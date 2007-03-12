@@ -1,0 +1,28 @@
+<?xml version='1.0' ?>
+<!-- turbulence default configuration -->
+<turbulence>
+
+  <global-settings>
+    <ports>
+      <port>3206</port>
+    </ports>
+  </global-settings>
+
+  <modules>
+    <!-- directory where to find modules to load -->
+    <directory src="./enabled" /> 
+
+    <!-- modules to be filtered (not loaded, even found at the modules directory) -->
+    <filter-modules>
+      <by-module>
+	filtered_module.so
+      </by-module>
+    </filter-modules>
+    
+  </modules>
+  
+  <server-name>
+    <name>0.0.0.0</name>
+  </server-name>
+  
+</turbulence>

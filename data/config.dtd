@@ -1,0 +1,21 @@
+<!-- main configuration setting -->
+<!ELEMENT turbulence (global-settings, modules, server-name)>
+
+<!-- global-settings -->
+<!ELEMENT global-settings (ports)>
+<!ELEMENT ports           (port+)>
+
+<!-- modules -->
+<!ELEMENT modules        (directory+, filter-modules)>
+<!ELEMENT directory       EMPTY>
+<!ELEMENT filter-modules (by-module)+>
+<!ELEMENT by-module      (#PCDATA)>
+
+<!-- server-name -->
+<!ELEMENT server-name (name+)>
+<!ELEMENT name        (#PCDATA)>
+
+
+
+
+
