@@ -40,6 +40,8 @@
 
 #include <turbulence.h>
 
-void turbulence_config_load (char * config);
+void turbulence_config_load    (char * config);
+
+void turbulence_config_cleanup ();
 
 #endif

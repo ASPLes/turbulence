@@ -48,6 +48,7 @@ axlDoc * __turbulence_config = NULL;
 void turbulence_config_load (char * config)
 {
 	axlError * error;
+	axlDtd   * dtd_file;
 	char     * dtd;
 
 	/* check null value */
@@ -94,13 +95,45 @@ void turbulence_config_load (char * config)
  
 	/* found dtd file */
 	msg ("found dtd file at: %s", dtd);
+	dtd_file = axl_dtd_parse_from_file (dtd, &error);
+	if (dtd_file == NULL) {
+		axl_doc_free (__turbulence_config);
+		error ("unable to load DTD file %s, error: %s", dtd, axl_error_get (error));
+		axl_error_free (error);
+		axl_free (dtd);
+		return;
+	} /* end if */
 
-	/** FOLLOW HERE: load the dtd file and validate the
-	 * configuration file found. **/
+	if (! axl_dtd_validate (__turbulence_config, dtd_file, &error)) {
+		error ("unable to validate server configuration (%s), something is wrong: %s", 
+		       dtd, axl_error_get (error));
+		axl_doc_free (__turbulence_config);
+		axl_error_free (error);
+		axl_free (dtd);
+		return;
+	} /* end if */
 
+	msg ("server configuration is valid..");
+	
+	/* free resources */
+	axl_dtd_free (dtd_file);
 	axl_free (dtd);
 	
 
 	return;
 }
+
+/** 
+ * @brief Cleanups the turbulence config module.
+ */
+void turbulence_config_cleanup ()
+{
+	/* free previous state */
+	if (__turbulence_config)
+		axl_doc_free (__turbulence_config);
+	__turbulence_config = NULL;
+
+	return;
+} 
+
 
