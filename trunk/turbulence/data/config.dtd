@@ -4,6 +4,7 @@
 <!-- global-settings -->
 <!ELEMENT global-settings (ports)>
 <!ELEMENT ports           (port+)>
+<!ELEMENT port            (#PCDATA)>
 
 <!-- modules -->
 <!ELEMENT modules        (directory+, filter-modules)>
