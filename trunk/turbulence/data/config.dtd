@@ -7,11 +7,14 @@
 <!ELEMENT ports           (port+)>
 <!ELEMENT port            (#PCDATA)>
 
-<!ELEMENT log-reporting (general-log, access-log, vortex-log) >
+<!ELEMENT log-reporting (general-log, error-log, access-log, vortex-log) >
 <!ATTLIST log-reporting enabled (yes|no) #REQUIRED>
 
 <!ELEMENT general-log        EMPTY>
 <!ATTLIST general-log file   CDATA #REQUIRED>
+
+<!ELEMENT error-log          EMPTY>
+<!ATTLIST error-log file     CDATA #REQUIRED>
 
 <!ELEMENT access-log         EMPTY>
 <!ATTLIST access-log  file   CDATA #REQUIRED>
