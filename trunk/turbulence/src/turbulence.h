@@ -40,6 +40,8 @@
 
 /* system includes */
 #include <stdarg.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 /* BEEP support */
 #include <vortex.h>
@@ -52,6 +54,9 @@
 
 /* local includes */
 #include <turbulence-config.h>
+#include <turbulence-run.h>
+#include <turbulence-sasl.h>
+#include <turbulence-module.h>
 
 /* definitions */
 
@@ -78,13 +83,68 @@ void  __error (const char * file, int line, const char * format, ...);
  *   msg ("module loaded: %s", module);
  * \endcode
  * 
- * @param m The error message to output.
+ * @param m The console message to output.
  */
 #define msg(m,...)   {__msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}
 void  __msg   (const char * file, int line, const char * format, ...);
 
+/** 
+ * Drops to the console stdout a warning, placing the content prefixed
+ * with the file and the line that caused the message.
+ *
+ * To drop a message use:
+ * \code
+ *   wrn ("module loaded: %s", module);
+ * \endcode
+ * 
+ * @param m The warning message to output.
+ */
+#define wrn(m,...)   {__msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}
+void  __wrn   (const char * file, int line, const char * format, ...);
+
+
 bool turbulence_init (int argc, char ** argv);
 
 void turbulence_exit (); 
+
+/** 
+ * @brief Available tests to be performed while using \ref
+ * camuc_file_test
+ */
+typedef enum {
+	/** 
+	 * @brief Check if the path exist.
+	 */
+	FILE_EXISTS     = 1 << 0,
+	/** 
+	 * @brief Check if the path provided is a symlink.
+	 */
+	FILE_IS_LINK    = 1 << 1,
+	/** 
+	 * @brief Check if the path provided is a directory.
+	 */
+	FILE_IS_DIR     = 1 << 2,
+	/** 
+	 * @brief Check if the path provided is a regular file.
+	 */
+	FILE_IS_REGULAR = 1 << 3,
+} FileTest;
+
+
+bool turbulence_file_test   (const char * path,   
+			     FileTest test);
+
+bool turbulence_file_test_v (const char * format, 
+			     FileTest test, ...);
+
+/* turbulence module definition */
+typedef bool (*ModInitFunc)  ();
+typedef void (*ModCloseFunc) ();
+
+typedef struct _TurbulenceModDef {
+	char         * mod_name;
+	ModInitFunc    init;
+	ModCloseFunc   close;
+} TurbulenceModDef;
 
 #endif

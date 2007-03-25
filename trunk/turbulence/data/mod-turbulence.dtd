@@ -1,0 +1,4 @@
+<!-- DTD to validate modules installed for turbulence -->
+<!ELEMENT mod-turbulence EMPTY>
+<!ATTLIST mod-turbulence location CDATA #REQUIRED>
+

@@ -1,3 +1,3 @@
 # build the BEEP application server
-SUBDIRS = src data
+SUBDIRS = src data modules
 

@@ -3,26 +3,37 @@
 <turbulence>
 
   <global-settings>
+    <!-- port allocation configuration -->
     <ports>
       <port>3206</port>
     </ports>
+    
+    <!-- log reporting configuration -->
+    <log-reporting enabled="yes">
+      <general-log file="/var/log/turbulance/main.log" />
+      <access-log file="/var/log/turbulance/access.log" />
+      <vortex-log file="/var/log/turbulance/vortex.log" />
+    </log-reporting>
+
+    <!-- building profiles support -->
+    <sasl-support enabled="yes" />
+    <tls-support enabled="yes" />
+    
   </global-settings>
 
   <modules>
     <!-- directory where to find modules to load -->
-    <directory src="./enabled" /> 
+    <directory src="/etc/turbulence/mods-enabled" /> 
 
     <!-- modules to be filtered (not loaded, even found at the modules directory) -->
     <filter-modules>
-      <by-module>
-	filtered_module.so
-      </by-module>
+      <by-module name="filtered_module.so" />
     </filter-modules>
     
   </modules>
   
-  <server-name>
+  <listener>
     <name>0.0.0.0</name>
-  </server-name>
-  
+  </listener>
+
 </turbulence>

@@ -1,5 +1,5 @@
 dtddir = $(datadir)/turbulence
-dtd_DATA = config.dtd
+dtd_DATA = config.dtd mod-turbulence.dtd
 
 etcdir = $(sysconfdir)/turbulence
 etc_DATA = config.xml

@@ -1,19 +1,42 @@
 <!-- main configuration setting -->
-<!ELEMENT turbulence (global-settings, modules, server-name)>
+<!ELEMENT turbulence (global-settings, modules, listener+)>
 
 <!-- global-settings -->
-<!ELEMENT global-settings (ports)>
+<!ELEMENT global-settings (ports, log-reporting, sasl-support, tls-support)>
+
 <!ELEMENT ports           (port+)>
 <!ELEMENT port            (#PCDATA)>
 
+<!ELEMENT log-reporting (general-log, access-log, vortex-log) >
+<!ATTLIST log-reporting enabled (yes|no) #REQUIRED>
+
+<!ELEMENT general-log        EMPTY>
+<!ATTLIST general-log file   CDATA #REQUIRED>
+
+<!ELEMENT access-log         EMPTY>
+<!ATTLIST access-log  file   CDATA #REQUIRED>
+
+<!ELEMENT vortex-log         EMPTY>
+<!ATTLIST vortex-log  file   CDATA #REQUIRED>
+
+<!ELEMENT sasl-support          EMPTY>
+<!ATTLIST sasl-support enabled (yes|no) #REQUIRED>
+
+<!ELEMENT tls-support       EMPTY>
+<!ATTLIST tls-support enabled (yes|no) #REQUIRED>
+
 <!-- modules -->
 <!ELEMENT modules        (directory+, filter-modules)>
+
 <!ELEMENT directory       EMPTY>
+<!ATTLIST directory src   CDATA #REQUIRED>
+
 <!ELEMENT filter-modules (by-module)+>
-<!ELEMENT by-module      (#PCDATA)>
+<!ELEMENT by-module       EMPTY>
+<!ATTLIST by-module name  CDATA #REQUIRED>
 
 <!-- server-name -->
-<!ELEMENT server-name (name+)>
+<!ELEMENT listener    (name+)>
 <!ELEMENT name        (#PCDATA)>
 
 
