@@ -69,6 +69,7 @@ static void test_close ()
  * symbol the turbulence will lookup to load the rest of items.
  */
 TurbulenceModDef module_def = {
+	"mod-test",
 	"Turbulence BEEP server, test module",
 	test_init,
 	test_close

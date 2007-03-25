@@ -1,0 +1,7 @@
+25/03/2007 - 19:57
+* Follow debuging memory deallocation once turbulence is stoped. You must
+  ensure that turbulence_exit uses a static mutex to avoid several threads
+  getting inside the termination function. For this, include now support
+  inside vortex to handle static mutex, lock and unlocking them. See
+  the source code provided by configure.in and glibconfig.h.win32 at
+  the glib source code.
