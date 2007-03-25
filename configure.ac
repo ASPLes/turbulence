@@ -77,6 +77,9 @@ AC_OUTPUT([
 Makefile
 data/Makefile
 src/Makefile
+modules/Makefile
+modules/mod-test/Makefile
+modules/mod-test/mod-test.xml
 ])
 
 echo "------------------------------------------"

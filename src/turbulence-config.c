@@ -90,6 +90,8 @@ void turbulence_config_load (char * config)
 		/* free document */
 		axl_doc_free (__turbulence_config);
 		error ("unable to find turbulence config DTD definition (config.dtd), check your turbulence installation.");
+
+		turbulence_exit (-1);
 		return;
 	} /* end if */
  
@@ -101,6 +103,8 @@ void turbulence_config_load (char * config)
 		error ("unable to load DTD file %s, error: %s", dtd, axl_error_get (error));
 		axl_error_free (error);
 		axl_free (dtd);
+
+		turbulence_exit (-1);
 		return;
 	} /* end if */
 
@@ -110,6 +114,8 @@ void turbulence_config_load (char * config)
 		axl_doc_free (__turbulence_config);
 		axl_error_free (error);
 		axl_free (dtd);
+
+		turbulence_exit (-1);
 		return;
 	} /* end if */
 
@@ -118,9 +124,23 @@ void turbulence_config_load (char * config)
 	/* free resources */
 	axl_dtd_free (dtd_file);
 	axl_free (dtd);
-	
 
 	return;
+}
+
+/** 
+ * @brief Allows to get the configuration loaded at the startup. The
+ * function will always return a configuration object. If the
+ * configuration was not properly setup, \ref turbulence_config_load
+ * will stop execution, reporting to the user.
+ * 
+ * @return A reference to the axlDoc having all the configuration
+ * created. 
+ */
+axlDoc * turbulence_config_get ()
+{
+	/* return current reference */
+	return __turbulence_config;
 }
 
 /** 

@@ -1,4 +1,4 @@
-/*  Turbulence:  BEEP application server
+/*
  *  Copyright (C) 2007 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
@@ -35,46 +35,43 @@
  *      Email address:
  *         info@aspl.es - http://fact.aspl.es
  */
-
 #include <turbulence.h>
 
-int main (int argc, char ** argv)
+/* use this declarations to avoid c++ compilers to mangle exported
+ * names. */
+BEGIN_C_DECLS
+
+/** 
+ * @brief Init function, perform all the necessary code to register
+ * profiles, configure Vortex, and any other task. The function must
+ * return true to signal that the module was initialized
+ * ok. Otherwise, false must be returned.
+ */
+static bool test_init ()
 {
-	char * config;
+	msg ("Turbulence BEEP server, test module: init");
 
-	/* init libraries */
-	turbulence_init (argc, argv);
-	
-	/* configure lookup domain, and load configuration file */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
-						   vortex_support_build_filename (SYSCONFDIR, "turbulence", NULL));
-	vortex_support_add_domain_search_path     ("turbulence-conf", ".");
-
-	/* find the configuration file */
-	if (exarg_is_defined ("config")) {
-		/* get the configuration defined at the command line */
-		config = axl_strdup (exarg_get_string ("config"));
-	} else {
-		/* get the default configuration defined at
-		 * compilation time */
-		config = vortex_support_domain_find_data_file ("turbulence-conf", "config.xml");
-	} /* end if */
-
-	/* load main turb */
-	msg ("using configuration file: %s", config);
-	turbulence_config_load (config);
-	
-	/* not required to free config var, already done by previous
-	 * function */
-	msg ("about to startup configuration found..");
-	turbulence_run_config ();
-
-	/* look main thread until finished */
-	vortex_listener_wait ();
-	
-	/* terminate turbulence execution */
-	turbulence_exit (0);
-	
-
-	return 0;
+	return true;
 }
+
+/** 
+ * @brief Close function called once the turbulence server wants to
+ * unload the module or it is being closed. All resource deallocation
+ * and stop operation required must be done here.
+ */
+static void test_close ()
+{
+	msg ("Turbulence BEEP server, test module: close");
+}
+
+/**
+ * @brief Public entry point for the module to be loaded. This is the
+ * symbol the turbulence will lookup to load the rest of items.
+ */
+TurbulenceModDef module_def = {
+	"Turbulence BEEP server, test module",
+	test_init,
+	test_close
+};
+
+END_C_DECLS

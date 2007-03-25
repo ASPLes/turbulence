@@ -11,6 +11,11 @@ bin_PROGRAMS = turbulence
 turbulence_SOURCES = \
 	main.c \
 	turbulence.c turbulence.h \
-	turbulence-config.c turbulence.h
+	turbulence-config.c turbulence.h \
+	turbulence-run.c turbulence-run.h \
+	turbulence-sasl.c turbulence-sasl.h \
+	turbulence-module.c turbulence-module.h
 
-turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS)
+turbulence_LDFLAGS = -Wl,-export-dynamic -ldl
+
+turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) 

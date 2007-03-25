@@ -135,3 +135,127 @@ void __msg (const char * file, int line, const char * format, ...)
 	
 	return;
 }
+
+/** 
+ * @internal function that actually handles the console wrn.
+ */
+void __wrn (const char * file, int line, const char * format, ...)
+{
+	va_list args;
+	
+	fprintf (stdout, "[  !!!  ] (%s:%d) ", file, line);
+	
+	va_start (args, format);
+	vfprintf (stdout, format, args);
+	va_end (args);
+
+	fprintf (stdout, "\n");
+	
+	fflush (stdout);
+	
+	return;
+}
+
+/** 
+ * @brief Provides the same functionality like \ref turbulence_file_test,
+ * but allowing to provide the file path as a printf like argument.
+ * 
+ * @param format The path to be checked.
+ * @param test The test to be performed. 
+ * 
+ * @return true if all test returns true. Otherwise false is returned.
+ */
+bool turbulence_file_test_v (const char * format, FileTest test, ...)
+{
+	va_list   args;
+	char    * path;
+	bool      result;
+
+	/* open arguments */
+	va_start (args, test);
+
+	/* get the path */
+	path = axl_strdup_printfv (format, args);
+
+	/* close args */
+	va_end (args);
+
+	/* do the test */
+	result = turbulence_file_test (path, test);
+	axl_free (path);
+
+	/* return the test */
+	return result;
+}
+
+
+/** 
+ * @brief Allows to perform a set of test for the provided path.
+ * 
+ * @param path The path that will be checked.
+ *
+ * @param test The set of test to be performed. Separate each test
+ * with "|" to perform several test at the same time.
+ * 
+ * @return true if all test returns true. Otherwise false is returned.
+ */
+bool   turbulence_file_test (const char * path, FileTest test)
+{
+	bool result = false;
+	struct stat file_info;
+
+	/* perform common checks */
+	axl_return_val_if_fail (path, false);
+
+	/* call to get status */
+	result = (stat (path, &file_info) == 0);
+	if (! result) {
+		/* check that it is requesting for not file exists */
+		if (errno == ENOENT && (test & FILE_EXISTS) == FILE_EXISTS)
+			return false;
+
+		error ("filed to check test on %s, stat call has failed (result=%d, error=%s)", path, result, strerror (errno));
+		return false;
+	} /* end if */
+
+	/* check for file exists */
+	if ((test & FILE_EXISTS) == FILE_EXISTS) {
+		/* check result */
+		if (result == false)
+			return false;
+		
+		/* reached this point the file exists */
+		result = true;
+	}
+
+	/* check if the file is a link */
+	if ((test & FILE_IS_LINK) == FILE_IS_LINK) {
+		if (! S_ISLNK (file_info.st_mode))
+			return false;
+
+		/* reached this point the file is link */
+		result = true;
+	}
+
+	/* check if the file is a regular */
+	if ((test & FILE_IS_REGULAR) == FILE_IS_REGULAR) {
+		if (! S_ISREG (file_info.st_mode))
+			return false;
+
+		/* reached this point the file is link */
+		result = true;
+	}
+
+	/* check if the file is a directory */
+	if ((test & FILE_IS_DIR) == FILE_IS_DIR) {
+		if (! S_ISDIR (file_info.st_mode)) {
+			return false;
+		}
+
+		/* reached this point the file is link */
+		result = true;
+	}
+
+	/* return current result */
+	return result;
+}
