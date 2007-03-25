@@ -53,10 +53,12 @@
 #include <exarg.h>
 
 /* local includes */
+#include <turbulence-moddef.h>
 #include <turbulence-config.h>
 #include <turbulence-run.h>
 #include <turbulence-sasl.h>
 #include <turbulence-module.h>
+#include <turbulence-log.h>
 
 /* definitions */
 
@@ -105,7 +107,9 @@ void  __wrn   (const char * file, int line, const char * format, ...);
 
 bool turbulence_init (int argc, char ** argv);
 
-void turbulence_exit (); 
+void turbulence_exit (int value); 
+
+void turbulence_reload_config (int value);
 
 /** 
  * @brief Available tests to be performed while using \ref
@@ -136,15 +140,5 @@ bool turbulence_file_test   (const char * path,
 
 bool turbulence_file_test_v (const char * format, 
 			     FileTest test, ...);
-
-/* turbulence module definition */
-typedef bool (*ModInitFunc)  ();
-typedef void (*ModCloseFunc) ();
-
-typedef struct _TurbulenceModDef {
-	char         * mod_name;
-	ModInitFunc    init;
-	ModCloseFunc   close;
-} TurbulenceModDef;
 
 #endif

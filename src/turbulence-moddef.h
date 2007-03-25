@@ -35,49 +35,58 @@
  *      Email address:
  *         info@aspl.es - http://fact.aspl.es
  */
+#ifndef __TURBULENCE_MODDEF_H__
+#define __TURBULENCE_MODDEF_H__
 
-#include <turbulence.h>
+/** 
+ * @brief Public definition for the init function that must implement
+ * a turbulence module.
+ *
+ * The init function doesn't receive any thing, but it must return
+ * true to signal that the modules was initialized and must be
+ * registered.
+ * 
+ * @return true if the module is usable or false if not.
+ */
+typedef bool (*ModInitFunc)  ();
 
-int main (int argc, char ** argv)
-{
-	char * config;
+/** 
+ * @brief Public definition for the close function that must implement
+ * all operations required to unload module.
+ * 
+ * The function doesn't receive and return any data.
+ */
+typedef void (*ModCloseFunc) ();
 
-	/* init libraries */
-	turbulence_init (argc, argv);
 
-	/* configure lookup domain, and load configuration file */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
-						   vortex_support_build_filename (SYSCONFDIR, "turbulence", NULL));
-	vortex_support_add_domain_search_path     ("turbulence-conf", ".");
+/**
+ * @brief Public definition for the main entry point for all modules
+ * developed for turbulence.
+ * 
+ * See mod-test module for an example.
+ */
+typedef struct _TurbulenceModDef {
+	/**
+	 * @brief The module name. This name is used by turbulence to
+	 * refer to the module.
+	 */
+	char         * mod_name;
 
-	/* find the configuration file */
-	if (exarg_is_defined ("config")) {
-		/* get the configuration defined at the command line */
-		config = axl_strdup (exarg_get_string ("config"));
-	} else {
-		/* get the default configuration defined at
-		 * compilation time */
-		config = vortex_support_domain_find_data_file ("turbulence-conf", "config.xml");
-	} /* end if */
+	/**
+	 * @brief The module long description.
+	 */
+	char         * mod_description;
 
-	/* load main turb */
-	msg ("using configuration file: %s", config);
-	turbulence_config_load (config);
+	/**
+	 * @brief A reference to the init function associated to the module.
+	 */
+	ModInitFunc    init;
 
-	/* rest of modules to initialize */
-	turbulence_log_init ();
-	
-	/* not required to free config var, already done by previous
-	 * function */
-	msg ("about to startup configuration found..");
-	turbulence_run_config ();
+	/**
+	 * @brief A reference to the close function associated to the
+	 * module.
+	 */
+	ModCloseFunc   close;
+} TurbulenceModDef;
 
-	/* look main thread until finished */
-	vortex_listener_wait ();
-	
-	/* terminate turbulence execution */
-	turbulence_exit (0);
-	
-
-	return 0;
-}
+#endif

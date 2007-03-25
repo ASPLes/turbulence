@@ -38,10 +38,22 @@
 #ifndef __TURBULENCE_MODULE_H__
 #define __TURBULENCE_MODULE_H__
 
+#include <turbulence.h>
+
 typedef struct _TurbulenceModule TurbulenceModule;
 
-TurbulenceModule * turbulence_module_open (const char * module);
+void               turbulence_module_init      ();
 
-void               turbulence_module_free (TurbulenceModule * module);
+TurbulenceModule * turbulence_module_open      (const char * module);
+
+ModInitFunc        turbulence_module_get_init  (TurbulenceModule * module);
+
+ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module);
+
+void               turbulence_module_register  (TurbulenceModule * module);
+
+void               turbulence_module_free      (TurbulenceModule * module);
+
+void               turbulence_module_cleanup   ();
 
 #endif

@@ -36,6 +36,7 @@
  *         info@aspl.es - http://fact.aspl.es
  */
 #include <turbulence.h>
+#include <signal.h>
 
 #define HELP_HEADER "Turbulence: BEEP application server\n\
 Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
@@ -43,6 +44,11 @@ Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
 #define POST_HEADER "\n\
 If you have question, bugs to report, patches, you can reach us\n\
 at <vortex@lists.aspl.es>."
+
+/** 
+ * @internal Controls if messages must be send to the console log.
+ */
+bool console_enabled = false;
 
 /** 
  * Starts turbulence execution, initializing all libraries required by
@@ -64,8 +70,23 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_install_arg ("config", "f", EXARG_STRING, 
 			   "Main server configuration location.");
 
+	exarg_install_arg ("debug", "d", EXARG_NONE,
+			   "Makes all log produced by the application, to be also dropped to the console");
+
+	/* install default signal handling */
+	signal (SIGINT,  turbulence_exit);
+	signal (SIGTERM, turbulence_exit);
+	signal (SIGKILL, turbulence_exit);
+	signal (SIGQUIT, turbulence_exit);
+	signal (SIGSEGV, turbulence_exit);
+	signal (SIGABRT, turbulence_exit);
+	signal (SIGHUP,  turbulence_reload_config);
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
+
+	/* check if the console is defined */
+	console_enabled = exarg_is_defined ("debug");
 
 	/*** init the vortex library ***/
 	if (! vortex_init ()) {
@@ -74,11 +95,26 @@ bool turbulence_init (int argc, char ** argv)
 	} /* end if */
 
 	/*** not required to initialize axl library, already done by vortex ***/
+	
 	msg ("turbulence internal init");
+	turbulence_module_init ();
 
 	/* init ok */
 	return true;
 } /* end if */
+
+/** 
+ * @internal Function that performs a reload operation for the current
+ * turbulence instance.
+ * 
+ * @param value The signal number caught.
+ */
+void turbulence_reload_config (int value)
+{
+	msg ("caught HUP signal, reloading configuration (FIXME!)");
+	
+	return;
+} 
 
 /** 
  * Terminates the turbulence excution, returing the exit value
@@ -89,6 +125,46 @@ bool turbulence_init (int argc, char ** argv)
 void turbulence_exit (int value)
 {
 	
+	
+	switch (value) {
+	case SIGINT:
+		msg ("caught SIGINT, terminating turbulence..");
+		break;
+	case SIGTERM:
+		msg ("caught SIGTERM, terminating turbulence..");
+		break;
+	case SIGKILL:
+		msg ("caught SIGKILL, terminating turbulence..");
+		break;
+	case SIGQUIT:
+		msg ("caught SIGQUIT, terminating turbulence..");
+		break;
+	case SIGSEGV:
+		msg ("caught SIGSEV, anomalous termination (this is an internal turbulence or module error)");
+		break;
+	case SIGABRT:
+		msg ("caught SIGABRT, anomalous termination (this is an internal turbulence or module error)");
+		break;
+	default:
+		msg ("terminating turbulence..");
+		break;
+	} /* end if */
+
+	/* terminate all modules */
+	turbulence_module_cleanup ();
+	turbulence_config_cleanup ();
+	
+
+	/* terminate vortex */
+	msg ("terminating vortex library..");
+	vortex_exit ();
+	
+	/* terminate exarg */
+	msg ("terminating exarg library..");
+	exarg_end ();
+
+	/* the last module to clean up */
+	turbulence_log_cleanup ();
 
 	/* terminate */
 	exit (value);
@@ -97,19 +173,38 @@ void turbulence_exit (int value)
 }
 
 /** 
+ * @internal Simple macro to check if the console output is activated
+ * or not.
+ */
+#define CONSOLE if (console_enabled) fprintf
+
+/** 
+ * @internal Simple macro to check if the console output is activated
+ * or not.
+ */
+#define CONSOLEV if (console_enabled) vfprintf
+    
+
+/** 
  * @internal function that actually handles the console error.
  */
 void __error (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
-	fprintf (stderr, "[ error ] (%s:%d) ", file, line);
+	CONSOLE (stderr, "[ error ] (%s:%d) ", file, line);
 	
 	va_start (args, format);
-	vfprintf (stderr, format, args);
+
+	/* report to the console */
+	CONSOLEV (stderr, format, args);
+
+	/* report to log */
+	turbulence_log_report (LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+	
 	va_end (args);
 
-	fprintf (stderr, "\n");
+	CONSOLE (stderr, "\n");
 	
 	fflush (stderr);
 	
@@ -123,13 +218,19 @@ void __msg (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
-	fprintf (stdout, "[  msg  ] (%s:%d) ", file, line);
+	CONSOLE (stdout, "[  msg  ] (%s:%d) ", file, line);
 	
 	va_start (args, format);
-	vfprintf (stdout, format, args);
+	
+	/* report to console */
+	CONSOLEV (stdout, format, args);
+
+	/* report to log */
+	turbulence_log_report (LOG_REPORT_GENERAL, format, args, file, line);
+
 	va_end (args);
 
-	fprintf (stdout, "\n");
+	CONSOLE (stdout, "\n");
 	
 	fflush (stdout);
 	
@@ -143,13 +244,18 @@ void __wrn (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
-	fprintf (stdout, "[  !!!  ] (%s:%d) ", file, line);
+	CONSOLE (stdout, "[  !!!  ] (%s:%d) ", file, line);
 	
 	va_start (args, format);
-	vfprintf (stdout, format, args);
+
+	CONSOLEV (stdout, format, args);
+
+	/* report to log */
+	turbulence_log_report (LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+
 	va_end (args);
 
-	fprintf (stdout, "\n");
+	CONSOLE (stdout, "\n");
 	
 	fflush (stdout);
 	
