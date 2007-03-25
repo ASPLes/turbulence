@@ -40,9 +40,27 @@
 #include <dlfcn.h>
 
 struct _TurbulenceModule {
-	char * path;
-	void * handle;
+	char             * path;
+	void             * handle;
+	TurbulenceModDef * def;
 };
+
+/** 
+ * @internal A list of modules registered.
+ */
+axlList * __registered_modules = NULL;
+
+/** 
+ * @brief Starts the turbulence module initializing all internal
+ * variables.
+ */
+void               turbulence_module_init      ()
+{
+	/* a list of all modules loaded */
+	__registered_modules = axl_list_new (axl_list_always_return_1, 
+					     (axlDestroyFunc) turbulence_module_free);
+	return;
+}
 
 /** 
  * @brief Loads a turbulence module, from the provided path.
@@ -54,7 +72,6 @@ struct _TurbulenceModule {
 TurbulenceModule * turbulence_module_open (const char * module)
 {
 	TurbulenceModule * result;
-	TurbulenceModDef * def;
 
 	axl_return_val_if_fail (module, NULL);
 
@@ -74,8 +91,8 @@ TurbulenceModule * turbulence_module_open (const char * module)
 	} /* end if */
 
 	/* find the module */
-	def = dlsym (result->handle, "module_def");
-	if (def == NULL) {
+	result->def = dlsym (result->handle, "module_def");
+	if (result->def == NULL) {
 		/* unable to find module def */
 		error ("unable to find 'module_def' symbol, it seems it isn't a turbulence module: %s", dlerror ());
 		
@@ -84,9 +101,64 @@ TurbulenceModule * turbulence_module_open (const char * module)
 		return NULL;
 	} /* end if */
 	
-	msg ("module found: [%s]", def->mod_name);
+	msg ("module found: [%s]", result->def->mod_name);
 	
 	return result;
+}
+
+/** 
+ * @brief Allows to get the init function for the module reference
+ * provided.
+ * 
+ * @param module The module that is being requested to return the init
+ * function.
+ * 
+ * @return A reference to the init function or NULL if the function
+ * doesn't have a init function defined (which is possible and allowed).
+ */
+ModInitFunc        turbulence_module_get_init  (TurbulenceModule * module)
+{
+	/* check the reference received */
+	if (module == NULL)
+		return NULL;
+
+	/* return the reference */
+	return module->def->init;
+}
+
+/** 
+ * @brief Allows to get the close function for the module reference
+ * provided.
+ * 
+ * @param module The module that is being requested to return the
+ * close function.
+ * 
+ * @return A refernce to the close function or NULL if the function
+ * doesn't have a close function defined (which is possible and
+ * allowed).
+ */
+ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
+{
+	/* check the reference received */
+	if (module == NULL)
+		return NULL;
+
+	/* return the reference */
+	return module->def->close;
+}
+
+/** 
+ * @brief Allows to register the module loaded to allow future access
+ * to it.
+ * 
+ * @param module The module being registered.
+ */
+void               turbulence_module_register  (TurbulenceModule * module)
+{
+	/* register the module */
+	axl_list_add (__registered_modules, module);
+
+	return;
 }
 
 /** 
@@ -109,5 +181,17 @@ void               turbulence_module_free (TurbulenceModule * module)
 	
 	return;
 }
+
+
+/** 
+ * @brief Cleans the module, releasing all resources and unloading all
+ * modules.
+ */
+void               turbulence_module_cleanup   ()
+{
+	/* release the list and all modules */
+	axl_list_free (__registered_modules);
+}
+
 
 

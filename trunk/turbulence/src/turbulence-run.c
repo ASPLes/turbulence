@@ -52,6 +52,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 	axlDoc           * doc;
 	axlError         * error;
 	TurbulenceModule * module;
+	ModInitFunc        init;
 				      
 
 
@@ -98,7 +99,21 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 			wrn ("unable to open module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 		} /* end if */
 
+		/* init the module */
+		init = turbulence_module_get_init (module);
 		
+		/* check init */
+		if (! init ()) {
+			wrn ("init for moddule: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
+		} else {
+			msg ("init ok, registering module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
+		}
+
+		/* free the document */
+		axl_doc_free (doc);
+
+		/* register the module to be loaded */
+		turbulence_module_register (module);
 
 	next:
 		/* free the error */

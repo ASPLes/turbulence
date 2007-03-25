@@ -10,11 +10,13 @@ bin_PROGRAMS = turbulence
 
 turbulence_SOURCES = \
 	main.c \
+	turbulence-moddef.h \
 	turbulence.c turbulence.h \
 	turbulence-config.c turbulence.h \
 	turbulence-run.c turbulence-run.h \
 	turbulence-sasl.c turbulence-sasl.h \
-	turbulence-module.c turbulence-module.h
+	turbulence-module.c turbulence-module.h \
+	turbulence-log.c turbulence-log.h
 
 turbulence_LDFLAGS = -Wl,-export-dynamic -ldl
 

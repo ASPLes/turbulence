@@ -35,49 +35,25 @@
  *      Email address:
  *         info@aspl.es - http://fact.aspl.es
  */
+#ifndef __TURBULENCE_LOG_H__
+#define __TURBULENCE_LOG_H__
 
 #include <turbulence.h>
 
-int main (int argc, char ** argv)
-{
-	char * config;
+void turbulence_log_init ();
 
-	/* init libraries */
-	turbulence_init (argc, argv);
+typedef enum {LOG_REPORT_GENERAL = 1, 
+	      LOG_REPORT_ACCESS  = 1 << 2, 
+	      LOG_REPORT_VORTEX  = 1 << 3,
+	      LOG_REPORT_ERROR   = 1 << 4
+} LogReportType;
 
-	/* configure lookup domain, and load configuration file */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
-						   vortex_support_build_filename (SYSCONFDIR, "turbulence", NULL));
-	vortex_support_add_domain_search_path     ("turbulence-conf", ".");
+void turbulence_log_report (LogReportType   type, 
+			    const char    * message,
+			    va_list         args,
+			    const char    * file,
+			    int             line);
 
-	/* find the configuration file */
-	if (exarg_is_defined ("config")) {
-		/* get the configuration defined at the command line */
-		config = axl_strdup (exarg_get_string ("config"));
-	} else {
-		/* get the default configuration defined at
-		 * compilation time */
-		config = vortex_support_domain_find_data_file ("turbulence-conf", "config.xml");
-	} /* end if */
+void turbulence_log_cleanup ();
 
-	/* load main turb */
-	msg ("using configuration file: %s", config);
-	turbulence_config_load (config);
-
-	/* rest of modules to initialize */
-	turbulence_log_init ();
-	
-	/* not required to free config var, already done by previous
-	 * function */
-	msg ("about to startup configuration found..");
-	turbulence_run_config ();
-
-	/* look main thread until finished */
-	vortex_listener_wait ();
-	
-	/* terminate turbulence execution */
-	turbulence_exit (0);
-	
-
-	return 0;
-}
+#endif
