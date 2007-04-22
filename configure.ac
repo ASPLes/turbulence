@@ -80,6 +80,8 @@ src/Makefile
 modules/Makefile
 modules/mod-test/Makefile
 modules/mod-test/mod-test.xml
+modules/mod-tunnel/Makefile
+modules/mod-tunnel/mod-tunnel.xml
 ])
 
 echo "------------------------------------------"
