@@ -1,0 +1,27 @@
+<!--
+    DTD for the TUNNEL Profile, as of 2001-02-03
+    
+    Refer to this DTD as:
+    
+    <!ENTITY % TUNNEL PUBLIC "-//IETF//DTD TUNNEL//EN" "">
+    %TUNNEL;
+-->
+
+<!--
+    TUNNEL messages
+    
+    role           MSG                 RPY
+    ======         ===                 ===
+    I or L         TUNNEL              +: ok
+    -: error
+-->
+
+<!ELEMENT tunnel      (tunnel?)>
+<!ATTLIST tunnel
+          fqdn         CDATA    #IMPLIED
+          ip4          CDATA    #IMPLIED
+          ip6          CDATA    #IMPLIED
+          port         CDATA    #IMPLIED
+          srv          CDATA    #IMPLIED
+          profile      CDATA    #IMPLIED
+          endpoint     CDATA    #IMPLIED >
