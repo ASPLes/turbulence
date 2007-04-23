@@ -76,8 +76,7 @@ int main (int argc, char ** argv)
 	vortex_listener_wait ();
 	
 	/* terminate turbulence execution */
-	turbulence_exit (0);
+	turbulence_cleanup (0);
 	
-
 	return 0;
 }
