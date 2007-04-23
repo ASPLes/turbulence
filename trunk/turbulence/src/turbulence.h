@@ -109,6 +109,8 @@ bool turbulence_init (int argc, char ** argv);
 
 void turbulence_exit (int value); 
 
+void turbulence_cleanup ();
+
 void turbulence_reload_config (int value);
 
 /** 

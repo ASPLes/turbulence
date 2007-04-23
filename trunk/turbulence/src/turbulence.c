@@ -50,6 +50,9 @@ at <vortex@lists.aspl.es>."
  */
 bool console_enabled = false;
 
+bool        turbulence_is_existing = false;
+VortexMutex turbulence_exit_mutex;
+
 /** 
  * Starts turbulence execution, initializing all libraries required by
  * the server application.
@@ -73,14 +76,8 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_install_arg ("debug", "d", EXARG_NONE,
 			   "Makes all log produced by the application, to be also dropped to the console");
 
-	/* install default signal handling */
-	signal (SIGINT,  turbulence_exit);
-	signal (SIGTERM, turbulence_exit);
-	signal (SIGKILL, turbulence_exit);
-	signal (SIGQUIT, turbulence_exit);
-	signal (SIGSEGV, turbulence_exit);
-	signal (SIGABRT, turbulence_exit);
-	signal (SIGHUP,  turbulence_reload_config);
+	exarg_install_arg ("color-debug", "c", EXARG_NONE,
+			   "Makes console log to be colorified");
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
@@ -97,7 +94,17 @@ bool turbulence_init (int argc, char ** argv)
 	/*** not required to initialize axl library, already done by vortex ***/
 	
 	msg ("turbulence internal init");
+	vortex_mutex_create (&turbulence_exit_mutex);
 	turbulence_module_init ();
+
+	/* install default signal handling */
+	signal (SIGINT,  turbulence_exit);
+	signal (SIGTERM, turbulence_exit);
+	signal (SIGKILL, turbulence_exit);
+	signal (SIGQUIT, turbulence_exit);
+	signal (SIGSEGV, turbulence_exit);
+	signal (SIGABRT, turbulence_exit);
+	signal (SIGHUP,  turbulence_reload_config);
 
 	/* init ok */
 	return true;
@@ -124,7 +131,19 @@ void turbulence_reload_config (int value)
  */
 void turbulence_exit (int value)
 {
-	
+
+	/* lock the mutex and check */
+	vortex_mutex_lock (&turbulence_exit_mutex);
+	if (turbulence_is_existing) {
+		/* other thread is already cleaning */
+		vortex_mutex_unlock (&turbulence_exit_mutex);
+		return;
+	} /* end if */
+
+	/* flag that turbulence is existing and do all cleanup
+	 * operations */
+	turbulence_is_existing = true;
+	vortex_mutex_unlock (&turbulence_exit_mutex);
 	
 	switch (value) {
 	case SIGINT:
@@ -150,6 +169,21 @@ void turbulence_exit (int value)
 		break;
 	} /* end if */
 
+	/* Unlock the listener here. Do not perform any deallocation
+	 * operation here because we are in the middle of a signal
+	 * handler execution. By unlocking the listener, the
+	 * turbulence_cleanup is called cleaning the room. */
+	vortex_listener_unlock ();
+
+	return;
+}
+
+/** 
+ * @internal Performs all operations required to cleanup turbulence
+ * runtime execution.
+ */
+void turbulence_cleanup ()
+{
 	/* terminate all modules */
 	turbulence_module_cleanup ();
 	turbulence_config_cleanup ();
@@ -167,7 +201,7 @@ void turbulence_exit (int value)
 	turbulence_log_cleanup ();
 
 	/* terminate */
-	exit (value);
+	vortex_mutex_destroy (&turbulence_exit_mutex);
 
 	return;
 }
@@ -192,6 +226,12 @@ void __error (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
+	
+#if defined(AXL_OS_UNIX)	
+	if (exarg_is_defined ("color-debug")) {
+		CONSOLE (stderr, "[  \e[1;31m!!!\e[0m  ] (%s:%d) ", file, line);
+	} else
+#endif
 	CONSOLE (stderr, "[ error ] (%s:%d) ", file, line);
 	
 	va_start (args, format);
@@ -217,8 +257,13 @@ void __error (const char * file, int line, const char * format, ...)
 void __msg (const char * file, int line, const char * format, ...)
 {
 	va_list args;
-	
-	CONSOLE (stdout, "[  msg  ] (%s:%d) ", file, line);
+
+#if defined(AXL_OS_UNIX)	
+	if (exarg_is_defined ("color-debug")) {
+		CONSOLE (stdout, "[  \e[1;32mmsg\e[0m  ] (%s:%d) ", file, line);
+	} else
+#endif
+		CONSOLE (stdout, "[  msg  ] (%s:%d) ", file, line);
 	
 	va_start (args, format);
 	
@@ -244,6 +289,11 @@ void __wrn (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
+#if defined(AXL_OS_UNIX)	
+	if (exarg_is_defined ("color-debug")) {
+		CONSOLE (stdout, "[  \e[1;33m!!!\e[0m  ] (%s:%d) ", file, line);
+	} else
+#endif
 	CONSOLE (stdout, "[  !!!  ] (%s:%d) ", file, line);
 	
 	va_start (args, format);
