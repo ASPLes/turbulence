@@ -40,18 +40,4 @@
 
 #include <turbulence.h>
 
-bool tunnel_start_request (char             * profile, 
-			   int                channel_num, 
-			   VortexConnection * connection, 
-			   char             * serverName, 
-			   char             * profile_content, 
-			   char            ** profile_content_reply, 
-			   VortexEncoding     encoding, 
-			   axlPointer         user_data);
-
-void tunnel_frame_received_handler (VortexChannel    * channel, 
-				    VortexConnection * connection, 
-				    VortexFrame      * frame, 
-				    axlPointer         user_data);
-
 #endif /* __MOD_TUNNEL_H__ */

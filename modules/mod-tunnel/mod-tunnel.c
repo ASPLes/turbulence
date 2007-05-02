@@ -37,9 +37,109 @@
  */
 #include <mod-tunnel.h>
 
-/* use this declarations to avoid c++ compilers to mangle exported
- * names. */
-BEGIN_C_DECLS
+axlDoc * mod_tunnel_resolver = NULL;
+
+bool find_and_replace (const char * conf, axlNode * node)
+{
+	axlNode    * db;
+	const char * value = ATTR_VALUE (node, conf);
+
+	/* lookup for the value at the provided conf */
+	db = axl_doc_get (mod_tunnel_resolver, "/tunnel-resolver/match");
+	while (db != NULL) {
+		/* check node found */
+		if (HAS_ATTR_VALUE (db, conf, value)) {
+			/* remove current node */
+			axl_node_remove_attribute (node, conf);
+
+			/* configure new values, check host */
+			value = ATTR_VALUE (node, "host");
+			if (axl_memcmp (value, "ip4:", 4)) {
+				/* ip4 case */
+				axl_node_set_attribute (node, "ip4", value + 4);
+
+			} else if (axl_memcmp (value, "fqdn:", 5)) {
+				/* fqdn case */
+				axl_node_set_attribute (node, "fqdn", value + 5);
+
+			} else {
+				/* ip4 case, default */
+				axl_node_set_attribute (node, "ip4", value + 4);
+			}
+
+			/* configure new values, check port */
+			value = ATTR_VALUE (node, "port");
+			axl_node_set_attribute (node, "port", value);
+
+			return true;
+		} /* node found ! */
+
+		/* get next node */
+		db = axl_node_get_next (db);
+	} /* end if */
+
+	return false;
+}
+
+/** 
+ * @brief Tunnel settings resolver implementation.
+ */
+VortexTunnelSettings * tunnel_resolver (const char * profile_content,
+					int          profile_content_size,
+					axlPointer   user_data)
+{
+	
+	axlDoc               * doc  = NULL;
+	axlNode              * node = NULL;
+	char                 * content;
+	int                    size;
+	VortexTunnelSettings * settings;
+
+	/* empty case, do not perform any translation if found final
+	 * node */
+	if (axl_cmp (profile_content, "<tunnel />"))
+		return NULL;
+
+	/* parse profile content */
+	doc = axl_doc_parse (profile_content, profile_content_size, NULL);
+	if (doc == NULL) {
+		error ("unable to parse tunnel settings, doing no translation");
+		return NULL;
+	} /* end if */
+		
+	/* get root, that is, the next hop */
+	node = axl_doc_get_root (doc);
+	if (HAS_ATTR (node, "endpoint")) {
+		/* try to translate endpoing */
+		if (! find_and_replace ("endpoint", node)) {
+			goto no_translation;
+		} /* end if */
+	} /* end if */
+
+	if (HAS_ATTR (node, "profile")) {
+		/* try to translate endpoing */
+		if (! find_and_replace ("profile", node)) {
+			goto no_translation;
+		} /* end if */
+	} /* end if */
+
+	/* dump the content translated, and free document */
+	axl_doc_dump (doc, &content, &size);
+	axl_doc_free (doc);
+
+	/* create settings, free content and return value */
+	settings = vortex_tunnel_settings_new_from_xml (content, size);
+	axl_free (content);
+	return settings;
+	       
+ no_translation:
+	/* free doc */
+	axl_doc_free (doc);
+
+	msg ("no translation provided");
+		
+	return NULL;
+}
 
 /** 
  * @brief Init function, perform all the necessary code to register
@@ -49,25 +149,60 @@ BEGIN_C_DECLS
  */
 static bool tunnel_init ()
 {
+	axlDoc   * doc;
+	axlNode  * node;
+	axlError * error;
+	char     * config;
+	
 	msg ("turbulence TUNNEL init");
 
-	/* register the profile, using the basic handlers */
-	vortex_profiles_register (
-		/* profile uri */
-		TUNNEL_PROFILE,
-		/* tunnel starth handler, no basic start handler
-		 * provided at this point */
-		NULL, NULL, 
-		/* no close channel provided because it is not
-		 * necessary. */
-		NULL, NULL,
-		/* provide a first level frame receive handler */
-		tunnel_frame_received_handler, NULL);
+	/* check if vortex library supports the tunnel profile */
+	if (! vortex_tunnel_is_enabled ()) {
+		error ("found vortex library without TUNNEL support (compile one with it included!)");
+		return false;
+	} /* end if */
 
-	/* register the especial start extended handler */
-	vortex_profiles_register_extended_start (TUNNEL_PROFILE, 
-						 tunnel_start_request, NULL);
+	/* configure lookup domain for mod tunnel settings */
+	vortex_support_add_domain_search_path_ref (axl_strdup ("tunnel"), 
+						   vortex_support_build_filename (SYSCONFDIR, "turbulence", "tunnel", NULL));
 
+	/* load module settings */
+	config = vortex_support_domain_find_data_file ("tunnel", "tunnel.conf");
+	doc    = axl_doc_parse_from_file (config, &error);
+	axl_free (config);
+	if (doc == NULL) {
+		error ("failed to init the TUNNEL profile, unable to find configuration file, error: %s",
+		       axl_error_get (error));
+		axl_error_free (error);
+		return false;
+	} /* end if */
+	
+	/* init translation database */
+	node                = axl_doc_get (doc, "/mod-tunnel/tunnel-resolver");
+	if (HAS_ATTR_VALUE (node, "type", "xml") &&
+	    HAS_ATTR (node, "location")) {
+		/* find the file to load */
+		config              = vortex_support_domain_find_data_file ("tunnel", ATTR_VALUE (node, "location"));
+		mod_tunnel_resolver = axl_doc_parse_from_file (config, NULL);
+		if (mod_tunnel_resolver == NULL) {
+			error ("failed to open resolver file, TUNNEL translation settings will not be applied, error: %s",
+			       axl_error_get (error));
+			axl_error_free (error);
+		} /* end if */
+		msg ("database resolver for TUNNEL loaded: %s", config);
+		axl_free (config);
+	} /* end if */
+
+	/* activates the tunnel profile to accept connections
+	 * (tunneling them or forwarding them to the next hop) */
+	if (! vortex_tunnel_accept_negotiation (NULL, NULL)) {
+		error ("failed to init the TUNNEL profile");
+		return false;
+	} /* end if */
+
+	/* configure tunnel settings translation */
+	vortex_tunnel_set_resolver (tunnel_resolver, NULL);
+		
 	return true;
 }
 
@@ -92,51 +227,3 @@ TurbulenceModDef module_def = {
 	tunnel_close
 };
 
-/** 
- * @internal Implementation for the start tunnel request on the
- * connection provided.
- */
-bool tunnel_start_request (char             * profile, 
-			   int                channel_num, 
-			   VortexConnection * connection, 
-			   char             * serverName, 
-			   char             * profile_content, 
-			   char            ** profile_content_reply, 
-			   VortexEncoding     encoding, 
-			   axlPointer         user_data)
-{
-	axlDoc   * doc;
-	axlError * error;
-
-	msg ("received request to tunnel..\n");
-	doc = axl_doc_parse (profile_content, strlen (profile_content), &error);
-	if (doc == NULL) {
-		/* fill an error to be reported */
-		*profile_content_reply = vortex_frame_get_error_message ("500", "failed to parse incoming tunnel spec.", NULL);
-
-		/* free the error */
-		axl_error_free (error);
-
-		return false;
-	} /* end if */
-
-	msg ("document parsed, resolv tunnel");
-	
-	/* free document */
-	axl_doc_free (doc);
-
-	return true;
-}
-
-/** 
- * @internal Implementation for the frame received for this profile. 
- */
-void tunnel_frame_received_handler (VortexChannel    * channel, 
-				    VortexConnection * connection, 
-				    VortexFrame      * frame, 
-				    axlPointer         user_data)
-{
-	
-}
-
-END_C_DECLS
