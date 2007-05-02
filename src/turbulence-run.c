@@ -201,13 +201,6 @@ void turbulence_run_config    ()
 		
 	} /* end if */
 
-	/* check for SASL profile support */
-	node = axl_doc_get (doc, "/turbulence/global-settings/sasl-support");
-	if (HAS_ATTR_VALUE (node, "enabled", "yes")) {
-		/* enable sasl support */
-		turbulence_sasl_enable ();
-	} /* end if */
-
 	node = axl_doc_get (doc, "/turbulence/global-settings/tls-support");
 	if (HAS_ATTR_VALUE (node, "enabled", "yes")) {
 		/* enable sasl support */

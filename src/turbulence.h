@@ -56,11 +56,12 @@
 #include <turbulence-moddef.h>
 #include <turbulence-config.h>
 #include <turbulence-run.h>
-#include <turbulence-sasl.h>
 #include <turbulence-module.h>
 #include <turbulence-log.h>
 
 /* definitions */
+
+void turbulence_set_console_debug (bool debug);
 
 /** 
  * Drops to the console stderr an error msg, placing the content
@@ -73,8 +74,8 @@
  * 
  * @param m The error message to output.
  */
-#define error(m,...) {__error (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}
-void  __error (const char * file, int line, const char * format, ...);
+#define error(m,...) do{turbulence_error (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_error (const char * file, int line, const char * format, ...);
 
 /** 
  * Drops to the console stdout a msg, placing the content prefixed
@@ -87,8 +88,8 @@ void  __error (const char * file, int line, const char * format, ...);
  * 
  * @param m The console message to output.
  */
-#define msg(m,...)   {__msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}
-void  __msg   (const char * file, int line, const char * format, ...);
+#define msg(m,...)   do{turbulence_msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_msg   (const char * file, int line, const char * format, ...);
 
 /** 
  * Drops to the console stdout a warning, placing the content prefixed
@@ -101,8 +102,8 @@ void  __msg   (const char * file, int line, const char * format, ...);
  * 
  * @param m The warning message to output.
  */
-#define wrn(m,...)   {__msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}
-void  __wrn   (const char * file, int line, const char * format, ...);
+#define wrn(m,...)   do{turbulence_msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_wrn   (const char * file, int line, const char * format, ...);
 
 
 bool turbulence_init (int argc, char ** argv);
@@ -142,5 +143,7 @@ bool turbulence_file_test   (const char * path,
 
 bool turbulence_file_test_v (const char * format, 
 			     FileTest test, ...);
+
+long int turbulence_last_modification (const char * file);
 
 #endif
