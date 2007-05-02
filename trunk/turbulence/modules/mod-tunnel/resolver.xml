@@ -1,0 +1,11 @@
+<tunnel-resolver>
+  <!-- match the tunnel request trying to reach the endpoint "af-kernel" which is resolved to the BEEP peer found at localhost:55000 -->
+  <match endpoint="af-kernel" host="localhost" port="55000" />
+
+  <!-- match the tunnel request trying to reach the endpoint "af-gestor-mecaes" -->
+  <match endpoint="af-gestor-mecaes" host="localhost" port="55000" />
+
+  <!-- match the request trying to reach the profile provided -->
+  <match profile="http://fact.aspl.es/profiles/coyote_profile" host="localhost" port="55000" />
+
+</tunnel-resolver>
