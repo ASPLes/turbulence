@@ -82,6 +82,8 @@ modules/mod-test/Makefile
 modules/mod-test/mod-test.xml
 modules/mod-tunnel/Makefile
 modules/mod-tunnel/mod-tunnel.xml
+modules/mod-sasl/Makefile
+modules/mod-sasl/mod-sasl.xml
 ])
 
 echo "------------------------------------------"
