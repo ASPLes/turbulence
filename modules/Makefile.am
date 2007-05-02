@@ -1,1 +1,1 @@
-SUBDIRS = mod-test mod-tunnel
+SUBDIRS = mod-test mod-tunnel mod-sasl

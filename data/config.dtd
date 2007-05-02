@@ -2,7 +2,7 @@
 <!ELEMENT turbulence (global-settings, modules, listener+)>
 
 <!-- global-settings -->
-<!ELEMENT global-settings (ports, log-reporting, sasl-support, tls-support)>
+<!ELEMENT global-settings (ports, log-reporting, tls-support, on-bad-signal)>
 
 <!ELEMENT ports           (port+)>
 <!ELEMENT port            (#PCDATA)>
@@ -22,11 +22,11 @@
 <!ELEMENT vortex-log         EMPTY>
 <!ATTLIST vortex-log  file   CDATA #REQUIRED>
 
-<!ELEMENT sasl-support          EMPTY>
-<!ATTLIST sasl-support enabled (yes|no) #REQUIRED>
-
 <!ELEMENT tls-support       EMPTY>
 <!ATTLIST tls-support enabled (yes|no) #REQUIRED>
+
+<!ELEMENT on-bad-signal       EMPTY>
+<!ATTLIST on-bad-signal action (hold|ignore|quit|exit) #REQUIRED>
 
 <!-- modules -->
 <!ELEMENT modules        (directory+, filter-modules)>
