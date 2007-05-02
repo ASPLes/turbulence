@@ -48,7 +48,8 @@ at <vortex@lists.aspl.es>."
 /** 
  * @internal Controls if messages must be send to the console log.
  */
-bool console_enabled = false;
+bool        console_enabled = false;
+int         turbulence_pid  = -1;
 
 bool        turbulence_is_existing = false;
 VortexMutex turbulence_exit_mutex;
@@ -83,7 +84,7 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_parse (argc, argv);
 
 	/* check if the console is defined */
-	console_enabled = exarg_is_defined ("debug");
+	turbulence_set_console_debug (exarg_is_defined ("debug"));
 
 	/*** init the vortex library ***/
 	if (! vortex_init ()) {
@@ -92,7 +93,7 @@ bool turbulence_init (int argc, char ** argv)
 	} /* end if */
 
 	/*** not required to initialize axl library, already done by vortex ***/
-	
+
 	msg ("turbulence internal init");
 	vortex_mutex_create (&turbulence_exit_mutex);
 	turbulence_module_init ();
@@ -131,6 +132,9 @@ void turbulence_reload_config (int value)
  */
 void turbulence_exit (int value)
 {
+	axlDoc           * doc;
+	axlNode          * node;
+	VortexAsyncQueue * queue;
 
 	/* lock the mutex and check */
 	vortex_mutex_lock (&turbulence_exit_mutex);
@@ -159,10 +163,24 @@ void turbulence_exit (int value)
 		msg ("caught SIGQUIT, terminating turbulence..");
 		break;
 	case SIGSEGV:
-		msg ("caught SIGSEV, anomalous termination (this is an internal turbulence or module error)");
-		break;
 	case SIGABRT:
-		msg ("caught SIGABRT, anomalous termination (this is an internal turbulence or module error)");
+		error ("caught %s, anomalous termination (this is an internal turbulence or module error)",
+		       value == SIGSEGV ? "SIGSEGV" : "SIGABRT");
+		
+		/* check current termination option */
+		doc  = turbulence_config_get ();
+		node = axl_doc_get (doc, "/turbulence/global-settings/on-bad-signal");
+		if (HAS_ATTR_VALUE (node, "action", "ignore")) {
+			/* ignore the signal emision */
+			return;
+		} else if (HAS_ATTR_VALUE (node, "action", "hold")) {
+			/* lock the process */
+			queue = vortex_async_queue_new ();
+			vortex_async_queue_pop (queue);
+			return;
+		}
+		
+		/* let turbulence to exit */
 		break;
 	default:
 		msg ("terminating turbulence..");
@@ -184,10 +202,11 @@ void turbulence_exit (int value)
  */
 void turbulence_cleanup ()
 {
+	msg ("cleaning up..");
+
 	/* terminate all modules */
 	turbulence_module_cleanup ();
 	turbulence_config_cleanup ();
-	
 
 	/* terminate vortex */
 	msg ("terminating vortex library..");
@@ -217,22 +236,37 @@ void turbulence_cleanup ()
  * or not.
  */
 #define CONSOLEV if (console_enabled) vfprintf
-    
+
+
+/** 
+ * @brief Allows to activated/deactivate the console log reporting.
+ * 
+ * @param debug The value to be configured, false to disable console
+ * log, true to enable it.
+ */
+void turbulence_set_console_debug (bool debug)
+{
+	/* get current process id */
+	turbulence_pid = getpid ();
+
+	/* set the value */
+	console_enabled = debug;
+}
 
 /** 
  * @internal function that actually handles the console error.
  */
-void __error (const char * file, int line, const char * format, ...)
+void turbulence_error (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
 	
 #if defined(AXL_OS_UNIX)	
 	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stderr, "[  \e[1;31m!!!\e[0m  ] (%s:%d) ", file, line);
+		CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", turbulence_pid, file, line);
 	} else
 #endif
-	CONSOLE (stderr, "[ error ] (%s:%d) ", file, line);
+	CONSOLE (stderr, "(proc:%d) [err] (%s:%d) ", turbulence_pid, file, line);
 	
 	va_start (args, format);
 
@@ -254,16 +288,16 @@ void __error (const char * file, int line, const char * format, ...)
 /** 
  * @internal function that actually handles the console msg.
  */
-void __msg (const char * file, int line, const char * format, ...)
+void turbulence_msg (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 
 #if defined(AXL_OS_UNIX)	
 	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stdout, "[  \e[1;32mmsg\e[0m  ] (%s:%d) ", file, line);
+		CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
 	} else
 #endif
-		CONSOLE (stdout, "[  msg  ] (%s:%d) ", file, line);
+		CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
 	
 	va_start (args, format);
 	
@@ -285,16 +319,16 @@ void __msg (const char * file, int line, const char * format, ...)
 /** 
  * @internal function that actually handles the console wrn.
  */
-void __wrn (const char * file, int line, const char * format, ...)
+void turbulence_wrn (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
 #if defined(AXL_OS_UNIX)	
 	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stdout, "[  \e[1;33m!!!\e[0m  ] (%s:%d) ", file, line);
+		CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
 	} else
 #endif
-	CONSOLE (stdout, "[  !!!  ] (%s:%d) ", file, line);
+	CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
 	
 	va_start (args, format);
 
@@ -414,4 +448,30 @@ bool   turbulence_file_test (const char * path, FileTest test)
 
 	/* return current result */
 	return result;
+}
+
+/** 
+ * @brief Allows to get the modification for the provided format,
+ * which can be used to detect file changes, to perform the required
+ * operations.
+ * 
+ * @param file The file to check for its modification time.
+ * 
+ * @return The last modification time for the file provided. The
+ * function return -1 if it fails.
+ */
+long int turbulence_last_modification (const char * file)
+{
+	struct stat status;
+
+	/* check file received */
+	if (file == NULL)
+		return -1;
+
+	/* get stat */
+	if (stat (file, &status) == 0)
+		return (long int) status.st_mtime;
+	
+	/* failed to get stats */
+	return -1;
 }

@@ -57,7 +57,7 @@ int main (int argc, char ** argv)
 	} else {
 		/* get the default configuration defined at
 		 * compilation time */
-		config = vortex_support_domain_find_data_file ("turbulence-conf", "config.xml");
+		config = vortex_support_domain_find_data_file ("turbulence-conf", "turbulence.conf");
 	} /* end if */
 
 	/* load main turb */
