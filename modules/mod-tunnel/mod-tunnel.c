@@ -38,6 +38,7 @@
 #include <mod-tunnel.h>
 
 axlDoc * mod_tunnel_resolver = NULL;
+axlDoc * tunnel_conf         = NULL;
 
 bool find_and_replace (const char * conf, axlNode * node)
 {
@@ -86,59 +87,41 @@ bool find_and_replace (const char * conf, axlNode * node)
  */
 VortexTunnelSettings * tunnel_resolver (const char * profile_content,
 					int          profile_content_size,
+					axlDoc     * doc,
 					axlPointer   user_data)
 {
 	
-	axlDoc               * doc  = NULL;
 	axlNode              * node = NULL;
 	char                 * content;
 	int                    size;
 	VortexTunnelSettings * settings;
 
-	/* empty case, do not perform any translation if found final
-	 * node */
-	if (axl_cmp (profile_content, "<tunnel />"))
-		return NULL;
-
-	/* parse profile content */
-	doc = axl_doc_parse (profile_content, profile_content_size, NULL);
-	if (doc == NULL) {
-		error ("unable to parse tunnel settings, doing no translation");
-		return NULL;
-	} /* end if */
-		
 	/* get root, that is, the next hop */
 	node = axl_doc_get_root (doc);
+
+	/* check profile and endpoint */
+	if (! HAS_ATTR (node, "endpoing") && ! HAS_ATTR (node, "profile"))
+		return NULL;
+
+	/* check and translate */
 	if (HAS_ATTR (node, "endpoint")) {
 		/* try to translate endpoing */
-		if (! find_and_replace ("endpoint", node)) {
-			goto no_translation;
-		} /* end if */
+		find_and_replace ("endpoint", node);
 	} /* end if */
 
+	/* check and translate */
 	if (HAS_ATTR (node, "profile")) {
 		/* try to translate endpoing */
-		if (! find_and_replace ("profile", node)) {
-			goto no_translation;
-		} /* end if */
+		find_and_replace ("profile", node);
 	} /* end if */
 
 	/* dump the content translated, and free document */
 	axl_doc_dump (doc, &content, &size);
-	axl_doc_free (doc);
 
 	/* create settings, free content and return value */
 	settings = vortex_tunnel_settings_new_from_xml (content, size);
 	axl_free (content);
 	return settings;
-	       
- no_translation:
-	/* free doc */
-	axl_doc_free (doc);
-
-	msg ("no translation provided");
-		
-	return NULL;
 }
 
 /** 
@@ -149,7 +132,6 @@ VortexTunnelSettings * tunnel_resolver (const char * profile_content,
  */
 static bool tunnel_init ()
 {
-	axlDoc   * doc;
 	axlNode  * node;
 	axlError * error;
 	char     * config;
@@ -167,10 +149,10 @@ static bool tunnel_init ()
 						   vortex_support_build_filename (SYSCONFDIR, "turbulence", "tunnel", NULL));
 
 	/* load module settings */
-	config = vortex_support_domain_find_data_file ("tunnel", "tunnel.conf");
-	doc    = axl_doc_parse_from_file (config, &error);
+	config       = vortex_support_domain_find_data_file ("tunnel", "tunnel.conf");
+	tunnel_conf  = axl_doc_parse_from_file (config, &error);
 	axl_free (config);
-	if (doc == NULL) {
+	if (tunnel_conf == NULL) {
 		error ("failed to init the TUNNEL profile, unable to find configuration file, error: %s",
 		       axl_error_get (error));
 		axl_error_free (error);
@@ -178,7 +160,7 @@ static bool tunnel_init ()
 	} /* end if */
 	
 	/* init translation database */
-	node                = axl_doc_get (doc, "/mod-tunnel/tunnel-resolver");
+	node                = axl_doc_get (tunnel_conf, "/mod-tunnel/tunnel-resolver");
 	if (HAS_ATTR_VALUE (node, "type", "xml") &&
 	    HAS_ATTR (node, "location")) {
 		/* find the file to load */
@@ -214,6 +196,8 @@ static bool tunnel_init ()
 static void tunnel_close ()
 {
 	msg ("turbulence TUNNEL close");
+	axl_doc_free (tunnel_conf);
+	axl_doc_free (mod_tunnel_resolver);
 }
 
 /**

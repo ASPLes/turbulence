@@ -35,17 +35,13 @@
  *      Email address:
  *         info@aspl.es - http://fact.aspl.es
  */
-#ifndef __TURBULENCE_CONFIG_H__
-#define __TURBULENCE_CONFIG_H__
+#ifndef __TURBULENCE_PPATH_H__
+#define __TURBULENCE_PPATH_H__
 
 #include <turbulence.h>
 
-bool            turbulence_config_load    (char * config);
+void turbulence_ppath_init ();
 
-const    char * turbulence_config_mods_dir ();
+void turbulence_ppath_cleanup ();
 
-void            turbulence_config_cleanup ();
-
-axlDoc        * turbulence_config_get ();
-
-#endif
+#endif /* end __TURBULENCE_PPATH_H__ */

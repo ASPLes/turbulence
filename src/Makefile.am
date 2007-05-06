@@ -1,9 +1,15 @@
 EXTRA_DIST = 
 
+# profile a flag to enable the source to code to react agaisnt the
+# pcre inclusion.
+if ENABLE_PCRE_SUPPORT
+INCLUDE_PCRE_SUPPORT=-DENABLE_PCRE_SUPPORT
+endif
+
 INCLUDES = -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
-	   -DDATADIR=\""$(datadir)"\" \
+	   -DDATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -ansi
 
 bin_PROGRAMS = turbulence
@@ -21,8 +27,9 @@ libturbulence_la_SOURCES = turbulence-moddef.h \
 	turbulence-config.c turbulence.h \
 	turbulence-run.c turbulence-run.h \
 	turbulence-module.c turbulence-module.h \
-	turbulence-log.c turbulence-log.h
-libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) 
+	turbulence-log.c turbulence-log.h \
+	turbulence-ppath.c turbulence-ppath.h
+libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'
 
 libturbulenceincludedir = $(includedir)/turbulence

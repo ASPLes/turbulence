@@ -58,6 +58,7 @@
 #include <turbulence-run.h>
 #include <turbulence-module.h>
 #include <turbulence-log.h>
+#include <turbulence-ppath.h>
 
 /* definitions */
 

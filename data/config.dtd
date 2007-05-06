@@ -1,5 +1,5 @@
 <!-- main configuration setting -->
-<!ELEMENT turbulence (global-settings, modules, listener+)>
+<!ELEMENT turbulence (global-settings, modules, listener+, profile-path-configuration)>
 
 <!-- global-settings -->
 <!ELEMENT global-settings (ports, log-reporting, tls-support, on-bad-signal)>
@@ -38,9 +38,29 @@
 <!ELEMENT by-module       EMPTY>
 <!ATTLIST by-module name  CDATA #REQUIRED>
 
-<!-- server-name -->
+<!-- listener to be started -->
 <!ELEMENT listener    (name+)>
 <!ELEMENT name        (#PCDATA)>
+
+<!-- profile-path-configuration support -->
+<!ELEMENT profile-path-configuration  (path-def+)>
+<!ELEMENT path-def        (if-success | allow)*>
+
+<!ELEMENT if-success      (if-success | allow)*>
+<!ELEMENT allow           (if-success | allow)*>
+
+<!ATTLIST path-def 
+          path-name   CDATA #IMPLIED
+          server-name CDATA #IMPLIED
+	  src         CDATA #IMPLIED >
+
+<!ATTLIST if-success 
+          profile     CDATA #REQUIRED>
+	  
+<!ATTLIST allow
+          profile     CDATA #REQUIRED>
+          
+
 
 
 

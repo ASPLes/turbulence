@@ -62,7 +62,10 @@ int main (int argc, char ** argv)
 
 	/* load main turb */
 	msg ("using configuration file: %s", config);
-	turbulence_config_load (config);
+	if (! turbulence_config_load (config)) {
+		/* unable to load configuration */
+		return -1;
+	}
 
 	/* rest of modules to initialize */
 	turbulence_log_init ();
