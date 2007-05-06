@@ -35,17 +35,76 @@
  *      Email address:
  *         info@aspl.es - http://fact.aspl.es
  */
-#ifndef __TURBULENCE_CONFIG_H__
-#define __TURBULENCE_CONFIG_H__
+#include <turbulence-ppath.h>
+#include <pcre.h>
 
-#include <turbulence.h>
+typedef enum {
+	PROFILE_ALLOW, 
+	PROFILE_IF
+} TurbulencePPathItemType;
 
-bool            turbulence_config_load    (char * config);
-
-const    char * turbulence_config_mods_dir ();
-
-void            turbulence_config_cleanup ();
-
-axlDoc        * turbulence_config_get ();
-
+typedef struct _TurbulencePPathItem {
+	/* The type of the profile item path  */
+	TurbulencePPathItemType type;
+	
+	/* support for the profile to be matched by this profile item
+	 * path */
+#if defined(ENABLE_PCRE_SUPPORT)
+	pcre * profile;
+#else   
+	char * profile;
 #endif
+	
+} TurbulencePPathItem;
+
+typedef struct _TurbulencePPathDef {
+	/* the name of the profile path group (optional value) */
+	char * path_name;
+
+	/* the server name pattern to be used to match the profile
+	 * path. If turbulence wasn't built with pcre support, it will
+	 * compiled as an string. */
+#if defined(ENABLE_PCRE_SUPPORT)
+	pcre * serverName;
+#else   
+	char * serverName;
+#endif
+
+	/* source filter pattern. Again, if the library doesn't
+	 * support regular expression, the source is taken as an
+	 * string */
+#if defined(ENABLE_PCRE_SUPPORT)
+	pcre * src;
+#else   
+	char * src;
+#endif
+	/* a reference to the list of profile path supported */
+	TurbulencePPathItem * ppath_item;
+	
+} TurbulencePPathDef;
+
+typedef struct _TurbulencePPath {
+	/* list of profile paths found */
+	TurbulencePPathDef * items;
+	
+} TurbulencePPath;
+
+/** 
+ * @internal Prepares the runtime execution to provide profile path
+ * support according to the current configuration.
+ * 
+ */
+void turbulence_ppath_init ()
+{
+	
+}
+
+/** 
+ * @internal Terminates the profile path module, cleanup all memory
+ * used.
+ */
+void turbulence_ppath_cleanup ()
+{
+	
+}
+

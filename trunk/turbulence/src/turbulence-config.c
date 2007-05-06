@@ -44,8 +44,11 @@ axlDoc * __turbulence_config = NULL;
  * turbulence to start.
  * 
  * @param config 
+ * 
+ * @return true if the configuration file looks ok and it is
+ * syncatically correct.
  */
-void turbulence_config_load (char * config)
+bool turbulence_config_load (char * config)
 {
 	axlError * error;
 	axlDtd   * dtd_file;
@@ -55,7 +58,7 @@ void turbulence_config_load (char * config)
 	if (config == NULL) {
 		error ("config file not defined, terminating turbulence");
 		turbulence_exit (-1);
-		return;
+		return false;
 	} /* end if */
 
 	/* load the file */
@@ -70,7 +73,7 @@ void turbulence_config_load (char * config)
 
 		/* call to finish turbulence */
 		turbulence_exit (-1);
-		return;
+		return false;
 
 	} /* end if */
 	
@@ -92,7 +95,7 @@ void turbulence_config_load (char * config)
 		error ("unable to find turbulence config DTD definition (config.dtd), check your turbulence installation.");
 
 		turbulence_exit (-1);
-		return;
+		return false;
 	} /* end if */
  
 	/* found dtd file */
@@ -105,18 +108,22 @@ void turbulence_config_load (char * config)
 		axl_free (dtd);
 
 		turbulence_exit (-1);
-		return;
+		return false;
 	} /* end if */
 
 	if (! axl_dtd_validate (__turbulence_config, dtd_file, &error)) {
 		error ("unable to validate server configuration (%s), something is wrong: %s", 
 		       dtd, axl_error_get (error));
+
+		/* free and set a null reference */
 		axl_doc_free (__turbulence_config);
+		__turbulence_config = NULL;
+
 		axl_error_free (error);
 		axl_free (dtd);
 
 		turbulence_exit (-1);
-		return;
+		return false;
 	} /* end if */
 
 	msg ("server configuration is valid..");
@@ -125,7 +132,7 @@ void turbulence_config_load (char * config)
 	axl_dtd_free (dtd_file);
 	axl_free (dtd);
 
-	return;
+	return true;
 }
 
 /** 

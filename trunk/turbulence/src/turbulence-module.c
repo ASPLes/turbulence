@@ -172,6 +172,12 @@ void               turbulence_module_free (TurbulenceModule * module)
 	if (module == NULL)
 		return;
 
+	/* call to close the module */
+	if (module->def->close != NULL) {
+		msg ("closing module: %s", module->def->mod_name);
+		module->def->close ();
+	}
+
 	axl_free (module->path);
 	/* call to unload the module */
 	if (module->handle)
