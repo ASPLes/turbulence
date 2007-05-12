@@ -75,6 +75,10 @@ int main (int argc, char ** argv)
 	msg ("about to startup configuration found..");
 	turbulence_run_config ();
 
+	/* init profile path */
+	if (! turbulence_ppath_init ())
+		return false;
+
 	/* look main thread until finished */
 	vortex_listener_wait ();
 	

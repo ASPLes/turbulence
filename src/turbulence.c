@@ -211,6 +211,9 @@ void turbulence_cleanup ()
 	/* terminate vortex */
 	msg ("terminating vortex library..");
 	vortex_exit ();
+
+	/* terminate profile path */
+	turbulence_ppath_cleanup ();
 	
 	/* terminate exarg */
 	msg ("terminating exarg library..");

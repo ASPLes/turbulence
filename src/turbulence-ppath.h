@@ -40,7 +40,7 @@
 
 #include <turbulence.h>
 
-void turbulence_ppath_init ();
+bool turbulence_ppath_init ();
 
 void turbulence_ppath_cleanup ();
 
