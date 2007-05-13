@@ -96,12 +96,16 @@ bool common_sasl_load_users_db (axlDoc ** sasl_xml_db, char * sasl_xml_db_path, 
 	axlError * error;
 
 	/* lock the mutex */
-	if (mutex != NULL)
-		vortex_mutex_lock (mutex);
+	vortex_mutex_lock (mutex);
 
 	/* check file modification */
-	if (turbulence_last_modification (sasl_xml_db_path) == sasl_xml_db_time)
+	if (turbulence_last_modification (sasl_xml_db_path) == sasl_xml_db_time) {
+		
+		/* lock the mutex */
+		vortex_mutex_unlock (mutex);
+
 		return true;
+	} /* end if */
 
 	msg ("loading sasl auth xml-db..");
 
@@ -115,8 +119,7 @@ bool common_sasl_load_users_db (axlDoc ** sasl_xml_db, char * sasl_xml_db_path, 
 	/* check db opened */
 	if (sasl_xml_db == NULL) {
 		/* unlock the mutex */
-		if (mutex != NULL)
-			vortex_mutex_unlock (mutex);
+		vortex_mutex_unlock (mutex);
 
 		error ("failed to init the SASL profile, unable to auth db, error: %s",
 		       axl_error_get (error));
@@ -128,8 +131,7 @@ bool common_sasl_load_users_db (axlDoc ** sasl_xml_db, char * sasl_xml_db_path, 
 	sasl_xml_db_time = turbulence_last_modification (sasl_xml_db_path);
 
 	/* unlock the mutex */
-	if (mutex != NULL)
-		vortex_mutex_unlock (mutex);
+	vortex_mutex_unlock (mutex);
 	
 	return true;
 }

@@ -99,6 +99,13 @@ typedef struct _TurbulencePPath {
 
 TurbulencePPath * turbulence_paths = NULL;
 
+typedef struct _TurbulencePPathState {
+	/* a reference to the profile path selected for the
+	 * connection */
+	TurbulencePPathDef * path_selected;
+
+} TurbulencePPathState;
+
 /**
  * @internal Support function to parse the expression provided or to
  * just copy the string if turbulence wasn't built without pcre
@@ -151,6 +158,26 @@ void __turbulence_ppath_free_expr (axlPointer expr)
 	return;
 }
 
+/** 
+ * @internal Function that allows perform matching against the
+ * expression, using the subject received. According to the
+ * compilation process, this operation will be performed against the
+ * pcre library or a simple string match.
+ */
+bool __turbulence_ppath_match_expr (axlPointer expr, const char * subject)
+{
+	/* return false if either values received are null */
+	if (subject == NULL || expr == NULL)
+		return false;
+
+#if defined(ENABLE_PCRE_SUPPORT)
+	/* check against the pcre expression */
+	return pcre_exec (expr, NULL, subject, strlen (subject), 0, 0, NULL, 0) >= 0;
+#else
+	return axl_cmp (expr, subject);
+#endif
+}
+
 TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 {
 	axlNode             * child;
@@ -194,6 +221,204 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 	
 	/* return result parsed */
 	return result;
+}
+
+#define TURBULENCE_PPATH_STATE "tu::pp:st"
+
+bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items, 
+				    TurbulencePPathState * state, 
+				    const char           * uri, 
+				    const char           * serverName,
+				    int                    channel_num,
+				    VortexConnection     * connection,
+				    const char           * profile_content)
+{
+	int                   iterator;
+	TurbulencePPathItem * item;
+	axlList             * profiles;
+	int                   iterator2;
+
+	msg ("checking profile uri=%s", uri);
+
+	iterator = 0;
+	while (ppath_items[iterator]) {
+		/* item from the profile path */
+		item = state->path_selected->ppath_item[iterator];
+
+		/* check the profile uri */
+		if (! __turbulence_ppath_match_expr (item->profile, uri)) {
+			/* profile doesn't match, go to the next */
+			iterator++;
+			continue;
+		} /* end if */
+
+		/* profile path matched! */
+
+		/* check if the channel num is defined */
+		if (channel_num > 0  && state->path_selected->serverName != NULL) {
+
+			/* check the serverName value provided against
+			 * the configuration */
+			if (! __turbulence_ppath_match_expr (state->path_selected->serverName, serverName ? serverName : "")) {
+				error ("serverName='%s' doesn't match profile path conf", serverName ? serverName : "");
+				/* filter the channel creation because
+				 * the serverName provided doesn't
+				 * match */
+				return true;
+			} /* end if */
+		} /* end if */
+
+		/* profile properly matched, including the serverName */
+		return false;
+	} /* end if */
+
+	/* now check for second level profile path configurations,
+	 * based on <if-success> */
+	iterator = 0;
+	while (state->path_selected->ppath_item[iterator]) {
+		/* item from the profile path */
+		item = state->path_selected->ppath_item[iterator];
+
+		/* check if the profile path item is an IF
+		 * expression. In such case, check if the profile
+		 * provided by the if-expression is already running on
+		 * the connection. If the connection have the profile,
+		 * check all <allow> and <if-success> nodes inside. */
+		if (item->type == PROFILE_IF) {
+
+			/* try to find a profile that matches the expression found */
+			profiles = vortex_profiles_get_actual_list_ref ();
+			iterator2 = 0;
+			while (iterator2 < axl_list_length (profiles)) {
+
+				/* try to match the profile expression against
+				   a concrete profile value */
+				if (! __turbulence_ppath_match_expr (item->profile, 
+								     axl_list_get_nth (profiles, iterator))) {
+
+					/* found, now check if the profile is running on the
+					 * conection */
+					if (vortex_connection_get_channel_by_uri (connection, 
+										  axl_list_get_nth (profiles, iterator))) {
+						
+						/* check if the profile provided is found in the allow
+						 * configuration */
+						if (! __turbulence_ppath_mask_items (item->ppath_item, 
+										     state, uri, serverName, channel_num, connection, profile_content)) {
+							/* profile allowed, do not filter */
+							return false;
+						} /* end if */
+
+					} /* end if */
+
+				} /* end if */
+
+				/* go to the next item */
+				iterator2++;
+
+			} /* end while */
+
+		} /* end if */
+
+		/* next item to process */
+		iterator++;
+	} /* end if */
+
+
+	/* not matched ! */
+	return true;
+}
+
+/** 
+ * @internal Mask function that allows to control how profiles are
+ * handled and sequenced by the client according to the state of the
+ * connection (profiles already accepted, etc).
+ */
+bool __turbulence_ppath_mask (VortexConnection * connection, 
+			      int                channel_num,
+			      const char       * uri,
+			      const char       * profile_content,
+			      const char       * serverName,
+			      axlPointer         user_data)
+{
+	/* get a reference to the turbulence profile path state */
+	TurbulencePPathState  * state = user_data;
+
+	msg ("checking profile path mask status..");
+
+	/* check if the profile provided is found in the <allow> or
+	 * <if-success> configuration */
+	if (! __turbulence_ppath_mask_items (state->path_selected->ppath_item, 
+					     state, uri, serverName, channel_num, connection, profile_content)) {
+		msg ("profile: %s not filtered..", uri);
+		/* profile allowed, do not filter */
+		return false;
+	} /* end if */
+
+	/* filter any other option */
+	return true;
+}
+
+/** 
+ * @internal Server init handler that allows to check the connectio
+ * source and select the appropiate profile path to be used for the
+ * connection. It also sets the required handler to enforce profile
+ * path policy.
+ *
+ * In the case a profile path definition is not found, the handler
+ * just denies the connection.
+ */
+bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
+{
+	TurbulencePPathState * state;
+	TurbulencePPathDef   * def = NULL;
+	int                    iterator;
+	const char           * src;
+
+	/* try to find a profile path that could match with the
+	 * provided source */
+	iterator = 0;
+	src      = vortex_connection_get_host (connection);
+	while (turbulence_paths->items[iterator] != NULL) {
+		/* get the profile path def */
+		def = turbulence_paths->items[iterator];
+		msg ("checking profile path def: %s", def->path_name ? def->path_name : "(no path name defined)");
+
+		/* try to match the src expression against the connection value */
+		if (__turbulence_ppath_match_expr (def->src, src)) {
+			/* match found */
+			msg ("profile path found, setting default state: %s, connection id=%d, src=%s", 
+			     def->path_name ? def->path_name : "(no path name defined)",
+			     vortex_connection_get_id (connection), src);
+			break;
+		}
+		
+		/* next profile path definition */
+		iterator++;
+		def = NULL;
+
+	} /* end while */
+	
+	if (def == NULL) {
+		/* no profile path def was found, rejecting
+		 * connection */
+		return false;
+	} /* end if */
+
+	/* create and store */
+	state                = axl_new (TurbulencePPathState, 1);
+	state->path_selected = def;
+	vortex_connection_set_data_full (connection, 
+					 /* the key and its associated value */
+					 TURBULENCE_PPATH_STATE, state,
+					 /* destroy functions */
+					 NULL, axl_free);
+	
+	/* now configure the profile path mask to handle how channels
+	 * and profiles are accepted */
+	vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask, state);
+	
+	return true;
 }
 
 /** 
@@ -270,6 +495,9 @@ bool turbulence_ppath_init ()
 		iterator++;
 		pdef = axl_node_get_next (pdef);
 	} /* end while */
+
+	/* install server connection accepted */
+	vortex_listener_set_on_connection_accepted (__turbulence_ppath_handle_connection, NULL);
 	
 	msg ("profile path definition ok..");
 

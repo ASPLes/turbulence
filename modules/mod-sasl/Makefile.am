@@ -6,10 +6,9 @@ INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DDATADIR=\""$(datadir)"\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
-pkglib_LTLIBRARIES   = mod-sasl.la
+lib_LTLIBRARIES   = mod-sasl.la
 mod_sasl_la_SOURCES  = mod-sasl.c common-sasl.c common-sasl.h
 mod_sasl_la_LDFLAGS  = -module -ldl
-
 
 # reconfigure module installation directory
 libdir = $(prefix)/lib/turbulence/modules

@@ -41,6 +41,11 @@
  * names. */
 BEGIN_C_DECLS
 
+#define MOD_TEST_URI1 "http://turbulence.ws/profiles/test1"
+#define MOD_TEST_URI2 "http://turbulence.ws/profiles/test2"
+#define MOD_TEST_URI3 "http://turbulence.ws/profiles/test3"
+#define MOD_TEST_URI4 "http://turbulence.ws/profiles/test4"
+
 /** 
  * @brief Init function, perform all the necessary code to register
  * profiles, configure Vortex, and any other task. The function must
@@ -50,6 +55,27 @@ BEGIN_C_DECLS
 static bool test_init ()
 {
 	msg ("Turbulence BEEP server, test module: init");
+
+	/* register all profiles without handlers: testing purposes */
+	vortex_profiles_register (MOD_TEST_URI1,
+				  NULL, NULL,
+				  NULL, NULL,
+				  NULL, NULL);
+
+	vortex_profiles_register (MOD_TEST_URI2,
+				  NULL, NULL,
+				  NULL, NULL,
+				  NULL, NULL);
+
+	vortex_profiles_register (MOD_TEST_URI3,
+				  NULL, NULL,
+				  NULL, NULL,
+				  NULL, NULL);
+
+	vortex_profiles_register (MOD_TEST_URI4,
+				  NULL, NULL,
+				  NULL, NULL,
+				  NULL, NULL);
 
 	return true;
 }
