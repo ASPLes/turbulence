@@ -36,7 +36,9 @@
  *         info@aspl.es - http://fact.aspl.es
  */
 #include <turbulence-ppath.h>
+#if defined (ENABLE_PCRE_SUPPORT)
 #include <pcre.h>
+#endif
 
 typedef enum {
 	PROFILE_ALLOW, 
@@ -65,6 +67,10 @@ struct _TurbulencePPathItem {
 	/* support for the profile to be matched by this profile item
 	 * path */
 	expr * profile;
+
+	/* optional expression to match a mark that must have a
+	 * connection holding the profile */
+	char * connmark;
 
 	/* Another list for all profile path item found inside this
 	 * profile path item. This is only used by PROFILE_IF items */
@@ -106,6 +112,96 @@ typedef struct _TurbulencePPathState {
 
 } TurbulencePPathState;
 
+/** 
+ * @internal Function used to check if the string provided have
+ * content that must be revised to help its clarity.
+ */
+bool      __turbulence_ppath_has_escapable_chars        (const char * expression,
+							 int          expression_size,
+							 int        * added_size)
+{
+	int      iterator = 0;
+	bool     result   = false;
+
+	/* reset additional size value */
+	*added_size = 0;
+
+	/* calculate the content size */
+	expression_size = strlen (expression);
+
+	/* iterate over all content defined */
+	while (iterator < expression_size) {
+
+		/* check for .* */
+		if (expression [iterator] == '*' && expression [iterator - 1] != '.' ) {
+			result = true;
+			(*added_size) += 1;
+		}
+
+		/* check for \/ */
+		if (expression [iterator] == '/' && expression [iterator - 1] != '\\' ) {
+			result = true;
+			(*added_size) += 1;
+		}
+
+		/* update the iterator */
+		iterator++;
+	} /* end if */
+
+	/* return results */
+	return result;
+} /* end __turbulence_ppath_has_escapable_chars */
+
+/** 
+ * @internal Support function which used information provided by
+ * previous function to expand the string providing a perl regular
+ * expression compatible if used / and *.
+ */
+char * __turbulence_ppath_copy_and_escape (const char * expression, 
+					   int          expression_size, 
+					   int          additional_size)
+{
+	int    iterator  = 0;
+	int    iterator2 = 0;
+	char * result;
+	axl_return_val_if_fail (expression, false);
+
+	/* allocate the memory to be returned */
+	result = axl_new (char, expression_size + additional_size + 1);
+
+	/* iterate over all expression defined */
+	while (iterator2 < expression_size) {
+		if (iterator2 > 0) {
+			/* check for .* */
+			if (expression [iterator2] == '*' && expression [iterator2 - 1] != '.') {
+				memcpy (result + iterator, ".*", 2);
+				iterator += 2;
+				iterator2++;
+				continue;
+			}
+			
+			/* check for .* */
+			if (expression [iterator2] == '/' && expression [iterator2 - 1] != '\\') {
+				memcpy (result + iterator, "\\/", 2);
+				iterator += 2;
+				iterator2++;
+				continue;
+			}
+		} /* end if */
+
+		/* copy value received because it is not an escape
+		 * sequence */
+		memcpy (result + iterator, expression + iterator2, 1);
+
+		/* update the iterator */
+		iterator++;
+		iterator2++;
+	} /* end while */
+
+	/* return results */
+	return result;
+} /* end __turbulence_ppath_copy_and_escape */
+
 /**
  * @internal Support function to parse the expression provided or to
  * just copy the string if turbulence wasn't built without pcre
@@ -117,6 +213,19 @@ axlPointer __turbulence_ppath_compile_expr (const char * expression, const char 
 	pcre       * result;
 	const char * error;
 	int          erroroffset;
+	bool         dealloc = false;
+	int          additional_size;
+	
+	/* do some regular expression support to avoid making it
+	 * painful */
+	if (__turbulence_ppath_has_escapable_chars (expression, strlen (expression), &additional_size)) {
+		/* expand all * and / values which are not preceded as
+		 * .* or \/ */
+		msg ("NOTE: expanding expression: %s..", expression);
+		expression = __turbulence_ppath_copy_and_escape (expression, strlen (expression), additional_size);
+		msg ("      to: %s..", expression);
+		dealloc    = true;
+	} /* end if */
 	
 	/* compile expression */
 	result = pcre_compile (
@@ -126,12 +235,21 @@ axlPointer __turbulence_ppath_compile_expr (const char * expression, const char 
 		0,
 		/* provide a reference to the error reporting */
 		&error, &erroroffset, NULL);
+
 	if (result == NULL) {
 		/* failed to parse server name matching */
 		error ("%s: %s, error: %s, at: %d",
 		       error_msg, expression, error, erroroffset);
+
+		/* check and dealloc */
+		if (dealloc)
+			axl_free ((char*) expression);
 		return NULL;
 	} /* end if */
+
+	/* check and dealloc */
+	if (dealloc)
+		axl_free ((char *) expression);
 
 	/* return expression */
 	return result;
@@ -189,11 +307,16 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 		/* the expression */
 		ATTR_VALUE (node, "profile"), 
 		/* error message */
-		"Failed to get profile expression");
+		"Failed to get profile expression..");
 	if (result->profile == NULL) {
 		axl_free (result);
 		return NULL;
 	} /* end if */
+
+	/* get the connmark flag if defined */
+	if (HAS_ATTR (node, "connmark")) {
+		result->connmark = axl_strdup (ATTR_VALUE (node, "connmark"));
+	}
 
 	/* configure the profile path item type */
 	if (NODE_CMP_NAME (node, "allow")) {
@@ -237,13 +360,14 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 	TurbulencePPathItem * item;
 	axlList             * profiles;
 	int                   iterator2;
+	char                * uri2;
 
 	msg ("checking profile uri=%s", uri);
 
 	iterator = 0;
 	while (ppath_items[iterator]) {
 		/* item from the profile path */
-		item = state->path_selected->ppath_item[iterator];
+		item = ppath_items[iterator];
 
 		/* check the profile uri */
 		if (! __turbulence_ppath_match_expr (item->profile, uri)) {
@@ -275,9 +399,9 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 	/* now check for second level profile path configurations,
 	 * based on <if-success> */
 	iterator = 0;
-	while (state->path_selected->ppath_item[iterator]) {
+	while (ppath_items[iterator]) {
 		/* item from the profile path */
-		item = state->path_selected->ppath_item[iterator];
+		item = ppath_items[iterator];
 
 		/* check if the profile path item is an IF
 		 * expression. In such case, check if the profile
@@ -285,22 +409,35 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 		 * the connection. If the connection have the profile,
 		 * check all <allow> and <if-success> nodes inside. */
 		if (item->type == PROFILE_IF) {
-
 			/* try to find a profile that matches the expression found */
 			profiles = vortex_profiles_get_actual_list_ref ();
 			iterator2 = 0;
 			while (iterator2 < axl_list_length (profiles)) {
 
+				/* get the uri value */
+				uri2 = axl_list_get_nth (profiles, iterator2);
+				
 				/* try to match the profile expression against
 				   a concrete profile value */
-				if (! __turbulence_ppath_match_expr (item->profile, 
-								     axl_list_get_nth (profiles, iterator))) {
+				if ( __turbulence_ppath_match_expr (item->profile, uri2)) {
+
+					msg ("<if-success node have a profile found in the list: %s", uri2);
 
 					/* found, now check if the profile is running on the
 					 * conection */
-					if (vortex_connection_get_channel_by_uri (connection, 
-										  axl_list_get_nth (profiles, iterator))) {
-						
+					if (vortex_connection_get_channel_by_uri (connection, uri2)) {
+
+						msg ("the profile %s is being used by the connection..", uri2);
+
+						/* now check its optional mark */
+						if (item->connmark != NULL) {
+							if (! vortex_connection_get_data (connection, item->connmark)) {
+								/* the mark doesn't match the connection */
+								iterator2++;
+								continue; 
+							} /* end if */
+						} /* end if */
+
 						/* check if the profile provided is found in the allow
 						 * configuration */
 						if (! __turbulence_ppath_mask_items (item->ppath_item, 
@@ -308,6 +445,8 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 							/* profile allowed, do not filter */
 							return false;
 						} /* end if */
+
+						msg ("childs inside doen't allow the profile: %s", uri);
 
 					} /* end if */
 
@@ -326,6 +465,7 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 
 
 	/* not matched ! */
+	error ("profile %s not allowed with your context", uri);
 	return true;
 }
 
@@ -511,6 +651,9 @@ void __turbulence_ppath_free_item (TurbulencePPathItem * item)
 
 	/* free profile expression */
 	__turbulence_ppath_free_expr (item->profile);
+
+	/* free connmark */
+	axl_free (item->connmark);
 
 	iterator = 0;
 	while (item->ppath_item != NULL && item->ppath_item[iterator]) {
