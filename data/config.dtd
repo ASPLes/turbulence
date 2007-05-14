@@ -54,11 +54,13 @@
           server-name CDATA #IMPLIED
 	  src         CDATA #IMPLIED >
 
+
 <!ATTLIST if-success 
-          profile     CDATA #REQUIRED>
+          profile     CDATA #REQUIRED
+          connmark    CDATA #IMPLIED >
 	  
 <!ATTLIST allow
-          profile     CDATA #REQUIRED>
+          profile     CDATA #REQUIRED >
           
 
 
