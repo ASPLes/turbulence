@@ -580,3 +580,22 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 	/* do not return anything from this point */
 	return result;
 }
+
+/**
+ * \mainpage 
+ *
+ * \section intro Introduction
+ *
+ * Turbulence is a general server side application that implements
+ * many of the administrative tasks required while deploying BEEP
+ * applications based on Vortex Library. Because Vortex Library
+ * (http://vortex.aspl.es) only provides support for the BEEP
+ * protocol, a server side application is required on top of it to
+ * init the library and the required provisioning, connecting the
+ * protocol to the real problem to be solved.
+ * 
+ * 
+ * 
+ *
+ * 
+ */
