@@ -139,12 +139,19 @@ typedef enum {
 } FileTest;
 
 
-bool turbulence_file_test   (const char * path,   
-			     FileTest test);
+bool     turbulence_file_test   (const char * path,   
+				 FileTest test);
 
-bool turbulence_file_test_v (const char * format, 
-			     FileTest test, ...);
+bool     turbulence_file_test_v (const char * format, 
+				 FileTest test, ...);
 
 long int turbulence_last_modification (const char * file);
+
+typedef enum {
+	DISABLE_STDIN_ECHO = 1 << 0,
+} TurbulenceIoFlags;
+
+char *   turbulence_io_get (char * prompt, TurbulenceIoFlags flags);
+
 
 #endif
