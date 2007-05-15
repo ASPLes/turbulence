@@ -57,10 +57,12 @@
 
 <!ATTLIST if-success 
           profile     CDATA #REQUIRED
-          connmark    CDATA #IMPLIED >
+          connmark    CDATA #IMPLIED 
+          preconnmark CDATA #IMPLIED >
 	  
 <!ATTLIST allow
-          profile     CDATA #REQUIRED >
+          profile     CDATA #REQUIRED 
+          preconnmark CDATA #IMPLIED >
           
 
 

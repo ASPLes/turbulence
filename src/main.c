@@ -73,7 +73,8 @@ int main (int argc, char ** argv)
 	/* not required to free config var, already done by previous
 	 * function */
 	msg ("about to startup configuration found..");
-	turbulence_run_config ();
+	if (! turbulence_run_config ())
+		return false;
 
 	/* init profile path */
 	if (! turbulence_ppath_init ())
