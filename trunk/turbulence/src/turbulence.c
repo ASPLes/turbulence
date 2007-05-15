@@ -87,11 +87,24 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_install_arg ("color-debug", "c", EXARG_NONE,
 			   "Makes console log to be colorified");
 
+	exarg_install_arg ("vortex-debug", NULL, EXARG_NONE,
+			   "Enable vortex debug");
+
+	exarg_install_arg ("vortex-debug-color", NULL, EXARG_NONE,
+			   "Makes vortex debug to be done using colors according to the message type. If this variable is activated, vortex-debug variable is activated implicitly.");
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
 	/* check if the console is defined */
 	turbulence_set_console_debug (exarg_is_defined ("debug"));
+
+	/* enable vortex debug */
+	vortex_log_enable (exarg_is_defined ("vortex-debug"));
+	if (exarg_is_defined ("vortex-debug-color")) {
+		vortex_log_enable       (true);
+		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
+	} /* end if */
 
 	/*** init the vortex library ***/
 	if (! vortex_init ()) {
