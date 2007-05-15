@@ -392,8 +392,8 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 	}
 
 	/* get the pre-connmark flag if defined */
-	if (HAS_ATTR (node, "pre-connmark")) {
-		result->preconnmark = axl_strdup (ATTR_VALUE (node, "pre-connmark"));
+	if (HAS_ATTR (node, "preconnmark")) {
+		result->preconnmark = axl_strdup (ATTR_VALUE (node, "preconnmark"));
 	}
 
 	/* configure the profile path item type */
