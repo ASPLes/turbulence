@@ -35,6 +35,13 @@
  *      Email address:
  *         info@aspl.es - http://fact.aspl.es
  */
+#if defined(ENABLE_TERMIOS)
+# include <termios.h>
+# include <sys/stat.h>
+# include <unistd.h>
+# define TBC_TERMINAL "/dev/tty"
+#endif
+
 #include <turbulence.h>
 #include <signal.h>
 
@@ -477,4 +484,86 @@ long int turbulence_last_modification (const char * file)
 	
 	/* failed to get stats */
 	return -1;
+}
+
+
+/*
+ * @brief Allows to get the next line read from the user. The function
+ * return an string allocated.
+ * 
+ * @return An string allocated or NULL if nothing was received.
+ */
+char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
+{
+	struct termios current_set;
+	struct termios new_set;
+	int input;
+	int output;
+
+	/* buffer declaration */
+	char   buffer[1024];
+	char * result = NULL;
+	int    iterator;
+	
+	/* try to read directly from the tty */
+	if ((input = output = open (TBC_TERMINAL, O_RDWR)) < 0) {
+		/* if fails to open the terminal, use the standard
+		 * input and standard error */
+		input  = STDIN_FILENO;
+		output = STDERR_FILENO;
+	} /* end if */
+
+	/* print the prompt if defined */
+	if (prompt != NULL) {
+		/* write the prompt */
+		write (output, prompt, strlen (prompt));
+		fsync (output);
+	}
+
+	/* check to disable echo */
+	if (flags & DISABLE_STDIN_ECHO) {
+		if (input != STDIN_FILENO && (tcgetattr (input, &current_set) == 0)) {
+			/* copy to the new set */
+			memcpy (&new_set, &current_set, sizeof (struct termios));
+			
+			/* configure new settings */
+			new_set.c_lflag &= ~(ECHO | ECHONL);
+			
+			/* set this values to the current input */
+			tcsetattr (input, TCSANOW, &new_set);
+		} /* end if */
+	} /* end if */
+
+	iterator = 0;
+	memset (buffer, 0, 1024);
+	/* get the next character */
+	while ((iterator < 1024) && (read (input, buffer + iterator, 1) == 1)) {
+		
+		if (buffer[iterator] == '\n') {
+			/* remove trailing \n */
+			buffer[iterator] = 0;
+			result = axl_strdup (buffer);
+
+			break;
+		} /* end if */
+
+
+		/* update the iterator */
+		iterator++;
+	}
+
+	/* return terminal settings if modified */
+	if (flags & DISABLE_STDIN_ECHO) {
+		if (input != STDIN_FILENO) {
+			
+			/* set this values to the current input */
+			tcsetattr (input, TCSANOW, &current_set);
+
+			/* close opened file descriptor */
+			close (input);
+		} /* end if */
+	} /* end if */
+
+	/* do not return anything from this point */
+	return result;
 }

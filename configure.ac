@@ -50,6 +50,9 @@ AC_ISC_POSIX
 AC_HEADER_STDC
 AM_PROG_LIBTOOL
 
+AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
+AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
+
 dnl external dependencies
 PKG_CHECK_MODULES(AXL, axl >= 0.4.4) 
 
@@ -134,6 +137,7 @@ echo "--       Turbulence Settings            --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
+echo "   build tbc-sasl-conf:            [$termios_found]"
 echo
 echo "------------------------------------------"
 echo "--            Let it beep!              --"
