@@ -22,8 +22,10 @@ modconfdir   = $(sysconfdir)/turbulence/sasl
 modconf_DATA = sasl.conf auth-db.xml
 
 # tool to admin sasl db 
+if ENABLE_TERMIOS
 bin_PROGRAMS = tbc-sasl-conf
 
 tbc_sasl_conf_SOURCES = tbc-sasl-conf.c
 tbc_sasl_conf_LDFLAGS = $(EXARG_LIBS) $(AXL_LIBS) ../../src/libturbulence.la 
 tbc_sasl_conf_LDADD   = common-sasl.o
+endif

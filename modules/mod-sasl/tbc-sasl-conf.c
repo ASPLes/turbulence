@@ -54,7 +54,9 @@ void tbc_sasl_add_user ()
 {
 	const char * new_user_id = exarg_get_string ("add-user");
 	const char * password    = NULL;
+	const char * password2   = NULL;
 	const char * user_id;
+	bool         dealloc     = false;
 	axlNode    * node;
 	axlNode    * newNode;
 
@@ -80,10 +82,23 @@ void tbc_sasl_add_user ()
 	} /* end while */
 
 	/* user doesn't exist, ask for the password */
+	msg ("adding user: %s..", new_user_id);
 	if (exarg_is_defined ("password")) 
 		password = exarg_get_string ("password");
 	else {
-		error ("password for user %s not provided", new_user_id);
+		password  = turbulence_io_get ("Password: ", DISABLE_STDIN_ECHO);
+		fprintf (stdout, "\n");
+		password2 = turbulence_io_get ("Type again: ", DISABLE_STDIN_ECHO);
+		fprintf (stdout, "\n");
+		if (! axl_cmp (password, password2)) {
+			axl_free ((char*) password);
+			axl_free ((char*) password2);
+			error ("Password mismatch..");
+			return;
+		} else {
+			axl_free ((char*) password2);
+		}
+		dealloc = true;
 	}
 
 	/* check if the user already exists */
@@ -106,6 +121,10 @@ void tbc_sasl_add_user ()
 	/* set the node */
 	axl_node_set_child (node, newNode);
 
+	/* free the password */
+	if (dealloc)
+		axl_free ((char*) password);
+
 	/* dump the db */
 	if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
 		error ("failed to dump SASL auth db..");
@@ -114,10 +133,133 @@ void tbc_sasl_add_user ()
 	return;
 }
 
+/** 
+ * @internal Lookup for the user and disables it.
+ */
 void tbc_sasl_disable_user ()
 {
+	const char * user_id_to_disable = exarg_get_string ("disable-user");
+	const char * user_id;
+	axlNode    * node;
+
+	/* check if the user already exists */
+	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+	while (node != NULL) {
+		
+		/* get the user */
+		user_id = ATTR_VALUE (node, "user_id");
+		
+		/* check the format for the user stored */
+		if (axl_memcmp (user_id, "text:", 5)) {
+			/* check the user id */
+			if (axl_cmp (user_id_to_disable, user_id + 5)) {
+				/* user found, disable it */
+				axl_node_remove_attribute (node, "disabled");
+
+				/* install the new attribute */
+				axl_node_set_attribute (node, "disabled", "yes");
+
+
+				/* dump the db */
+				if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
+					error ("failed to dump SASL auth db..");
+				else
+					msg ("user %s disabled!", user_id_to_disable);
+				return;
+			} /* end if */
+		} /* end if */
+
+		/* get next node */
+		node     = axl_node_get_next (node);
+
+	} /* end while */
+
+	/* nothing to do */
+	return;
 	
-}
+} /* end tbc_sasl_disable_user */
+
+/** 
+ * @internal List all users created.
+ */
+void tbc_sasl_list_users ()
+{
+	axlNode    * node;
+	const char * user_id;
+	bool         first_user = true;
+
+	/* check if the user already exists */
+	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+	while (node != NULL) {
+
+		if (first_user) {
+			msg ("Number of users created (%d):", axl_node_get_child_num (axl_node_get_parent (node)));
+			first_user = false;
+		} /* end if */
+		
+		/* check the format for the user stored */
+		if (axl_memcmp (ATTR_VALUE (node, "user_id"), "text:", 5)) {
+
+			/* get the actual user id */
+			user_id = ATTR_VALUE (node, "user_id") + 5;
+
+			msg ("  %s (disabled=%s)", 
+			     user_id, ATTR_VALUE (node, "disabled"));
+
+		} /* end if */
+
+		/* get next node */
+		node     = axl_node_get_next (node);
+
+	} /* end while */
+
+	/* nothing to do */
+	return;
+	
+} /* end tbc_sasl_disable_user */
+
+/** 
+ * @internal Lookup for the user and removes it from the database.
+ */
+void tbc_sasl_remove_user ()
+{
+	const char * user_id_to_remove = exarg_get_string ("remove-user");
+	const char * user_id;
+	axlNode    * node;
+
+	/* check if the user already exists */
+	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+	while (node != NULL) {
+		
+		/* get the user */
+		user_id = ATTR_VALUE (node, "user_id");
+		
+		/* check the format for the user stored */
+		if (axl_memcmp (user_id, "text:", 5)) {
+			/* check the user id */
+			if (axl_cmp (user_id_to_remove, user_id + 5)) {
+
+				/* remove the node */
+				axl_node_remove (node, true);
+
+				/* dump the db */
+				if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
+					error ("failed to dump SASL auth db..");
+				else
+					msg ("user %s removed!", user_id_to_remove);
+				return;
+			} /* end if */
+		} /* end if */
+
+		/* get next node */
+		node     = axl_node_get_next (node);
+
+	} /* end while */
+
+	/* nothing to do */
+	return;
+
+} /* end tbc_sasl_remove_user */
 
 int main (int argc, char ** argv)
 {
@@ -129,17 +271,27 @@ int main (int argc, char ** argv)
 
 	/* install exarg options */
 	exarg_install_arg ("add-user", "a", EXARG_STRING, 
-			   "Adds a new users to the sasl database");
+			   "Adds a new users to the sasl database.");
+	exarg_install_arg ("password", "p", EXARG_STRING,
+			   "Configures the password for the operation. Optionally used by --add-user");
 
 	/* install exarg options */
 	exarg_install_arg ("disable-user", "d", EXARG_STRING, 
 			   "Makes the user to be available on the system but not usable to perform real auth operation.");
+
+	exarg_install_arg ("remove-user", "r", EXARG_STRING,
+			   "Removes the user provided from the sasl database.");
+
+	exarg_install_arg ("list-users", "l", EXARG_NONE,
+			   "Allows to list current users created.");
+
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 	
 	/* enable console log */
 	turbulence_set_console_debug (true);
+
 
 	/* check empty arguments */
 	if (argc == 1) {
@@ -154,9 +306,21 @@ int main (int argc, char ** argv)
 	
 	/* check if the user want to add a new user */
 	if (exarg_is_defined ("add-user")) {
+
+		/* add a user */
 		tbc_sasl_add_user ();
 	} else if (exarg_is_defined ("disable-user")) {
+
+		/* disable a user */
 		tbc_sasl_disable_user ();
+	} else if (exarg_is_defined ("remove-user")) {
+
+		/* remove a user */
+		tbc_sasl_remove_user ();
+	} else if (exarg_is_defined ("list-users")) {
+
+		/* list all users */
+		tbc_sasl_list_users ();
 	}
 
 
