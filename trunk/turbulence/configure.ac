@@ -51,14 +51,14 @@ AC_HEADER_STDC
 AM_PROG_LIBTOOL
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.4.1) 
+PKG_CHECK_MODULES(AXL, axl >= 0.4.4) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
 AC_SUBST(AXL_LIBS)
 
 dnl external dependencies
-PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.1) 
+PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.3) 
 
 dnl general libries subsitution
 AC_SUBST(VORTEX_CFLAGS)

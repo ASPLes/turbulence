@@ -177,8 +177,11 @@ void turbulence_run_load_modules (axlDoc * doc, axlDtd * dtd)
  * required to run the server.
  * 
  * Later, all modules will be loaded adding profile configuration.
+ *
+ * @return false if the function is not able to properly start
+ * turbulence or the configuration will produce bad results.
  */
-void turbulence_run_config    ()
+bool turbulence_run_config    ()
 {
 	/* get the document configuration */
 	axlDoc           * doc = turbulence_config_get ();
@@ -192,6 +195,7 @@ void turbulence_run_config    ()
 	char             * dtd_file;
 	axlDtd           * dtd;
 	axlError         * error;
+	bool               at_least_one_listener = false;
 	
 
 	/* check log configuration */
@@ -213,7 +217,7 @@ void turbulence_run_config    ()
 		/* free document */
 		error ("unable to find mod turbulence DTD definition (mod-turbulence.dtd), check your turbulence installation.");
 		turbulence_exit (-1);
-		return;
+		return false;
 	} /* end if */
  
 	/* found dtd file */
@@ -225,7 +229,7 @@ void turbulence_run_config    ()
 		axl_error_free (error);
 		turbulence_exit (-1);
 		
-		return;
+		return false;
 	}
 
 	/* now load all modules found */
@@ -240,7 +244,7 @@ void turbulence_run_config    ()
 	if (vortex_profiles_registered () == 0) {
 		error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
 		turbulence_exit (-1);
-		return;
+		return false;
 	} /* end if */
 	
 	/* get the first listener configuration */
@@ -265,7 +269,7 @@ void turbulence_run_config    ()
 			/* check the listener started */
 			if (! vortex_connection_is_ok (con_listener, false)) {
 				/* unable to start the server configuration */
-				wrn ("unable to start listener at %s:%s...", 
+				error ("unable to start listener at %s:%s...", 
 				     
 				     /* server name */
 				     axl_node_get_content (name, NULL),
@@ -278,6 +282,10 @@ void turbulence_run_config    ()
 			msg ("started listener at %s:%s...",
 			     axl_node_get_content (name, NULL),
 			     axl_node_get_content (port, NULL));
+
+			/* flag that at least one listener was
+			 * created */
+			at_least_one_listener = true;
 			
 
 		next:
@@ -291,7 +299,14 @@ void turbulence_run_config    ()
 
 	} /* end if */
 
-	return;
+	if (! at_least_one_listener) {
+		error ("Unable to start turbulence, no listener configuration was started, either due to configuration error or to startup problems. Terminating..");
+		turbulence_exit (-1);
+		return false;
+	}
+
+	/* turbulence started properly */
+	return true;
 }
 
 /** 

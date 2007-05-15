@@ -40,7 +40,7 @@
 
 #include <turbulence.h>
 
-void turbulence_run_config    ();
+bool turbulence_run_config    ();
 
 void turbulence_run_cleanup ();
 
