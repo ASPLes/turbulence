@@ -119,10 +119,21 @@ dnl check for libpcre support
 CHECK_LIB_PCRE([pcre_found="yes"],[pcre_found="no"])
 AM_CONDITIONAL(ENABLE_PCRE_SUPPORT, test ".$pcre_found" = ".yes")
 
+dnl check for doxygen documentation
+AC_ARG_ENABLE(turbulence-doc, [  --enable-turbulence-doc       Enable building Turbulence documentation (doxygen required) [default=yes]], 
+	      enable_turbulence_doc="$enableval", 
+	      enable_turbulence_doc=yes)
+if test x$enable_turbulence_doc = xyes ; then
+        AC_CHECK_PROG(DOXYGEN, doxygen, "yes", "no")
+fi
+AM_CONDITIONAL(ENABLE_AF_ARCH_DOC, test "x$DOXYGEN" = "xyes")
+
 AC_OUTPUT([
 Makefile
 data/Makefile
 src/Makefile
+doc/Makefile
+doc/turbulence-doc.doxygen
 modules/Makefile
 modules/mod-test/Makefile
 modules/mod-test/mod-test.xml
@@ -137,10 +148,10 @@ echo "--       Turbulence Settings            --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
-echo "   build tbc-sasl-conf:            [$termios_found]"
-echo
+echo "   Build tbc-sasl-conf:            [$termios_found]"
+echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"
-echo "--            Let it beep!              --"
+echo "--            Let it BEEP!              --"
 echo "--                                      --"
 echo "--     NOW TYPE: make; make install     --"
 echo "------------------------------------------"

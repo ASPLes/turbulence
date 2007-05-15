@@ -1,3 +1,7 @@
 # build the BEEP application server
-SUBDIRS = src data modules
+if ENABLE_AF_ARCH_DOC
+DOC_DIR = doc
+endif
+
+SUBDIRS = src data modules $(DOC_DIR)
 
