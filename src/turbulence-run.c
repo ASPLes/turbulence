@@ -193,10 +193,34 @@ bool turbulence_run_config    ()
 
 	/* mod turbulence dtd */
 	char             * dtd_file;
+	char             * string_aux;
+	int                int_aux;
 	axlDtd           * dtd;
 	axlError         * error;
 	bool               at_least_one_listener = false;
-	
+
+	/* configure max connection settings here */
+	node       = axl_doc_get (doc, "/turbulence/global-settings/connections/max-connections");
+
+	/* set hard limit */
+	string_aux = (char*) ATTR_VALUE (node, "hard-limit");
+	int_aux    = strtol (string_aux, NULL, 10);
+	if (! vortex_conf_set (VORTEX_HARD_SOCK_LIMIT, int_aux, NULL)) {
+		error ("failed to set hard limit to=%s (int value=%d), terminating turbulence..",
+		       string_aux, int_aux);
+		return false;
+	} /* end if */
+	msg ("configured max connections hard limit to: %s", string_aux);
+
+	/* set soft limit */
+	string_aux = (char*) ATTR_VALUE (node, "soft-limit");
+	int_aux    = strtol (string_aux, NULL, 10);
+	if (! vortex_conf_set (VORTEX_SOFT_SOCK_LIMIT, int_aux, NULL)) {
+		error ("failed to set soft limit to=%s (int value=%d), terminating turbulence..",
+		       string_aux, int_aux);
+		return false;
+	} /* end if */
+	msg ("configured max connections soft limit to: %s", string_aux);
 
 	/* check log configuration */
 	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");

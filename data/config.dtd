@@ -2,7 +2,7 @@
 <!ELEMENT turbulence (global-settings, modules, listener+, profile-path-configuration)>
 
 <!-- global-settings -->
-<!ELEMENT global-settings (ports, log-reporting, tls-support, on-bad-signal)>
+<!ELEMENT global-settings (ports, log-reporting, tls-support, on-bad-signal, connections)>
 
 <!ELEMENT ports           (port+)>
 <!ELEMENT port            (#PCDATA)>
@@ -27,6 +27,12 @@
 
 <!ELEMENT on-bad-signal       EMPTY>
 <!ATTLIST on-bad-signal action (hold|ignore|quit|exit) #REQUIRED>
+
+<!ELEMENT connections       (max-connections)>
+<!ELEMENT max-connections   EMPTY>
+<!ATTLIST max-connections   hard-limit CDATA #REQUIRED
+                            soft-limit CDATA #REQUIRED>
+
 
 <!-- modules -->
 <!ELEMENT modules        (directory+, filter-modules)>
