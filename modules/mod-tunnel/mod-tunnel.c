@@ -208,6 +208,8 @@ TurbulenceModDef module_def = {
 	"mod-tunnel",
 	"BEEP proxy, TUNNEL profile",
 	tunnel_init,
-	tunnel_close
+	tunnel_close,
+	/* no reconf function for now */
+	NULL
 };
 

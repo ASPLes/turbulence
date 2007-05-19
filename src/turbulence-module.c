@@ -190,6 +190,31 @@ void               turbulence_module_free (TurbulenceModule * module)
 
 
 /** 
+ * @brief Allows to notify all modules loaded, that implements the
+ * \ref ModReconfFunc, to reload its configuration data.
+ */
+void               turbulence_module_notify_reload_conf ()
+{
+	TurbulenceModule * module;
+
+	int iterator = 0;
+	while (iterator < axl_list_length (__registered_modules)) {
+		/* get the module */
+		module = axl_list_get_nth (__registered_modules, iterator);
+
+		/* notify if defined reconf function */
+		if (module->def->reconf != NULL) {
+			/* call to reconfigured */
+			module->def->reconf ();
+		}
+
+		/* next iterator */
+		iterator++;
+
+	} /* end if */
+}
+
+/** 
  * @brief Cleans the module, releasing all resources and unloading all
  * modules.
  */

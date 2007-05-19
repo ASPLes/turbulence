@@ -90,6 +90,16 @@ static void test_close ()
 	msg ("Turbulence BEEP server, test module: close");
 }
 
+/** 
+ * @brief The reconf function is used by turbulence to notify to all
+ * its modules loaded that a reconfiguration signal was received and
+ * modules that could have configuration and run time change support,
+ * should reread its files. It is an optional handler.
+ */
+static void test_reconf () {
+	msg ("Turbulence BEEP server configuration have change");
+}
+
 /**
  * @brief Public entry point for the module to be loaded. This is the
  * symbol the turbulence will lookup to load the rest of items.
@@ -98,7 +108,8 @@ TurbulenceModDef module_def = {
 	"mod-test",
 	"Turbulence BEEP server, test module",
 	test_init,
-	test_close
+	test_close,
+	test_reconf
 };
 
 END_C_DECLS
