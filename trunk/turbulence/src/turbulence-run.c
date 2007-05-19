@@ -71,7 +71,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		} /* end if */
 		
 		fullpath = vortex_support_build_filename (path, entry->d_name, NULL);
-		if (! turbulence_file_test (fullpath, FILE_IS_REGULAR))
+		if (! vortex_support_file_test (fullpath, FILE_IS_REGULAR))
 			goto next;
 
 		/* notify file found */

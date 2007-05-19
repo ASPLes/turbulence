@@ -58,6 +58,13 @@ typedef bool (*ModInitFunc)  ();
  */
 typedef void (*ModCloseFunc) ();
 
+/** 
+ * @brief Public definition for the reconfiguration function that must
+ * be implemented to receive notification if the turbulence server
+ * configuration is reloaded.
+ */
+typedef void (*ModReconfFunc) ();
+
 
 /**
  * @brief Public definition for the main entry point for all modules
@@ -87,6 +94,13 @@ typedef struct _TurbulenceModDef {
 	 * module.
 	 */
 	ModCloseFunc   close;
+	
+	/**
+	 * @brief A reference to the reconf function that must be
+	 * implemented to get notifications about turbulence server
+	 * configuration changes.
+	 */
+	ModReconfFunc  reconf;
 } TurbulenceModDef;
 
 #endif

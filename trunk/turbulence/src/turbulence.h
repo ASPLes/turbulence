@@ -115,35 +115,8 @@ void turbulence_cleanup ();
 
 void turbulence_reload_config (int value);
 
-/** 
- * @brief Available tests to be performed while using \ref
- * camuc_file_test
- */
-typedef enum {
-	/** 
-	 * @brief Check if the path exist.
-	 */
-	FILE_EXISTS     = 1 << 0,
-	/** 
-	 * @brief Check if the path provided is a symlink.
-	 */
-	FILE_IS_LINK    = 1 << 1,
-	/** 
-	 * @brief Check if the path provided is a directory.
-	 */
-	FILE_IS_DIR     = 1 << 2,
-	/** 
-	 * @brief Check if the path provided is a regular file.
-	 */
-	FILE_IS_REGULAR = 1 << 3,
-} FileTest;
-
-
-bool     turbulence_file_test   (const char * path,   
-				 FileTest test);
-
 bool     turbulence_file_test_v (const char * format, 
-				 FileTest test, ...);
+				 VortexFileTest test, ...);
 
 long int turbulence_last_modification (const char * file);
 

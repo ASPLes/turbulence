@@ -54,6 +54,8 @@ void               turbulence_module_register  (TurbulenceModule * module);
 
 void               turbulence_module_free      (TurbulenceModule * module);
 
+void               turbulence_module_notify_reload_conf ();
+
 void               turbulence_module_cleanup   ();
 
 #endif

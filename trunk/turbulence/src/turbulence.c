@@ -139,7 +139,21 @@ bool turbulence_init (int argc, char ** argv)
  */
 void turbulence_reload_config (int value)
 {
-	msg ("caught HUP signal, reloading configuration (FIXME!)");
+	bool already_notified = false;
+	msg ("caught HUP signal, reloading configuration");
+	/* reconfigure signal received, notify turbulence modules the
+	 * signal */
+	vortex_mutex_lock (&turbulence_exit_mutex);
+	if (already_notified) {
+		vortex_mutex_unlock (&turbulence_exit_mutex);
+		return;
+	}
+	already_notified = true;
+	turbulence_module_notify_reload_conf ();
+	vortex_mutex_unlock (&turbulence_exit_mutex);
+
+	/* reload signal */
+	signal (SIGHUP,  turbulence_reload_config);
 	
 	return;
 } 
@@ -378,7 +392,7 @@ void turbulence_wrn (const char * file, int line, const char * format, ...)
  * 
  * @return true if all test returns true. Otherwise false is returned.
  */
-bool turbulence_file_test_v (const char * format, FileTest test, ...)
+bool turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 {
 	va_list   args;
 	char    * path;
@@ -394,84 +408,13 @@ bool turbulence_file_test_v (const char * format, FileTest test, ...)
 	va_end (args);
 
 	/* do the test */
-	result = turbulence_file_test (path, test);
+	result = vortex_support_file_test (path, test);
 	axl_free (path);
 
 	/* return the test */
 	return result;
 }
 
-
-/** 
- * @brief Allows to perform a set of test for the provided path.
- * 
- * @param path The path that will be checked.
- *
- * @param test The set of test to be performed. Separate each test
- * with "|" to perform several test at the same time.
- * 
- * @return true if all test returns true. Otherwise false is returned.
- */
-bool   turbulence_file_test (const char * path, FileTest test)
-{
-	bool result = false;
-	struct stat file_info;
-
-	/* perform common checks */
-	axl_return_val_if_fail (path, false);
-
-	/* call to get status */
-	result = (stat (path, &file_info) == 0);
-	if (! result) {
-		/* check that it is requesting for not file exists */
-		if (errno == ENOENT && (test & FILE_EXISTS) == FILE_EXISTS)
-			return false;
-
-		error ("filed to check test on %s, stat call has failed (result=%d, error=%s)", path, result, strerror (errno));
-		return false;
-	} /* end if */
-
-	/* check for file exists */
-	if ((test & FILE_EXISTS) == FILE_EXISTS) {
-		/* check result */
-		if (result == false)
-			return false;
-		
-		/* reached this point the file exists */
-		result = true;
-	}
-
-	/* check if the file is a link */
-	if ((test & FILE_IS_LINK) == FILE_IS_LINK) {
-		if (! S_ISLNK (file_info.st_mode))
-			return false;
-
-		/* reached this point the file is link */
-		result = true;
-	}
-
-	/* check if the file is a regular */
-	if ((test & FILE_IS_REGULAR) == FILE_IS_REGULAR) {
-		if (! S_ISREG (file_info.st_mode))
-			return false;
-
-		/* reached this point the file is link */
-		result = true;
-	}
-
-	/* check if the file is a directory */
-	if ((test & FILE_IS_DIR) == FILE_IS_DIR) {
-		if (! S_ISDIR (file_info.st_mode)) {
-			return false;
-		}
-
-		/* reached this point the file is link */
-		result = true;
-	}
-
-	/* return current result */
-	return result;
-}
 
 /** 
  * @brief Allows to get the modification for the provided format,

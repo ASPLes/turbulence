@@ -191,6 +191,8 @@ TurbulenceModDef module_def = {
 	"mod-sasl",
 	"Auth functions, SASL profile",
 	sasl_init,
-	sasl_close
+	sasl_close,
+	/* no reconf function for now */
+	NULL
 };
 
