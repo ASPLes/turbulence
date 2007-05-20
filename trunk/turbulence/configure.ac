@@ -128,6 +128,12 @@ if test x$enable_turbulence_doc = xyes ; then
 fi
 AM_CONDITIONAL(ENABLE_AF_ARCH_DOC, test "x$DOXYGEN" = "xyes")
 
+dnl check to build tbc-mod-gen tool
+AC_ARG_ENABLE(enable-tbc-mod-gen, [  --enable-tbc-mod-gen       Enable building tbc-mod-gen [default=yes]], 
+	      enable_tbc_mod_gen="$enableval", 
+	      enable_tbc_mod_gen=yes)
+AM_CONDITIONAL(ENABLE_TBC_MOD_GEN, test "x$enable_tbc_mod_gen" = "xyes")
+
 AC_OUTPUT([
 Makefile
 data/Makefile
@@ -141,6 +147,8 @@ modules/mod-tunnel/Makefile
 modules/mod-tunnel/mod-tunnel.xml
 modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
+tools/Makefile
+tools/tbc-mod-gen/Makefile
 ])
 
 echo "------------------------------------------"
@@ -149,6 +157,7 @@ echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
 echo "   Build tbc-sasl-conf:            [$termios_found]"
+echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"
 echo "--            Let it BEEP!              --"

@@ -384,6 +384,34 @@ void turbulence_wrn (const char * file, int line, const char * format, ...)
 }
 
 /** 
+ * @internal function that actually handles the console wrn_sl.
+ */
+void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
+{
+	va_list args;
+	
+#if defined(AXL_OS_UNIX)	
+	if (exarg_is_defined ("color-debug")) {
+		CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
+	} else
+#endif
+	CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+	
+	va_start (args, format);
+
+	CONSOLEV (stdout, format, args);
+
+	/* report to log */
+	turbulence_log_report (LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+
+	va_end (args);
+
+	fflush (stdout);
+	
+	return;
+}
+
+/** 
  * @brief Provides the same functionality like \ref turbulence_file_test,
  * but allowing to provide the file path as a printf like argument.
  * 
