@@ -8,6 +8,9 @@ bin_PROGRAMS        = tbc-mod-gen
 tbc_mod_gen_SOURCES = main.c support.c support.h
 tbc_mod_gen_LDADD   = $(AXL_LIBS) $(EXARG_LIBS) ../../src/libturbulence.la
 
+tbcmodgendir   = $(datadir)/turbulence
+tbcmodgen_DATA = tbc-mod-gen.dtd
+
 
 
 

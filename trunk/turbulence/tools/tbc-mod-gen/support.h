@@ -40,26 +40,40 @@
 
 #include <turbulence.h>
 
-void   support_open_file (const char * format, ...);
+void    support_open_file (const char * format, ...);
 
-void   support_close_file      ();
+void    support_close_file      ();
 
 #define write support_write
 
 #define write_sl support_sl_write
 
-void   support_write (const char * format, ...);
+void    support_write (const char * format, ...);
 
-void   support_sl_write        (const char * format, ...);
+void    support_sl_write        (const char * format, ...);
 
-void   support_push_indent     ();
+#define push_indent support_push_indent
 
-void   support_pop_indent      ();
+void    support_push_indent     ();
 
-bool   support_are_equal (char * file1 , char * file2);
+#define pop_indent support_pop_indent
 
-void   support_move_file (char * from, char * to);
+void    support_pop_indent      ();
 
-bool   support_dump_file (axlDoc * doc, int tabular, const char * format_path, ...);
+bool    support_are_equal           (char * file1 , 
+				     char * file2);
+
+void    support_move_file           (char * from, 
+				     char * to);
+
+bool    support_dump_file           (axlDoc * doc, 
+				     int tabular, 
+				     const char * format_path, ...);
+
+char  * support_clean_name          (const char * name);
+
+char  * support_to_upper            (const char * name);
+
+char  * support_to_lower            (const char * name);
 
 #endif

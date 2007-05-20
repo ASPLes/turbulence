@@ -1,0 +1,13 @@
+<!ELEMENT mod-def (name, description, source-code)>
+
+<!ELEMENT name (#PCDATA)>
+
+<!ELEMENT description (#PCDATA)>
+
+<!ELEMENT source-code (init, close, reconf)>
+
+<!ELEMENT init (#PCDATA)>
+
+<!ELEMENT close (#PCDATA)>
+
+<!ELEMENT reconf (#PCDATA)>

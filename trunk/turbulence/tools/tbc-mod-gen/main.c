@@ -1,3 +1,4 @@
+
 /*  tbc-mod-gen: A tool to produce modules for the Turbulence BEEP server
  *  Copyright (C) 2007 Advanced Software Production Line, S.L.
  *
@@ -145,7 +146,142 @@ bool tbc_mod_gen_template_create ()
 
 bool tbc_mod_gen_compile ()
 {
-	msg ("Compile code..");
+	axlDtd   * dtd;
+	axlDoc   * doc;
+	axlError * error;
+	axlNode  * node;
+	char     * file;
+	char     * mod_name;
+	char     * tolower;
+	char     * description;
+
+	/* configure lookup domain for tbc-mod-gen settings */
+	vortex_support_add_domain_search_path_ref (axl_strdup ("tbc-mod-gen"), 
+						   vortex_support_build_filename (DATADIR, "turbulence", NULL));
+	/* now find the file */
+	file = vortex_support_domain_find_data_file ("tbc-mod-gen", "tbc-mod-gen.dtd");
+
+	if (file == NULL) {
+		error ("Installation problem, unable to find dtd definition file: tbc-mod-gen.dtd");
+		return false;
+	}
+
+	/* parse DTD document */
+	dtd = axl_dtd_parse_from_file (file, &error);
+	axl_free (file);
+	if (dtd == NULL) {
+		/* report error and dealloc resources */
+		error ("Failed to parse DTD file: %s, error found: %s", axl_error_get (error));
+		axl_error_free (error);
+
+		return false;
+	} /* end if */
+	
+	/* nice, now parse the xml file */
+	doc = axl_doc_parse_from_file (exarg_get_string ("compile"), &error);
+	if (doc == NULL) {
+		/* report error and dealloc resources */
+		error ("unable to parse file: %s, error found: %s", 
+		       exarg_get_string ("compile"),
+		       axl_error_get (error));
+		axl_error_free (error);
+		axl_dtd_free (dtd);
+	} /* end if */
+
+	/* nice, now validate content */
+	if (! axl_dtd_validate (doc, dtd, &error)) {
+		/* report error and dealloc */
+		error ("failed to validate module description provided: %s, error found: %s",
+		       exarg_get_string ("compile"),
+		       axl_error_get (error));
+		axl_error_free (error);
+		axl_doc_free (doc);
+		axl_dtd_free (dtd);
+		return false;
+	} /* end if */
+
+	/* ok, now produce source code  */
+	axl_dtd_free (dtd);
+
+	/* open file */
+	node     = axl_doc_get (doc, "/mod-def/name");
+	mod_name = (char *) axl_node_get_content (node, NULL);
+	mod_name = support_clean_name (mod_name);
+	tolower  = support_to_lower (mod_name);
+	support_open_file ("%s%s.c", get_out_dir (), mod_name);
+
+	/* place copyright if found */
+	node     = axl_doc_get (doc, "/mod-def/copyright");
+	if (node != NULL) {
+		/* place the copyright */
+	}  /* end if */
+	
+	write ("/* %s implementation */\n", mod_name);
+	write ("#include <turbulence.h>\n\n");
+
+	write ("/* use this declarations to avoid c++ compilers to mangle exported\n");
+	write (" * names. */\n");
+	write ("BEGIN_C_DECLS\n\n");
+
+	/* init handler */
+	write ("/* %s init handler */\n", mod_name);
+	write ("static bool %s_init ()\n", tolower);
+	node = axl_doc_get (doc, "/mod-def/source-code/init");
+	if (axl_node_get_content (node, NULL)) {
+		/* write the content defined */
+		write ("%s\n", axl_node_get_content (node, NULL));
+	}
+	write ("} /* end %s_init */\n\n", tolower);
+
+	/* close handler */
+	write ("/* %s close handler */\n", mod_name);
+	write ("static bool %s_close ()\n", tolower);
+	node = axl_doc_get (doc, "/mod-def/source-code/close");
+	if (axl_node_get_content (node, NULL)) {
+		/* write the content defined */
+		write ("%s\n", axl_node_get_content (node, NULL));
+	}
+	write ("} /* end %s_close */\n\n", tolower);
+
+	/* reconf handler */
+	write ("/* %s reconf handler */\n", mod_name);
+	write ("static bool %s_reconf ()\n", tolower);
+	node = axl_doc_get (doc, "/mod-def/source-code/reconf");
+	if (axl_node_get_content (node, NULL)) {
+		/* write the content defined */
+		write ("%s\n", axl_node_get_content (node, NULL));
+	}
+	write ("} /* end %s_reconf */\n\n", tolower);
+
+	/* write handler description */
+	write ("/* Entry point definition for all handlers included in this module */\n");
+	write ("TurbulenceModDef module_def = {\n");
+
+	push_indent ();
+
+	write ("\"%s\",\n", mod_name);
+	node        = axl_doc_get (doc, "/mod-def/description");
+	description = (char *) axl_node_get_content (node, NULL);
+	write ("\"%s\",\n", description ? description : "");
+	write ("%s_init,\n", tolower);
+	write ("%s_close,\n", tolower);
+	write ("%s_reconf,\n", tolower);
+
+	pop_indent ();
+
+	write ("};\n\n");
+
+	write ("END_C_DECLS\n\n");
+	
+	/* close content */
+	support_close_file ();
+
+	msg ("%s created!", mod_name);
+
+	/* dealloc */
+	axl_free (mod_name);
+	axl_free (tolower);
+	axl_doc_free (doc);
 
 	return true;
 }
