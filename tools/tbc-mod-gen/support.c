@@ -465,3 +465,103 @@ bool support_dump_file (axlDoc * doc, int tabular, const char * format_path, ...
 	/* return result */
 	return result;
 }
+
+/** 
+ * @brief Produce a clean representation for the string received.
+ * 
+ * @param name The name to be represented in clean form.
+ * 
+ * @return A newly allocated norma value from the name received.
+ */
+char  * support_clean_name          (const char * name)
+{
+	char     * result   = axl_strdup (name);
+	int        iterator = 0;
+	int        index    = 0;
+	
+	/* translate all upper values to lower ones, removing all
+	 * characters that are letters or digits. */
+	while (name[iterator]) {
+		/* copy as is character '-' */
+		if (name[iterator] == '-') {
+			result[index] = (name[iterator]);
+			index++;
+		}
+
+		if (isalnum (name[iterator])) {
+			result[index] = tolower (name[iterator]);
+			index++;
+		}
+		iterator++;
+	}
+
+	/* close the value */
+	result[index] = 0;
+
+	return result;
+}
+
+/** 
+ * @internal
+ * 
+ * Internal implementation that support support_to_lower and
+ * support_to_upper.
+ */
+char * __support_common_name (const char * name, bool to_upper)
+{
+	char * result;
+	int    iterator;
+
+	axl_return_val_if_fail (name, NULL);
+	
+	/* get a lower copy */
+	if (to_upper)
+		result   = axl_stream_to_upper_copy (name);
+	else
+		result   = axl_stream_to_lower_copy (name);
+
+	iterator = 0;
+
+	/* check every character */
+	while (result [iterator] != 0) {
+		/* change the value */
+		if (! isalnum (result [iterator]))
+			result [iterator] = '_';
+
+		/* update iterator */
+		iterator++;
+	}
+	
+	/* return result */
+	return result;
+}
+
+/** 
+ * @brief Allows to get the lower representation, not only including
+ * alphabetic values but other values (like '-', which are translated
+ * into _).
+ * 
+ * @param name The name to get its lower version.
+ * 
+ * @return A newly allocated string or NULL if it fails.
+ */
+char  * support_to_lower            (const char * name)
+{
+	/* makes a to lower operation */
+	return __support_common_name (name, false);
+}
+
+/** 
+ * @brief Allows to get the upper representation, not only including
+ * alphabetic values but other values (like '-', which are translated
+ * into _).
+ * 
+ * @param name The name to get its lower version.
+ * 
+ * @return A newly allocated string or NULL if it fails.
+ */
+char  * support_to_upper            (const char * name)
+{
+	/* makes a to upper operation */
+	return __support_common_name (name, true);
+}
