@@ -285,6 +285,8 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("list-users", "l", EXARG_NONE,
 			   "Allows to list current users created.");
 
+	/* do not accept free arguments */
+	exarg_accept_free_args (0);
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);

@@ -3,5 +3,5 @@ if ENABLE_AF_ARCH_DOC
 DOC_DIR = doc
 endif
 
-SUBDIRS = src data modules $(DOC_DIR)
+SUBDIRS = src data modules tools $(DOC_DIR) 
 
