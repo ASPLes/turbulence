@@ -1,0 +1,5 @@
+if ENABLE_TBC_MOD_GEN 
+TBC_MOD_GEN_DIR=tbc-mod-gen
+endif
+
+SUBDIRS = $(TBC_MOD_GEN_DIR)
