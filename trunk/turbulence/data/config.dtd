@@ -35,14 +35,10 @@
 
 
 <!-- modules -->
-<!ELEMENT modules        (directory+, filter-modules)>
+<!ELEMENT modules        (directory+)>
 
 <!ELEMENT directory       EMPTY>
 <!ATTLIST directory src   CDATA #REQUIRED>
-
-<!ELEMENT filter-modules (by-module)+>
-<!ELEMENT by-module       EMPTY>
-<!ATTLIST by-module name  CDATA #REQUIRED>
 
 <!-- listener to be started -->
 <!ELEMENT listener    (name+)>
