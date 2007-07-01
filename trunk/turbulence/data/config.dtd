@@ -1,8 +1,8 @@
 <!-- main configuration setting -->
-<!ELEMENT turbulence (global-settings, modules, listener+, profile-path-configuration)>
+<!ELEMENT turbulence (global-settings, modules, profile-path-configuration)>
 
 <!-- global-settings -->
-<!ELEMENT global-settings (ports, log-reporting, tls-support, on-bad-signal, connections)>
+<!ELEMENT global-settings (ports, listener, log-reporting, tls-support, on-bad-signal, connections)>
 
 <!ELEMENT ports           (port+)>
 <!ELEMENT port            (#PCDATA)>

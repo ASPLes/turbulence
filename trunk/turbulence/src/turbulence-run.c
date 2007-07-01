@@ -272,7 +272,7 @@ bool turbulence_run_config    ()
 	} /* end if */
 	
 	/* get the first listener configuration */
-	listener = axl_doc_get (doc, "/turbulence/listener");
+	listener = axl_doc_get (doc, "/turbulence/global-settings/listener");
 	while (listener != NULL) {
 		/* get the listener name configuration */
 		name = axl_node_get_child_called (listener, "name");

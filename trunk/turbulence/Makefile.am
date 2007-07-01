@@ -5,3 +5,11 @@ endif
 
 SUBDIRS = src data modules tools $(DOC_DIR) 
 
+installdir = $(prefix)/sbin/
+
+install_SCRIPTS = turbulence-config
+
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = turbulence.pc
+

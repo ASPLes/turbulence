@@ -45,6 +45,12 @@ int main (int argc, char ** argv)
 	/* init libraries */
 	turbulence_init (argc, argv);
 
+	/* check for conf-location option */
+	if (exarg_is_defined ("conf-location")) {
+		msg ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
+		return 0;
+	}
+
 	/* configure lookup domain, and load configuration file */
 	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
 						   vortex_support_build_filename (SYSCONFDIR, "turbulence", NULL));

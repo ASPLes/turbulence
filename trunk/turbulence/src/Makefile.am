@@ -26,15 +26,28 @@ turbulence_LDFLAGS = -Wl,-export-dynamic -ldl
 turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) libturbulence.la
 
 lib_LTLIBRARIES          = libturbulence.la
-libturbulence_la_SOURCES = turbulence-moddef.h \
-	turbulence.c turbulence.h \
-	turbulence-config.c turbulence.h \
-	turbulence-run.c turbulence-run.h \
-	turbulence-module.c turbulence-module.h \
-	turbulence-log.c turbulence-log.h \
-	turbulence-ppath.c turbulence-ppath.h
+
+libturbulenceinclude_HEADERS    = \
+	turbulence-moddef.h \
+	turbulence.h \
+	turbulence-run.h \
+	turbulence-module.h \
+	turbulence-log.h \
+	turbulence-ppath.h \
+	turbulence-config.h 
+
+libturbulence_la_SOURCES = \
+	turbulence.c \
+	turbulence-config.c \
+	turbulence-run.c \
+	turbulence-module.c \
+	turbulence-log.c \
+	turbulence-ppath.c
+
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'
 
 libturbulenceincludedir = $(includedir)/turbulence
+
+
 

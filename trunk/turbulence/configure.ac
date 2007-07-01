@@ -134,6 +134,7 @@ AC_ARG_ENABLE(enable-tbc-mod-gen, [  --enable-tbc-mod-gen       Enable building 
 	      enable_tbc_mod_gen=yes)
 AM_CONDITIONAL(ENABLE_TBC_MOD_GEN, test "x$enable_tbc_mod_gen" = "xyes")
 
+
 AC_OUTPUT([
 Makefile
 data/Makefile
@@ -149,6 +150,8 @@ modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
 tools/Makefile
 tools/tbc-mod-gen/Makefile
+turbulence.pc
+turbulence-config
 ])
 
 echo "------------------------------------------"

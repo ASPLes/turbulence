@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://web.resource.org/cc/"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="2500"
+   height="744.09448"
+   id="svg3237"
+   sodipodi:version="0.32"
+   inkscape:version="0.44.1"
+   sodipodi:docbase="/home/acinom/af-arch/turbulence/doc"
+   sodipodi:docname="profile-path-example.svg"
+   inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/turbulence.png"
+   inkscape:export-xdpi="28"
+   inkscape:export-ydpi="28"
+   version="1.0">
+  <defs
+     id="defs3239">
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend"
+       style="overflow:visible">
+      <path
+         id="path3456"
+         d="M 0,0 L 5,-5 L -12.5,0 L 5,5 L 0,0 z "
+         style="fill-rule:evenodd;stroke:black;stroke-width:1pt;marker-start:none"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.35"
+     inkscape:cx="1121.4286"
+     inkscape:cy="383.15743"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     inkscape:window-width="1025"
+     inkscape:window-height="622"
+     inkscape:window-x="24"
+     inkscape:window-y="96"
+     width="2500px"
+     height="744.09448px" />
+  <metadata
+     id="metadata3242">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Capa 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g3619"
+       transform="translate(-51.42857,-5.714287)"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30"
+       inkscape:export-ydpi="30">
+      <rect
+         inkscape:export-ydpi="30.627127"
+         inkscape:export-xdpi="30.627127"
+         inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-chain.png"
+         ry="25.033978"
+         rx="25.740236"
+         y="292.62192"
+         x="67.563766"
+         height="87.060234"
+         width="307.51273"
+         id="rect3266"
+         style="fill:#888a85;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <text
+         inkscape:export-ydpi="30.627127"
+         inkscape:export-xdpi="30.627127"
+         inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-chain.png"
+         id="text3268"
+         y="331.88736"
+         x="97.377106"
+         style="font-size:27.82980537px;font-style:normal;font-weight:normal;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           id="tspan3270"
+           y="331.88736"
+           x="97.377106"
+           sodipodi:role="line">INIT:</tspan><tspan
+           id="tspan3553"
+           y="366.67462"
+           x="97.377106"
+           sodipodi:role="line">no profile initiated</tspan></text>
+    </g>
+    <rect
+       style="fill:#204a87;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3476"
+       width="513.22699"
+       height="67.060234"
+       x="442.95844"
+       y="299.51691"
+       rx="13.568736"
+       ry="13.568736"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <text
+       xml:space="preserve"
+       style="font-size:27.82980537px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="703.98785"
+       y="322.01727"
+       id="text3478"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127"><tspan
+         id="tspan3603"
+         sodipodi:role="line"
+         x="703.98785"
+         y="322.01727">Allow profile:</tspan><tspan
+         id="tspan3607"
+         sodipodi:role="line"
+         x="703.98785"
+         y="356.80453">http://iana.org/beep/SASL/.*</tspan></text>
+    <path
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#888a85;stroke-width:5.86776876;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:5.86776864, 5.86776864;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 923.12344,293.65401 C 925.22498,223.85571 941.61222,212.36892 1037.9995,197.6918"
+       id="path3493"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <path
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#888a85;stroke-width:5.86776876;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:5.86776864, 5.86776864;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 911.82357,362.26732 C 913.92511,432.06562 930.31235,443.55241 1026.6996,458.22953"
+       id="path3571"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <path
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#888a85;stroke-width:4.82467318;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:4.82467323, 4.82467323;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 1482.7306,426.44318 C 1484.8505,379.66416 1501.3812,371.96568 1598.6118,362.12903"
+       id="path3593"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <path
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#888a85;stroke-width:4.82467318;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:4.82467323, 4.82467323;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 1480.2624,500.62575 C 1482.3823,547.40477 1498.913,555.10325 1596.1436,564.9399"
+       id="path3595"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <path
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#888a85;stroke-width:5.86776876;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:5.86776864, 5.86776864;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 288.96642,280.20734 C 336.78225,233.26619 390.31235,233.20797 455.27104,298.53085"
+       id="path3625"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <g
+       id="g3627"
+       transform="translate(706.1423,116.7617)"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30"
+       inkscape:export-ydpi="30">
+      <rect
+         inkscape:export-ydpi="30.627127"
+         inkscape:export-xdpi="30.627127"
+         inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-chain.png"
+         ry="13.568736"
+         rx="13.568736"
+         y="39.516895"
+         x="348.6727"
+         height="67.060234"
+         width="513.22699"
+         id="rect3629"
+         style="fill:#204a87;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <text
+         inkscape:export-ydpi="30.627127"
+         inkscape:export-xdpi="30.627127"
+         inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-chain.png"
+         id="text3631"
+         y="62.017262"
+         x="609.70215"
+         style="font-size:27.82980537px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="62.017262"
+           x="609.70215"
+           sodipodi:role="line"
+           id="tspan3633">Allow profile:</tspan><tspan
+           y="96.804518"
+           x="609.70214"
+           sodipodi:role="line"
+           id="tspan3635">http://turbulence.ws/profiles/test1</tspan></text>
+    </g>
+    <g
+       id="g3641"
+       transform="translate(686.1424,385.3332)"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30"
+       inkscape:export-ydpi="30">
+      <rect
+         inkscape:export-ydpi="30.627127"
+         inkscape:export-xdpi="30.627127"
+         inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-chain.png"
+         ry="13.568736"
+         rx="13.568736"
+         y="39.516895"
+         x="348.6727"
+         height="67.060234"
+         width="513.22699"
+         id="rect3643"
+         style="fill:#204a87;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <text
+         inkscape:export-ydpi="30.627127"
+         inkscape:export-xdpi="30.627127"
+         inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-chain.png"
+         id="text3645"
+         y="62.017262"
+         x="609.70215"
+         style="font-size:27.82980537px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="62.017262"
+           x="609.70215"
+           sodipodi:role="line"
+           id="tspan3647">Allow profile:</tspan><tspan
+           y="96.804518"
+           x="609.70215"
+           sodipodi:role="line"
+           id="tspan3649">http://iana.org/beep/TLS</tspan></text>
+    </g>
+    <rect
+       style="fill:#204a87;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3653"
+       width="513.22699"
+       height="67.060234"
+       x="1614.8147"
+       y="336.27869"
+       rx="13.568736"
+       ry="13.568736"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <text
+       xml:space="preserve"
+       style="font-size:27.82980537px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="1875.8441"
+       y="358.77905"
+       id="text3655"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127"><tspan
+         id="tspan3657"
+         sodipodi:role="line"
+         x="1875.8441"
+         y="358.77905">Allow profile:</tspan><tspan
+         id="tspan3659"
+         sodipodi:role="line"
+         x="1875.8441"
+         y="393.56631">http://iana.org/beep/xmlrpc</tspan></text>
+    <rect
+       style="fill:#204a87;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3663"
+       width="616.08411"
+       height="67.060234"
+       x="1614.8157"
+       y="519.1358"
+       rx="16.288082"
+       ry="13.568736"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127" />
+    <text
+       xml:space="preserve"
+       style="font-size:27.82980537px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="1932.9879"
+       y="541.63617"
+       id="text3665"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30.627127"
+       inkscape:export-ydpi="30.627127"><tspan
+         id="tspan3667"
+         sodipodi:role="line"
+         x="1932.9879"
+         y="541.63617">Allow profile:</tspan><tspan
+         id="tspan3669"
+         sodipodi:role="line"
+         x="1932.9879"
+         y="576.42343">http://fact.aspl.es/profiles/coyote_profile</tspan></text>
+    <g
+       id="g3695"
+       transform="translate(25.71429,2.857143)"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30"
+       inkscape:export-ydpi="30">
+      <rect
+         ry="13.580378"
+         rx="13.564917"
+         y="26.864603"
+         x="151.34155"
+         height="203.03119"
+         width="483.03119"
+         id="rect3679"
+         style="opacity:1;fill:#888a85;fill-opacity:1;fill-rule:nonzero;stroke:black;stroke-width:1.82595396;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         id="text3681"
+         y="78.380196"
+         x="168.57143"
+         style="font-size:36px;font-style:normal;font-weight:normal;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="78.380196"
+           x="168.57143"
+           id="tspan3683"
+           sodipodi:role="line">Only accept to create</tspan><tspan
+           id="tspan3685"
+           y="123.3802"
+           x="168.57143"
+           sodipodi:role="line">SASL channels at this</tspan><tspan
+           id="tspan3687"
+           y="168.3802"
+           x="168.57143"
+           sodipodi:role="line">point. This allows to </tspan><tspan
+           id="tspan3691"
+           y="213.3802"
+           x="168.57143"
+           sodipodi:role="line">enforce a security policy.</tspan></text>
+    </g>
+    <g
+       id="g3805"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30"
+       inkscape:export-ydpi="30">
+      <rect
+         ry="15.668228"
+         rx="14.682208"
+         y="-120.17104"
+         x="1052.8773"
+         height="234.24524"
+         width="522.81671"
+         id="rect3705"
+         style="fill:#888a85;fill-opacity:1;fill-rule:nonzero;stroke:black;stroke-width:2.0404737;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         id="text3707"
+         y="-83.048416"
+         x="1069.9999"
+         style="font-size:36px;font-style:normal;font-weight:normal;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           id="tspan3715"
+           y="-83.048416"
+           x="1069.9999"
+           sodipodi:role="line">At this point, only if the</tspan><tspan
+           y="-38.048416"
+           x="1069.9999"
+           sodipodi:role="line"
+           id="tspan3723">SASL channel is created</tspan><tspan
+           y="6.9515839"
+           x="1069.9999"
+           sodipodi:role="line"
+           id="tspan3725">and properly authenticated</tspan><tspan
+           y="51.951584"
+           x="1069.9999"
+           sodipodi:role="line"
+           id="tspan3727">the following profiles are</tspan><tspan
+           y="96.951584"
+           x="1069.9999"
+           sodipodi:role="line"
+           id="tspan3729">allowed.</tspan></text>
+    </g>
+    <g
+       id="g3788"
+       transform="translate(71.42857,-28.57143)"
+       inkscape:export-filename="/home/acinom/af-arch/turbulence/doc/profile-path-example.png"
+       inkscape:export-xdpi="30"
+       inkscape:export-ydpi="30">
+      <rect
+         ry="19.086842"
+         rx="16.11751"
+         y="38.560043"
+         x="1644.4757"
+         height="285.35468"
+         width="573.92609"
+         id="rect3749"
+         style="fill:#888a85;fill-opacity:1;fill-rule:nonzero;stroke:black;stroke-width:2.35961628;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         id="text3751"
+         y="75.523094"
+         x="1661.4388"
+         style="font-size:36px;font-style:normal;font-weight:normal;fill:white;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="75.523094"
+           x="1661.4388"
+           sodipodi:role="line"
+           id="tspan3761">Once the SASL and the</tspan><tspan
+           id="tspan3778"
+           y="120.52309"
+           x="1661.4388"
+           sodipodi:role="line">TLS profiles are properly</tspan><tspan
+           id="tspan3780"
+           y="165.52309"
+           x="1661.4388"
+           sodipodi:role="line">created for the channel,</tspan><tspan
+           id="tspan3782"
+           y="210.52309"
+           x="1661.4388"
+           sodipodi:role="line">Turbulence will allow creating</tspan><tspan
+           id="tspan3784"
+           y="255.52309"
+           x="1661.4388"
+           sodipodi:role="line">an xml-rpc channel or</tspan><tspan
+           id="tspan3786"
+           y="300.52309"
+           x="1661.4388"
+           sodipodi:role="line">a coyote channel..</tspan></text>
+    </g>
+  </g>
+</svg>

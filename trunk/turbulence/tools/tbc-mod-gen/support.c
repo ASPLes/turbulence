@@ -484,7 +484,7 @@ char  * support_clean_name          (const char * name)
 	while (name[iterator]) {
 		/* copy as is character '-' */
 		if (name[iterator] == '-') {
-			result[index] = (name[iterator]);
+			result[index] = '_';
 			index++;
 		}
 
