@@ -10,7 +10,7 @@ body {
 }
 
 h1, h2, h3, a { 
-       color: #00568d;
+   color: #00568d;
    font-family: Arial, FreeSans, Sans, Sans-Serif, Helvetica;
 }
 
@@ -28,13 +28,13 @@ a:visited {
 
 .af-arch-header { 
   width: 100%;
-  background: #00568d;
+  background: white;
   margin: 0;
 }
 
 .separator { 
  border: 2px solid #c9c9c9;
- background: #7d0000;
+ background: #204a87;
  height: 10px;
 }
 
@@ -152,5 +152,33 @@ pre.fragment {
 .mdTable .mdRow table td { 
   width: 10px;
 }
+
+pre.xml-doc { 
+  padding: 10px;
+  border: 1px dashed #b0b0b0;
+  background: #4a554a;
+  color: white;
+}
+
+div.xml-doc pre.fragment { 
+  margin: 0px;
+  padding: 10px;
+/*  background: #4a554a; */
+  background: #555753;
+  color: white;
+}
+
+div.xml-doc pre.fragment .stringliteral { 
+  color: #e9b96e;
+}
+
+div.xml-doc pre.fragment .keyword { 
+  color: white;
+}
+
+div.xml-doc pre.fragment .keywordflow { 
+  color: white;
+}
+
 
 

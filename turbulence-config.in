@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# return module directory installation
+if [ $1 == "--mod-dir" ]; then
+        echo -n "@prefix@/lib/turbulence/modules";
+	exit 0;
+fi
+
+# return module xml pointer directory installation
+if [ $1 == "--mod-xml" ]; then
+        echo -n "@sysconfdir@/turbulence/mods-available";
+	exit 0;
+fi
+
+

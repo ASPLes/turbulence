@@ -93,6 +93,9 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_install_arg ("vortex-debug-color", NULL, EXARG_NONE,
 			   "Makes vortex debug to be done using colors according to the message type. If this variable is activated, vortex-debug variable is activated implicitly.");
 
+	exarg_install_arg ("conf-location", NULL, EXARG_NONE,
+			   "Allows to get the location of the turbulence configuration file that will be used by default");
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -562,11 +565,271 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  * applications based on Vortex Library. Because Vortex Library
  * (http://vortex.aspl.es) only provides support for the BEEP
  * protocol, a server side application is required on top of it to
- * init the library and the required provisioning, connecting the
- * protocol to the real problem to be solved.
+ * init the library and to provide the required provisioning,
+ * connecting the protocol to the real problem to be solved.
  * 
+ * Turbulence is extended through modules, and already provides into
+ * its base code modules to manage SASL users and an implementation of
+ * the TUNNEL profile.
  * 
+ * The following are a set of documents that provides information
+ * about using Turbulence and to extend it.
  * 
+ * - \ref turbulence_configuration
  *
  * 
+ */
+
+/**
+ * \page turbulence_configuration Configuring Turbulence
+ *
+ * \section Index
+ *
+ *   - \ref turbulence_configuration_file
+ *   - \ref turbulence_addresses_and_ports
+ *   - \ref turbulence_log_files
+ *   - \ref turbulence_modules_configuration
+ *   - \ref turbulence_profile_path
+ *
+ * \section turbulence_configuration_file How turbulence is configured (configuration file location)
+ * 
+ * Turbulence is configured through XML 1.0 files. According to your
+ * installation, the main turbulence configuration file should be
+ * found at the location provided by the following command:
+ * 
+ * \code
+ * turbulence --conf-location --debug
+ * (proc:13369) [msg] (turbulence.c:120) turbulence internal init
+ * (proc:13369) [msg] (main.c:50) Default configuration file: /etc/turbulence/turbulence.conf
+ * \endcode
+ * 
+ * Alternatively you can provide your own configuration file by using
+ * the <b>--config</b> option: 
+ * 
+ * \code
+ * turbulence --conf my-turbulence.conf
+ * \endcode
+ *
+ * This main configuration file includes several main sections:
+ * 
+ * - <b>&lt;global-settings></b>: This main section includes several
+ * run time configuration for the BEEP server: TCP ports, listener
+ * address, log files, crash handling, etc.
+ *
+ * - <b>&lt;modules></b>: following to this section is found the
+ * modules configuration. Under this section is mainly configured
+ * directories holding modules.
+ *
+ * - <b>&lt;profile-path-configuration></b>: and finally, at the end
+ * of the file is found the profile path configuration. This is one of
+ * the great features provided by turbulence, an administrative
+ * configuration which allows to mix, sequence, and select profiles to
+ * be provided to client peers according to several run time values
+ * such remote address, profiles already initiated.
+ * 
+ * \section turbulence_addresses_and_ports Turbulence addresses and ports
+ *
+ * Ports and addresses used by Turbulence to listen are configured at
+ * the <b>&lt;global-settings></b> section. Here is an example:
+ * 
+ * <div class="xml-doc">
+ * \code
+ *  <global-settings>
+ *    <!-- ... more settings ... -->
+ * 
+ *    <!-- port to listen to -->
+ *    <ports>
+ *      <port>3206</port>
+ *      <port>44010</port>
+ *    </ports>
+ *
+ *    <!-- listener configuration (address to listen) --> 
+ *    <listener>
+ *      <name>0.0.0.0</name>
+ *    </listener>
+ *  </global-settings>
+ * \endcode
+ * </div>
+ *
+ * Previous example will make Turbulence to listen on ports 3206 and
+ * 44010 for all addresses that are known for the server hosting
+ * turbulence (0.0.0.0). Turbulence will understand this section
+ * listening on all addresses provided, for all ports.
+ *
+ * Then you can use profile path to enforce which profiles will be
+ * served on each port. For example, you can provide TUNNEL support
+ * only on port 3206.
+ * 
+ * \section turbulence_log_files Configuring turbulence log files
+ * 
+ * Log files used by turbulence are configured at the
+ * <b>&lt;global-settings</b> section. FIXME ME, FINISH TURBULENCE LOG
+ * SUPPORT.
+ *
+ * \section turbulence_modules_configuration Turbulence modules configuration
+ * 
+ * Modules loaded by turbulence are found at the directories
+ * configured at the <b>&lt;modules></b> section. Here is an example:
+ * 
+ * <div class="xml-doc">
+ * \code
+ *  <modules>
+ *    <!-- directory where to find modules to load -->
+ *    <directory src="/etc/turbulence/mods-enabled" /> 
+ *  </modules>
+ * \endcode
+ * </div>
+ * 
+ * Every directory configured contains turbulence xml module pointers
+ * having the following content:
+ * 
+ * <div class="xml-doc">
+ * \code
+ * <mod-turbulence location="/usr/lib/turbulence/modules/mod-sasl.so"/>
+ * \endcode
+ * </div>
+ * 
+ * Each module have its own configuration file, which should use XML
+ * as default configuration format. Check the following documents for
+ * modules implemented into Turbulence:
+ * 
+ * - \ref turbulence_mod_sasl
+ * - \ref turbulence_mod_tunnel
+ *  
+ *
+ * 
+ * 
+ * \section turbulence_profile_path Profile path configuration
+ *
+ * Profile Path is a feature that will allow to configure which
+ * profiles can be used by remote peers, according to several run time
+ * configurations. It is designed to make it more easy to develop a
+ * BEEP profile, to them mix it with other profiles in many ways
+ * making them more useful through the combination created at
+ * run-time.
+ * 
+ * Let's see some examples to initially clarify the profile path
+ * support. A usual configuration around BEEP is to provide SASL
+ * autentication and then allow using a profile which do useful
+ * work. With profile path this can be configured as:
+ * 
+ * <div class="xml-doc">
+ * \code
+ * <path-def server-name=".*" src="not 192.168.0.*" path-name="not local-parts">
+ *   <if-success profile="http://iana.org/beep/SASL/*" connmark="sasl:is:authenticated">
+ *      <allow profile="http://iana.org/beep/TUNNEL" />
+ *   </if-success>
+ * </path-def>
+ * \endcode
+ * </div>
+ *
+ * Previous example instruct Turbulence to apply a profile path called
+ * "not local-parts" if the source of the connection comes not from
+ * 192.168.0.X. It also teaches Turbulence to only provide SASL
+ * profiles and once initiated properly (and autenticated), the remote
+ * client peer can use the TUNNEL profile. Nothing more.
+ *
+ * Profile path is applied as a chain, composed by <b>&lt;path-def></b>
+ * definitions. Once a path-def match the target, the profile path
+ * configuration found on it its applied to the peer. 
+ * 
+ * \image html profile-path-chain.png "Profile path chain"
+ *
+ * As the previous image shows, the turbulence profile path
+ * configuration is composed by several profile path definitions:
+ * 
+ * <div class="xml-doc">
+ * \code
+ * <path-def server-name=".*" src="not 192.168.0.*" path-name="not local-parts">
+ *   <!-- profile path configuration -->
+ * </path-def>
+ * \endcode
+ * </div>
+ * 
+ * It supports the following matching configurations:
+ * 
+ * - <b>server-name</b>: a perl expression defining the the serverName
+ * to match for the connection.
+ *
+ * - <b>src</b>: a perl expression defining the source of the
+ * connection.
+ *
+ * - <b>path-name</b>: an administrative flag that will help to
+ * recognize the connection in future process (log reporting).
+ *
+ * Once a path is matched, the following are discarded and the
+ * configuration inside the profile path is applied to the connection
+ * as long as the connection is running.
+ * 
+ * Now, it is required to configure which profiles will be
+ * allowed. This is done by using two types of nodes:
+ * 
+ * - <b>&lt;if-success></b>: a configuration that allows to use the
+ * profile referenced by it, and additionally, allows to use profiles
+ * provided by other nodes inside it once a channel with the profile
+ * provided is initiated.
+ *
+ * - <b>&lt;allow></b>: a configuration that allows to use a profile
+ * at a particular level.
+ *
+ * Let's see an example to show how it works:
+ * 
+ * <div class="xml-doc">
+ * \code
+ * <if-success profile="http://iana.org/beep/SASL/.*" connmark="sasl:is:authenticated" >
+ *    <allow profile="http://turbulence.ws/profiles/test1" preconnmark="sasl:is:authenticated"/>
+ *    <if-success profile="http://iana.org/beep/TLS" >
+ *       <allow profile="http://iana.org/beep/xmlrpc" />
+ *       <allow profile="http://fact.aspl.es/profiles/coyote_profile" />
+ *    </if-success>
+ * </if-success>
+ * \endcode
+ * </div>
+ *
+ * Previous example have configured a particular profile path as
+ * follows:
+ *
+ * \image html profile-path-example.png "Profile path example: how it is applied profile path"
+ * 
+ * The example is mostly self-explanatory, but one detail remains. The
+ * configuration uses two attributes: <b>connmark</b> and
+ * <b>preconnmark</b>. They are used as flags that must be detected in
+ * the connection in other to allow the connection to accept a profile
+ * or the content of the following profiles.
+ *
+ * - <b>preconnmark</b>: if used, it means that the connection must
+ * have the "mark" provided before the profile can be accepted to be
+ * initiated.
+ * 
+ * - <b>connmark</b>: can only be used from &lt;if-success> nodes, and
+ * allows to protect the profile path content inside the
+ * &lt;if-success> node, enforcing to not only create a channel under
+ * the profile provided but also having the mark. This is particular
+ * useful for the SASL case because having a SASL channel created
+ * isn't a warranty of a connection authenticated. Thus, an additional
+ * mark is required to properly ensure that the connection was
+ * authenticated.
+ *
+ * So, a good question at this point is "how are those marks
+ * created?". These marks are profile dependant and are created using
+ * the interface provided by the vortex connection module to store
+ * data:
+ * 
+ * - vortex_connection_set_data
+ *
+ * In this case, SASL implementation flags the connection as
+ * authenticated using the provided flag: "sasl:is:authenticated".
+ * 
+ */
+
+/**
+ * \page turbulence_mod_sasl Turbunece mod-sasl: SASL profile support for turbulence
+ *
+ * FIXME
+ */
+
+/**
+ * \page turbulence_mod_tunnel Turbulence mod-tunnel: TUNNEL profile support for turbulence
+ *
+ * FIXME
  */

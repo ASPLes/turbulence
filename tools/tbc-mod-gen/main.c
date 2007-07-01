@@ -1,4 +1,3 @@
-
 /*  tbc-mod-gen: A tool to produce modules for the Turbulence BEEP server
  *  Copyright (C) 2007 Advanced Software Production Line, S.L.
  *
@@ -119,7 +118,7 @@ bool tbc_mod_gen_template_create ()
 	axl_node_set_comment (node, "init method, called once the module is loaded", -1);
 	nodeAux = axl_node_create ("init");
 	axl_node_set_child (node, nodeAux);
-	axl_node_set_cdata_content (nodeAux, "/* Place here your mod init code. This will be called once turbulence decides to include the module. */", -1);
+	axl_node_set_cdata_content (nodeAux, "/* Place here your mod init code. This will be called once turbulence decides to include the module. */\nreturn true;", -1);
 	
 	/* close node */
 	axl_node_set_comment (node, "close method, called once the module is going to be stoped", -1);
@@ -225,7 +224,7 @@ bool tbc_mod_gen_compile ()
 
 	/* init handler */
 	write ("/* %s init handler */\n", mod_name);
-	write ("static bool %s_init ()\n", tolower);
+	write ("static bool %s_init () {\n", tolower);
 	node = axl_doc_get (doc, "/mod-def/source-code/init");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
@@ -235,7 +234,7 @@ bool tbc_mod_gen_compile ()
 
 	/* close handler */
 	write ("/* %s close handler */\n", mod_name);
-	write ("static bool %s_close ()\n", tolower);
+	write ("static void %s_close () {\n", tolower);
 	node = axl_doc_get (doc, "/mod-def/source-code/close");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
@@ -245,7 +244,7 @@ bool tbc_mod_gen_compile ()
 
 	/* reconf handler */
 	write ("/* %s reconf handler */\n", mod_name);
-	write ("static bool %s_reconf ()\n", tolower);
+	write ("static void %s_reconf () {\n", tolower);
 	node = axl_doc_get (doc, "/mod-def/source-code/reconf");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
@@ -277,6 +276,42 @@ bool tbc_mod_gen_compile ()
 	support_close_file ();
 
 	msg ("%s created!", mod_name);
+
+
+	/* create the makefile required */
+	support_open_file ("%sMakefile.am", get_out_dir ());
+	
+	write ("# Module definition\n");
+	write ("EXTRA_DIST = %s\n\n", exarg_get_string ("compile"));
+	
+	       
+	write ("INCLUDES = -Wall -g -ansi -I $(TURBULENCE_CFLAGS) -DCOMPILATION_DATE=`date +%%s` \\\n");
+	push_indent ();
+	
+	write ("-DVERSION=\\\"$(VERSION)\\\" \\\n");
+	write ("-DSYSCONFDIR=\\\"\"$(sysconfdir)\"\\\" \\\n");
+	write ("-DDATADIR=\\\"\"$(datadir)\"\\\" \\\n");
+	write ("$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)\n\n");
+	pop_indent ();
+	
+	write ("# configure module binary\n");
+	write ("lib_LTLIBRARIES      = %s.la\n", mod_name);
+	write ("%s_la_SOURCES  = %s.c\n", mod_name, mod_name);
+	write ("%s_la_LDFLAGS  = -module -ldl\n\n", mod_name);
+	
+	write ("# reconfigure module installation directory\n");
+	write ("libdir = `turbulence-config --mod-dir`\n\n");
+	
+	write ("# configure site module installation\n");
+	write ("modconfdir   = `turbulence-config --mod-xml`\n");
+	write ("modconf_DATA = %s.xml\n\n", mod_name);
+	
+	write ("%s.xml:\n", mod_name);
+	push_indent ();
+	write ("echo \"<mod-turbulence location=\\\"`turbulence-config --mod-dir`/%s.so\\\"/>\" > %s.xml\n", mod_name, mod_name);
+	pop_indent ();
+
+	support_close_file ();
 
 	/* dealloc */
 	axl_free (mod_name);
