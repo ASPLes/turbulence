@@ -560,18 +560,12 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  *
  * \section intro Introduction
  *
- * Turbulence is a general server side application that implements
- * many of the administrative tasks required while deploying BEEP
- * applications based on Vortex Library. Because Vortex Library
- * (http://vortex.aspl.es) only provides support for the BEEP
- * protocol, a server side application is required on top of it to
- * init the library and to provide the required provisioning,
- * connecting the protocol to the real problem to be solved.
- * 
- * Turbulence is extended through modules, and already provides into
- * its base code modules to manage SASL users and an implementation of
- * the TUNNEL profile.
- * 
+ * Turbulence is a general BEEP server built on top of Vortex
+ * Library. It provides many required features like SASL user
+ * administration, profile policy selection, BEEP proxy (TUNNEL
+ * profile), runtime limits, etc. It is extensible through modules,
+ * allowing to add with new profiles.
+ *
  * The following are a set of documents that provides information
  * about using Turbulence and to extend it.
  * 
