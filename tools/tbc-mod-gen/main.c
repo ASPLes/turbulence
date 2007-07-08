@@ -149,6 +149,7 @@ bool tbc_mod_gen_compile ()
 	axlDoc   * doc;
 	axlError * error;
 	axlNode  * node;
+	axlNode  * moddef;
 	char     * file;
 	char     * mod_name;
 	char     * tolower;
@@ -203,6 +204,7 @@ bool tbc_mod_gen_compile ()
 	axl_dtd_free (dtd);
 
 	/* open file */
+	moddef   = axl_doc_get_root (doc);
 	node     = axl_doc_get (doc, "/mod-def/name");
 	mod_name = (char *) axl_node_get_content (node, NULL);
 	mod_name = support_clean_name (mod_name);
@@ -296,7 +298,8 @@ bool tbc_mod_gen_compile ()
 	
 	write ("# configure module binary\n");
 	write ("lib_LTLIBRARIES      = %s.la\n", mod_name);
-	write ("%s_la_SOURCES  = %s.c\n", mod_name, mod_name);
+	write ("%s_la_SOURCES  = %s.c %s\n", mod_name, mod_name,
+	       HAS_ATTR (moddef, "sources") ? ATTR_VALUE (moddef, "sources") : "");
 	write ("%s_la_LDFLAGS  = -module -ldl\n\n", mod_name);
 	
 	write ("# reconfigure module installation directory\n");

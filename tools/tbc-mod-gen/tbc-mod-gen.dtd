@@ -1,5 +1,7 @@
 <!ELEMENT mod-def (name, description, source-code)>
 
+<!ATTLIST mod-def sources CDATA #IMPLIED>
+
 <!ELEMENT name (#PCDATA)>
 
 <!ELEMENT description (#PCDATA)>
