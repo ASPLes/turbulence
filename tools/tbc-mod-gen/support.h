@@ -76,4 +76,6 @@ char  * support_to_upper            (const char * name);
 
 char  * support_to_lower            (const char * name);
 
+void    support_make_executable     (const char * format, ...);
+
 #endif

@@ -224,6 +224,12 @@ bool tbc_mod_gen_compile ()
 	write (" * names. */\n");
 	write ("BEGIN_C_DECLS\n\n");
 
+	/* place here additional content */
+	node    = axl_doc_get (doc, "/mod-def/source-code/additional-content");
+	if (node != NULL) {
+		write ("%s\n", axl_node_get_content (node, NULL));
+	} /* end if */
+
 	/* init handler */
 	write ("/* %s init handler */\n", mod_name);
 	write ("static bool %s_init () {\n", tolower);
@@ -320,6 +326,18 @@ bool tbc_mod_gen_compile ()
 	axl_free (mod_name);
 	axl_free (tolower);
 	axl_doc_free (doc);
+
+	/* create the script file */
+	support_open_file ("%sgen-code", get_out_dir ());
+
+	write ("#!/bin/sh\n\n");
+
+	/* write the mod gen */
+	write ("tbc-mod-gen --compile %s --out-dir %s\n", exarg_get_string ("compile"), exarg_get_string ("out-dir"));
+	
+	support_close_file ();
+
+	support_make_executable ("%sgen-code", get_out_dir ());
 
 	return true;
 }

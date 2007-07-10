@@ -565,3 +565,38 @@ char  * support_to_upper            (const char * name)
 	/* makes a to upper operation */
 	return __support_common_name (name, true);
 }
+
+/** 
+ * @internal
+ * 
+ * Makes the provided file, located at the path formed by the
+ * printf-like function, to be executable.
+ * 
+ * @param format The file to be executable, especified by the a
+ * printf-like path.
+ */
+void    support_make_executable (const char * format, ...)
+{
+	char * result;
+	
+	va_list   args;
+
+	/* write content defined by the parameters */
+	va_start (args, format);
+	result = axl_strdup_printfv (format, args);
+	va_end (args);
+	
+	msg ("making executable:         %s", result);
+
+	/* make a chmod operation */
+	if (chmod (result, 0770) < 0) {
+		error ("unable to make executable the file: '%s'\n", result);
+	}
+	
+	/* release the memory hold */
+	axl_free (result);
+
+	/* return */
+	return;
+	
+}
