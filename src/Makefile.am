@@ -10,7 +10,7 @@ if ENABLE_TERMIOS
 INCLUDE_TERMIOS=-DENABLE_TERMIOS
 endif
 
-INCLUDES = -DCOMPILATION_DATE=`date +%s` \
+INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__\
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
 	   -DDATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
@@ -34,7 +34,8 @@ libturbulenceinclude_HEADERS    = \
 	turbulence-module.h \
 	turbulence-log.h \
 	turbulence-ppath.h \
-	turbulence-config.h 
+	turbulence-config.h \
+	turbulence-db-list.h
 
 libturbulence_la_SOURCES = \
 	turbulence.c \
@@ -42,7 +43,8 @@ libturbulence_la_SOURCES = \
 	turbulence-run.c \
 	turbulence-module.c \
 	turbulence-log.c \
-	turbulence-ppath.c
+	turbulence-ppath.c \
+	turbulence-db-list.c
 
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'

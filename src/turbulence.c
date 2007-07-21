@@ -45,6 +45,20 @@
 #include <turbulence.h>
 #include <signal.h>
 
+#if defined(__COMPILING_TURBULENCE__) && defined(__GNUC__)
+/* make happy gcc compiler */
+int fsync (int fd);
+#endif
+
+/**
+ * \defgroup turbulence Turbulence: main turbulence module, general facilities, initialization, etc.
+ */
+
+/**
+ * \addtogroup turbulence.
+ * @{
+ */
+
 #define HELP_HEADER "Turbulence: BEEP application server\n\
 Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
 
@@ -55,8 +69,12 @@ at <vortex@lists.aspl.es>."
 /** 
  * @internal Controls if messages must be send to the console log.
  */
-bool        console_enabled = false;
-int         turbulence_pid  = -1;
+bool        console_enabled        = false;
+bool        console_debug          = false;
+bool        console_debug2         = false;
+bool        console_debug3         = false;
+bool        console_color_debug    = false;
+int         turbulence_pid         = -1;
 
 bool        turbulence_is_existing = false;
 VortexMutex turbulence_exit_mutex;
@@ -81,11 +99,9 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_install_arg ("config", "f", EXARG_STRING, 
 			   "Main server configuration location.");
 
-	exarg_install_arg ("debug", "d", EXARG_NONE,
-			   "Makes all log produced by the application, to be also dropped to the console");
-
-	exarg_install_arg ("color-debug", "c", EXARG_NONE,
-			   "Makes console log to be colorified");
+	/* install console options */
+	console_debug = true;
+	turbulence_console_install_options (); 
 
 	exarg_install_arg ("vortex-debug", NULL, EXARG_NONE,
 			   "Enable vortex debug");
@@ -100,7 +116,7 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_parse (argc, argv);
 
 	/* check if the console is defined */
-	turbulence_set_console_debug (exarg_is_defined ("debug"));
+	turbulence_console_process_options (); 
 
 	/* enable vortex debug */
 	vortex_log_enable (exarg_is_defined ("vortex-debug"));
@@ -118,8 +134,15 @@ bool turbulence_init (int argc, char ** argv)
 	/*** not required to initialize axl library, already done by vortex ***/
 
 	msg ("turbulence internal init");
+
+	/* configure lookup domain for turbulence data */
+	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-data"), 
+						   vortex_support_build_filename (DATADIR, "turbulence", NULL));
+	vortex_support_add_domain_search_path     ("turbulence-data", ".");
+
 	vortex_mutex_create (&turbulence_exit_mutex);
 	turbulence_module_init ();
+	turbulence_db_list_init ();
 
 	/* install default signal handling */
 	signal (SIGINT,  turbulence_exit);
@@ -152,6 +175,12 @@ void turbulence_reload_config (int value)
 		return;
 	}
 	already_notified = true;
+
+	/* reload turbulence here, before modules
+	 * reloading */
+	turbulence_db_list_reload_module ();
+	
+	/* reload modules */
 	turbulence_module_notify_reload_conf ();
 	vortex_mutex_unlock (&turbulence_exit_mutex);
 
@@ -244,6 +273,7 @@ void turbulence_cleanup ()
 	/* terminate all modules */
 	turbulence_module_cleanup ();
 	turbulence_config_cleanup ();
+	turbulence_db_list_cleanup ();
 
 	/* terminate vortex */
 	msg ("terminating vortex library..");
@@ -284,13 +314,58 @@ void turbulence_cleanup ()
  * @param debug The value to be configured, false to disable console
  * log, true to enable it.
  */
-void turbulence_set_console_debug (bool debug)
+void turbulence_console_process_options ()
 {
 	/* get current process id */
 	turbulence_pid = getpid ();
 
-	/* set the value */
-	console_enabled = debug;
+	/* activate log console */
+	console_debug       = exarg_is_defined ("debug");
+	console_debug2      = exarg_is_defined ("debug2");
+	console_debug3      = exarg_is_defined ("debug3");
+	console_enabled     = console_debug || console_debug2 || console_debug3;
+
+	/* implicitly activate third and second console debug */
+	if (console_debug3)
+		console_debug2 = true;
+	if (console_debug2)
+		console_debug = true;
+	
+	console_color_debug = exarg_is_defined ("color-debug");
+
+	return;
+}
+
+/** 
+ * @brief Install default console debug options accepted for
+ * turbulence tools. Activates by default the --debug option which is
+ * the normal console output.
+ */
+void turbulence_console_install_options ()
+{
+	/* install default debug options. */
+
+	exarg_install_arg ("debug", "d", EXARG_NONE,
+			   "Makes all log produced by the application, to be also dropped to the console in sort form.");
+
+	exarg_install_arg ("debug2", NULL, EXARG_NONE,
+			   "Increase the level of log to console produced.");
+
+	exarg_install_arg ("debug3", NULL, EXARG_NONE,
+			   "Makes logs produced to console to inclue more information about the place it was launched.");
+
+	exarg_install_arg ("color-debug", "c", EXARG_NONE,
+			   "Makes console log to be colorified.");
+
+	/* check implicit activation */
+	if (console_debug) 
+		console_debug = false;
+	else {
+		/* seems the caller is a tool, define the debug flag
+		 * to be activated. */
+		exarg_define ("debug", NULL);
+	}
+	return;
 }
 
 /** 
@@ -301,12 +376,22 @@ void turbulence_error (const char * file, int line, const char * format, ...)
 	va_list args;
 	
 	
+	/* check extended console log */
+	if (console_debug3) {
 #if defined(AXL_OS_UNIX)	
-	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", turbulence_pid, file, line);
-	} else
+		if (exarg_is_defined ("color-debug")) {
+			CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		} else
 #endif
-	CONSOLE (stderr, "(proc:%d) [err] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stderr, "(proc:%d) [err] (%s:%d) ", turbulence_pid, file, line);
+	} else {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stderr, "\e[1;31mE: \e[0m");
+		} else
+#endif
+			CONSOLE (stderr, "E: ");
+	} /* end if */
 	
 	va_start (args, format);
 
@@ -332,12 +417,67 @@ void turbulence_msg (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 
+	/* check extended console log */
+	if (console_debug3) {
 #if defined(AXL_OS_UNIX)	
-	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
-	} else
+		if (console_color_debug) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		} else
 #endif
-		CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+	} else {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stdout, "\e[1;32mI: \e[0m");
+		} else
+#endif
+			CONSOLE (stdout, "I: ");
+	} /* end if */
+	
+	va_start (args, format);
+	
+	/* report to console */
+	CONSOLEV (stdout, format, args);
+
+	/* report to log */
+	turbulence_log_report (LOG_REPORT_GENERAL, format, args, file, line);
+
+	va_end (args);
+
+	CONSOLE (stdout, "\n");
+	
+	fflush (stdout);
+	
+	return;
+}
+
+/** 
+ * @internal function that actually handles the console msg (second level debug)
+ */
+void turbulence_msg2 (const char * file, int line, const char * format, ...)
+{
+	va_list args;
+
+	/* check second level debug */
+	if (! console_debug2)
+		return;
+
+	/* check extended console log */
+	if (console_debug3) {
+#if defined(AXL_OS_UNIX)	
+		if (exarg_is_defined ("color-debug")) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		} else
+#endif
+			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+	} else {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stdout, "\e[1;32mI: \e[0m");
+		} else
+#endif
+			CONSOLE (stdout, "I: ");
+	} /* end if */
 	
 	va_start (args, format);
 	
@@ -363,12 +503,22 @@ void turbulence_wrn (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
+	/* check extended console log */
+	if (console_debug3) {
 #if defined(AXL_OS_UNIX)	
-	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
-	} else
+		if (exarg_is_defined ("color-debug")) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		} else
 #endif
-	CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+	} else {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stdout, "\e[1;33m!: \e[0m");
+		} else
+#endif
+			CONSOLE (stdout, "!: ");
+	} /* end if */
 	
 	va_start (args, format);
 
@@ -393,12 +543,22 @@ void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
 {
 	va_list args;
 	
+	/* check extended console log */
+	if (console_debug3) {
 #if defined(AXL_OS_UNIX)	
-	if (exarg_is_defined ("color-debug")) {
-		CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
-	} else
+		if (exarg_is_defined ("color-debug")) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		} else
 #endif
-	CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+	} else {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stdout, "\e[1;33m!: \e[0m");
+		} else
+#endif
+			CONSOLE (stdout, "!: ");
+	} /* end if */
 	
 	va_start (args, format);
 
@@ -415,7 +575,7 @@ void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
 }
 
 /** 
- * @brief Provides the same functionality like \ref turbulence_file_test,
+ * @brief Provides the same functionality like \ref turbulence_file_test_v,
  * but allowing to provide the file path as a printf like argument.
  * 
  * @param format The path to be checked.
@@ -446,6 +606,24 @@ bool turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 	return result;
 }
 
+
+/** 
+ * @brief Creates the directory with the path provided.
+ * 
+ * @param path The directory to create.
+ * 
+ * @return true if the directory was created, otherwise false is
+ * returned.
+ */
+bool     turbulence_create_dir  (const char * path)
+{
+	/* check the reference */
+	if (path == NULL)
+		return false;
+	
+	/* create the directory */
+	return (mkdir (path, 770) == 0);
+}
 
 /** 
  * @brief Allows to get the modification for the provided format,
@@ -555,6 +733,8 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 	return result;
 }
 
+/* @} */
+
 /**
  * \mainpage 
  *
@@ -655,10 +835,60 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  * only on port 3206.
  * 
  * \section turbulence_log_files Configuring turbulence log files
+ *
+ * Turbulence, its library and the tools associated using that library
+ * have two destinations where logs are sent. The first default
+ * destination for log produced by the turbulence server and its
+ * modules are sent to a set of files that are configured at the at
+ * the <b>&lt;global-settings></b> section:
  * 
- * Log files used by turbulence are configured at the
- * <b>&lt;global-settings</b> section. FIXME ME, FINISH TURBULENCE LOG
- * SUPPORT.
+ * <div class="xml-doc">
+ * \code
+ *    <!-- log reporting configuration -->
+ *    <log-reporting enabled="yes">
+ *      <general-log file="/var/log/turbulence/main.log" />
+ *      <error-log  file="/var/log/turbulence/error.log" />
+ *      <access-log file="/var/log/turbulence/access.log" />
+ *      <vortex-log file="/var/log/turbulence/vortex.log" />
+ *    </log-reporting>
+ * \endcode
+ * </div>
+ *
+ * These files hold logs for general information
+ * (<b>&lt;general-log></b>), error information
+ * (<b>&lt;error-log></b>), client peer access information
+ * (<b>&lt;access-log></b>) and vortex engine log produced by its
+ * execution (<b>&lt;vortex-log></b>).
+ *
+ * Apart from the vortex log (<b>&lt;vortex-log></b>) the rest of
+ * files contains the information that is produced by all calls done
+ * to: \ref msg, \ref msg2, \ref wrn and \ref error. 
+ *
+ * By default, Turbulence server is started with no console
+ * output. All log is sent to previous log files. The second
+ * destination avaiable to send logs is the console output. 
+ *
+ * Four command line options controls logs produced to the console by
+ * Turbulence and tools associated:
+ *
+ * - <b>--debug</b>: activates the console log, showing main
+ * messages. Tubulence tools have this option implicitly activated.
+ *
+ * - <b>--debug2</b>: activates implicitly the <b>--debug</b> option
+ * and shows previous messages plus new messages that are considered
+ * to have more details.
+ *
+ * - <b>--debub3</b>: makes log output activated to include more
+ * details at the place it was launched (file and line), process pid,
+ * etc.
+ *
+ * - <b>--color-debug</b>: whenever previous options are activated, if
+ * this one is used, the console log is colorified according to the
+ * kind of message reported: green (messages), red (error messages),
+ * yellow (warning messages).
+ *
+ * If previous options are used Turbulence will register a log into
+ * the appropiate file but also will send the same log to the console.
  *
  * \section turbulence_modules_configuration Turbulence modules configuration
  * 
@@ -710,7 +940,7 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  * <div class="xml-doc">
  * \code
  * <path-def server-name=".*" src="not 192.168.0.*" path-name="not local-parts">
- *   <if-success profile="http://iana.org/beep/SASL/*" connmark="sasl:is:authenticated">
+ *   <if-success profile="http://iana.org/beep/SASL/.*" connmark="sasl:is:authenticated">
  *      <allow profile="http://iana.org/beep/TUNNEL" />
  *   </if-success>
  * </path-def>
@@ -827,3 +1057,12 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  *
  * FIXME
  */
+
+/**
+ * \page turbulence_tools Turbulence tools: Set of tools included
+ * inside turbulence to manage and extend its function.
+ *
+ * FIXME
+ */
+
+

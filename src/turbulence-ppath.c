@@ -414,7 +414,7 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 			result->ppath_item[iterator] = __turbulence_ppath_get_item (child);
 			
 			/* next profile path item */
-			child = axl_node_get_next (node);
+			child = axl_node_get_next (child);
 			iterator++;
 			
 		} /* end if */

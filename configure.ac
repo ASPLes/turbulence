@@ -134,6 +134,12 @@ AC_ARG_ENABLE(enable-tbc-mod-gen, [  --enable-tbc-mod-gen       Enable building 
 	      enable_tbc_mod_gen=yes)
 AM_CONDITIONAL(ENABLE_TBC_MOD_GEN, test "x$enable_tbc_mod_gen" = "xyes")
 
+dnl check to build tbc-dblist-mgr tool
+AC_ARG_ENABLE(enable-tbc-dblist-mgr, [  --enable-tbc-dblist-mgr       Enable building tbc-dblist-mgr [default=yes]], 
+	      enable_tbc_dblist_mgr="$enableval", 
+	      enable_tbc_dblist_mgr=yes)
+AM_CONDITIONAL(ENABLE_TBC_DBLIST_MGR, test "x$enable_tbc_dblist_mgr" = "xyes")
+
 
 AC_OUTPUT([
 Makefile
@@ -150,6 +156,7 @@ modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
 tools/Makefile
 tools/tbc-mod-gen/Makefile
+tools/tbc-dblist-mgr/Makefile
 turbulence.pc
 turbulence-config
 ])
@@ -161,6 +168,7 @@ echo "   Installation prefix:            [$prefix]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
 echo "   Build tbc-sasl-conf:            [$termios_found]"
 echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
+echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"
 echo "--            Let it BEEP!              --"

@@ -59,14 +59,19 @@
 #include <turbulence-module.h>
 #include <turbulence-log.h>
 #include <turbulence-ppath.h>
+#include <turbulence-db-list.h>
 
-/* definitions */
+/**
+ * \addtogroup turbulence
+ * @{
+ */
 
-void turbulence_set_console_debug (bool debug);
+void turbulence_console_process_options ();
+
+void turbulence_console_install_options (); 
 
 /** 
- * Drops to the console stderr an error msg, placing the content
- * prefixed with the file and the line that caused the error.
+ * Drops to the console stderr an error msg.
  *
  * To drop an error message use:
  * \code
@@ -79,8 +84,7 @@ void turbulence_set_console_debug (bool debug);
 void  turbulence_error (const char * file, int line, const char * format, ...);
 
 /** 
- * Drops to the console stdout a msg, placing the content prefixed
- * with the file and the line that caused the message.
+ * Drops to the console stdout a msg.
  *
  * To drop a message use:
  * \code
@@ -93,8 +97,22 @@ void  turbulence_error (const char * file, int line, const char * format, ...);
 void  turbulence_msg   (const char * file, int line, const char * format, ...);
 
 /** 
- * Drops to the console stdout a warning, placing the content prefixed
- * with the file and the line that caused the message.
+ * Drops to the console stdout a msg (second level debug).
+ *
+ * To drop a message use:
+ * \code
+ *   msg2 ("module loaded: %s", module);
+ * \endcode
+ * 
+ * @param m The console message to output.
+ */
+#define msg2(m,...)   do{turbulence_msg2 (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_msg2   (const char * file, int line, const char * format, ...);
+
+
+
+/** 
+ * Drops to the console stdout a warning.
  *
  * To drop a message use:
  * \code
@@ -103,7 +121,7 @@ void  turbulence_msg   (const char * file, int line, const char * format, ...);
  * 
  * @param m The warning message to output.
  */
-#define wrn(m,...)   do{turbulence_msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+#define wrn(m,...)   do{turbulence_wrn (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_wrn   (const char * file, int line, const char * format, ...);
 
 /** 
@@ -132,6 +150,8 @@ void turbulence_reload_config (int value);
 bool     turbulence_file_test_v (const char * format, 
 				 VortexFileTest test, ...);
 
+bool     turbulence_create_dir  (const char * path);
+
 long int turbulence_last_modification (const char * file);
 
 typedef enum {
@@ -142,3 +162,5 @@ char *   turbulence_io_get (char * prompt, TurbulenceIoFlags flags);
 
 
 #endif
+
+/* @} */

@@ -52,10 +52,9 @@
 <!ELEMENT allow           (if-success | allow)*>
 
 <!ATTLIST path-def 
-          path-name   CDATA #IMPLIED
-          server-name CDATA #IMPLIED
-	  src         CDATA #IMPLIED >
-
+          path-name      CDATA #IMPLIED
+          server-name    CDATA #IMPLIED
+	  src            CDATA #IMPLIED >
 
 <!ATTLIST if-success 
           profile     CDATA #REQUIRED

@@ -84,10 +84,6 @@ bool turbulence_config_load (char * config)
 	axl_free (config);
 
 	/* now validates the turbulence file */
-	/* configure lookup domain, and load DTD file */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-data"), 
-						   vortex_support_build_filename (DATADIR, "turbulence", NULL));
-	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 	dtd = vortex_support_domain_find_data_file ("turbulence-data", "config.dtd");
 	if (dtd == NULL) {
 		/* free document */
