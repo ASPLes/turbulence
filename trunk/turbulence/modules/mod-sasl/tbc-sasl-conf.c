@@ -276,7 +276,7 @@ int main (int argc, char ** argv)
 			   "Configures the password for the operation. Optionally used by --add-user");
 
 	/* install exarg options */
-	exarg_install_arg ("disable-user", "d", EXARG_STRING, 
+	exarg_install_arg ("disable-user", "e", EXARG_STRING, 
 			   "Makes the user to be available on the system but not usable to perform real auth operation.");
 
 	exarg_install_arg ("remove-user", "r", EXARG_STRING,
@@ -288,16 +288,19 @@ int main (int argc, char ** argv)
 	/* do not accept free arguments */
 	exarg_accept_free_args (0);
 
+	/* install turbulence tool options */
+	turbulence_console_install_options ();
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 	
-	/* enable console log */
-	turbulence_set_console_debug (true);
-
+	/* process turbulence tool options */
+	turbulence_console_process_options ();
 
 	/* check empty arguments */
 	if (argc == 1) {
 		msg ("Try to use: %s --help", argv[0]);
+		goto finish;
 	}
 
 	/* load sasl module configuration */

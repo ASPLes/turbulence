@@ -358,17 +358,20 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("template", "t", EXARG_NONE,
 			   "Produce a module xml template. Use this file as starting point to create a module. Then use --compile.");
 
-	exarg_install_arg ("compile", "c", EXARG_STRING,
+	exarg_install_arg ("compile", "p", EXARG_STRING,
 			   "Produces the source code associated to a module, using as description the xml module definition provided.");
 	
 	exarg_install_arg ("out-dir", "o", EXARG_STRING,
 			   "Allows to configure the out put dir to be used. If not provided, '.' will be used as default value");
 
+	/* install turbulence tool options */
+	turbulence_console_install_options ();
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
-	/* enable console log */
-	turbulence_set_console_debug (true);
+	/* process turbulence tool options */
+	turbulence_console_process_options ();
 
 	/* check version argument */
 	if (exarg_is_defined ("version")) {
