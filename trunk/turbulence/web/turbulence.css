@@ -1,0 +1,166 @@
+/* 
+  gris oscuro: #2e3436;  
+  gris medio:  #555753;
+  gris aluminio: #888a85;
+  rojo claro: #ef2929;
+  azul claro: #3465a4;
+*/
+
+body { 
+  font-family: free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
+  background: #fff url("images/bg.gif"); 
+  color: #555753;
+}
+
+.content { 
+  background: white;
+  border: 1px solid #888a85;
+  /* first width, then position, then margin-left */
+  width: 620px;
+  position: absolute; left: 50%; top: 3%; z-index: 1;
+  margin-left: -310px;
+  padding: 20px;
+  padding-bottom: 0px;
+  color: #555753;
+}
+
+a:link { 
+  color: #3465a4;
+  text-decoration: none;
+  font-weight: bold;
+  background: white;
+}
+
+a:visited { 
+  color: #3465a4;
+  text-decoration: none;
+  font-weight: bold;
+  background: white;
+}
+
+a:hover { 
+  color: #3465a4;
+  text-decoration: none;                              
+  font-weight: bold;
+  background: white;
+}
+
+a:active { 
+  color: red;
+  text-decoration: underline;
+  font-weight: bold;
+  background: white;
+}
+
+p, li { 
+  font-size: 12px;
+}
+
+h1 { 
+   font-weight: lighter;
+   height: 30px;
+   font-size: 20px;
+   color: black;
+   font-family: impact, free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
+   background: white;
+}
+
+h1 span { 
+  border-right: 2px solid #ef2929;
+  padding-right: 10px;
+  font-family: impact, free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
+  font-weight: normal;
+  font-size: 32px;
+  color: black;
+  background: white;
+}
+
+h2 { 
+  font-size: 100%;
+  border-left: 5px solid #3465a4;
+  padding-left: 3px;
+}
+
+pre { 
+  color: white;
+  background: black;
+  border: 1px solid #acacac;
+}
+
+.main-content-left { 
+  width: 65%;
+  float: left;                     
+  padding-right: 15px;
+  border-right: 1px dotted #3465a4;
+}
+
+.main-content-right { 
+  width: 30%;
+  float: right;
+}
+
+ul.news { 
+  padding: 0px;
+  margin: 0px;
+}
+
+ul.news li { 
+  list-style: none;
+  font-size: 11px;
+}
+
+ul.images { 
+  padding: 2px;
+  margin: 0px;
+}
+
+ul.images li { 
+  list-style: none;
+  display: inline;
+}
+
+ul.images img { 
+  border: 0px;
+}
+
+.logo img { 
+ border: 0px;
+}
+
+.logo { 
+  float: right;
+  margin-top: -120px;
+}
+
+.alt-logo img { 
+ border: 0px;
+}
+
+.alt-logo { 
+  float: right;
+  margin-top: -40px;
+}
+
+.footer-notice { 
+  color: #888a85;
+  border-top: 1px dotted #3465a4;
+  float: left;
+  font-size: 50%;
+  text-align: center;
+  padding-top: 20px;
+  background: white;
+}
+
+.valid { 
+  width: 15%;
+  float: left;
+}
+
+.valid img { 
+  border: 0px;
+}
+
+.footer-content { 
+  width: 80%;
+  float: right;
+}
