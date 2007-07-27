@@ -198,3 +198,14 @@ ul.menu {
 .center { 
   text-align: center;
 }
+
+ul.languages { 
+  list-style: none;
+  padding: 0px;
+  margin: 0px;
+}
+
+ul.languages li { 
+  display: inline;
+}
+
