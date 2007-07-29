@@ -99,7 +99,7 @@ h2 {
 
 pre { 
   color: white;
-  background: black;
+  background: #2e3436;
   border: 1px solid #acacac;
 }
 
@@ -209,3 +209,42 @@ ul.languages li {
   display: inline;
 }
 
+
+pre.xml-doc { 
+  padding: 10px;
+  border: 1px dashed #b0b0b0;
+  background: #4a554a;
+  color: white;
+}
+
+div.xml-doc pre.fragment { 
+  margin: 0px;
+  padding: 10px;
+/*  background: #4a554a; */
+  background: #555753;
+  color: white;
+}
+
+div.xml-doc pre.fragment .stringliteral { 
+  color: #e9b96e;
+}
+
+div.xml-doc pre.fragment .keyword { 
+  color: white;
+}
+
+div.xml-doc pre.fragment .keywordflow { 
+  color: white;
+}
+
+span.comment { 
+  color: #ef2929;
+}
+
+span.attrvalue { 
+  color: #fcaf3e;
+}
+
+span.node { 
+  color: #ad7fa8;
+}

@@ -1,0 +1,359 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+<link rel="stylesheet" type="text/css" href="turbulence.css">
+<title>Turbulence: The BEEP application server, BEEP server, BEEP listener, BEEP server side </title>
+</head>
+
+<body>
+<div class="content">
+<a href="index.html"><img alt="[TURBULENCE HEADER]" src="images/turbulence-compact-header.png" /></a>
+<a class="alt-logo" href="http://www.aspl.es"><img alt="[ASPL LOGO]" src="images/aspl-alt-compat-logo.png"></a>
+<h1>Configuring Turbulence</h1>
+
+<h2>Index</h2>
+
+ <ol>
+ <li><a href="#how_is_configured">How turbulence is configured (configuration file location)</a></li>
+ <li><a href="#addresses_and_ports">Turbulence addresses and ports used</a></li>
+ <li><a href="#configuring_log_files">Configuring turbulence log files</a></li>
+ <li><a href="#modules_conf">Turbulence modules configuration</a></li>
+ <li><a href="#profile_path_conf">Profile path configuration</a></li>
+ </ol>
+  
+<h2> <a name="how_is_configured">How turbulence is configured (configuration file location)</a></h2>
+  
+<p>Turbulence is configured through XML 1.0 files. The intention is
+provide an easy, yet extensible way to configure turbulence, allowing
+ third parties to build tools to update/reconfigure it. It is
+also provided a DTD to ensure that configuration file created is
+properly constructed at a minimum syntax level.</p>
+
+  <p>According to your
+ installation, the main turbulence configuration file should be
+ found at the location provided by the following command: </p>
+ 
+ <pre>
+
+   >> turbulence --conf-location --debug
+   I: turbulence internal init
+   I: Default configuration file: /etc/turbulence/turbulence.conf
+ </pre>
+ 
+ <p>Alternatively you can provide your own configuration file by using
+ the <b>--config</b> option:  </p>
+ 
+ <pre>
+
+   >> turbulence --conf my-turbulence.conf
+ </pre>
+
+ <p>Turbulence main configuration file includes several global sections: </p>
+
+ <ol>
+ <li><p><b>&lt;global-settings></b>: This main section includes several
+   run time configuration for the BEEP server: TCP ports, listener
+   address, log files, crash handling, etc.</p>
+ </li>
+
+  <li>
+    <p><b>&lt;modules></b>: Under this section is mainly configured
+ directories holding modules.</p>
+  </li>
+
+ <li><p><b>&lt;profile-path-configuration></b>: Under this section is
+  provided the profile path configuration, an administrative
+  configuration which allows to mix, sequence, and select profiles to
+  be provided to client peers according to several run time values
+  such remote address, profiles already initiated, etc.. </p>
+ </li>
+</ol>
+
+<h2> <a name="addresses_and_ports"> Turbulence addresses and ports used</a></h2>
+
+<p> Ports and addresses used by Turbulence to listen are configured at
+ the <b>&lt;global-settings></b> section. Here is an example: </p>
+ 
+ <div class="xml-doc">
+ <pre>
+
+  &lt;<span class="node">global-settings</span>>
+    <span class="comment">&lt;!-- ... more settings ... --></span>
+ 
+    <span class="comment">&lt;!-- port to listen to --></span>
+    &lt;<span class="node">ports</span>>
+      &lt;<span class="node">port</span>>3206&lt;/<span class="node">port</span>>
+      &lt;<span class="node">port</span>>44010&lt;/<span class="node">port</span>>
+    &lt;/<span class="node">ports</span>>
+
+    <span class="comment">&lt;!-- listener configuration (address to listen) --></span>
+    &lt;<span class="node">listener</span>>
+      &lt;<span class="node">name</span>>0.0.0.0&lt;/<span class="node">name</span>>
+    &lt;/<span class="node">listener</span>>
+  &lt;/<span class="node">global-settings</span>>
+ </pre>
+ </div> <!-- class=xml-doc -->
+
+ <p>Previous example will make Turbulence to listen on ports 3206 and
+ 44010 for all addresses that are known for the server hosting
+ turbulence (0.0.0.0). Turbulence will understand this section
+ listening on all addresses provided, for all ports.</p>
+
+ <p>Then you can use profile path to enforce which profiles will be
+ served on each port. For example, you can provide TUNNEL support
+ only on port 604 (though not recommended: see <a href="beep-applications-and-ports.html">Building wrong port oriented network applications</a>). </p>
+
+<h2><a name="configuring_log_files">Configuring turbulence log files</a></h2>
+
+<p> Turbulence, its base library (libturbulence), modules and the
+tools associated (using previous library) have two destinations where
+logs are sent. The first default destination for log produced by the
+turbulence server and its modules are sent to a set of files that are
+configured at the at the <b>&lt;global-settings></b> section:</p>
+ 
+ <div class="xml-doc">
+ <pre>
+
+    <span class="comment">&lt;!-- log reporting configuration --></span>
+    &lt;<span class="node">log-reporting</span> enabled=<span class="attrvalue">"yes"</span>>
+      &lt;<span class="node">general-log</span> file=<span class="attrvalue">"/var/log/turbulence/main.log"</span> />
+      &lt;<span class="node">error-log</span>  file=<span class="attrvalue">"/var/log/turbulence/error.log"</span> />
+      &lt;<span class="node">access-log</span> file=<span class="attrvalue">"/var/log/turbulence/access.log"</span> />
+      &lt;<span class="node">vortex-log</span> file=<span class="attrvalue">"/var/log/turbulence/vortex.log"</span> />
+    &lt;/<span class="node">log-reporting</span>>
+ </pre>
+ </div>
+
+ <p>These files hold logs for general information
+ (<b>&lt;general-log></b>), error information
+ (<b>&lt;error-log></b>), client peer access information
+ (<b>&lt;access-log></b>) and vortex engine log produced by its
+ execution (<b>&lt;vortex-log></b>).</p>
+
+ <p>Apart from the vortex log (<b>&lt;vortex-log></b>) the rest of
+ files contains the information that is produced by all calls done
+ to the following library functions: <b>msg</b>, <b>msg2</b>, <b>wrn</b> and <b>error</b>. </p>
+
+ <p>By default, Turbulence server is started with no console
+ output. All log is sent to previous log files. The second
+ destination available is the console output. </p>
+
+ <p>Four command line options controls logs produced to the console by
+ Turbulence and tools associated:</p>
+
+<ol>
+  
+ <li><p><b>--debug</b>: activates the console log, showing main
+ messages. Turbulence tools have this option implicitly activated. </p></li>
+
+ <li><p> <b>--debug2</b>: activates implicitly the <b>--debug</b> option
+ and shows previous messages plus new messages that are considered
+ to have more details.</p></li>
+
+ <li><p><b>--debub3</b>: makes log output activated to include more
+ details at the place it was launched (file and line), process pid,
+ etc.</p></li>
+
+ <li><p><b>--color-debug</b>: whenever previous options are activated, if
+ this one is used, the console log is colored according to the
+ kind of message reported: green (messages), red (error messages),
+ yellow (warning messages).</p></li>
+
+</ol>
+ 
+ <p>If previous options are used Turbulence will register a log into
+ the appropriate file but also will send the same log to the console.</p>
+
+<h2><a name="modules_conf">Turbulence modules configuration</a></h2>
+ 
+<p>Modules loaded by turbulence are found at the directories
+configured in the <b>&lt;modules></b> section. Here is an example:</p>
+
+ <div class="xml-doc">
+ <pre>
+
+  &lt;<span class="node">modules</span>>
+    <span class="comment">&lt;!-- directory where to find modules to load --></span>
+    &lt;<span class="node">directory</span> src=<span class="attrvalue">"/etc/turbulence/mods-enabled"</span> /> 
+  &lt;/<span class="node">modules</span>>
+ </pre>
+ </div>
+ 
+ <p>Every directory configured contains turbulence xml module pointers
+ having the following content: </p>
+ 
+ <div class="xml-doc">
+ <pre>
+
+ &lt;<span class="node">mod-turbulence</span> location=<span class="attrvalue">"/usr/lib/turbulence/modules/mod-sasl.so"</span> />
+ </pre>
+ </div>
+ 
+<p>Each module have its own configuration file, which should use XML
+ as default configuration format. </p>
+ 
+<h2><a name="profile_path_conf">Profile path configuration</a></h2>
+
+<p> Profile Path is a feature that allows to configure which
+ profiles can be used by remote peers, according to several run time
+ configurations. It is designed to make it easy to develop
+ BEEP profile, that later mixed with other profiles in many ways
+ making them more useful through the combinations created at
+ run-time.</p>
+ 
+<p>Let's see some examples to initially clarify the profile path
+ support. A usual configuration around BEEP is to provide SASL
+ authentication and then allow using a profile which do useful
+ work. The intention is to enforce a successful SASL negotiation, to
+provide a protected resource. </p>
+
+<p>With profile path this can be configured as:</p>
+ 
+ <div class="xml-doc">
+ <pre>
+
+ &lt;<span class="node">path-def</span> server-name=<span class="attrvalue">".*"</span> src=<span class="attrvalue">"not 192.168.0.*"</span> path-name=<span class="attrvalue">"not local-parts"</span>>
+   &lt;<span class="node">if-success</span> profile=<span class="attrvalue">"http://iana.org/beep/SASL/.*"</span> connmark=<span class="attrvalue">"sasl:is:authenticated"</span>>
+      &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://iana.org/beep/TUNNEL"</span> />
+   &lt;/<span class="node">if-success</span>>
+ &lt;/<span class="node">path-def</span>>
+ </pre>
+ </div>
+
+<p> Previous example instruct Turbulence to apply a profile path called
+ "not local-parts" if the source of the connection comes not from
+ 192.168.0.X (let's support an inbound connection from a WAN). It also teaches Turbulence to only provide SASL
+ profiles available and once initiated properly (and authenticated),
+ the remote client peer can use the TUNNEL profile. </p>
+
+<p>Profile path is applied as a chain, composed by a set of <b>&lt;path-def></b>
+ declarations. Once a <b>&lt;path-def></b> match the target, the profile path
+ configuration found on it its applied to the peer, discarding the rest of <b>&lt;path-def></b> defined.  </p>
+ 
+<div class="center"><img  src="profile-path-chain.png" alt="[PROFILE PATH CHAIN]"></div>
+
+<p> As the previous image shows, the turbulence profile path
+ configuration is composed by several profile path definitions: </p>
+ 
+ <div class="xml-doc">
+ <pre>
+
+ &lt;<span class="node">path-def</span> server-name=<span class="attrvalue">".*"</span> src=<span class="attrvalue">"not 192.168.0.*"</span> path-name=<span class="attrvalue">"not local-parts"</span>>
+   <span class="comment">&lt;!-- profile path configuration --></span>
+ &lt;/<span class="node">path-def</span>>
+ </pre>
+ </div>
+ 
+<p>Once a connection is received, a path-def is selected. If not
+path-def is selected, the connection is rejected. If a path-def is
+selected, the configuration inside it is provided. </p>
+
+<p>Every <b>&lt;path-def></b> supports the following matching configurations:</p>
+
+<ol> 
+ <li><p><b>server-name</b>: a perl expression defining the the serverName
+ to match for the connection.</p></li>
+
+ <li><p><b>src</b>: a perl expression defining the source of the
+ connection.</p></li>
+
+ <li><p><b>path-name</b>: an administrative flag that will help to
+ recognize the connection in future process (log reporting).</li><p>
+ 
+</ol> 
+
+<p> Once a path is matched, the following are discarded and the
+ configuration inside the profile path is applied to the connection
+ as long as the connection is running.</p>
+ 
+<p> Now, it is required to configure which profiles will be
+ allowed. This is done by using two types of nodes:</p>
+
+<ol>
+ 
+ <li><p><b>&lt;if-success></b>: a configuration that allows to use the
+ profile referenced by it, and additionally, allows to use profiles
+ provided by its child nodes once a channel with the profile
+ provided is initiated.</p></li>
+
+ <li><p><b>&lt;allow></b>: a configuration that allows to use a profile
+ at a particular level. </p></li>
+
+</ol>
+ 
+<p> Let's see an example to show how it works:</p>
+ 
+ <div class="xml-doc">
+ <pre>
+
+ <span class="comment">&lt;-- enforce all BEEP peers to do a successful SASL negotiation --></span>
+ &lt;<span class="node">if-success</span> profile=<span class="attrvalue">"http://iana.org/beep/SASL/.*"</span>
+             connmark=<span class="attrvalue">"sasl:is:authenticated"</span> >
+
+    &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://turbulence.ws/profiles/test1"</span>
+           preconnmark=<span class="attrvalue">"sasl:is:authenticated"</span>/>
+
+    &lt;<span class="node">if-success</span> profile=<span class="attrvalue">"http://iana.org/beep/TLS"</span> >
+       &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://iana.org/beep/xmlrpc"</span> />
+       &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://fact.aspl.es/profiles/coyote_profile"</span> />
+    &lt;/<span class="node">if-success</span>>
+
+ &lt;/<span class="node">if-success</span>>
+ </pre>
+ </div>
+
+<p> Previous example have configured a particular profile path as
+ follows: </p>
+
+<div class="center"><img src="profile-path-example.png" alt="[PROFILE PATH EXAMPLE]"></div>
+ 
+<p> The example is mostly self-explanatory, but one detail remains. The
+ configuration uses two attributes: <b>connmark</b> and
+ <b>preconnmark</b>. They are used as flags that must be detected in
+ the connection in other to allow the connection to accept a profile
+ or the content of the following profiles.</p>
+
+<ol>
+ <li><p><b>preconnmark</b>: if used, it means that the connection must
+ have the "mark" provided before the profile can be accepted to be
+ initiated.</p></li>
+ 
+ <li><p><b>connmark</b>: can only be used from &lt;if-success> nodes, and
+ allows to protect the profile path content inside the
+ &lt;if-success> node, enforcing to not only create a channel under
+ the profile provided but also having the mark. This is particular
+ useful for the SASL case because having a SASL channel created
+ isn't a warranty of a connection authenticated. Thus, an additional
+ mark is required to properly ensure that the connection was
+ authenticated.</p></li>
+
+</ol>
+ 
+<p>So, a good question at this point is "how are those marks
+ created?". These marks are profile dependant and are created using
+ the interface provided by the vortex connection module to store
+ data. You must check the profile documentation to know which marks
+ are supported as they are particular to each BEEP profile. </p>
+ 
+<p>In this case, SASL implementation flags the connection as
+ authenticated using the provided flag: "sasl:is:authenticated".</p>
+
+
+<!-- end central section -->
+
+<div class="footer-notice">
+<div class="valid">  
+<a href="http://validator.w3.org/check?uri=referer"><img src="images/valid-html401.png" alt="Valid HTML 4.01 Transitional"></a><br>
+<a href="http://jigsaw.w3.org/css-validator/check/referer"><img src="images/vcss.png"  alt="Valid CSS!"></a>
+</div>
+<div class="footer-content">  
+ Copyright © 2007 Advanced Software Production Line, S.L.
+ All rights reversed.<br>
+ ASPL and its logo are trademarks of Advanced Software Production Line, S.L.<br>
+ Webmaster: <a href="mailto:webmaster@aspl.es">webmaster@aspl.es</a>
+</div> <!-- footer-content -->  
+</div> <!-- footer-notice -->  
+
+</div> <!-- div=content -->
+</body> </html>
