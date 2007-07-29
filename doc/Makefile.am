@@ -1,4 +1,9 @@
-EXTRA_DIST = turbulence-doc.doxygen 
+EXTRA_DIST = turbulence-doc.doxygen \
+	main-page-logo.png \
+	body_back.gif \
+	turbulence-doc-footer.html \
+	turbulence-doc-header.html \
+	turbulence.css 
 
 bin_SCRIPTS = initial_build_doc
 

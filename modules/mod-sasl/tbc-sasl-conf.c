@@ -33,7 +33,7 @@
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://fact.aspl.es
+ *         info@aspl.es - http://www.turbulence.ws
  */
 
 #define HELP_HEADER "tbc-sasl-conf: a tool to administrate mod-sasl and users.\n\

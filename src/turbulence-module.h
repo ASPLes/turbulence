@@ -1,4 +1,4 @@
-/*
+/*  Turbulence:  BEEP application server
  *  Copyright (C) 2007 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
@@ -33,7 +33,7 @@
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://fact.aspl.es
+ *         info@aspl.es - http://www.turbulence.ws
  */
 #ifndef __TURBULENCE_MODULE_H__
 #define __TURBULENCE_MODULE_H__

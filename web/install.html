@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+<link rel="stylesheet" type="text/css" href="turbulence.css">
+<title>Turbulence: The BEEP application server, BEEP server, BEEP listener, BEEP server side </title>
+</head>
+
+<body>
+<div class="content">
+<a href="index.html"><img alt="[TURBULENCE HEADER]" src="images/turbulence-compact-header.png" /></a>
+<a class="alt-logo" href="http://www.aspl.es"><img alt="[ASPL LOGO]" src="images/aspl-alt-compat-logo.png"></a>
+<h1>Installing Turbulence</h1>
+
+<h2>Turbulence dependencies</h2>
+  
+<p>Turbulence have two required dependencies:</p>
+
+<ol>
+  <li><p><b>Vortex Library:</b> which provides the BEEP engine (located
+  at: <a href="http://vortex.aspl.es">http://vortex.aspl.es</a>).</p></li>
+
+  <li><p><b>Axl Library:</b> which provides all XML services (located at:
+  <a href="http://xml.aspl.es">http://xml.aspl.es</a>).</p></li>
+</ol>
+
+<p>The following optional dependencies are required to built
+Turbulence. If not provided some features will be disabled.</p>
+
+<ol>
+  <li><p><b>Libpcre3:</b> a library that provides perl expressions
+  support. It is used by all expressions used by the turbulence
+  configuration file. If not provided all expressions provided will be
+  matched as is.</p>
+
+  <p> This regular expression library was written by Philip Hazel, and copyrighted
+     by the University of Cambridge, England.</p>
+  
+  <p>The software is available at: <a href="ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/">ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/</a></p>
+
+  </li>
+
+  <li><p><b>OpenSSL:</b> a library that provides TLS support. If not
+  provided the BEEP TLS profile won't be available. This dependency is
+  required by Vortex Library not by Turbulence.</p>
+
+  <p>The software is available at: <a href="http://www.openssl.org">http://www.openssl.org</a></li>
+
+  <li><p><b>GNU SASL:</b> a library that provides SASL support. If not
+provided the BEEP SASL family of profiles won't be available.</p>
+
+   <p>The software is available at: <a href="ftp://alpha.gnu.org/pub/gnu/gsasl">ftp://alpha.gnu.org/pub/gnu/gsasl</a></p></li>
+</ol>
+
+<p>In many cases, GNU SASL, Libpcre3 and OpenSSL are already available
+on your platform. Check your distribution documentation.</p>
+
+<h2>Building Turbulence from source on POSIX / Unix environments</h2>
+
+<p>It is assumed you have a platform that have autoconf, libtool, and
+the rest of GNU tools to build software.</p>
+
+<p>Get the source code at the download page: <a href="downloads.html">download Turbulence</a></p>
+
+<p>Turbulence is compiled following the standard autoconf-compatible
+procedure:</p>
+
+<pre>
+
+   >> tar xzvf turbulence-X.X.X-bXXXX.gXXXX.tar.gz
+   >> cd turbulence-X.X.X-bXXXX.gXXXX
+   >> ./configure
+   >> make
+   >> make install
+
+</pre>
+
+
+
+
+<!-- end central section -->
+
+<div class="footer-notice">
+<div class="valid">  
+<a href="http://validator.w3.org/check?uri=referer"><img src="images/valid-html401.png" alt="Valid HTML 4.01 Transitional"></a><br>
+<a href="http://jigsaw.w3.org/css-validator/check/referer"><img src="images/vcss.png"  alt="Valid CSS!"></a>
+</div>
+<div class="footer-content">  
+ Copyright © 2007 Advanced Software Production Line, S.L.
+ All rights reversed.<br>
+ ASPL and its logo are trademarks of Advanced Software Production Line, S.L.<br>
+ Webmaster: <a href="mailto:webmaster@aspl.es">webmaster@aspl.es</a>
+</div> <!-- footer-content -->  
+</div> <!-- footer-notice -->  
+
+</div> <!-- div=content -->
+</body> </html>

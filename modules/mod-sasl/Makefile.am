@@ -1,4 +1,4 @@
-EXTRA_DIST = mod-sasl.xml
+EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -7,7 +7,7 @@ INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
 lib_LTLIBRARIES   = mod-sasl.la
-mod_sasl_la_SOURCES  = mod-sasl.c common-sasl.c common-sasl.h
+mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h
 mod_sasl_la_LDFLAGS  = -module -ldl
 
 # reconfigure module installation directory

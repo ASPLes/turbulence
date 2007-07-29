@@ -1,3 +1,5 @@
+EXTRA_DIST = tbc-mod-gen.dtd
+
 INCLUDES = -DCOMPILATION_DATE=`date +%s` -I ../../src \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \

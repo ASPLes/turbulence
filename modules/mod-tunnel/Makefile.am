@@ -1,4 +1,4 @@
-EXTRA_DIST = mod-tunnel.xml
+EXTRA_DIST = mod-tunnel.xml tunnel.conf resolver.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
