@@ -6,6 +6,6 @@ fi
 
 read -p "Update image files (y/n): " images
 if [ $images == "y" ]; then
-	scp images/*.png images/*.gif images/*.jpg aspl@www.aspl.es:www/turbulence/images/
+	scp images/*.png images/*.gif aspl@www.aspl.es:www/turbulence/images/
 fi
 
