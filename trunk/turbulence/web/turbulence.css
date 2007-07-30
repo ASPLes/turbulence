@@ -248,3 +248,7 @@ span.attrvalue {
 span.node { 
   color: #ad7fa8;
 }
+
+.donation { 
+  text-align: center;
+}

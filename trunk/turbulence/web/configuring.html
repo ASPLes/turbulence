@@ -198,14 +198,14 @@ configured in the <b>&lt;modules></b> section. Here is an example:</p>
 <p> Profile Path is a feature that allows to configure which
  profiles can be used by remote peers, according to several run time
  configurations. It is designed to make it easy to develop
- BEEP profile, that later mixed with other profiles in many ways
+ BEEP profile, that are later mixed with other profiles in many ways
  making them more useful through the combinations created at
  run-time.</p>
  
 <p>Let's see some examples to initially clarify the profile path
  support. A usual configuration around BEEP is to provide SASL
  authentication and then allow using a profile which do useful
- work. The intention is to enforce a successful SASL negotiation, to
+ work. The intention is to enforce a successful SASL negotiation, to later
 provide a protected resource. </p>
 
 <p>With profile path this can be configured as:</p>
@@ -222,14 +222,14 @@ provide a protected resource. </p>
  </div>
 
 <p> Previous example instruct Turbulence to apply a profile path called
- "not local-parts" if the source of the connection comes not from
- 192.168.0.X (let's support an inbound connection from a WAN). It also teaches Turbulence to only provide SASL
- profiles available and once initiated properly (and authenticated),
+ "not local-parts" if the source of the connection comes <i>"not from
+ 192.168.0.X"</i>. It also teaches Turbulence to only provide SASL
+ profiles available and only once initiated properly (and authenticated),
  the remote client peer can use the TUNNEL profile. </p>
 
 <p>Profile path is applied as a chain, composed by a set of <b>&lt;path-def></b>
  declarations. Once a <b>&lt;path-def></b> match the target, the profile path
- configuration found on it its applied to the peer, discarding the rest of <b>&lt;path-def></b> defined.  </p>
+ configuration found on it is applied to the peer, discarding the rest of <b>&lt;path-def></b> defined.  </p>
  
 <div class="center"><img  src="profile-path-chain.png" alt="[PROFILE PATH CHAIN]"></div>
 
@@ -245,18 +245,20 @@ provide a protected resource. </p>
  </pre>
  </div>
  
-<p>Once a connection is received, a path-def is selected. If not
-path-def is selected, the connection is rejected. If a path-def is
-selected, the configuration inside it is provided. </p>
+<p>Once a connection is received, a path-def is selected and the
+configuration inside it is applied. If no path-def is selected, the
+connection is rejected. </p>
 
 <p>Every <b>&lt;path-def></b> supports the following matching configurations:</p>
 
 <ol> 
- <li><p><b>server-name</b>: a perl expression defining the the serverName
- to match for the connection.</p></li>
+ <li><p><b>server-name</b>: a perl expression defining the serverName
+ to match for the connection. This can be used to only provide
+  services based on a virtual hosting.</p></li>
 
  <li><p><b>src</b>: a perl expression defining the source of the
- connection.</p></li>
+ connection. This can be used to only provide critical services to
+  local administrators.</p></li>
 
  <li><p><b>path-name</b>: an administrative flag that will help to
  recognize the connection in future process (log reporting).</li><p>
@@ -275,7 +277,7 @@ selected, the configuration inside it is provided. </p>
  <li><p><b>&lt;if-success></b>: a configuration that allows to use the
  profile referenced by it, and additionally, allows to use profiles
  provided by its child nodes once a channel with the profile
- provided is initiated.</p></li>
+ provided is created.</p></li>
 
  <li><p><b>&lt;allow></b>: a configuration that allows to use a profile
  at a particular level. </p></li>
@@ -322,7 +324,9 @@ selected, the configuration inside it is provided. </p>
  <li><p><b>connmark</b>: can only be used from &lt;if-success> nodes, and
  allows to protect the profile path content inside the
  &lt;if-success> node, enforcing to not only create a channel under
- the profile provided but also having the mark. This is particular
+ the profile provided but also having the mark. </p>
+
+ <p>This is particular
  useful for the SASL case because having a SASL channel created
  isn't a warranty of a connection authenticated. Thus, an additional
  mark is required to properly ensure that the connection was
@@ -336,7 +340,7 @@ selected, the configuration inside it is provided. </p>
  data. You must check the profile documentation to know which marks
  are supported as they are particular to each BEEP profile. </p>
  
-<p>In this case, SASL implementation flags the connection as
+<p>In this case, Vortex Library SASL implementation flags the connection as
  authenticated using the provided flag: "sasl:is:authenticated".</p>
 
 
