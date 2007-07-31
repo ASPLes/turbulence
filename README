@@ -1,14 +1,21 @@
      
-       Turbulence BEEP application server
-     Advanced Software Production Line, S.L.
+                Turbulence BEEP application server
+              Advanced Software Production Line, S.L.
 
-1. Introduction
+                     -= Introduction =-
 
-  Turbulence is a general application framework that allows to create
-server BEEP application taking advantage from a full programmed server
-that includes many features already working. 
+  Turbulence is a general BEEP application server that provides many
+features already implemented. It is built on top of Vortex Library,
+and new functionality is added through modules. 
 
-  
+  The idea behind Turbulence is to create a new module implementing
+your profile (or any other feature), that turbulence will load and
+expose according to is configuration.
+
+  All project documentation can be found at: http://www.turbulence.ws
+
+  Additional resources such mailing list, etc are also found at the
+previous site. 
 
 --
 Francis Brosnan Blázquez

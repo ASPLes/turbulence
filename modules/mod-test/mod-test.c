@@ -1,4 +1,4 @@
-/*
+/*  Turbulence:  BEEP application server
  *  Copyright (C) 2007 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
@@ -48,9 +48,9 @@ BEGIN_C_DECLS
 
 /** 
  * @brief Init function, perform all the necessary code to register
- * profiles, configure Vortex, and any other task. The function must
- * return true to signal that the module was initialized
- * ok. Otherwise, false must be returned.
+ * profiles, configure Vortex, and any other init task. The function
+ * must return true to signal that the module was properly initialized
+ * Otherwise, false must be returned.
  */
 static bool test_init ()
 {

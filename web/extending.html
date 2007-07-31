@@ -24,9 +24,68 @@
   
 <h2> <a name="how_modules_works">How Turbulence modules works</a></h2>
   
-<p>To be completed.</p>
+<p>Turbulence, from a minimal point of view is a listener application
+ built on top of <a href="http://vortex.aspl.es">Vortex Library</a>,
+ which reads a <a href="configuring.html">configuration file</a> to
+ start at some selected ports, etc, and then load all modules
+ installed.</p>
 
+<p>These modules could implement new BEEP profiles or features that
+ extend Turbulence internal function (not necessarily a new BEEP
+ profile). This is because module structure is really simple.</p>
 
+<p>Turbulence core is really small. The rest of features are added as
+ modules. For example, Turbulence SASL support is a module
+ which is configurable to use a particular user database and, with the
+ help of some tools (<b>tbc-sasl-conf</b>), you can manage users that can connect to
+ Turbulence.</p>
+
+<p>In fact, Turbulence doesn't known anything about SASL. The SASL
+ module is implemented to install and configure the SASL profile
+ provided by Vortex, and using Profile Path (a Turbulence core
+ feature), the security provisioning is met.</p>
+
+<p>The Turbulence module anatomy is fairly simple. It contains three
+ handlers:</p>
+<ol>
+  <li><b>Init:</b> A handler called by Turbulence to start the
+  module. Here the developer must place all calls required to
+  install/configure a profile, init global variables, etc.</li>
+
+  <li><b>Close:</b> Called by Turbulence to stop a module. Here the
+  developer must stop and dealloc all resources used by its
+  module. </li>
+  
+  <li><b>Reconf:</b> Called by Turbulence when a HUP signal is
+  received. This is a notification that the module should reload its
+  configuration files and start to behave as they propose. </li>
+</ol>
+
+<p>As you can observe, a Turbulence module structure is simple and not
+enforced to anything. </p>
+
+<h2>Creating a module from the scratch (dirty way)</h2>
+
+<p>Maybe the easiest way to start writing a Turbulence Module is to
+take a look into <b>mod-test</b> source code. This module doesn't do
+anything but is maintained across releases to contain all handlers
+required and a brief help. You can use it as an official
+reference. A module is at minimum composed by the following tree files:</p>
+
+<ul>
+  <li><p><b>mod-test.c</b>: base module source code: <a href="mod-test.c.html">[HTML]</a> | <a href="mod-test.c">[TXT]</a> </p>
+  <li><p><b>Makefile.am</b>: optional automake file used to build the module: <a href="Makefile.am">[TXT]</a> </p>
+  <li><p><b>mod-test.xml.in</b>: xml module pointer, a file that is installed at the Turbulence modules dir to load the module.: <a href="mod-test.xml.in">[TXT]</a> </p>
+</ul>
+
+<p>Now if your intention is to built a BEEP profile then you should do
+all calls to install it and its associated handlers using the <a href="http://www.aspl.es/fact/files/af-arch/vortex/html/group__vortex__profiles.html">vortex profiles API</a> at the <b>Init handler</b>.</p>
+
+<h2>Using tbc-mod-gen to create the module</h2>
+
+<p>This tool allows to create a XML template that is used to produce
+the module output. It allows to build a module without taking into
+account all details. </p>
 
 <!-- end central section -->
 
