@@ -1,0 +1,9 @@
+* Make mod-sasl to support more SASL profiles (CRAM-MD5, DIGEST-MD5
+and anonymous). 
+
+* Create a mod-tls module to activate the TLS profile according to the
+serverName received and other run time values. 
+
+* Add support to mod-sasl and mod-tls to perform multihosting, that
+is, providing different databases and certificates according to the
+serverName (and maybe other configuration values).
