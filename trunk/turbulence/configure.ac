@@ -59,6 +59,8 @@ PKG_CHECK_MODULES(AXL, axl >= 0.4.6)
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
 AC_SUBST(AXL_LIBS)
+AXL_VERSION=`pkg-config --modversion axl`
+AC_SUBST(AXL_VERSION)
 
 dnl external dependencies
 PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.5) 
@@ -66,6 +68,8 @@ PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.5)
 dnl general libries subsitution
 AC_SUBST(VORTEX_CFLAGS)
 AC_SUBST(VORTEX_LIBS)
+VORTEX_VERSION=`pkg-config --modversion vortex`
+AC_SUBST(VORTEX_VERSION)
 
 dnl external dependencies
 PKG_CHECK_MODULES(EXARG, exarg) 
@@ -73,6 +77,8 @@ PKG_CHECK_MODULES(EXARG, exarg)
 dnl general libries subsitution
 AC_SUBST(EXARG_CFLAGS)
 AC_SUBST(EXARG_LIBS)
+EXARG_VERSION=`pkg-config --modversion exarg`
+AC_SUBST(EXARG_VERSION)
 
 dnl define a m4 macro to check for perl regular expresion support
 AC_DEFUN([CHECK_LIB_PCRE],[dnl

@@ -84,8 +84,78 @@ all calls to install it and its associated handlers using the <a href="http://ww
 <h2>Using tbc-mod-gen to create the module</h2>
 
 <p>This tool allows to create a XML template that is used to produce
-the module output. It allows to build a module without taking into
-account all details. </p>
+the module output. Here is an example:</p>
+
+<p>First we create a xml empty module template:</p>
+<pre>
+
+  >> mkdir template
+  >> cd template
+  >> tbc-mod-gen --template --enable-autoconf --out-dir .
+  I: producing a template definition at the location provided
+  I: creating file:             ./template.xml
+  I: template created: OK
+
+</pre>
+
+<p>Now you should rename the file <b>template.xml</b> to something
+more appropiate and edit the template content, changing the module
+name and its description. Do not change the content of init, close and
+reconf nodes for now: </p>
+
+<div class="xml-doc">
+<pre>
+
+  <span class="header">&lt;?xml version='1.0' standalone='yes' ?></span>
+  &lt;<span class="node">mod-def</span>>
+     &lt;<span class="node">name</span>>mod-template&lt;/<span class="node">name</span>>
+     &lt;<span class="node">description</span>>Place here a generic module description&lt;/<span class="node">description</span>>
+     &lt;<span class="node">source-code</span>>
+
+        <span class="comment">&lt;!-- init method, called once the module is loaded --></span>
+        &lt;<span class="node">init</span>>
+         /* Place here your mod init code.
+            This will be called once turbulence decides to include the module. */
+         return true;
+        &lt;/<span class="node">init</span>>
+
+        <span class="comment">&lt;!-- close method, called once the module is going to be stoped --></span>
+        &lt;<span class="node">close</span>>
+        /* Place here the code required to stop and dealloc resources
+           used by your module */
+        &lt;/<span class="node">close</span>>
+
+        <span class="comment">&lt;!-- reconf method, called once it is received a 'reconfiguration signal' --></span>
+        &lt;<span class="node">reconf</span>>
+         /* Place here all your optional reconf code if the HUP signal is received */
+        &lt;/<span class="node">reconf</span>>
+
+    &lt;/<span class="node">source-code</span>>
+  &lt;/<span class="node">mod-def</span>>
+
+</pre>
+</div> <!-- class=xml-doc -->
+
+<p>Now, do the following to compile the content and produce a module
+that is compatible with the Turbulence interface, and it is full ready
+to be compiled and installed:</p>
+
+<pre>
+  
+  >> tbc-mod-gen --compile template.xml --out-dir . --enable-autoconf
+  I: creating file:             ./mod_template.c
+  I: creating file:             ./Makefile.am
+  I: found autoconf support files request..
+  I: creating file:             ./autogen.sh
+  I: making executable:         ./autogen.sh
+  I: creating file:             ./configure.ac
+  I: creating file:             ./gen-code
+  I: making executable:         ./gen-code
+  I: mod_template created!
+
+</pre>
+
+
 
 <!-- end central section -->
 
