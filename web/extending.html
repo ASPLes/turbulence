@@ -12,15 +12,13 @@
 <a class="alt-logo" href="http://www.aspl.es"><img alt="[ASPL LOGO]" src="images/aspl-alt-compat-logo.png"></a>
 <h1>Creating Turbulence modules</h1>
 
-<!-- <h2>Index</h2> -->
+<h2>Index</h2> 
 
-<!-- <ol>
- <li><a href="#how_is_configured">How turbulence is configured (configuration file location)</a></li>
- <li><a href="#addresses_and_ports">Turbulence addresses and ports used</a></li>
- <li><a href="#configuring_log_files">Configuring turbulence log files</a></li>
- <li><a href="#modules_conf">Turbulence modules configuration</a></li>
- <li><a href="#profile_path_conf">Profile path configuration</a></li>
- </ol> -->
+<ol>
+ <li><a href="#how_modules_works">How Turbulence modules works</a></li>
+ <li><a href="#creating_a_module">Creating a module from the scratch (dirty way)</a></li>
+ <li><a href="#using_tbc_mod_gen">Using tbc-mod-gen to create the module (recommended)</a></li>
+</ol>
   
 <h2> <a name="how_modules_works">How Turbulence modules works</a></h2>
   
@@ -64,7 +62,7 @@
 <p>As you can observe, a Turbulence module structure is simple and not
 enforced to anything. </p>
 
-<h2>Creating a module from the scratch (dirty way)</h2>
+<h2><a name="creating_a_module">Creating a module from the scratch (dirty way)</a></h2>
 
 <p>Maybe the easiest way to start writing a Turbulence Module is to
 take a look into <b>mod-test</b> source code. This module doesn't do
@@ -81,7 +79,7 @@ reference. A module is at minimum composed by the following tree files:</p>
 <p>Now if your intention is to built a BEEP profile then you should do
 all calls to install it and its associated handlers using the <a href="http://www.aspl.es/fact/files/af-arch/vortex/html/group__vortex__profiles.html">vortex profiles API</a> at the <b>Init handler</b>.</p>
 
-<h2>Using tbc-mod-gen to create the module</h2>
+<h2><a name="using_tbc_mod_gen">Using tbc-mod-gen to create the module (recommended)</a></h2>
 
 <p>This tool allows to create a XML template that is used to produce
 the module output. Here is an example:</p>
@@ -99,7 +97,7 @@ the module output. Here is an example:</p>
 </pre>
 
 <p>Now you should rename the file <b>template.xml</b> to something
-more appropiate and edit the template content, changing the module
+more appropriate and edit the template content, changing the module
 name and its description. Do not change the content of init, close and
 reconf nodes for now: </p>
 
@@ -119,7 +117,7 @@ reconf nodes for now: </p>
          return true;
         &lt;/<span class="node">init</span>>
 
-        <span class="comment">&lt;!-- close method, called once the module is going to be stoped --></span>
+        <span class="comment">&lt;!-- close method, called once the module is going to be stopped --></span>
         &lt;<span class="node">close</span>>
         /* Place here the code required to stop and dealloc resources
            used by your module */
@@ -155,7 +153,27 @@ to be compiled and installed:</p>
 
 </pre>
 
+<p>Now take a look into the files created, specially
+<b>mod_template.c</b>. Once you are ready, type the following to build
+the module:</p>
 
+<pre>
+
+  >> ./autogen.sh
+  >> make
+  >> make install
+
+</pre>
+
+<p>If you are new to autotools, you have to now that the first command
+(autogen.sh) is only execute once. Next times you can run
+<b>./configure</b> which have the same effect and run
+faster. The <b>autogen.sh</b> command is executed to bootstrap the project,
+adding all missing files.</p>
+
+<p>Now you are ready to complete the module with your particular
+code. For that, you'll have to use the Turbulence API and specially
+the Vortex API. See <a href="doc.html">document section for more details.</a></p>
 
 <!-- end central section -->
 
