@@ -1,6 +1,7 @@
 EXTRA_DIST = turbulence-doc.doxygen \
 	main-page-logo.png \
 	body_back.gif \
+	aspl-alt-compat-logo.png \
 	turbulence-doc-footer.html \
 	turbulence-doc-header.html \
 	turbulence.css 
@@ -28,3 +29,4 @@ build_doc:
 	cp main-page-logo.png html
 	cp turbulence.css html
 	cp body_back.gif html
+	cp aspl-alt-compat-logo.png html
