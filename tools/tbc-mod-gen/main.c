@@ -146,6 +146,7 @@ bool tbc_mod_gen_compile ()
 	char     * file;
 	char     * mod_name;
 	char     * tolower;
+	char     * toupper;
 	char     * description;
 
 	/* configure lookup domain for tbc-mod-gen settings */
@@ -202,6 +203,7 @@ bool tbc_mod_gen_compile ()
 	mod_name = (char *) axl_node_get_content (node, NULL);
 	mod_name = support_clean_name (mod_name);
 	tolower  = support_to_lower (mod_name);
+	toupper  = support_to_upper (mod_name);
 	support_open_file ("%s%s.c", get_out_dir (), mod_name);
 
 	/* place copyright if found */
@@ -276,9 +278,6 @@ bool tbc_mod_gen_compile ()
 	/* close content */
 	support_close_file ();
 
-	msg ("%s created!", mod_name);
-
-
 	/* create the makefile required */
 	support_open_file ("%sMakefile.am", get_out_dir ());
 	
@@ -315,8 +314,120 @@ bool tbc_mod_gen_compile ()
 
 	support_close_file ();
 
+	/* create autoconf if defined */
+	if (exarg_is_defined ("enable-autoconf")) {
+
+		msg ("found autoconf support files request..");
+		
+		/* create the autogen.sh */
+		support_open_file ("%sautogen.sh", get_out_dir ());
+
+		write ("# autogen.sh file created by tbc-mod-gen\n");
+		write ("PACKAGE=\"%s: %s\"\n\n", mod_name, description);
+
+		write ("(automake --version) < /dev/null > /dev/null 2>&1 || {\n");
+
+		push_indent ();
+		write ("echo;\n");
+		write ("echo \"You must have automake installed to compile $PACKAGE\";\n");
+		write ("echo;\n");
+		write ("exit;\n");
+		pop_indent ();
+
+		write ("}\n\n");
+
+		write ("(autoconf --version) < /dev/null > /dev/null 2>&1 || {\n");
+		push_indent ();
+		write ("echo;\n");
+		write ("echo \"You must have autoconf installed to compile $PACKAGE\";\n");
+		write ("echo;\n");
+		write ("exit;\n");
+		pop_indent ();
+		write ("}\n\n");
+
+		write ("echo \"Generating configuration files for $PACKAGE, please wait....\"\n");
+		write ("echo;\n\n");
+
+		write ("touch NEWS README AUTHORS ChangeLog\n");
+		write ("libtoolize --force;\n");
+		write ("aclocal $ACLOCAL_FLAGS;\n");
+		write ("autoheader;\n");
+		write ("automake --add-missing;\n");
+		write ("autoconf;\n\n");
+
+		write ("./configure $@ --enable-maintainer-mode --enable-compile-warnings\n");
+
+		support_close_file ();
+
+		support_make_executable ("%sautogen.sh", get_out_dir ());
+
+		/* now create the configure.ac file */
+
+		support_open_file ("%sconfigure.ac", get_out_dir ());
+
+		write ("dnl configure.ac template file created by tbc-mod-gen\n");
+		write ("AC_INIT(%s.c)\n\n", mod_name);
+
+		write ("dnl declare a global version value\n");
+		write ("%s_VERSION=\"0.0.1\"\n", toupper);
+		write ("AC_SUBST(%s_VERSION)\n\n", toupper);
+
+		write ("AC_CONFIG_AUX_DIR(.)\n");
+		write ("AM_INIT_AUTOMAKE(%s, $%s_VERSION)\n\n", mod_name, toupper);
+
+		write ("AC_CONFIG_HEADER(config.h)\n");
+		write ("AM_MAINTAINER_MODE\n");
+		write ("AC_PROG_CC\n");
+		write ("AC_ISC_POSIX\n");
+		write ("AC_HEADER_STDC\n");
+		write ("AM_PROG_LIBTOOL\n\n");
+
+		write ("dnl external dependencies\n");
+		write ("PKG_CHECK_MODULES(AXL, axl >= %s)\n\n", AXL_VERSION);
+
+		write ("dnl general libries subsitution\n");
+		write ("AC_SUBST(AXL_CFLAGS)\n");
+		write ("AC_SUBST(AXL_LIBS)\n\n");
+
+		write ("dnl external dependencies\n");
+		write ("PKG_CHECK_MODULES(VORTEX, vortex >= %s) \n\n", VORTEX_VERSION);
+
+		write ("dnl general libries subsitution\n");
+		write ("AC_SUBST(VORTEX_CFLAGS)\n");
+		write ("AC_SUBST(VORTEX_LIBS)\n\n");
+
+		write ("dnl external dependencies\n");
+		write ("PKG_CHECK_MODULES(EXARG, exarg)\n\n");
+
+		write ("dnl general libries subsitution\n");
+		write ("AC_SUBST(EXARG_CFLAGS)\n");
+		write ("AC_SUBST(EXARG_LIBS)\n\n");
+		
+		write ("dnl external dependencies\n");
+		write ("PKG_CHECK_MODULES(TURBULENCE, turbulence >= %s)\n\n", VERSION);
+
+		write ("dnl general libries subsitution\n");
+		write ("AC_SUBST(TURBULENCE_CFLAGS)\n");
+		write ("AC_SUBST(TURBULENCE_LIBS)\n\n");
+
+		write ("AC_OUTPUT([\n");
+		write ("Makefile\n");
+		write ("])\n\n");
+
+		write ("echo \"------------------------------------------\"\n");
+		write ("echo \"--       mod_template Settings          --\"\n");
+		write ("echo \"------------------------------------------\"\n");
+		write ("echo \"------------------------------------------\"\n");
+		write ("echo \"--            Let it BEEP!              --\"\n");
+		write ("echo \"--                                      --\"\n");
+		write ("echo \"--     NOW TYPE: make; make install     --\"\n");
+		write ("echo \"------------------------------------------\"\n");
+
+		support_close_file ();
+		
+	} /* end if */
+
 	/* dealloc */
-	axl_free (mod_name);
 	axl_free (tolower);
 	axl_doc_free (doc);
 
@@ -331,6 +442,9 @@ bool tbc_mod_gen_compile ()
 	support_close_file ();
 
 	support_make_executable ("%sgen-code", get_out_dir ());
+
+	msg ("%s created!", mod_name);
+	axl_free (mod_name);
 
 	return true;
 }
@@ -356,6 +470,9 @@ int main (int argc, char ** argv)
 	
 	exarg_install_arg ("out-dir", "o", EXARG_STRING,
 			   "Allows to configure the out put dir to be used. If not provided, '.' will be used as default value");
+
+	exarg_install_arg ("enable-autoconf", "e", EXARG_NONE,
+			   "Makes the output to produce autoconf support files: autogen.sh and configure.ac. It provides an starting point to build and compile your module.");
 
 	/* install turbulence tool options */
 	turbulence_console_install_options ();
