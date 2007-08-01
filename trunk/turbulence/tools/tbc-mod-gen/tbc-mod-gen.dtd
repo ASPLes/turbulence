@@ -6,7 +6,7 @@
 
 <!ELEMENT description (#PCDATA)>
 
-<!ELEMENT source-code (additional-content, init, close, reconf)>
+<!ELEMENT source-code (additional-content?, init, close, reconf)>
 
 <!ELEMENT additional-content (#PCDATA)>
 
