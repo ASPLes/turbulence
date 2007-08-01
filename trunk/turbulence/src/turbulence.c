@@ -735,26 +735,23 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 /**
  * \mainpage 
  *
- * To be filled.
- */
-
-/**
- * \page turbulence_mod_sasl Turbunece mod-sasl: SASL profile support for turbulence
+ * \section intro Turbulence API Documentation
  *
- * FIXME
- */
-
-/**
- * \page turbulence_mod_tunnel Turbulence mod-tunnel: TUNNEL profile support for turbulence
+ * The following is the API provided by Turbulence to all its tools
+ * and modules developed for Turbulence. This API complements the <a
+ * href="">Vortex API</a> adding features that is missing in Vortex
+ * (due to its library nature).
  *
- * FIXME
- */
-
-/**
- * \page turbulence_tools Turbulence tools: Set of tools included
- * inside turbulence to manage and extend its function.
+ * This documentation is only useful for anyone that is interested in
+ * building a turbulence module.
  *
- * FIXME
+ * <h2>Vortex API </h2>
+ *
+ *  - <a class="el" href="http://fact.aspl.es/files/af-arch/vortex/html/index.html">Vortex Library Documentation Center</a>
+ *
+ * <h2>Turbulence API</h2>
+ *
+ *  - \ref turbulence
  */
 
 

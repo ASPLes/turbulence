@@ -18,6 +18,10 @@ p, b, ul, li, i {
    font-family: Arial, FreeSans, Sans, Sans-Serif, Helvetica;
 }
 
+img { 
+  border: 0px;
+}
+
 .tabs span { 
         color: #00568d;
 }
