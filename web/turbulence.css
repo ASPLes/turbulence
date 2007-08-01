@@ -4,12 +4,13 @@
   gris aluminio: #888a85;
   rojo claro: #ef2929;
   azul claro: #3465a4;
+  azul clarito: #729fcf;
 */
 
 body { 
   font-family: free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
   background: #fff url("images/bg.gif"); 
-  color: #555753;
+  color: #000000;
 }
 
 .content { 
@@ -21,7 +22,7 @@ body {
   margin-left: -310px;
   padding: 20px;
   padding-bottom: 0px;
-  color: #555753;
+  color: #000000;
 }
 
 .content-note { 
@@ -33,7 +34,7 @@ body {
   margin-left: -160px;
   padding: 20px;
   padding-bottom: 0px;
-  color: #555753;
+  color: #000000;
 }
 
 a:link { 
@@ -247,6 +248,10 @@ span.attrvalue {
 
 span.node { 
   color: #ad7fa8;
+}
+
+span.header { 
+  color: #729fcf;
 }
 
 .donation { 
