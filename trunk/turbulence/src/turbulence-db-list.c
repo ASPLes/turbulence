@@ -37,6 +37,15 @@
  */
 #include <turbulence.h>
 
+/**
+ * \defgroup turbulence_db_list Turbulence Db List: common abstract interface to store list of items (flushed to the storage device).
+ */
+
+/**
+ * \addtogroup turbulence_db_list
+ * @{
+ */
+
 /** 
  * @internal Mutex to protect the list of db list opened.
  */
@@ -703,3 +712,5 @@ bool               turbulence_db_list_reload_module  ()
 }
 
 
+
+/* @} */

@@ -37,10 +37,19 @@
  */
 #include <turbulence.h>
 
+/**
+ * \defgroup turbulence_config Turbulence Config: files to access to run-time Turbulence Config
+ */
+
+/**
+ * \addtogroup turbulence_config
+ * @{
+ */
+
 axlDoc * __turbulence_config = NULL;
 
 /** 
- * Loads the turbulence main file, which has all definitions to make
+ * @internal Loads the turbulence main file, which has all definitions to make
  * turbulence to start.
  * 
  * @param config 
@@ -133,12 +142,10 @@ bool turbulence_config_load (char * config)
 
 /** 
  * @brief Allows to get the configuration loaded at the startup. The
- * function will always return a configuration object. If the
- * configuration was not properly setup, \ref turbulence_config_load
- * will stop execution, reporting to the user.
+ * function will always return a configuration object. 
  * 
  * @return A reference to the axlDoc having all the configuration
- * created. 
+ * loaded.
  */
 axlDoc * turbulence_config_get ()
 {
@@ -147,7 +154,8 @@ axlDoc * turbulence_config_get ()
 }
 
 /** 
- * @brief Cleanups the turbulence config module.
+ * @internal Cleanups the turbulence config module. This is called by
+ * Turbulence itself on exit.
  */
 void turbulence_config_cleanup ()
 {
@@ -160,3 +168,4 @@ void turbulence_config_cleanup ()
 } 
 
 
+/* @} */

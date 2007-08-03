@@ -71,7 +71,7 @@ void turbulence_console_process_options ();
 void turbulence_console_install_options (); 
 
 /** 
- * Drops to the console stderr an error msg.
+ * Drop an error msg to the console stderr.
  *
  * To drop an error message use:
  * \code
@@ -84,7 +84,7 @@ void turbulence_console_install_options ();
 void  turbulence_error (const char * file, int line, const char * format, ...);
 
 /** 
- * Drops to the console stdout a msg.
+ * Drop a msg to the console stdout.
  *
  * To drop a message use:
  * \code
@@ -97,7 +97,7 @@ void  turbulence_error (const char * file, int line, const char * format, ...);
 void  turbulence_msg   (const char * file, int line, const char * format, ...);
 
 /** 
- * Drops to the console stdout a msg (second level debug).
+ * Drop a second level msg to the console stdout.
  *
  * To drop a message use:
  * \code
@@ -112,7 +112,7 @@ void  turbulence_msg2   (const char * file, int line, const char * format, ...);
 
 
 /** 
- * Drops to the console stdout a warning.
+ * Drop a warning msg to the console stdout.
  *
  * To drop a message use:
  * \code

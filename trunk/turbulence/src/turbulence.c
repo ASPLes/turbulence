@@ -51,11 +51,11 @@ int fsync (int fd);
 #endif
 
 /**
- * \defgroup turbulence Turbulence: main turbulence module, general facilities, initialization, etc.
+ * \defgroup turbulence Turbulence: general facilities, initialization, etc
  */
 
 /**
- * \addtogroup turbulence.
+ * \addtogroup turbulence
  * @{
  */
 
@@ -80,8 +80,8 @@ bool        turbulence_is_existing = false;
 VortexMutex turbulence_exit_mutex;
 
 /** 
- * Starts turbulence execution, initializing all libraries required by
- * the server application.
+ * @internal Starts turbulence execution, initializing all libraries
+ * required by the server application.
  *
  * A call to turbulence_exit is required before exit.
  */
@@ -191,7 +191,7 @@ void turbulence_reload_config (int value)
 } 
 
 /** 
- * Terminates the turbulence excution, returing the exit value
+ * @brief Terminates the turbulence excution, returing the exit value
  * provided as first parameter.
  * 
  * @param value The exit code to return.
@@ -337,6 +337,14 @@ void turbulence_console_process_options ()
  * @brief Install default console debug options accepted for
  * turbulence tools. Activates by default the --debug option which is
  * the normal console output.
+ *
+ * This function is only useful for Turbulence tools which requires to
+ * implement the same debug options as provided by turbulence
+ * executable.
+ *
+ * A proper use must call to this function before the call to
+ * exarg_parse. Once finished previous function it is required to call
+ * to \ref turbulence_console_process_options.
  */
 void turbulence_console_install_options ()
 {
@@ -572,7 +580,7 @@ void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
 }
 
 /** 
- * @brief Provides the same functionality like \ref turbulence_file_test_v,
+ * @brief Provides the same functionality like vortex_support_file_test,
  * but allowing to provide the file path as a printf like argument.
  * 
  * @param format The path to be checked.
@@ -623,9 +631,7 @@ bool     turbulence_create_dir  (const char * path)
 }
 
 /** 
- * @brief Allows to get the modification for the provided format,
- * which can be used to detect file changes, to perform the required
- * operations.
+ * @brief Allows to get last modification date for the file provided.
  * 
  * @param file The file to check for its modification time.
  * 
@@ -737,13 +743,11 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  *
  * \section intro Turbulence API Documentation
  *
- * The following is the API provided by Turbulence to all its tools
- * and modules developed for Turbulence. This API complements the <a
- * href="">Vortex API</a> adding features that is missing in Vortex
- * (due to its library nature).
- *
- * This documentation is only useful for anyone that is interested in
- * building a turbulence module.
+ * The following is the API provided by Turbulence to all tools and
+ * modules built on top of it. This API complements the <a class="el"
+ * href="">Vortex API</a> adding features that are missing in Vortex
+ * (due to its library nature). This documentation is only useful to
+ * anyone that is interested in building a Turbulence module.
  *
  * <h2>Vortex API </h2>
  *
@@ -752,6 +756,9 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  * <h2>Turbulence API</h2>
  *
  *  - \ref turbulence
+ *  - \ref turbulence_moddef
+ *  - \ref turbulence_config
+ *  - \ref turbulence_db_list
  */
 
 

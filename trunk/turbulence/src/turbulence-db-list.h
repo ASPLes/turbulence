@@ -40,6 +40,11 @@
 
 #include <turbulence.h>
 
+/**
+ * \addtogroup turbulence_db_list
+ * @{
+ */
+
 /** 
  * @brief Type definition for an opened turbulence db list: an
  * abstraction that provides easy access to an item list automatically
@@ -78,3 +83,4 @@ bool               turbulence_db_list_reload_module  ();
 
 #endif
 
+/* @} */
