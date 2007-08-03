@@ -10,7 +10,7 @@
 body { 
   font-family: free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
   background: #fff url("images/bg.gif"); 
-  color: #000000;
+  color: #2e3436;  
 }
 
 .content { 
@@ -22,7 +22,7 @@ body {
   margin-left: -310px;
   padding: 20px;
   padding-bottom: 0px;
-  color: #000000;
+  color: #2e3436;  
 }
 
 .content-note { 
@@ -34,7 +34,7 @@ body {
   margin-left: -160px;
   padding: 20px;
   padding-bottom: 0px;
-  color: #000000;
+  color: #2e3436;  
 }
 
 a:link { 
@@ -161,11 +161,15 @@ ul.images img {
 .footer-notice { 
   color: #888a85;
   border-top: 1px dotted #3465a4;
-  float: left;
   font-size: 50%;
   text-align: center;
-  padding-top: 20px;
   background: white;
+  margin: 0px;
+  padding: 0px;
+  width: 100%;
+  float: left;
+  padding-top: 20px;
+  padding-bottom: 10px;
 }
 
 .valid { 
@@ -178,8 +182,7 @@ ul.images img {
 }
 
 .footer-content { 
-  width: 80%;
-  float: right;
+  text-align: center;
 }
 
 .menu { 
@@ -193,6 +196,7 @@ ul.menu {
 }
 
 .menu a { 
+  font-weight: normal;
   font-size: 15px;
 }
 
@@ -258,7 +262,3 @@ span.header {
   text-align: center;
 }
 
-ol li { 
-
-  padding-top: 4px;
-}

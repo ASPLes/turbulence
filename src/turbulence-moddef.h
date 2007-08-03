@@ -38,6 +38,15 @@
 #ifndef __TURBULENCE_MODDEF_H__
 #define __TURBULENCE_MODDEF_H__
 
+/**
+ * \defgroup turbulence_moddef Turbulence Module Def: Type definitions for modules
+ */
+
+/**
+ * \addtogroup turbulence_moddef
+ * @{
+ */
+
 /** 
  * @brief Public definition for the init function that must implement
  * a turbulence module.
@@ -70,7 +79,7 @@ typedef void (*ModReconfFunc) ();
  * @brief Public definition for the main entry point for all modules
  * developed for turbulence.
  * 
- * See mod-test module for an example.
+ * See <a class="el" href="http://www.turbulence.ws/extending.html">how to create Turbulence modules</a>.
  */
 typedef struct _TurbulenceModDef {
 	/**
@@ -104,3 +113,5 @@ typedef struct _TurbulenceModDef {
 } TurbulenceModDef;
 
 #endif
+
+/* @} */

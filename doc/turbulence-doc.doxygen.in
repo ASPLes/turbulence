@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "Turbulence: BEEP general listener side application server"
+PROJECT_NAME           = "Turbulence: BEEP server API"
 PROJECT_NUMBER         = @TURBULENCE_VERSION@
 OUTPUT_DIRECTORY       = 
 CREATE_SUBDIRS         = NO
