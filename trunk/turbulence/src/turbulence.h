@@ -139,6 +139,20 @@ void  turbulence_wrn   (const char * file, int line, const char * format, ...);
 #define wrn_sl(m,...)   do{turbulence_wrn_sl (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_wrn_sl   (const char * file, int line, const char * format, ...);
 
+/** 
+ * Reports an access message, a message that is sent to the access log
+ * file. The message must contain access to the server information.
+ *
+ * To drop a message use:
+ * \code
+ *   access ("module loaded: %s", module);
+ * \endcode
+ * 
+ * @param m The console message to output.
+ */
+#define access(m,...)   do{turbulence_access (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_access   (const char * file, int line, const char * format, ...);
+
 bool turbulence_init (int argc, char ** argv);
 
 void turbulence_exit (int value); 
