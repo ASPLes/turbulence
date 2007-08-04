@@ -564,10 +564,39 @@ bool __turbulence_ppath_mask (VortexConnection * connection,
 	 * <if-success> configuration */
 	if (! __turbulence_ppath_mask_items (state->path_selected->ppath_item, 
 					     state, uri, serverName, channel_num, connection, profile_content)) {
-		msg ("profile: %s accepted (ppath: \"%s\")", uri, state->path_selected->path_name);
+
+		/* only drop a message if the channel number have a
+		 * valid value. Profile mask is also executed at
+		 * greetings phase and channel_num is equal to -1. In
+		 * this case we can't say the channel have been
+		 * accepted */
+		if (channel_num > 0) {
+			msg ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
+			     uri, state->path_selected->path_name, 
+			     vortex_connection_get_id (connection), 
+			     vortex_connection_get_host (connection),
+			     vortex_connection_get_port (connection));
+			
+			/* report access */
+			access ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
+				uri, state->path_selected->path_name, 
+				vortex_connection_get_id (connection), 
+				vortex_connection_get_host (connection),
+				vortex_connection_get_port (connection));
+		}
+		
 		/* profile allowed, do not filter */
 		return false;
 	} /* end if */
+
+	/* drop an error message if a definitive channel request was
+	 * received */
+	if (channel_num > 0) 
+		error ("profile: %s not accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
+		       uri, state->path_selected->path_name, 
+		       vortex_connection_get_id (connection), 
+		       vortex_connection_get_host (connection),
+		       vortex_connection_get_port (connection));
 
 	/* filter any other option */
 	return true;

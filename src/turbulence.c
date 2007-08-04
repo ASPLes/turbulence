@@ -241,6 +241,8 @@ void turbulence_exit (int value)
 			return;
 		} else if (HAS_ATTR_VALUE (node, "action", "hold")) {
 			/* lock the process */
+			error ("Bad signal found, locking process, now you can attach or terminate pid: %d", 
+			       getpid ());
 			queue = vortex_async_queue_new ();
 			vortex_async_queue_pop (queue);
 			return;
@@ -446,6 +448,47 @@ void turbulence_msg (const char * file, int line, const char * format, ...)
 
 	/* report to log */
 	turbulence_log_report (LOG_REPORT_GENERAL, format, args, file, line);
+
+	va_end (args);
+
+	CONSOLE (stdout, "\n");
+	
+	fflush (stdout);
+	
+	return;
+}
+
+/** 
+ * @internal function that actually handles the console access
+ */
+void  turbulence_access   (const char * file, int line, const char * format, ...)
+{
+	va_list args;
+
+	/* check extended console log */
+	if (console_debug3) {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		} else
+#endif
+			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+	} else {
+#if defined(AXL_OS_UNIX)	
+		if (console_color_debug) {
+			CONSOLE (stdout, "\e[1;32mI: \e[0m");
+		} else
+#endif
+			CONSOLE (stdout, "I: ");
+	} /* end if */
+	
+	va_start (args, format);
+	
+	/* report to console */
+	CONSOLEV (stdout, format, args);
+
+	/* report to log */
+	turbulence_log_report (LOG_REPORT_ACCESS, format, args, file, line);
 
 	va_end (args);
 
