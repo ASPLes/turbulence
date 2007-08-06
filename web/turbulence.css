@@ -102,6 +102,7 @@ pre {
   color: white;
   background: #2e3436;
   border: 1px solid #acacac;
+  font-size: 11px;
 }
 
 .main-content-left { 
@@ -112,8 +113,8 @@ pre {
 }
 
 .main-content-right { 
+  position: absolute; left: 450px; top: 130px; z-index: 1;
   width: 30%;
-  float: right;
 }
 
 ul.news { 
@@ -145,8 +146,7 @@ ul.images img {
 }
 
 .logo { 
-  float: right;
-  margin-top: -120px;
+  position: absolute; left: 520px; top: 20px; z-index: 1;
 }
 
 .alt-logo img { 
@@ -161,7 +161,7 @@ ul.images img {
 .footer-notice { 
   color: #888a85;
   border-top: 1px dotted #3465a4;
-  font-size: 50%;
+  font-size: 9px;
   text-align: center;
   background: white;
   margin: 0px;
