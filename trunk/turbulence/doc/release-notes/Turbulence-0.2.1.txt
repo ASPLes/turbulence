@@ -1,0 +1,320 @@
+                     -= Turbulence 0.2.1  =-
+                       "Solid Eyes release"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce the first
+  public available Turbulence release: an open source BEEP application
+  server, written on top of Vortex Library.
+
+  Turbulence is a BEEP server extensible through modules and allows to
+  implement server side profiles that are used and combined later with
+  other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.turbulence.ws
+      [Turbulence homepage]
+
+    - http://vortex.aspl.es 
+      [Vortex Library homepage]
+ 
+    - http://www.sf.net/projects/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://xml.aspl.es
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  First official release. Included basic configuration features: ports,
+  bind address, log files, max connections and bad signal handling.
+
+  It also includes two initial modules: mod-sasl and mod-tunnel, which
+  implements and provides facilities and tools to admin them. It also
+  included initial tools to manage configuration lists
+  (tbc-dblist-mgr), SASL users (tbc-sasl-conf) and module creation
+  (tbc-mod-gen).
+
+  This release also includes one of the most important features for
+  Turbulence, the profile path: an administrative mechanism that
+  allows to configure which profiles can be used by remote peers and
+  how they are sequenced, according to peer status, source address,
+  previously created channels, and much more.
+
+Thanks to..
+~~~~~~~~~~~
+  Marshall Rose and Carl Malamud for helping to polish the site.
+  
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the emptiness
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Added a log message to the access file when a profile is
+  accepted.  Added a new function to perform such task. API added:
+
+   - turbulence_access
+   - access (macro)
+
+* [fix] Changing default turbulence configuration file to
+  turbulence.example.conf to avoid overwriting system configuration
+  on turbulence install or update.
+
+* [fix] Updated autoconf process to detect axl and vortex version, and
+  using them from tbc-mod-gen to produce an appropriate output.
+
+* [fix] Updated DTD file to allow not requiring the additional-content.
+
+* [fix] Updated the tool to support a new option (--enable-autoconf)
+  that produces two new files (autogen.sh and configure.ac).
+
+
+* [new] Include support for an db list implementation, initially
+  supporting the xml backend, which allows reading/storing a list of
+  items that is automatically managed (disk stored, automatic close,
+  etc). API added:
+
+   - TurbulenceDbList
+   - turbulence_db_list_open
+   - turbulence_db_list_exists
+   - turbulence_db_list_add
+   - turbulence_db_list_remove
+   - turbulence_db_list_get
+   - turbulence_db_list_close
+   - turbulence_db_list_reload
+   - turbulence_db_list_flush
+
+* [new] Added a new tool that allows to manage db list created.
+  Operations implemented: add, remove and list.
+
+* [fix] Fixed bug inside profile path engine which was causing to read
+  the content provided by nodes following the first child.
+
+* [fix] Making the generated turbulence-config to support a new
+  option: --base-dir which returns the turbulence base configuration
+  directory.
+
+* [new] Updated tbc-mod-gen to generate a script to allow refreshing
+  the source code.
+
+* [new] Updated tbc-mod-gen to support a new node:
+  <additional-content> which allows to declare content that will be
+  included in the module.
+
+* [fix] Making the tool to allow including into the xml definition
+  more source files that are included into the Makefile.am created.
+
+* [fix] Updated the tool to fully produce a compilable module template
+  including the Makefile.am and the xml module definition.
+
+* [new] Added a new script which allows to get current default module
+  installation dir and the xml module definition directory. Script
+  added: turbulence-config.
+
+* [fix] Updated documentation including main configuration settings
+  and profile path configuration.
+
+* [fix] Removed filter-modules node from the configuration file
+  because it is going to be implemented in an apache style using
+  mod-enabled/available directories.
+
+* [fix] Committing more updates to the tbc-mod-gen tool. Now the tool
+  is able to produce a basic template file and read it to produce the
+  module implementation. Source code not tested.
+
+* [fix] Updated configure files to include the new tools directory and
+  the tbc-mod-gen tool.
+
+* [new] Added a new tool to create new modules easily: tbc-mod-gen The
+  tool allows to create an xml template file which is used to produce
+  a module following conventions used by turbulence.
+
+* [new] Implemented the reconfiguration mechanism required by which
+  modules get notifications for reconfiguration if turbulence receives
+  a HUP signal.
+
+* [new] Added support to configure max connection limits (hard and
+  soft).
+
+* [new] Updated tbc-sasl-conf to allow removing, disabling and listing
+  users inside the sasl database provided by mod-sasl.
+
+* [fix] Fixed a bug inside the profile path pre-connmark.
+
+* [fix] Updated turbulence config run to stop the server if at least
+  one listener couldn't be started.
+
+* [new] Updated turbulence profile path to include negative
+  expressions.  This allow to configure perl regular expression that
+  match its negation.  Supported prefixes: "!" and "not". Great!
+
+* [new] Added support for preconnmark attribute at profile path item
+  configuration, allowing to enforce the existence of a particular
+  mark before a channel can be created.
+
+* [new] Finished initial fully tested and working version for the
+  profile path support. Now the profile path supports checking for
+  connection marks (<if-success connmark="some-mark">).
+
+  This helps to not only check for the presence of a successfully
+  created channel but for a particular mark which notifies a
+  particular state.  For instance, SASL channels can be created but
+  having the right connmark shows that the channel have finished
+  successfully auth operations.  This is getting really
+  interesting. GREAT!
+
+* [fix] Added an internal support to allow the turbulence
+  administration to use regular expression like * or / without
+  escaping them. Because we are using pcre, * or / have an especial
+  meaning. Now it is possible to write:
+
+   - <if-success profile="http://iana.org/beep/SASL/*"> 
+
+   which is translated to:
+
+   - <if-success profile="http:\/\/iana.org\/beep\/SASL/.*">. 
+
+* [fix] Finished initial working prototype support profile path
+  support.  This initial support allows to select a profile path to be
+  applied according to the connection source, server name parameter
+  and profiles requested. Great!
+
+* [fix] committing initial implementation that parses and process
+  profile path configuration. Checked that the engine deallocates all
+  memory used on exit for the profile path support.
+
+* [new] Added initial implementation and working configuration example
+  describing initial design and features to be supported for the new
+  profile path support. Added to the configure.ac process, detection
+  support for pcre (perl regular expressions), required by profile
+  path.
+
+* [fix] Making turbulence_config_load to return a status code, that
+  allows notifying an error found to the caller.
+
+* [fix] Making turbulence module close to call to all modules to close
+  and cleanup its resources allocated.
+
+* [fix] Updated tunnel configuration resolver (to translate "profile"
+  and "endpoint" values) to better check request received.
+
+* [fix] Fixed Makefile.am files at the mod tunnel.
+
+* [fix] Updating autoconf files, included new mod-sasl, renamed
+  config.xml to turbulence.conf and main configuration template to
+  include new options to handle bad signals.
+
+* [new] Added initial mod-sasl implementation which provides fully
+  working authentication backend for plain profile. Included an
+  initial implementation for a tool to manage user database:
+  tbc-sasl-conf.
+
+* [fix] Finished first fully working implementation for the TUNNEL
+  profile.  Now turbulence is able to act as a general BEEP
+  application proxy. Great!!  It implements the default proxy
+  behavior for ip4/fqdn/port and also provides a realtime
+  configuration file to translate endpoint and profile to particular
+  host location values.
+
+* [new] Removed sasl initial module and implemented a module
+  (mod-sasl) to implement all SASL related functions.
+
+* [new] Added a new function to control if debug to console is
+  activated and a new function to get the last modification time for a
+  file.
+  
+  - turbulence_set_console_debug
+  - turbulence_last_modification 
+
+* [new] Updated turbulence signal handler for SIGSEGV and SIGABRT to
+  allow controlling if the signal is ignored, hold or let the exit
+  operation to continue. This is now control through the main
+  configuration file, at the global settings.
+
+* [fix] Changed default main configuration file from config.xml to
+  turbulence.conf.
+
+* [fix] Making turbulence to be built as a library and an an
+  executable that init it, allowing to use source code provided by the
+  library from modules developed and tools around them.
+
+* [fix] Updated source code to properly implement the exit operation,
+  deallocating all resources. Added support to colorify console debug
+  (by activating a command line option).
+
+* [new] Updated default configuration DTD validation file to include a
+  error-log node used to report error log.
+
+* [new] Finished initial working API to load and activate modules. Now
+  turbulence checks and activates module, registering them to be
+  unloaded once turbulence finish. API added:
+ 
+   - turbulence_module_get_init
+   - turbulence_module_get_close
+   - turbulence_module_register
+   - turbulence_module_free
+   - turbulence_module_cleanup
+
+* [new] Implemented initial signal handling for usual signals (SIGINT,
+  SIGTERM, SIGKKILL, SIGQUIT, SIGSEGV, SIGABRT, SIGHP).
+
+* [new] Added support to the application for a new flag (--debug)
+  which allows to disable console log (or enable it).
+
+* [new] Making turbulence to send all log messages to log files
+  configured at the turbulence main configuration. API added:
+
+   - turbulence_log_init
+   - turbulence_log_report
+   - turbulence_log_cleanup
+
+* [new] Created a new module to hold all definitions used by
+  turbulence modules.
+
+* [fix] Committing first version with a minimal structure to start,
+  read the configuration, validate all items, find modules, validate
+  them and exec them.
+
+* [fix] Committing last changes to validate turbulence main configuration
+  file.
+
+* [new] Committing initial files for the new BEEP server application.
+
+About Us
+~~~~~~~~
+
+  Aspl (Advanced Software Production Line) is a Spanish company that
+  provides services and support to introduce open source products into
+  organizations.
+
+  It has more than 6 years of experience and its main development line
+  is to provide software development and support to install GNU/Linux
+  enterprise servers that provides mail, file and firewall services.
+
+  Contact us, using English or Spanish, to get commercial support
+  and/or BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope Vortex Library and Turbulence help you. Enjoy Turbulence!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+6th august 2007, Madrid (Spain)
+  
+

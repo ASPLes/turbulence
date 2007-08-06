@@ -1,4 +1,4 @@
-EXTRA_DIST = 
+EXTRA_DIST = libturbulence.def
 
 # profile a flag to enable the source to code to react agaisnt the
 # pcre inclusion.
