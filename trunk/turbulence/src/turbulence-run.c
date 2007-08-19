@@ -39,6 +39,13 @@
 #include <turbulence.h>
 
 /** 
+ * @internal By default clean start is disabled.
+ */
+bool turbulence_clean_start = false;
+
+#define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (-1);exit (-1);}while (0);
+
+/** 
  * @brief Tries to load all modules found at the directory already
  * located. In fact the function searches for xml files that points to
  * modules to be loaded.
@@ -104,7 +111,8 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		
 		/* check init */
 		if (! init ()) {
-			wrn ("init for moddule: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
+			wrn ("init module: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
+			CLEAN_START();
 		} else {
 			msg ("init ok, registering module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 		}
@@ -198,6 +206,10 @@ bool turbulence_run_config    ()
 	axlDtd           * dtd;
 	axlError         * error;
 	bool               at_least_one_listener = false;
+
+	/* check clean start */
+	node                   = axl_doc_get (doc, "/turbulence/global-settings/clean-start");
+	turbulence_clean_start = (HAS_ATTR_VALUE (node, "value", "yes"));
 
 	/* configure max connection settings here */
 	node       = axl_doc_get (doc, "/turbulence/global-settings/connections/max-connections");
@@ -300,6 +312,10 @@ bool turbulence_run_config    ()
 				     
 				     /* server port */
 				     axl_node_get_content (port, NULL));
+
+				/* check clean start */ 
+				CLEAN_START ();
+
 				goto next;
 			} /* end if */
 
