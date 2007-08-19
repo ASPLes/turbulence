@@ -8,7 +8,7 @@ echo "Updating mod-test.c.html"
 
 read -p "Update html files (y/n): " html
 if [ $html == "y" ]; then
-	scp turbulence.css mod-test.c Makefile.am mod-test.xml.in mod-test.c.html index.html install.html tunnel.html sasl.html extending.html doc.html news.html configuring.html downloads.html turbulence.html commercial.html licensing.html support.html aspl@www.aspl.es:www/turbulence
+	scp turbulence.css mod-test.c Makefile.am mod-test.xml.in mod-test.c.html beep-applications-and-ports.html index.html install.html tunnel.html sasl.html extending.html doc.html news.html configuring.html downloads.html turbulence.html commercial.html licensing.html support.html aspl@www.aspl.es:www/turbulence
 fi
 
 read -p "Update image files (y/n): " images
