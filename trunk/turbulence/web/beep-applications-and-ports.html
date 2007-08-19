@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+<link rel="stylesheet" type="text/css" href="turbulence.css">
+<title>Turbulence: The BEEP application server, BEEP server, BEEP listener, BEEP server side </title>
+</head>
+
+<body>
+<div class="content">
+<a href="index.html"><img alt="[TURBULENCE HEADER]" src="images/turbulence-compact-header.png" /></a>
+<a class="alt-logo" href="http://www.aspl.es"><img alt="[ASPL LOGO]" src="images/aspl-alt-compat-logo.png"></a>
+<h1>Building port oriented applications and BEEP</h1>
+
+<h2>Network application protocols state of the art</h2>
+
+<p>All currently deployed application protocol such SMTP, HTTP, FTP,
+  etc runs on a particular port making it more easy for developers and
+  users to take advantage of the resource provided, because many
+  settings are assumed. </p>
+
+<p>In the past this approach was really helpful because many network
+  design problems were solved for free: session setup, protocol
+  identification, versioning, security level,..</p>
+
+<p>For example, if it is required to "talk" plain HTTP you can use the
+  default TCP port 80 to reach the web server at a particular
+  location. However, if you want to secure your session you must use a
+  different port, that is 443, because "by contract" the application
+  protocol bind to the 80 port runs the HTTP without secure the
+  session.</p>
+
+<p>The same happens with many application protocols that must be
+  secured, or "tuned", to provide a particular feature plus the
+  application protocol that provides the resource required.</p>
+
+<p>As everything, this has advantages: easy deployment, protocol
+  location (many site administrators block applications not by content
+  but by port), etc, but it also has drawbacks.</p>
+
+<h2>Taking a look into limits imposed by port driven application protocols</h2>
+
+<p>All features that provides "for free" a port driven approach are at
+  the same time flaws in the long term. Taking separately we can see
+  how they have a deep impact in our design. Understanding them its
+  the first step to make a proper choice while designing network
+  application protocols.</p>
+
+<ol>
+  <li><b>No or minimal protocol negotiation phase:</b>
+  <p>Assuming you are going to find a particular application
+  protocol at a particular port (i.e, SMTP on 25 TCP port) you can
+  skip all details that could
+  require peer connection, identify your credentials and then ask for your
+  protocol.</p>
+
+  <p>However, if the protocol requires to be mixed or extended with
+  some feature that falls outside the protocol scope or capability it
+  is now required to talk to "a new" version of the protocol in a
+  different port. Obviously this is far from being desired but happens
+  specially with protocols that are previous to the SSL/TLS
+  appearance. </p>
+
+  <p>In this case, the port driven approach uses a new port. In the
+  case of BEEP a new BEEP profile is provided, making it to be
+  available at the same port, making old and new client applications
+  to coexist.</p>
+
+  </li>
+  <li><b>Port bound protocol: </b>
+  <p>Until now, a common idiom is to assume the port according to the
+  protocol being used and viceversa. Though it is argued that it makes more easy
+  software development and makes life easy to end users, some
+  experience shows that it is required to be able to move services to
+  different ports. </p>
+  <p>However, in many cases this is not possible because, again, the
+  application protocol design. So, <i>why design an application protocol
+  that is "married" with a particular port?</i>  </p>
+
+  <p>The answer was two fold: first, there was nothing like BEEP that
+  could help two different application protocols to coexist at the same TCP
+  port, making difficult to move applications to different
+  ports. Second, it is supposed it is easy for client applications to
+  reach the server side application assuming the TCP port.</p>
+
+  <p>While the first answer is pretty clear, the second is not so
+  accurate now having BEEP. A really flexible approach would be to
+  have a "default port" where the application server is usually reached but,
+  it should be possible to place the server application at a different
+  one. </p>
+
+  <p>It is difficult to understand that, in many cases, current client
+  Internet applications doesn't provide a TCP port configuration to
+  reach the server application because "it is too much setting for the
+  end user!!". </p>
+ </li>
+ 
+ <li><b>Being one step ahead to the change</b>
+ <p>Many experienced network application designers take into account
+ that features not envisioned by its protocols will happen. Several
+ measures are provided, but the most common is versioning the
+ protocol. However, this do not solve all problems as showed with the
+ TLS/SSL case.</p>
+
+ <p>BEEP provides a flexible and powerful mechanism to perform a
+ session setup, allowing to mix and extend your protocol (a
+ BEEP profile) with several existing BEEP profiles. </p>
+
+ <p>This is great not
+ only because the amount of work already done, but because it is a warranty
+ that the change that will happen will be covered easily by new BEEP
+ profiles, making your protocol to be fresh and up to date.</p>
+
+ <p>For example, the Af-Arch platform <a
+ href="http://fact.aspl.es">[1]</a> provides its RPC services through
+ two profiles at the same time. This allows client applications
+ to use the <i>"Coyote"</i> or the <i>"XML-RPC over BEEP"</i>
+ profile to invoke services. </p>
+
+ <p>This is done because initially the <i>Coyote profile</i> was
+ defined to perform a XML-RPC invocation without too much
+ features (really limited protocol) but simple enough for the kind of
+ services exposed by Af-Arch servers. With the time Shaper <a
+ href="https://dolphin.aspl.es/svn/publico/shaper/">[2]</a> was written and a XML-RPC invocation profile with
+ support for data typing was required. </p>
+
+ <p>Obviously rewriting the <i>"Coyote profile"</i> was not a
+ reasonable option. Having BEEP allowed to support
+ over the same connection <i>"Coyote"</i> and <i>"XML-RPC over
+ BEEP"</i> which fitted really well due to its data typing support. </p>
+ </li>
+</ol>
+
+<h2>Conclusion</h2>
+
+<p>The very first concept to change while building applications with
+BEEP is to not think about running a particular BEEP profile at a
+particular port. This is because BEEP is able to run any
+configuration at any port due to its design.</p>
+
+<p>A little experience with BEEP and its building block reuse pattern
+shows that several BEEP profiles are used and combined to produce the
+"useful work" at the same port (without being important this last detail).</p>
+
+<p>For example, you can run a mixture of XML-RPC over BEEP, SASL and
+TLS, with a custom profile to provide some service. In this case, you
+can use the IANA port assigned to the XML-RPC over BEEP, 602 TCP port,
+but once connected you are in fact running several protocols on port
+602. </p>
+
+<p>What happens is that your client application reached the 602 TCP
+port, negotiated a TLS tuning to secure your connection, then
+provided SASL credentials, and then asked to use the XML-RPC over BEEP
+profile. But, at this last step, your client application could have
+asked for other BEEP profile.</p>
+
+<p>It is recommended to design BEEP applications to use as "default
+port" anyone provided for current IANA BEEP accepted profiles, but at
+the same time, allowing to move that application to any port. The same
+applies to new BEEP profiles with IANA assigned ports. These ports
+should be taken only as "default" values.  </p>
+
+<p>Some of IANA assigned ports to BEEP profiles are:</p>
+
+<ol>
+  <li>601 TCP: RFC3195 <a href="http://www.rfc-editor.org/rfc/rfc3195.txt">Reliable Delivery for syslog</a></li>
+  <li>602 TCP: RFC3529 <a href="http://www.rfc-editor.org/rfc/rfc3529.txt">XML-RPC over BEEP</a></li>
+  <li>604 TCP: RFC3620 <a href="http://www.rfc-editor.org/rfc/rfc3602.txt">The TUNNEL profile</a></li>
+</ol>
+
+<h2>References</h2>
+
+<ol>
+  <li>[1] Af-Arch framework<br> <a href="http://fact.aspl.es">http://fact.aspl.es</a></li>
+  <li>[2] Shaper: creating xml documents from XML-RPC over BEEP servers<br>
+  <a href="https://dolphin.aspl.es/svn/publico/shaper/">https://dolphin.aspl.es/svn/publico/shaper/</a></li>
+</ol>
+
+
+<!-- end central section -->
+
+<div class="footer-notice">
+<div class="valid">  
+<a href="http://validator.w3.org/check?uri=referer"><img src="images/valid-html401.png" alt="Valid HTML 4.01 Transitional"></a><br>
+<a href="http://jigsaw.w3.org/css-validator/check/referer"><img src="images/vcss.png"  alt="Valid CSS!"></a>
+</div>
+<div class="footer-content">  
+ Copyright © 2007 Advanced Software Production Line, S.L.
+ All rights reversed.<br>
+ ASPL and its logo are trademarks of Advanced Software Production Line, S.L.<br>
+ Webmaster: <a href="mailto:webmaster@aspl.es">webmaster@aspl.es</a>
+</div> <!-- footer-content -->  
+</div> <!-- footer-notice -->  
+
+</div> <!-- div=content -->
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "UA-123192-8";
+urchinTracker();
+</script>
+</body> </html>
