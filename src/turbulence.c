@@ -106,6 +106,9 @@ bool turbulence_init (int argc, char ** argv)
 	exarg_install_arg ("vortex-debug", NULL, EXARG_NONE,
 			   "Enable vortex debug");
 
+	exarg_install_arg ("vortex-debug2", NULL, EXARG_NONE,
+			   "Enable second level vortex debug");
+
 	exarg_install_arg ("vortex-debug-color", NULL, EXARG_NONE,
 			   "Makes vortex debug to be done using colors according to the message type. If this variable is activated, vortex-debug variable is activated implicitly.");
 
@@ -120,6 +123,7 @@ bool turbulence_init (int argc, char ** argv)
 
 	/* enable vortex debug */
 	vortex_log_enable (exarg_is_defined ("vortex-debug"));
+	vortex_log2_enable (exarg_is_defined ("vortex-debug2"));
 	if (exarg_is_defined ("vortex-debug-color")) {
 		vortex_log_enable       (true);
 		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
@@ -415,6 +419,27 @@ void turbulence_error (const char * file, int line, const char * format, ...)
 	fflush (stderr);
 	
 	return;
+}
+
+/** 
+ * @bried Allows to check if the debug is activated (\ref msg type).
+ * 
+ * @return true if activated, otherwise false is returned.
+ */
+bool turbulence_log_enabled ()
+{
+	return console_debug;
+}
+
+/** 
+ * @brief Allows to check if the second level debug is activated (\ref
+ * msg2 type).
+ * 
+ * @return true if activated, otherwise false is returned.
+ */
+bool turbulence_log2_enabled ()
+{
+	return console_debug2;
 }
 
 /** 

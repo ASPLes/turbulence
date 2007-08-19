@@ -2,7 +2,13 @@
 <!ELEMENT turbulence (global-settings, modules, profile-path-configuration)>
 
 <!-- global-settings -->
-<!ELEMENT global-settings (ports, listener, log-reporting, tls-support, on-bad-signal, connections)>
+<!ELEMENT global-settings (ports, 
+                           listener, 
+                           log-reporting, 
+			   tls-support, 
+			   on-bad-signal, 
+			   clean-start?,
+			   connections)>
 
 <!ELEMENT ports           (port+)>
 <!ELEMENT port            (#PCDATA)>
@@ -27,6 +33,9 @@
 
 <!ELEMENT on-bad-signal       EMPTY>
 <!ATTLIST on-bad-signal action (hold|ignore|quit|exit) #REQUIRED>
+
+<!ELEMENT clean-start       EMPTY>
+<!ATTLIST on-bad-signal action (yes|no) #REQUIRED>
 
 <!ELEMENT connections       (max-connections)>
 <!ELEMENT max-connections   EMPTY>

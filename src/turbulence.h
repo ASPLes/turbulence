@@ -70,6 +70,10 @@ void turbulence_console_process_options ();
 
 void turbulence_console_install_options (); 
 
+bool turbulence_log_enabled ();
+
+bool turbulence_log2_enabled ();
+
 /** 
  * Drop an error msg to the console stderr.
  *
