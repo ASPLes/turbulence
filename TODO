@@ -7,3 +7,6 @@ serverName received and other run time values.
 * Add support to mod-sasl and mod-tls to perform multihosting, that
 is, providing different databases and certificates according to the
 serverName (and maybe other configuration values).
+
+* Create a connection manager to allow configuring a list of
+connections that can be received by a single host. 
