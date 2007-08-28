@@ -84,6 +84,14 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		/* notify file found */
 		msg ("file found: %s", fullpath);		
 
+#if defined(AXL_OS_UNIX)
+		/* check if the fullpath is ended with a ~ sign */
+		if (fullpath [strlen (fullpath) - 1] == '~') {
+			wrn ("skiping file %s which looks a backup one", fullpath);
+			goto next;
+		} /* end if */
+#endif
+
 		/* check its xml format */
 		doc = axl_doc_parse_from_file (fullpath, &error);
 		if (doc == NULL) {
