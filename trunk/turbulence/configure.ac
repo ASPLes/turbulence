@@ -54,7 +54,7 @@ AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.4.6) 
+PKG_CHECK_MODULES(AXL, axl >= 0.4.8) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
@@ -63,7 +63,7 @@ AXL_VERSION=`pkg-config --modversion axl`
 AC_SUBST(AXL_VERSION)
 
 dnl external dependencies
-PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.5) 
+PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.7) 
 
 dnl general libries subsitution
 AC_SUBST(VORTEX_CFLAGS)
