@@ -354,7 +354,7 @@ bool __turbulence_ppath_match_expr (axlPointer _expr, const char * subject)
 #endif
 
 	/* return false if either values received are null */
-	if (subject == NULL || expr == NULL)
+	if (subject == NULL || _expr == NULL)
 		return false;
 
 #if defined(ENABLE_PCRE_SUPPORT)
