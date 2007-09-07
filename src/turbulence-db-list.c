@@ -381,6 +381,58 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 }
 
 /** 
+ * @brief Allows to get a snapshot of the current status of items
+ * stored on the provided db list.
+ *
+ * This function is useful if you want to have a reference to all
+ * items stored on a particular time without taking into consideration
+ * race conditions, etc.
+ * 
+ * @param list The list to be used to produce the snapshot list.
+ * 
+ * @return A refernece to a newly allocated axlList or NULL if it
+ * fails. The axl list will contains strings stored. Using
+ * axl_list_free to release the list returned.
+ */
+axlList          * turbulence_db_list_status (TurbulenceDbList * list)
+{
+	axlNode * node;
+	axlList * result;
+
+	/* check values received */
+	if (list == NULL)
+		return NULL;
+
+	/* reload the document */
+	turbulence_db_list_reload (list);
+	
+	/* lock */
+	vortex_mutex_lock (&(list->mutex));
+
+	/* create the list */
+	result = axl_list_new (axl_list_always_return_1, axl_free);
+
+	/* get the first node */
+	node = list->first;
+	while (node != NULL) {
+
+		/* add the item found */
+		axl_list_add (result, axl_strdup (ATTR_VALUE (node, "value")));
+		
+		/* get next node */
+		node = axl_node_get_next_called (node, "item");
+		
+	} /* end while */
+	/* unlock */
+	vortex_mutex_unlock (&(list->mutex));
+
+	/* return the content */
+	return result;
+}
+
+
+
+/** 
  * @brief Allows to remove the provided content (first reference) on
  * the provided db list.
  * 
@@ -417,6 +469,79 @@ bool               turbulence_db_list_remove (TurbulenceDbList * list,
 		if (axl_cmp (value, ATTR_VALUE (node, "value"))) {
 			/* found the node holding the value */
 			axl_node_remove (node, true);
+
+			/* unlock and flush */
+			vortex_mutex_unlock (&(list->mutex));
+
+			/* flush */
+			turbulence_db_list_flush (list);
+
+			return true;
+		} /* end if */
+
+		/* get next node */
+		node = axl_node_get_next_called (node, "item");
+	} /* end if */
+
+	/* unlock */
+	vortex_mutex_unlock (&(list->mutex));
+
+	/* item removed either because it wasn't found or because it
+	 * was really removed */
+	return true;
+}
+
+/** 
+ * @brief Allows to implement an edit operation on the provided dblist
+ * in an atomic way.
+ *
+ * This function could be replaced by a call to \ref
+ * turbulence_db_list_remove followed by a call to \ref
+ * turbulence_db_list_add. However, there is a race condition between
+ * those two calls, which is avoided by this function. This function
+ * also allows to conserve position of the previous item edited, which
+ * is likely to be lost by an remove/add pattern is used.
+ *
+ * @param list The list to be edited.
+ *
+ * @param oldValue The element to be edited. This element will be
+ * searched and edited/replaced with the value provided as newValue.
+ *
+ * @param newValue The new value to place in exchange for oldValue.
+ * 
+ * @return true if the operation was properly completed, otherwise
+ * false is returned.
+ */
+bool               turbulence_db_list_edit   (TurbulenceDbList * list,
+					      const char       * oldValue,
+					      const char       * newValue)
+{
+	axlNode * node;
+
+	/* check values received */
+	if (list == NULL)
+		return false;
+	if (oldValue == NULL)
+		return false;
+	if (newValue == NULL)
+		return false;
+
+	/* reload the document */
+	turbulence_db_list_reload (list);
+	
+	/* lock */
+	vortex_mutex_lock (&(list->mutex));
+
+	/* get the first node */
+	node = list->first;
+	while (node != NULL) {
+		
+		/* check the item */
+		if (axl_cmp (oldValue, ATTR_VALUE (node, "value"))) {
+			/* found the node holding the value, replace
+			 * the attribute with the new value */
+			axl_node_remove_attribute (node, "value");
+			axl_node_set_attribute (node, "value", newValue);
 
 			/* unlock and flush */
 			vortex_mutex_unlock (&(list->mutex));
