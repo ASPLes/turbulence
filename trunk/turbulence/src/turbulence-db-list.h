@@ -65,6 +65,10 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 bool               turbulence_db_list_remove (TurbulenceDbList * list,
 					      const char       * value);
 
+bool               turbulence_db_list_edit   (TurbulenceDbList * list,
+					      const char       * oldValue,
+					      const char       * newValue);
+
 axlList          * turbulence_db_list_get    (TurbulenceDbList * list);
 
 bool               turbulence_db_list_close  (TurbulenceDbList * list);
@@ -72,6 +76,9 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list);
 bool               turbulence_db_list_reload (TurbulenceDbList * list);
 
 bool               turbulence_db_list_flush  (TurbulenceDbList * list);
+
+axlList          * turbulence_db_list_status (TurbulenceDbList * list);
+
 
 /* internal services, used by turbulence engine, never by user
  * application code */
