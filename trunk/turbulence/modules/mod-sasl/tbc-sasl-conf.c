@@ -52,10 +52,14 @@ char        * auth_db_path  = NULL;
 
 void tbc_sasl_add_user ()
 {
-	const char * new_user_id = exarg_get_string ("add-user");
-	const char * password    = NULL;
-	const char * password2   = NULL;
-	const char * user_id;
+	const char  * new_user_id  = exarg_get_string ("add-user");
+	const char  * password     = NULL;
+	const char  * password2    = NULL;
+	char        * enc_password = NULL;
+	const char  * user_id;
+	const char  * format;
+	bool          release;
+
 	bool         dealloc     = false;
 	axlNode    * node;
 	axlNode    * newNode;
@@ -67,13 +71,10 @@ void tbc_sasl_add_user ()
 		/* get the user */
 		user_id = ATTR_VALUE (node, "user_id");
 		
-		/* check the format for the user stored */
-		if (axl_memcmp (user_id, "text:", 5)) {
-			/* check the user id */
-			if (axl_cmp (new_user_id, user_id + 5)) {
-				msg ("user %s already exist..", new_user_id);
-				return;
-			} /* end if */
+		/* check the user id */
+		if (axl_cmp (new_user_id, user_id)) {
+			msg ("user %s already exist..", new_user_id);
+			return;
 		} /* end if */
 
 		/* get next node */
@@ -86,6 +87,9 @@ void tbc_sasl_add_user ()
 	if (exarg_is_defined ("password")) 
 		password = exarg_get_string ("password");
 	else {
+
+		/* user didn't provide a password, get from the
+		 * command line */
 		password  = turbulence_io_get ("Password: ", DISABLE_STDIN_ECHO);
 		fprintf (stdout, "\n");
 		password2 = turbulence_io_get ("Type again: ", DISABLE_STDIN_ECHO);
@@ -101,19 +105,43 @@ void tbc_sasl_add_user ()
 		dealloc = true;
 	}
 
-	/* check if the user already exists */
+	/* now check the format to be used */
+	node   = axl_doc_get (sasl_xml_conf, "/mod-sasl/auth-db");
+	format = (node != NULL && HAS_ATTR (node, "format")) ? ATTR_VALUE (node, "format") : "md5";
+
+	msg ("found format: %s", format);
+
+	/* prepare key and password to be looked up */
+	if (axl_cmp (format, "md5")) {
+		/* redifine values */
+		enc_password = vortex_tls_get_digest (VORTEX_MD5, password);
+		release  = true;
+	} else if (axl_cmp (format, "sha-1")) {
+
+		/* redifine values */
+		enc_password = vortex_tls_get_digest (VORTEX_SHA1, password);
+		release  = true;
+
+	}  else if (axl_cmp (format, "plain")) {
+		/* plain do not require additional format */
+		enc_password = (char*) password;
+		release      = false;
+	} else {
+		/* error, unable to find the proper keying material
+		 * encoding configuration */
+		error ("unable to find the proper format for keying material (inside sasl.conf)");
+		return;
+	} /* end if */
+
+	/* create the auth node for the user */
 	node     = axl_doc_get_root (auth_db);
 	newNode  = axl_node_create ("auth");
 	
 	/* set user */
-	axl_node_set_attribute_ref (newNode, 
-				    axl_strdup ("user_id"),
-				    axl_strdup_printf ("text:%s", new_user_id));
+	axl_node_set_attribute (newNode, "user_id", new_user_id);
 
 	/* set password */
-	axl_node_set_attribute_ref (newNode, 
-				    axl_strdup ("password"),
-				    axl_strdup_printf ("text:%s", password));
+	axl_node_set_attribute (newNode, "password", enc_password);
 
 	/* account enabled */
 	axl_node_set_attribute (newNode, "disabled", "no");
@@ -124,6 +152,8 @@ void tbc_sasl_add_user ()
 	/* free the password */
 	if (dealloc)
 		axl_free ((char*) password);
+	if (release) 
+		axl_free ((char*) enc_password);
 
 	/* dump the db */
 	if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
@@ -149,29 +179,27 @@ void tbc_sasl_disable_user ()
 		/* get the user */
 		user_id = ATTR_VALUE (node, "user_id");
 		
-		/* check the format for the user stored */
-		if (axl_memcmp (user_id, "text:", 5)) {
-			/* check the user id */
-			if (axl_cmp (user_id_to_disable, user_id + 5)) {
-				/* user found, disable it */
-				axl_node_remove_attribute (node, "disabled");
-
-				/* install the new attribute */
-				axl_node_set_attribute (node, "disabled", "yes");
-
-
-				/* dump the db */
-				if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
-					error ("failed to dump SASL auth db..");
-				else
-					msg ("user %s disabled!", user_id_to_disable);
-				return;
-			} /* end if */
+		/* check the user id */
+		if (axl_cmp (user_id_to_disable, user_id)) {
+			/* user found, disable it */
+			axl_node_remove_attribute (node, "disabled");
+			
+			/* install the new attribute */
+			axl_node_set_attribute (node, "disabled", "yes");
+			
+			
+			/* dump the db */
+			if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
+				error ("failed to dump SASL auth db..");
+			else
+				msg ("user %s disabled!", user_id_to_disable);
+			return;
 		} /* end if */
-
+		
+		
 		/* get next node */
 		node     = axl_node_get_next (node);
-
+		
 	} /* end while */
 
 	/* nothing to do */
@@ -197,17 +225,12 @@ void tbc_sasl_list_users ()
 			first_user = false;
 		} /* end if */
 		
-		/* check the format for the user stored */
-		if (axl_memcmp (ATTR_VALUE (node, "user_id"), "text:", 5)) {
+		/* get the actual user id */
+		user_id = ATTR_VALUE (node, "user_id");
 
-			/* get the actual user id */
-			user_id = ATTR_VALUE (node, "user_id") + 5;
-
-			msg ("  %s (disabled=%s)", 
-			     user_id, ATTR_VALUE (node, "disabled"));
-
-		} /* end if */
-
+		msg ("  %s (disabled=%s)", 
+		     user_id, ATTR_VALUE (node, "disabled"));
+		
 		/* get next node */
 		node     = axl_node_get_next (node);
 
@@ -234,22 +257,20 @@ void tbc_sasl_remove_user ()
 		/* get the user */
 		user_id = ATTR_VALUE (node, "user_id");
 		
-		/* check the format for the user stored */
-		if (axl_memcmp (user_id, "text:", 5)) {
-			/* check the user id */
-			if (axl_cmp (user_id_to_remove, user_id + 5)) {
+		/* check the user id */
+		if (axl_cmp (user_id_to_remove, user_id)) {
 
-				/* remove the node */
-				axl_node_remove (node, true);
+			/* remove the node */
+			axl_node_remove (node, true);
 
-				/* dump the db */
-				if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
-					error ("failed to dump SASL auth db..");
-				else
-					msg ("user %s removed!", user_id_to_remove);
-				return;
-			} /* end if */
+			/* dump the db */
+			if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
+				error ("failed to dump SASL auth db..");
+			else
+				msg ("user %s removed!", user_id_to_remove);
+			return;
 		} /* end if */
+		
 
 		/* get next node */
 		node     = axl_node_get_next (node);

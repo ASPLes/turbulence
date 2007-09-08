@@ -50,6 +50,8 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 	axlNode     * node;
 	const char  * user_id;
 	const char  * db_password;
+	const char  * format;
+	bool          release;
 
 	msg ("required to auth: auth_id=%s, authorization_id=%s", 
 	     auth_id ? auth_id : "", authorization_id ? authorization_id : "");
@@ -58,6 +60,31 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 	if (! common_sasl_load_users_db (&sasl_xml_db, sasl_xml_db_path, &sasl_xml_db_mutex))
 		return false;
 
+	/* now check the format to be used */
+	node   = axl_doc_get (sasl_xml_conf, "/mod-sasl/auth-db");
+	format = (node != NULL && HAS_ATTR (node, "format")) ? ATTR_VALUE (node, "format") : "md5";
+
+	/* prepare key and password to be looked up */
+	if (axl_cmp (format, "md5")) {
+		/* redifine values */
+		password = vortex_tls_get_digest (VORTEX_MD5, password);
+		release  = true;
+	} else if (axl_cmp (format, "sha-1")) {
+
+		/* redifine values */
+		password = vortex_tls_get_digest (VORTEX_SHA1, password);
+		release  = true;
+
+	}  else if (axl_cmp (format, "plain")) {
+		/* plain do not require additional format */
+		release  = false;
+	} else {
+		/* error, unable to find the proper keying material
+		 * encoding configuration */
+		error ("unable to find the proper format for keying material (inside sasl.conf)");
+		return false;
+	} /* end if */
+
 	/* look up for the user and its password */
 	node = axl_doc_get (sasl_xml_db, "/sasl-auth-db/auth");
 	while (node != NULL) {
@@ -65,36 +92,38 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 		/* get user id to check */
 		user_id = ATTR_VALUE (node, "user_id");
 		
-		/* check the format for the user stored */
-		if (axl_memcmp (user_id, "text:", 5)) {
-			/* check the user id */
-			if (axl_cmp (auth_id, user_id + 5)) {
+		/* check the user id */
+		if (axl_cmp (auth_id, user_id)) {
 
-				/* user found, check if the account is
-				 * disabled */
-				if (HAS_ATTR_VALUE (node, "disabled", "yes")) {
-					error ("trying to auth an account disabled: %s", auth_id);
-					return false;
-				}
-
-				/* user id found, check password */
-				db_password = ATTR_VALUE (node, "password");
-				
-				/* check the format for the password
-				 * stored */
-				if (axl_memcmp (db_password, "text:", 5)) {
-
-					/* return if both passwords
-					 * are equal */
-					return axl_cmp (password, db_password + 5);
-
+			/* user found, check if the account is
+			 * disabled */
+			if (HAS_ATTR_VALUE (node, "disabled", "yes")) {
+				error ("trying to auth an account disabled: %s", auth_id);
+				return false;
+			}
+			
+			/* user id found, check password */
+			db_password = ATTR_VALUE (node, "password");
+			
+			
+			/* return if both passwords
+			 * are equal */
+			if (axl_cmp (password, db_password)) {
+				if (release) {
+					axl_free ((char*) password);
 				} /* end if */
-
+				return true;
 			} /* end if */
+			
 		} /* end if */
-		
+			
 		/* get next node */
 		node = axl_node_get_next (node);
+	} /* end if */
+
+	/* dealloc encoded keys before returning */
+	if (release) {
+		axl_free ((char*) password);
 	} /* end if */
 
         /* deny SASL request to authenticate remote peer */
