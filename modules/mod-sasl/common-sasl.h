@@ -65,6 +65,7 @@ typedef struct _SaslUser {
 } SaslUser;
 
 bool      common_sasl_load_config    (SaslAuthBackend ** sasl_backend,
+				      const char       * alt_location,
 				      VortexMutex      * mutex);
 
 bool      common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,

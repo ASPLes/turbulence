@@ -216,7 +216,7 @@ int main (int argc, char ** argv)
 	}
 
 	/* load sasl module configuration */
-	if (! common_sasl_load_config (&sasl_backend, NULL))
+	if (! common_sasl_load_config (&sasl_backend, NULL, NULL))
 		goto finish;
 	
 	/* check if the user want to add a new user */

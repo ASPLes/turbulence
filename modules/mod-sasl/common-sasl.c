@@ -192,10 +192,21 @@ void common_sasl_free (SaslAuthBackend * backend)
 }
 
 /** 
- * @internal Loads the sasl configuration, returning the proper
- * variables filled.
+ * @brief Public mod-sasl APi that allows to load sasl backend from
+ * the default file or the one located using alt_location. The
+ * function return on success a reference to the sasl backend loaded,
+ * with all databases associated. 
+ *
+ * @param sasl_backend Caller reference to the sasl_backend to be loaded.
+ * 
+ * @param alt_location An optional value that allows to configure
+ * which is the location of the sasl backend.
+ *
+ * @param mutex Optional mutex variable used to lock the
+ * implementation to avoid race conditions between threads.
  */
 bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
+			      const char       * alt_location,
 			      VortexMutex      * mutex)
 {
 	axlNode         * node;
@@ -211,12 +222,21 @@ bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
 	result      = axl_new (SaslAuthBackend, 1);
 	result->dbs = axl_hash_new (axl_hash_string, axl_hash_equal_string);
 
-	/* configure lookup domain for mod tunnel settings */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("sasl"), 
-						   vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", NULL));
+	/* check alternative location */
+	if (alt_location == NULL) {
+		/* configure lookup domain for mod sasl settings */
+		vortex_support_add_domain_search_path_ref (axl_strdup ("sasl"), 
+							   vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", NULL));
+		
+		/* find and load the file */
+		result->sasl_conf_path  = vortex_support_domain_find_data_file ("sasl", "sasl.conf");
+	} else {
+		/* us the alternative location to load the document */
+		result->sasl_conf_path  = axl_strdup (alt_location);
+		
+	} /* end if */
 
-	/* find and load the file */
-	result->sasl_conf_path  = vortex_support_domain_find_data_file ("sasl", "sasl.conf");
+	/* load the document */
 	result->sasl_xml_conf   = axl_doc_parse_from_file (result->sasl_conf_path, &err);
 	
 	/* check result */

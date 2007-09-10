@@ -70,7 +70,7 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 bool sasl_load_config ()
 {
 	/* load and check sasl conf */
-	if (! common_sasl_load_config (&sasl_backend, &sasl_xml_db_mutex)) {
+	if (! common_sasl_load_config (&sasl_backend, NULL, &sasl_xml_db_mutex)) {
 		/* failed to load sasl module */
 		return false;
 	}
