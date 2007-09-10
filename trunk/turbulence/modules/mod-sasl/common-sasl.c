@@ -37,9 +37,6 @@
  */
 #include <common-sasl.h>
 
-long int      sasl_xml_db_time = 0;
-
-
 /** 
  * @internal Type to represent the set of backends that we support to
  * store users databases. 
@@ -63,7 +60,7 @@ typedef enum {
  * database. mod-sasl allows to configure several users databases that
  * are configured for each serverName allowed by the application.
  */
-typedef struct _SaslAuthDb {
+struct _SaslAuthDb {
 	/** 
 	 * @internal Type of the backend.
 	 */
@@ -96,7 +93,13 @@ typedef struct _SaslAuthDb {
 	 * @internal Reference to the database loaded.
 	 */
 	axlPointer          db;
-} SaslAuthDb;
+
+	/** 
+	 * @brief Time record the last modification for the document.
+	 */
+	long int            db_time;
+	
+};
 
 /** 
  * @internal Structure used to store all information about databases
@@ -234,7 +237,11 @@ bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
 		    HAS_ATTR (node, "location")) {
 
 			/* call to load the database in xml format */
-			common_sasl_load_auth_db_xml (result, node, mutex);
+			if (! common_sasl_load_auth_db_xml (result, node, mutex)) {
+				/* failed to load some database */
+				common_sasl_free (result);
+				return false;
+			} /* end if */
 			
 		} else {
 			/* add here other formats ... */
@@ -276,7 +283,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				   VortexMutex     * mutex)
 {
 	SaslAuthDb * db;
-	axlDoc     * doc;
+	axlDoc     * doc  = NULL;
 	axlError   * err  = NULL;
 
 	/* create one db */
@@ -287,7 +294,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	db->db_path  = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "location"));
 	
 	/* load db in xml format */
-	if (! common_sasl_load_users_db (&doc, db->db_path, mutex)) {
+	if (! common_sasl_load_users_db (db, mutex)) {
 		/* failed to load database */
 		wrn ("Unable to load database from: %s, this database won't be usable", 
 		     db->db_path);
@@ -366,7 +373,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			if (sasl_backend->default_db != NULL) {
 				error ("it was found several default users databases (serverName empty or not found)");
 				common_sasl_db_free (db);
-				
+				return false;
 			} /* end if */
 			
 			/* configure as the default one */
@@ -1010,15 +1017,22 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
  * 
  * @return true if the db was properly loaded.
  */
-bool common_sasl_load_users_db (axlDoc ** sasl_xml_db, char * sasl_xml_db_path, VortexMutex * mutex)
+bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
 {
 	axlError * error;
+	
+	/* check received parameter */
+	if (db == NULL)
+		return false;
 
 	/* lock the mutex */
 	vortex_mutex_lock (mutex);
 
+	/* nullify the document */
+	db->db = NULL;
+
 	/* check file modification */
-	if (turbulence_last_modification (sasl_xml_db_path) == sasl_xml_db_time) {
+	if (turbulence_last_modification (db->db_path) == db->db_time) {
 		
 		/* lock the mutex */
 		vortex_mutex_unlock (mutex);
@@ -1029,10 +1043,10 @@ bool common_sasl_load_users_db (axlDoc ** sasl_xml_db, char * sasl_xml_db_path, 
 	msg ("loading sasl auth xml-db..");
 
 	/* find the file to load */
-	*sasl_xml_db       = axl_doc_parse_from_file (sasl_xml_db_path, &error);
+	db->db       = axl_doc_parse_from_file (db->db_path, &error);
 	
 	/* check db opened */
-	if (sasl_xml_db == NULL) {
+	if (db->db == NULL) {
 		/* unlock the mutex */
 		vortex_mutex_unlock (mutex);
 
@@ -1043,7 +1057,7 @@ bool common_sasl_load_users_db (axlDoc ** sasl_xml_db, char * sasl_xml_db_path, 
 	} /* end if */
 	
 	/* get current db time */
-	sasl_xml_db_time = turbulence_last_modification (sasl_xml_db_path);
+	db->db_time = turbulence_last_modification (db->db_path);
 
 	/* unlock the mutex */
 	vortex_mutex_unlock (mutex);
