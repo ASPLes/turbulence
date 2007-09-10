@@ -227,6 +227,67 @@ bool test_01 ()
 }
 
 /** 
+ * @brie Check misc turbulence functions.
+ * 
+ * 
+ * @return true if they succeed, othewise false is returned.
+ */
+bool test_02 ()
+{
+	if (turbulence_file_is_fullpath ("test")) {
+		printf ("Expected to find a relative path..\n");
+		return false;
+	}
+
+	if (turbulence_file_is_fullpath ("test/test2")) {
+		printf ("Expected to find a relative path..\n");
+		return false;
+	}
+
+#if defined(AXL_OS_WIN32)
+	if (! turbulence_file_is_fullpath ("c:/test")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+	if (! turbulence_file_is_fullpath ("c:\\test")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+
+	if (! turbulence_file_is_fullpath ("d:/test")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+	if (! turbulence_file_is_fullpath ("c:/")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+
+	if (! turbulence_file_is_fullpath ("c:\\")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+#elif defined(AXL_OS_UNIX) 
+	if (! turbulence_file_is_fullpath ("/")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+
+	if (! turbulence_file_is_fullpath ("/home")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+
+	if (! turbulence_file_is_fullpath ("/test")) {
+		printf ("Expected to find a full path..\n");
+		return false;
+	}
+#endif
+	/* all test ok */
+	return true;
+}
+
+/** 
  * @brief General regression test to check all features inside
  * turbulence.
  */
@@ -254,6 +315,14 @@ int main (int argc, char ** argv)
 		printf ("Test 01: Turbulence db-list implementation [ FAILED ]\n");
 		return -1;
 	} /* end if */
+
+	if (test_02 ()) {
+		printf ("Test 02: Turbulence misc functions [   OK   ]\n");
+	}else {
+		printf ("Test 02: Turbulence misc functions [ FAILED ]\n");
+		return -1;
+	}
+	
 
 	/* terminate */
 	return 0;
