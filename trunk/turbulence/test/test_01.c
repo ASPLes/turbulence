@@ -38,6 +38,9 @@
 /* include local turbulence header */
 #include <turbulence.h>
 
+/* local include to check mod-sasl */
+#include <common-sasl.h>
+
 /** 
  * @brief Check the turbulence db list implementation.
  * 
@@ -288,6 +291,42 @@ bool test_02 ()
 }
 
 /** 
+ * @brief Allows to check the sasl backend.
+ * 
+ * 
+ * @return true if it is workin, false if some error is found.
+ */
+bool test_03 ()
+{
+	/* local reference */
+	SaslAuthBackend * sasl_backend;
+
+	/* start the sasl backend */
+	if (! common_sasl_load_config (&sasl_backend, "test_03.sasl.conf", NULL)) {
+		printf ("Unable to initialize the sasl backend..\n");
+		return false;
+	}
+	
+	/* check if the default aspl user exists */
+	if (! common_sasl_user_exists (sasl_backend, "aspl", NULL, NULL)) {
+		printf ("Failed while checking if the user already exists....\n");
+		return false;
+	}
+
+	/* check we don't provide false positive values */
+	if (common_sasl_user_exists (sasl_backend, "aspl2", NULL, NULL)) {
+		printf ("It was expected to not find the user \"aspl2\" but it was found!....\n");
+		return false;
+	}
+	
+
+	/* terminate the sasl module */
+	common_sasl_free (sasl_backend);
+
+	return true;
+}
+
+/** 
  * @brief General regression test to check all features inside
  * turbulence.
  */
@@ -320,6 +359,13 @@ int main (int argc, char ** argv)
 		printf ("Test 02: Turbulence misc functions [   OK   ]\n");
 	}else {
 		printf ("Test 02: Turbulence misc functions [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_03 ()) {
+		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [   OK   ]\n");
+	}else {
+		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [ FAILED ]\n");
 		return -1;
 	}
 	
