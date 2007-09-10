@@ -46,48 +46,32 @@ at <vortex@lists.aspl.es>."
 #include <turbulence.h>
 #include <common-sasl.h>
 
-axlDoc      * sasl_xml_conf = NULL;
-axlDoc      * auth_db       = NULL;
-char        * auth_db_path  = NULL;
+
+SaslAuthBackend * sasl_backend = NULL;
 
 void tbc_sasl_add_user ()
 {
+	const char  * serverName   = NULL;
 	const char  * new_user_id  = exarg_get_string ("add-user");
 	const char  * password     = NULL;
 	const char  * password2    = NULL;
-	char        * enc_password = NULL;
-	const char  * user_id;
-	const char  * format;
-	bool          release;
-
-	bool         dealloc     = false;
-	axlNode    * node;
-	axlNode    * newNode;
+	bool          dealloc     = false;
 
 	/* check if the user already exists */
-	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
-	while (node != NULL) {
-		
-		/* get the user */
-		user_id = ATTR_VALUE (node, "user_id");
-		
-		/* check the user id */
-		if (axl_cmp (new_user_id, user_id)) {
-			msg ("user %s already exist..", new_user_id);
-			return;
-		} /* end if */
-
-		/* get next node */
-		node     = axl_node_get_next (node);
-
-	} /* end while */
-
+	if (common_sasl_user_exists (sasl_backend,
+				     new_user_id, 
+				     serverName,
+				     NULL)) {
+		msg ("user %s already exists..", new_user_id);
+		return;
+	} /* end if */
+				     
+				     
 	/* user doesn't exist, ask for the password */
 	msg ("adding user: %s..", new_user_id);
 	if (exarg_is_defined ("password")) 
 		password = exarg_get_string ("password");
 	else {
-
 		/* user didn't provide a password, get from the
 		 * command line */
 		password  = turbulence_io_get ("Password: ", DISABLE_STDIN_ECHO);
@@ -105,61 +89,16 @@ void tbc_sasl_add_user ()
 		dealloc = true;
 	}
 
-	/* now check the format to be used */
-	node   = axl_doc_get (sasl_xml_conf, "/mod-sasl/auth-db");
-	format = (node != NULL && HAS_ATTR (node, "format")) ? ATTR_VALUE (node, "format") : "md5";
 
-	msg ("found format: %s", format);
-
-	/* prepare key and password to be looked up */
-	if (axl_cmp (format, "md5")) {
-		/* redifine values */
-		enc_password = vortex_tls_get_digest (VORTEX_MD5, password);
-		release  = true;
-	} else if (axl_cmp (format, "sha-1")) {
-
-		/* redifine values */
-		enc_password = vortex_tls_get_digest (VORTEX_SHA1, password);
-		release  = true;
-
-	}  else if (axl_cmp (format, "plain")) {
-		/* plain do not require additional format */
-		enc_password = (char*) password;
-		release      = false;
-	} else {
-		/* error, unable to find the proper keying material
-		 * encoding configuration */
-		error ("unable to find the proper format for keying material (inside sasl.conf)");
-		return;
-	} /* end if */
-
-	/* create the auth node for the user */
-	node     = axl_doc_get_root (auth_db);
-	newNode  = axl_node_create ("auth");
-	
-	/* set user */
-	axl_node_set_attribute (newNode, "user_id", new_user_id);
-
-	/* set password */
-	axl_node_set_attribute (newNode, "password", enc_password);
-
-	/* account enabled */
-	axl_node_set_attribute (newNode, "disabled", "no");
-				    
-	/* set the node */
-	axl_node_set_child (node, newNode);
-
-	/* free the password */
-	if (dealloc)
-		axl_free ((char*) password);
-	if (release) 
-		axl_free ((char*) enc_password);
-
-	/* dump the db */
-	if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
+	/* add the user */
+	if (! common_sasl_user_add (sasl_backend, new_user_id, password, serverName, NULL))
 		error ("failed to dump SASL auth db..");
 	else
 		msg ("user %s added!", new_user_id);
+
+	if (dealloc)
+		axl_free ((char*) password);
+
 	return;
 }
 
@@ -169,39 +108,13 @@ void tbc_sasl_add_user ()
 void tbc_sasl_disable_user ()
 {
 	const char * user_id_to_disable = exarg_get_string ("disable-user");
-	const char * user_id;
-	axlNode    * node;
+	const char * serverName         = NULL;
 
-	/* check if the user already exists */
-	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
-	while (node != NULL) {
-		
-		/* get the user */
-		user_id = ATTR_VALUE (node, "user_id");
-		
-		/* check the user id */
-		if (axl_cmp (user_id_to_disable, user_id)) {
-			/* user found, disable it */
-			axl_node_remove_attribute (node, "disabled");
-			
-			/* install the new attribute */
-			axl_node_set_attribute (node, "disabled", "yes");
-			
-			
-			/* dump the db */
-			if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
-				error ("failed to dump SASL auth db..");
-			else
-				msg ("user %s disabled!", user_id_to_disable);
-			return;
-		} /* end if */
-		
-		
-		/* get next node */
-		node     = axl_node_get_next (node);
-		
-	} /* end while */
-
+	/* call to disable user */
+	if (! common_sasl_user_disable (sasl_backend, user_id_to_disable, serverName, NULL))
+		error ("failed to dump SASL auth db..");
+	else
+		msg ("user %s disabled!", user_id_to_disable);
 	/* nothing to do */
 	return;
 	
@@ -212,33 +125,31 @@ void tbc_sasl_disable_user ()
  */
 void tbc_sasl_list_users ()
 {
-	axlNode    * node;
-	const char * user_id;
-	bool         first_user = true;
+	const char * serverName = NULL;
+	axlList    * list;
+	int          iterator   = 0;
+	SaslUser   * user;
 
-	/* check if the user already exists */
-	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
-	while (node != NULL) {
+	/* get the list of users installed */
+	list = common_sasl_get_users (sasl_backend, serverName, NULL);
+	msg ("Number of users created (%d):", list != NULL ? axl_list_length (list) : 0);
+	while (iterator < axl_list_length (list)) {
 
-		if (first_user) {
-			msg ("Number of users created (%d):", axl_node_get_child_num (axl_node_get_parent (node)));
-			first_user = false;
-		} /* end if */
-		
-		/* get the actual user id */
-		user_id = ATTR_VALUE (node, "user_id");
+		/* get a reference */
+		user = axl_list_get_nth (list, iterator);
 
 		msg ("  %s (disabled=%s)", 
-		     user_id, ATTR_VALUE (node, "disabled"));
+		     user->auth_id, user->disabled ? "yes" : "no");
+
+		/* update iterator value */
+		iterator++;
 		
-		/* get next node */
-		node     = axl_node_get_next (node);
+	} /* end if */
 
-	} /* end while */
-
-	/* nothing to do */
+	/* free the list */
+	axl_list_free (list);
 	return;
-	
+
 } /* end tbc_sasl_disable_user */
 
 /** 
@@ -246,36 +157,15 @@ void tbc_sasl_list_users ()
  */
 void tbc_sasl_remove_user ()
 {
+	const char * serverName        = NULL;
 	const char * user_id_to_remove = exarg_get_string ("remove-user");
-	const char * user_id;
-	axlNode    * node;
 
-	/* check if the user already exists */
-	node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
-	while (node != NULL) {
-		
-		/* get the user */
-		user_id = ATTR_VALUE (node, "user_id");
-		
-		/* check the user id */
-		if (axl_cmp (user_id_to_remove, user_id)) {
-
-			/* remove the node */
-			axl_node_remove (node, true);
-
-			/* dump the db */
-			if (! axl_doc_dump_pretty_to_file (auth_db, auth_db_path, 3))
-				error ("failed to dump SASL auth db..");
-			else
-				msg ("user %s removed!", user_id_to_remove);
-			return;
-		} /* end if */
-		
-
-		/* get next node */
-		node     = axl_node_get_next (node);
-
-	} /* end while */
+	/* call to remove the user */
+	if (! common_sasl_user_remove (sasl_backend, user_id_to_remove, serverName, NULL)) 
+		error ("failed to dump SASL auth db..");
+	else
+		msg ("user %s removed!", user_id_to_remove);
+	return;
 
 	/* nothing to do */
 	return;
@@ -311,6 +201,7 @@ int main (int argc, char ** argv)
 
 	/* install turbulence tool options */
 	turbulence_console_install_options ();
+	turbulence_db_list_init ();
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
@@ -325,10 +216,8 @@ int main (int argc, char ** argv)
 	}
 
 	/* load sasl module configuration */
-	if (! common_sasl_load_config (&sasl_xml_conf, &auth_db_path, &auth_db, NULL))
+	if (! common_sasl_load_config (&sasl_backend, NULL))
 		goto finish;
-
-	msg ("using db: %s", auth_db_path);
 	
 	/* check if the user want to add a new user */
 	if (exarg_is_defined ("add-user")) {
@@ -355,8 +244,11 @@ int main (int argc, char ** argv)
 	/* terminate the library */
 	exarg_end ();
 
-	/* free document */
-	axl_doc_free (sasl_xml_conf);
+	/* free sasl backend */
+	common_sasl_free (sasl_backend);
+
+	/* stop pieces of turbulence started */
+	turbulence_db_list_cleanup ();
 
 	return 0;
 }
