@@ -49,6 +49,7 @@ bool test_01 ()
 {
 	TurbulenceDbList * dblist;
 	axlError         * err;
+	axlList          * list;
 	
 	/* init turbulence db list */
 	turbulence_db_list_init ();
@@ -100,6 +101,33 @@ bool test_01 ()
 		return false;
 	} /* end if */
 
+	if (! turbulence_db_list_exists (dblist, "TEST")) {
+		printf ("Expected to find an item but exist function failed..\n");
+		return false;
+	}
+
+	/* get the list */
+	list = turbulence_db_list_status (dblist);
+	if (list == NULL || axl_list_length (list) != 3) {
+		printf ("Expected to a list with 3 items but it wasn't found..\n");
+		return false;
+	}
+	
+	if (! axl_cmp ("TEST", axl_list_get_nth (list, 0))) {
+		printf ("Expected to find TEST item at the 0, but it wasn't fuond..\n");
+		return false;
+	}
+	if (! axl_cmp ("TEST 2", axl_list_get_nth (list, 1))) {
+		printf ("Expected to find TEST 2 item at the 1, but it wasn't fuond..\n");
+		return false;
+	}
+	if (! axl_cmp ("TEST 3", axl_list_get_nth (list, 2))) {
+		printf ("Expected to find TEST 3 item at the 2, but it wasn't fuond..\n");
+		return false;
+	}
+
+	axl_list_free (list);
+
 	/* remove items to the list */
 	if (! turbulence_db_list_remove (dblist, "TEST")) {
 		printf ("Expected to be able to remove items to the dblist\n");
@@ -112,6 +140,29 @@ bool test_01 ()
 			turbulence_db_list_count (dblist));
 		return false;
 	} /* end if */
+
+	if (! turbulence_db_list_exists (dblist, "TEST 2")) {
+		printf ("Expected to find an item but exist function failed..\n");
+		return false;
+	}
+
+	/* get the list */
+	list = turbulence_db_list_status (dblist);
+	if (list == NULL || axl_list_length (list) != 2) {
+		printf ("Expected to a list with 2 items but it wasn't found..\n");
+		return false;
+	}
+
+	if (! axl_cmp ("TEST 2", axl_list_get_nth (list, 0))) {
+		printf ("Expected to find TEST 2 item at the 0, but it wasn't fuond..\n");
+		return false;
+	}
+	if (! axl_cmp ("TEST 3", axl_list_get_nth (list, 1))) {
+		printf ("Expected to find TEST 3 item at the 1, but it wasn't fuond..\n");
+		return false;
+	}
+
+	axl_list_free (list);
 
 	/* remove items to the list */
 	if (! turbulence_db_list_remove (dblist, "TEST 2")) {
@@ -126,6 +177,25 @@ bool test_01 ()
 		return false;
 	} /* end if */
 
+	if (! turbulence_db_list_exists (dblist, "TEST 3")) {
+		printf ("Expected to find an item but exist function failed..\n");
+		return false;
+	}
+
+	/* get the list */
+	list = turbulence_db_list_status (dblist);
+	if (list == NULL || axl_list_length (list) != 1) {
+		printf ("Expected to a list with 1 items but it wasn't found..\n");
+		return false;
+	}
+
+	if (! axl_cmp ("TEST 3", axl_list_get_nth (list, 0))) {
+		printf ("Expected to find TEST 3 item at the 0, but it wasn't fuond..\n");
+		return false;
+	}
+
+	axl_list_free (list);
+
 	/* remove items to the list */
 	if (! turbulence_db_list_remove (dblist, "TEST 3")) {
 		printf ("Expected to be able to remove items to the dblist\n");
@@ -138,6 +208,14 @@ bool test_01 ()
 			turbulence_db_list_count (dblist));
 		return false;
 	} /* end if */
+
+	/* get the list */
+	list = turbulence_db_list_status (dblist);
+	if (list == NULL || axl_list_length (list) != 0) {
+		printf ("Expected to find empty list but it wasn't found..\n");
+		return false;
+	}
+	axl_list_free (list);
 
 	/* close the db list */
 	turbulence_db_list_close (dblist);
