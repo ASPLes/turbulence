@@ -664,9 +664,7 @@ bool               turbulence_db_list_close_internal  (TurbulenceDbList * list)
 	} /* end if */
 
 	/* add the db list opened */
-	msg ("removing the list from opened list: %d", axl_list_length (turbulence_db_list_opened));
-	axl_list_remove (turbulence_db_list_opened, list);
-	msg ("after removing the list from opened list: %d", axl_list_length (turbulence_db_list_opened));
+	axl_list_unlink (turbulence_db_list_opened, list);
 
 	/* dealloc */
 	axl_doc_free (list->doc);
