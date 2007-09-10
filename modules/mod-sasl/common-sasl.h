@@ -45,6 +45,8 @@
  */
 typedef struct _SaslAuthBackend SaslAuthBackend;
 
+typedef struct _SaslAuthDb SaslAuthDb;
+
 /** 
  * @brief Public structure representing a user found in the
  * database. This structure is mainly used by the function \ref
@@ -108,9 +110,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
 				   axlNode          * node,
 				   VortexMutex      * mutex);
 				   
-
-bool common_sasl_load_users_db    (axlDoc          ** sasl_xml_db, 
-				   char             * sasl_xml_db_path,
+bool common_sasl_load_users_db    (SaslAuthDb       * db,
 				   VortexMutex      * mutex);
 
 #endif
