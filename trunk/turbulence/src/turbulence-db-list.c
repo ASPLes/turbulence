@@ -373,6 +373,11 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 		axl_node_set_child (axl_node_get_parent (list->first), node);
 	} /* end if */
 
+	/* update first node */
+	list->first = axl_doc_get_root (list->doc);
+	if (list->first != NULL)
+		list->first = axl_node_get_first_child (list->first);
+
 	/* unlock */
 	vortex_mutex_unlock (&(list->mutex));
 
@@ -469,6 +474,11 @@ bool               turbulence_db_list_remove (TurbulenceDbList * list,
 		if (axl_cmp (value, ATTR_VALUE (node, "value"))) {
 			/* found the node holding the value */
 			axl_node_remove (node, true);
+
+			/* update first node */
+			list->first = axl_doc_get_root (list->doc);
+			if (list->first != NULL)
+				list->first = axl_node_get_first_child (list->first);
 
 			/* unlock and flush */
 			vortex_mutex_unlock (&(list->mutex));
@@ -778,6 +788,43 @@ bool               turbulence_db_list_flush  (TurbulenceDbList * list)
 	return true;
 }
 
+/** 
+ * @brief Allows to get the number of items stored on the provided
+ * turbulence db list.
+ * 
+ * @param list Turbulence db-list that is being requested to return
+ * the number of items stored.
+ * 
+ * @return The number or items stored or -1 it if fails.
+ */
+int               turbulence_db_list_count          (TurbulenceDbList * list)
+{
+	int       count = 0;
+	axlNode * node;
+
+	if (list == NULL)
+		return -1;
+
+	/* lock the mutex */
+	vortex_mutex_lock (&(list->mutex));
+
+	node = list->first;
+	while (node != NULL) {
+		
+		/* update count */
+		count++;
+		
+		/* get next node */
+		node = axl_node_get_next_called (node, "item");
+		
+	} /* end while */
+
+	/* unlock the mutex */
+	vortex_mutex_unlock (&(list->mutex));
+
+	return count;
+	
+}
 
 /** 
  * @internal Service used to start the turbulence db list module.

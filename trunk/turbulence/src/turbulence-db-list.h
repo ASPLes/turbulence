@@ -79,6 +79,8 @@ bool               turbulence_db_list_reload         (TurbulenceDbList * list);
 
 bool               turbulence_db_list_flush          (TurbulenceDbList * list);
 
+int                turbulence_db_list_count          (TurbulenceDbList * list);
+
 axlList          * turbulence_db_list_status         (TurbulenceDbList * list);
 
 
