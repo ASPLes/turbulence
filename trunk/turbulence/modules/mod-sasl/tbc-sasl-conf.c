@@ -245,10 +245,11 @@ int main (int argc, char ** argv)
 	exarg_end ();
 
 	/* free sasl backend */
-	common_sasl_free (sasl_backend);
+	common_sasl_free (sasl_backend); 
 
 	/* stop pieces of turbulence started */
 	turbulence_db_list_cleanup ();
+	vortex_support_cleanup ();
 
 	return 0;
 }
