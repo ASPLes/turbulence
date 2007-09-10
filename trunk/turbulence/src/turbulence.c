@@ -722,6 +722,31 @@ long int turbulence_last_modification (const char * file)
 	return -1;
 }
 
+/** 
+ * @brief Allows to check if the provided file path is a full path
+ * (not releative). The function is meant to be portable.
+ * 
+ * @param file The file to check if it is a full path file name.
+ * 
+ * @return true if the file is a full path, otherwise false is
+ * returned.
+ */
+bool     turbulence_file_is_fullpath (const char * file)
+{
+	/* check the value received */
+	if (file == NULL)
+		return false;
+#if defined(AXL_OS_UNIX)
+	if (file != NULL && (strlen (file) >= 2) && file[0] == '/')
+		return true;
+#elif defined(AXL_OS_WIN32)
+	if (file != NULL && (strlen (file) >= 3) && file[1] == ':' && (file[2] == '/' || file[2] == '\\'))
+		return true;
+#endif	
+	/* the file is not a full path */
+	return false;
+}
+
 
 /*
  * @brief Allows to get the next line read from the user. The function

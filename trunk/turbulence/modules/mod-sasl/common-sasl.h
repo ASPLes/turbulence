@@ -40,13 +40,77 @@
 
 #include <turbulence.h>
 
-bool common_sasl_load_config (axlDoc      ** sasl_xml_conf, 
-			      char        ** sasl_xml_db_path, 
-			      axlDoc      ** sasl_xml_db,
-			      VortexMutex  * mutex);
+/** 
+ * @brief Public type representing a SASL backend loaded.
+ */
+typedef struct _SaslAuthBackend SaslAuthBackend;
 
-bool common_sasl_load_users_db (axlDoc      ** sasl_xml_db, 
-				char         * sasl_xml_db_path,
-				VortexMutex  * mutex);
+/** 
+ * @brief Public structure representing a user found in the
+ * database. This structure is mainly used by the function \ref
+ * common_sasl_get_users function.
+ */
+typedef struct _SaslUser {
+	/** 
+	 * @brief Auth id for the user stored user.
+	 */
+	char * auth_id;
+	
+	/** 
+	 * @brief Flags if the user was disabled.
+	 */
+	bool   disabled;
+} SaslUser;
+
+bool      common_sasl_load_config    (SaslAuthBackend ** sasl_backend,
+				      VortexMutex      * mutex);
+
+bool      common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,
+				      const char       * auth_id,
+				      const char       * authorization_id,
+				      const char       * password,
+				      const char       * serverName,
+				      VortexMutex      * mutex);
+
+bool      common_sasl_method_allowed (SaslAuthBackend  * sasl_backend,
+				      const char       * sasl_method);
+
+bool      common_sasl_user_exists    (SaslAuthBackend  * sasl_backend,
+				      const char       * auth_id,
+				      const char       * serverName,
+				      VortexMutex      * mutex);
+
+bool      common_sasl_user_add       (SaslAuthBackend  * sasl_backend, 
+				      const char       * auth_id, 
+				      const char       * password, 
+				      const char       * serverName, 
+				      VortexMutex      * mutex);
+
+bool      common_sasl_user_disable   (SaslAuthBackend  * sasl_backend, 
+				      const char       * auth_id, 
+				      const char       * serverName, 
+				      VortexMutex      * mutex);
+
+axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
+				      const char       * serverName,
+				      VortexMutex      * mutex);
+
+bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
+				      const char       * auth_id, 
+				      const char       * serverName, 
+				      VortexMutex      * mutex);
+
+void      common_sasl_free           (SaslAuthBackend  * backend);
+
+
+/* private API */
+bool common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
+				   axlNode          * node,
+				   VortexMutex      * mutex);
+				   
+
+bool common_sasl_load_users_db    (axlDoc          ** sasl_xml_db, 
+				   char             * sasl_xml_db_path,
+				   VortexMutex      * mutex);
 
 #endif

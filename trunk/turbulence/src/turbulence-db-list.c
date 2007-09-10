@@ -628,18 +628,52 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list)
 	 * operation, and return ok status. */
 	if (list == NULL)
 		return true;
+
+
+	/* remove the list from the opened db list */
+	vortex_mutex_lock (&turbulence_db_list_mutex);
+
+	/* remove the item */
+	turbulence_db_list_close_internal (list);
+
+	/* unlock and return */
+	vortex_mutex_unlock (&turbulence_db_list_mutex);
+	
+	return true;
+}
+
+/** 
+ * @brief Allows to close the db list opened.
+ * 
+ * @param list The list to close.
+ * 
+ * @return true if the list was properly close, otherwise false is
+ * returned. 
+ */
+bool               turbulence_db_list_close_internal  (TurbulenceDbList * list)
+{
+	/* if a null reference is received do not perform any
+	 * operation, and return ok status. */
+	if (list == NULL)
+		return true;
 	
 	/* dump the document content */
 	if (list->doc != NULL) {
 		if (! axl_doc_dump_pretty_to_file (list->doc, list->full_path, 4))
 			error ("failed to dump: %s", list->full_path);
 	} /* end if */
-	
+
+	/* add the db list opened */
+	msg ("removing the list from opened list: %d", axl_list_length (turbulence_db_list_opened));
+	axl_list_remove (turbulence_db_list_opened, list);
+	msg ("after removing the list from opened list: %d", axl_list_length (turbulence_db_list_opened));
+
 	/* dealloc */
 	axl_doc_free (list->doc);
 	axl_free (list->full_path);
 	vortex_mutex_destroy (&(list->mutex));
 	axl_free (list);
+	
 
 	return true;
 }
@@ -762,7 +796,7 @@ bool               turbulence_db_list_init ()
 
 	/* init the list if it werent */
 	if (turbulence_db_list_opened == NULL)
-		turbulence_db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close);
+		turbulence_db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close_internal);
 	
 	/* init dtd to validate data */
 	if (turbulence_db_list_dtd == NULL) {

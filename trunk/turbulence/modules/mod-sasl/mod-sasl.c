@@ -37,93 +37,26 @@
  */
 #include <mod-sasl.h>
 
-axlDoc      * sasl_xml_conf    = NULL;
-axlDoc      * sasl_xml_db      = NULL;
-char        * sasl_xml_db_path = NULL;
-VortexMutex   sasl_xml_db_mutex;
+SaslAuthBackend * sasl_backend     = NULL;
+char            * sasl_xml_db_path = NULL;
+VortexMutex       sasl_xml_db_mutex;
 
 bool     mod_sasl_plain_validation  (VortexConnection * connection,
 				     const char       * auth_id,
 				     const char       * authorization_id,
 				     const char       * password)
 {
-	axlNode     * node;
-	const char  * user_id;
-	const char  * db_password;
-	const char  * format;
-	bool          release;
-
 	msg ("required to auth: auth_id=%s, authorization_id=%s", 
 	     auth_id ? auth_id : "", authorization_id ? authorization_id : "");
 
-	/* load db */
-	if (! common_sasl_load_users_db (&sasl_xml_db, sasl_xml_db_path, &sasl_xml_db_mutex))
-		return false;
-
-	/* now check the format to be used */
-	node   = axl_doc_get (sasl_xml_conf, "/mod-sasl/auth-db");
-	format = (node != NULL && HAS_ATTR (node, "format")) ? ATTR_VALUE (node, "format") : "md5";
-
-	/* prepare key and password to be looked up */
-	if (axl_cmp (format, "md5")) {
-		/* redifine values */
-		password = vortex_tls_get_digest (VORTEX_MD5, password);
-		release  = true;
-	} else if (axl_cmp (format, "sha-1")) {
-
-		/* redifine values */
-		password = vortex_tls_get_digest (VORTEX_SHA1, password);
-		release  = true;
-
-	}  else if (axl_cmp (format, "plain")) {
-		/* plain do not require additional format */
-		release  = false;
-	} else {
-		/* error, unable to find the proper keying material
-		 * encoding configuration */
-		error ("unable to find the proper format for keying material (inside sasl.conf)");
-		return false;
-	} /* end if */
-
-	/* look up for the user and its password */
-	node = axl_doc_get (sasl_xml_db, "/sasl-auth-db/auth");
-	while (node != NULL) {
-		
-		/* get user id to check */
-		user_id = ATTR_VALUE (node, "user_id");
-		
-		/* check the user id */
-		if (axl_cmp (auth_id, user_id)) {
-
-			/* user found, check if the account is
-			 * disabled */
-			if (HAS_ATTR_VALUE (node, "disabled", "yes")) {
-				error ("trying to auth an account disabled: %s", auth_id);
-				return false;
-			}
-			
-			/* user id found, check password */
-			db_password = ATTR_VALUE (node, "password");
-			
-			
-			/* return if both passwords
-			 * are equal */
-			if (axl_cmp (password, db_password)) {
-				if (release) {
-					axl_free ((char*) password);
-				} /* end if */
-				return true;
-			} /* end if */
-			
-		} /* end if */
-			
-		/* get next node */
-		node = axl_node_get_next (node);
-	} /* end if */
-
-	/* dealloc encoded keys before returning */
-	if (release) {
-		axl_free ((char*) password);
+	/* call to authenticate */
+	if (common_sasl_auth_user (sasl_backend, 
+				   auth_id, 
+				   authorization_id, 
+				   password,
+				   vortex_connection_get_server_name (connection),
+				   &sasl_xml_db_mutex)) {
+		return true;
 	} /* end if */
 
         /* deny SASL request to authenticate remote peer */
@@ -137,9 +70,7 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 bool sasl_load_config ()
 {
 	/* load and check sasl conf */
-	if (! common_sasl_load_config (&sasl_xml_conf, 
-				       /* xml backend */
-				       &sasl_xml_db_path, &sasl_xml_db, &sasl_xml_db_mutex)) {
+	if (! common_sasl_load_config (&sasl_backend, &sasl_xml_db_mutex)) {
 		/* failed to load sasl module */
 		return false;
 	}
@@ -157,7 +88,6 @@ bool sasl_load_config ()
 static bool sasl_init ()
 {
 	msg ("turbulence SASL init");
-	axlNode * node;
 
 	/* check for SASL support */
 	if (!vortex_sasl_is_enabled ()) {
@@ -174,25 +104,16 @@ static bool sasl_init ()
 		return false;
 
 	/* check for sasl methods to be activated */
-	node = axl_doc_get (sasl_xml_conf, "/mod-sasl/method-allowed/method");
-	while (node != NULL) {
-
-		/* check for plain profile */
-		if (HAS_ATTR_VALUE (node, "value", "plain")) {
-			/* accept plain profile */
-			vortex_sasl_set_plain_validation (mod_sasl_plain_validation);
-			
-			/* accept SASL PLAIN incoming requests */
-			if (! vortex_sasl_accept_negociation (VORTEX_SASL_PLAIN)) {
-				error ("Unable accept incoming SASL PLAIN profile");
-			} /* end if */			
-		} /* end if */
+	if (common_sasl_method_allowed (sasl_backend, "plain")) {
+		/* accept plain profile */
+		vortex_sasl_set_plain_validation (mod_sasl_plain_validation);
 		
-		/* get the next node */
-		node = axl_node_get_next (node);
-
+		/* accept SASL PLAIN incoming requests */
+		if (! vortex_sasl_accept_negociation (VORTEX_SASL_PLAIN)) {
+			error ("Unable accept incoming SASL PLAIN profile");
+		} /* end if */			
 	} /* end if */
-
+	
 	return true;
 }
 
@@ -204,9 +125,7 @@ static bool sasl_init ()
 static void sasl_close ()
 {
 	msg ("turbulence SASL close");
-	axl_doc_free (sasl_xml_db);
-	axl_doc_free (sasl_xml_conf);
-	axl_free     (sasl_xml_db_path);
+	common_sasl_free (sasl_backend);
 
 	/* close mutex */
 	vortex_mutex_destroy (&sasl_xml_db_mutex);
