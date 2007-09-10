@@ -737,7 +737,7 @@ bool     turbulence_file_is_fullpath (const char * file)
 	if (file == NULL)
 		return false;
 #if defined(AXL_OS_UNIX)
-	if (file != NULL && (strlen (file) >= 2) && file[0] == '/')
+	if (file != NULL && (strlen (file) >= 1) && file[0] == '/')
 		return true;
 #elif defined(AXL_OS_WIN32)
 	if (file != NULL && (strlen (file) >= 3) && file[1] == ':' && (file[2] == '/' || file[2] == '\\'))
