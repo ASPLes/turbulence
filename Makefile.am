@@ -6,7 +6,7 @@ if ENABLE_AF_ARCH_DOC
 DOC_DIR = doc
 endif
 
-SUBDIRS = src data modules tools $(DOC_DIR) 
+SUBDIRS = src data modules tools test $(DOC_DIR) 
 
 installdir = $(prefix)/bin/
 

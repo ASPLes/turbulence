@@ -163,6 +163,7 @@ modules/mod-sasl/mod-sasl.xml
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile
+test/Makefile
 turbulence.pc
 turbulence-config
 ])
