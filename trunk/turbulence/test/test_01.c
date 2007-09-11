@@ -54,9 +54,6 @@ bool test_01 ()
 	axlError         * err;
 	axlList          * list;
 	
-	/* init turbulence db list */
-	turbulence_db_list_init ();
-
 	/* test if the file exists and remote it */
 	if (turbulence_file_test_v ("test_01.xml", FILE_EXISTS)) {
 		/* file exist, remote it */
@@ -223,9 +220,6 @@ bool test_01 ()
 	/* close the db list */
 	turbulence_db_list_close (dblist);
 	
-	/* terminate the db list */
-	turbulence_db_list_cleanup ();
-
 	return true;
 }
 
@@ -445,6 +439,8 @@ bool test_03 ()
 		printf ("It was expected to not find the user \"aspl2\" but it was found!....\n");
 		return false;
 	}
+	/* free error associated we know it happens */
+	axl_error_free (err);
 	
 
 	/* terminate the sasl module */
@@ -474,6 +470,15 @@ int main (int argc, char ** argv)
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
+
+	/* uncomment the following tree lines to get debug */
+/*	turbulence_console_install_options ();
+	exarg_parse (argc, argv);
+	turbulence_console_process_options (); */
+
+	/* init turbulence db list */
+	turbulence_db_list_init ();
+
 	/* test dblist */
 	if (test_01 ()) {
 		printf ("Test 01: Turbulence db-list implementation [   OK   ]\n");
@@ -495,7 +500,13 @@ int main (int argc, char ** argv)
 		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [ FAILED ]\n");
 		return -1;
 	}
-	
+
+	/* terminate turbulence support module */
+	vortex_support_cleanup ();
+
+	/* terminate the db list */
+	turbulence_db_list_cleanup ();
+
 
 	/* terminate */
 	return 0;

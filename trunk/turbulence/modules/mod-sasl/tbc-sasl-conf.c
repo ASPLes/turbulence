@@ -61,6 +61,7 @@ void tbc_sasl_add_user ()
 	if (common_sasl_user_exists (sasl_backend,
 				     new_user_id, 
 				     serverName,
+				     NULL,
 				     NULL)) {
 		msg ("user %s already exists..", new_user_id);
 		return;

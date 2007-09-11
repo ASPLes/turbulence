@@ -711,6 +711,12 @@ bool               turbulence_db_list_reload (TurbulenceDbList * list)
 		return true;
 	}
 
+	/* check if the document exists, and do no try to reload
+	 * something is missing .. */
+	if (! turbulence_file_test_v (list->full_path, FILE_EXISTS)) {
+		return true;
+	}
+
 	/* open the document */
 	newContent = axl_doc_parse_from_file (list->full_path, &err);
 	if (newContent == NULL) {
