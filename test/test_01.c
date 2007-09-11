@@ -419,6 +419,8 @@ bool test_03 ()
 	/* local reference */
 	SaslAuthBackend * sasl_backend;
 	axlError        * err;
+	axlList         * users;
+	SaslUser        * user;
 
 	/* start the sasl backend */
 	if (! common_sasl_load_config (&sasl_backend, "test_03.sasl.conf", NULL)) {
@@ -441,6 +443,106 @@ bool test_03 ()
 	}
 	/* free error associated we know it happens */
 	axl_error_free (err);
+
+	/* now check passwords */
+	if (! common_sasl_auth_user (sasl_backend, "aspl", NULL, "test", NULL, NULL)) {
+		printf ("Expected to find proper validation for aspl user\n");
+		return false;
+	}
+
+	/* now check passwords */
+	if (common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", NULL, NULL)) {
+		printf ("Expected to a failure while validating aspl2 user\n");
+		return false;
+	}
+
+	/* check default methods allowed */
+	if (! common_sasl_method_allowed (sasl_backend, "plain")) {
+		printf ("Expected to find \"plain\" as a proper method accepted..\n");
+		return false;
+	}
+
+	/* get the list of users */
+	users = common_sasl_get_users (sasl_backend, NULL, NULL);
+	if (users == NULL || axl_list_length (users) == 0) {
+		printf ("Expected to find a list with one item: aspl..\n");
+		return false;
+	}
+	
+	/* check users in the list */
+	user = axl_list_get_nth (users, 0);
+	if (! axl_cmp (user->auth_id, "aspl")) {
+		printf ("Expected to find the user aspl..\n");
+		return false;
+	}
+
+	if (user->disabled) {
+		printf ("Expected to find user not disabled..\n");
+		return false;
+	}
+
+	/* dealloc the list associated */
+	axl_list_free (users);
+
+	/* check disable function */
+	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, true, NULL)) {
+		printf ("failed to disable a user ..\n");
+		return false;
+	}
+
+	/* get the list of users */
+	users = common_sasl_get_users (sasl_backend, NULL, NULL);
+	if (users == NULL || axl_list_length (users) == 0) {
+		printf ("Expected to find a list with one item: aspl..\n");
+		return false;
+	}
+
+	/* check users in the list */
+	user = axl_list_get_nth (users, 0);
+	if (! axl_cmp (user->auth_id, "aspl")) {
+		printf ("Expected to find the user aspl..\n");
+		return false;
+	}
+
+	if (! user->disabled) {
+		printf ("Expected to find user disabled..\n");
+		return false;
+	}
+
+	/* dealloc the list associated */
+	axl_list_free (users);
+
+	/* check disable function */
+	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, false, NULL)) {
+		printf ("failed to disable a user ..\n");
+		return false;
+	}
+
+	/* get the list of users */
+	users = common_sasl_get_users (sasl_backend, NULL, NULL);
+	if (users == NULL || axl_list_length (users) == 0) {
+		printf ("Expected to find a list with one item: aspl..\n");
+		return false;
+	}
+
+	/* check users in the list */
+	user = axl_list_get_nth (users, 0);
+	if (! axl_cmp (user->auth_id, "aspl")) {
+		printf ("Expected to find the user aspl..\n");
+		return false;
+	}
+
+	if (user->disabled) {
+		printf ("Expected to find user not disabled..\n");
+		return false;
+	}
+
+	/* dealloc the list associated */
+	axl_list_free (users);
+
+
+	/* ADD AN API TO CHECK IF A USER IS DISABLED */
+	/* CHECK ADDING/REMOVING/CHECKING USERS ON THE FLY */
 	
 
 	/* terminate the sasl module */

@@ -112,7 +112,7 @@ void tbc_sasl_disable_user ()
 	const char * serverName         = NULL;
 
 	/* call to disable user */
-	if (! common_sasl_user_disable (sasl_backend, user_id_to_disable, serverName, NULL))
+	if (! common_sasl_user_disable (sasl_backend, user_id_to_disable, serverName, true, NULL))
 		error ("failed to dump SASL auth db..");
 	else
 		msg ("user %s disabled!", user_id_to_disable);
