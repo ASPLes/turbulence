@@ -237,6 +237,8 @@ bool test_01 ()
  */
 bool test_02 ()
 {
+	char * value;
+
 	if (turbulence_file_is_fullpath ("test")) {
 		printf ("Expected to find a relative path..\n");
 		return false;
@@ -286,6 +288,128 @@ bool test_02 ()
 		return false;
 	}
 #endif
+
+	/* check base dir and file name */
+	value = turbulence_base_dir ("/test");
+	if (! axl_cmp (value, "/")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("/test/value");
+	if (! axl_cmp (value, "/test")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("/test/value/base-value.txt");
+	if (! axl_cmp (value, "/test/value")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("c:/test/value/base-value.txt");
+	if (! axl_cmp (value, "c:/test/value")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("c:\\test\\value\\base-value.txt");
+	if (! axl_cmp (value, "c:\\test\\value")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("c:\\test value\\value\\base-value.txt");
+	if (! axl_cmp (value, "c:\\test value\\value")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("c:\\test value \\value \\base-value.txt");
+	if (! axl_cmp (value, "c:\\test value \\value ")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_base_dir ("c:\\test value \\value \\ base-value.txt");
+	if (! axl_cmp (value, "c:\\test value \\value ")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	/* now check file name */
+	value = turbulence_file_name ("test");
+	if (! axl_cmp (value, "test")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("/test");
+	if (! axl_cmp (value, "test")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("/test/value");
+	if (! axl_cmp (value, "value")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("/test/value/base-value.txt");
+	if (! axl_cmp (value, "base-value.txt")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("c:/test/value/base-value.txt");
+	if (! axl_cmp (value, "base-value.txt")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("c:\\test\\value\\base-value.txt");
+	if (! axl_cmp (value, "base-value.txt")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("c:\\test value\\value\\base-value.txt");
+	if (! axl_cmp (value, "base-value.txt")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("c:\\test value \\value \\base-value.txt");
+	if (! axl_cmp (value, "base-value.txt")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
+	value = turbulence_file_name ("c:\\test value \\value \\ base-value.txt");
+	if (! axl_cmp (value, " base-value.txt")) {
+		printf ("Expected to find a different value but found: %s\n", value);
+		return false;
+	} /* end if */
+	axl_free (value);
+
 	/* all test ok */
 	return true;
 }
@@ -300,6 +424,7 @@ bool test_03 ()
 {
 	/* local reference */
 	SaslAuthBackend * sasl_backend;
+	axlError        * err;
 
 	/* start the sasl backend */
 	if (! common_sasl_load_config (&sasl_backend, "test_03.sasl.conf", NULL)) {
@@ -308,13 +433,15 @@ bool test_03 ()
 	}
 	
 	/* check if the default aspl user exists */
-	if (! common_sasl_user_exists (sasl_backend, "aspl", NULL, NULL)) {
-		printf ("Failed while checking if the user already exists....\n");
+	if (! common_sasl_user_exists (sasl_backend, "aspl", NULL, &err, NULL)) {
+		printf ("Failed while checking if the user already exists, error found: %s....\n",
+			axl_error_get (err));
+		axl_error_free (err);
 		return false;
 	}
 
 	/* check we don't provide false positive values */
-	if (common_sasl_user_exists (sasl_backend, "aspl2", NULL, NULL)) {
+	if (common_sasl_user_exists (sasl_backend, "aspl2", NULL, &err, NULL)) {
 		printf ("It was expected to not find the user \"aspl2\" but it was found!....\n");
 		return false;
 	}

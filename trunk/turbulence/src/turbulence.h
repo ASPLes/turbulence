@@ -174,6 +174,10 @@ long int turbulence_last_modification (const char * file);
 
 bool     turbulence_file_is_fullpath (const char * file);
 
+char   * turbulence_base_dir            (const char * path);
+
+char   * turbulence_file_name           (const char * path);
+
 typedef enum {
 	DISABLE_STDIN_ECHO = 1 << 0,
 } TurbulenceIoFlags;
