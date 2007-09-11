@@ -826,6 +826,8 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
  *
  * @param serverName The serverName to use to select the proper user database.
  *
+ * @param disable true to disable the user, false to enable.
+ *
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
@@ -834,6 +836,7 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend, 
 				   const char       * auth_id, 
 				   const char       * serverName, 
+				   bool               disable,
 				   VortexMutex      * mutex)
 {
 	axlNode    * node;
@@ -875,8 +878,7 @@ bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 				axl_node_remove_attribute (node, "disabled");
 				
 				/* install the new attribute */
-				axl_node_set_attribute (node, "disabled", "yes");
-				
+				axl_node_set_attribute (node, "disabled", disable ? "yes" : "no");
 				
 				/* dump the db */
 				if (! axl_doc_dump_pretty_to_file (auth_db, db->db_path, 3)) {
