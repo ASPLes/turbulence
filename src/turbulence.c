@@ -748,6 +748,71 @@ bool     turbulence_file_is_fullpath (const char * file)
 }
 
 
+/** 
+ * @brief Allows to get the base dir associated to the provided path.
+ * 
+ * @param path The path that is required to return its base part.
+ * 
+ * @return Returns the base dir associated to the function. You
+ * must deallocate the returning value with axl_free.
+ */
+char   * turbulence_base_dir            (const char * path)
+{
+	int    iterator;
+	axl_return_val_if_fail (path, NULL);
+
+	/* start with string length */
+	iterator = strlen (path) - 1;
+
+	/* lookup for the back-slash */
+	while ((iterator >= 0) && 
+	       ((path [iterator] != '/') && path [iterator] != '\\'))
+		iterator--;
+
+	/* check if the file provided doesn't have any base dir */
+	if (iterator == -1) {
+		/* return base dir for default location */
+		return axl_strdup (".");
+	}
+
+	/* check the special case where the base path is / */
+	if (iterator == 0 && path [0] == '/')
+		iterator = 1;
+
+	/* copy the base dir found */
+	return axl_stream_strdup_n (path, iterator);
+}
+
+/** 
+ * @brief Allows to get the file name associated to the provided path.
+ * 
+ * @param path The path that is required to return its base value.
+ * 
+ * @return Returns the base dir associated to the function. You msut
+ * deallocate the returning value with axl_free.
+ */
+char   * turbulence_file_name           (const char * path)
+{
+	int    iterator;
+	axl_return_val_if_fail (path, NULL);
+
+	/* start with string length */
+	iterator = strlen (path) - 1;
+
+	/* lookup for the back-slash */
+	while ((iterator >= 0) && ((path [iterator] != '/') && (path [iterator] != '\\')))
+		iterator--;
+
+	/* check if the file provided doesn't have any file part */
+	if (iterator == -1) {
+		/* return the an empty file part */
+		return axl_strdup (path);
+	}
+
+	/* copy the base dir found */
+	return axl_strdup (path + iterator + 1);
+}
+
 /*
  * @brief Allows to get the next line read from the user. The function
  * return an string allocated.
