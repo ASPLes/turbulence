@@ -540,6 +540,33 @@ bool test_03 ()
 	/* dealloc the list associated */
 	axl_list_free (users);
 
+	if (common_sasl_user_is_disabled (sasl_backend, "aspl", NULL, NULL)) {
+		printf ("Expected to find user not disabled, but found in such state..\n");
+		return false;
+	} /* end if */
+
+	/* check disable function */
+	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, true, NULL)) {
+		printf ("failed to disable a user ..\n");
+		return false;
+	}
+
+	if (! common_sasl_user_is_disabled (sasl_backend, "aspl", NULL, NULL)) {
+		printf ("Expected to find user disabled, but found in such state..\n");
+		return false;
+	} /* end if */
+
+	/* check disable function */
+	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, false, NULL)) {
+		printf ("failed to enable a user ..\n");
+		return false;
+	}
+
+	if (common_sasl_user_is_disabled (sasl_backend, "aspl", NULL, NULL)) {
+		printf ("Expected to find user not disabled, but found in such state..\n");
+		return false;
+	} /* end if */
+
 
 	/* ADD AN API TO CHECK IF A USER IS DISABLED */
 	/* CHECK ADDING/REMOVING/CHECKING USERS ON THE FLY */
