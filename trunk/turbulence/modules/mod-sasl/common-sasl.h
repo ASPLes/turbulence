@@ -90,11 +90,17 @@ bool      common_sasl_user_add       (SaslAuthBackend  * sasl_backend,
 				      const char       * serverName, 
 				      VortexMutex      * mutex);
 
-bool      common_sasl_user_disable   (SaslAuthBackend  * sasl_backend, 
-				      const char       * auth_id, 
-				      const char       * serverName,
-				      bool               disable,
-				      VortexMutex      * mutex);
+bool      common_sasl_user_disable      (SaslAuthBackend  * sasl_backend, 
+					 const char       * auth_id, 
+					 const char       * serverName,
+					 bool               disable,
+					 VortexMutex      * mutex);
+
+bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
+					const char       * auth_id, 
+					const char       * serverName,
+					VortexMutex      * mutex);
+					
 
 axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
 				      const char       * serverName,

@@ -981,6 +981,74 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
 }
 
 /** 
+ * @brief Allows to check if the provided user is disabled (exists in
+ * the datbase but no authorization can be done).
+ * 
+ * @param sasl_backend The sasl backend where the user will be check
+ * to be disabled or not.
+ *
+ * @param auth_id The authorization id to be checked.
+ *
+ * @param serverName Server name configuration to select the proper
+ * auth database.
+ *
+ * @param mutex An optional mutex used by the library to lock the
+ * database while operating.
+ * 
+ * @return true if the user is disabled, otherwise false is returned,
+ * meaning the user can login.
+ */
+bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
+					const char       * auth_id, 
+					const char       * serverName,
+					VortexMutex      * mutex)
+{
+	axlNode    * node;
+	SaslAuthDb * db;
+	axlDoc     * auth_db;
+
+	/* return if minimum parameters aren't found. */
+	if (sasl_backend == NULL)
+		return false;
+
+	/* get the appropiate database */
+	if (serverName == NULL)
+		db = sasl_backend->default_db;
+	else {
+		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+	
+	/* check if the database was found, so the user doesn't
+	 * exists, hence it is at least disabled */
+	if (db == NULL)
+		return true;
+
+	/* according to the database backend, do */
+	if (db->type == SASL_BACKEND_XML) {
+		
+		/* search the user */
+		auth_db  = (axlDoc *) db->db;
+		node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+		while (node != NULL) {
+
+			if (axl_cmp (ATTR_VALUE (node, "user_id"), auth_id)) {
+				/* return the current status for the is disabled */
+				return HAS_ATTR_VALUE (node, "disabled", "yes");
+			} /* end if */
+
+			/* get next node */
+			node     = axl_node_get_next (node);
+		
+		} /* end while */
+
+	} /* end if */
+		
+	/* return true, the user is disabled mainly because it
+	 * doesn't exists */
+	return true;
+}
+
+/** 
  * @brief Allows to remove the provided user under the database
  * selected the given serverName.
  * 
