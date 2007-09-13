@@ -37,6 +37,9 @@
  */
 #include <common-sasl.h>
 
+#define LOCK   vortex_mutex_lock(mutex)
+#define UNLOCK vortex_mutex_unlock(mutex)
+
 /** 
  * @internal Type to represent the set of backends that we support to
  * store users databases. 
@@ -522,6 +525,9 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		return false;
 	}
 
+	/* lock the mutex */
+	LOCK;
+
 	/* check serverName authentication */
 	if (serverName != NULL) {
 		/* try to find the associated database */
@@ -534,6 +540,9 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 
 	/* check database */
 	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+
 		error ("no sasl <auth-db> was found for the provided serverName or no default <auth-db> was found, unable to perform SASL authentication.");
 		return false;
 	} /* end if */
@@ -556,6 +565,10 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		release  = false;
 		break;
 	default:
+
+		/* unlock the mutex */
+		UNLOCK;
+
 		/* error, unable to find the proper keying material
 		 * encoding configuration */
 		error ("unable to find the proper format for keying material (inside sasl.conf)");
@@ -574,6 +587,9 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		break;
 	} /* end switch */
 
+	/* unlock the mutex */
+	UNLOCK;
+
 	/* check to release memory allocated */
 	if (release)
 		axl_free ((char*) password);
@@ -591,11 +607,15 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
  *
  * @param sasl_method The sasl method to be checked to be
  * activated. Currently only "plain" is accepted.
+ *
+ * @param mutex An optional mutex used by the library to lock the
+ * database while operating.
  * 
  * @return true if the SASL method requested is supported.
  */
 bool common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
-				   const char       * sasl_method)
+				   const char       * sasl_method,
+				   VortexMutex      * mutex)
 {
 	axlNode * node;
 
@@ -603,11 +623,17 @@ bool common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 	if (sasl_backend == NULL || sasl_method == NULL)
 		return false;
 
+	/* lock the mutex */
+	LOCK;
+
 	node = axl_doc_get (sasl_backend->sasl_xml_conf, "/mod-sasl/method-allowed/method");
 	while (node != NULL) {
 
 		/* check for plain profile */
 		if (HAS_ATTR_VALUE (node, "value", "plain")) {
+			/* unlock the mutex */
+			UNLOCK;
+
 			/* accept plain profile */
 			return true;
 		} /* end if */
@@ -616,6 +642,9 @@ bool common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 		node = axl_node_get_next (node);
 
 	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
 
 	return false;
 }
@@ -659,6 +688,9 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 		return false;
 	}
 
+	/* lock the mutex */
+	LOCK;
+
 	/* get the appropiate database */
 	if (serverName == NULL)
 		db = sasl_backend->default_db;
@@ -668,6 +700,9 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 	
 	/* check if the database was found */
 	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+
 		axl_error_new (-1, "Failed to find associated auth db, the user is not valid or the serverName configuration is not present.", NULL, err);
 		return false;
 	}
@@ -683,6 +718,9 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 
 			/* check the user id */
 			if (axl_cmp (auth_id, user_id)) {
+				/* unlock the mutex */
+				UNLOCK;
+
 				return true;
 			} /* end if */
 			
@@ -691,11 +729,17 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 
 		} /* end while */
 
+		/* unlock the mutex */
+		UNLOCK;
+
 		axl_error_new (-1, "Failed to find the user, but found the associated backend.", NULL, err);
 		return false;
 	} /* end if */
 
 	axl_error_new (-1, "Failed to find the user.", NULL, err);
+
+	/* unlock the mutex */
+	UNLOCK;
 
 	return false;
 }
@@ -733,12 +777,16 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	char       * enc_password;
 	bool         release;
 	SaslAuthDb * db;
+	bool         result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL ||
 	    password     == NULL)
 		return false;
+
+	/* lock the mutex */
+	LOCK;
 
 	/* get the appropiate database */
 	if (serverName == NULL)
@@ -748,8 +796,11 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	}
 	
 	/* check if the database was found */
-	if (db == NULL)
+	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
 		return false;
+	}
 
 	/* encode the password received according to the encoding
 	 * configured */
@@ -770,6 +821,9 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 		release      = false;
 		break;
 	default:
+		/* unlock the mutex */
+		UNLOCK;
+
 		/* error, unable to find the proper keying material
 		 * encoding configuration */
 		error ("unable to find the proper format for keying material (inside sasl.conf)");
@@ -796,14 +850,8 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 			/* set the node */
 			axl_node_set_child (node, newNode);
 			
-			/* free the password */
-			if (release) 
-				axl_free ((char*) enc_password);
-			
 			/* dump the db */
-			if (! axl_doc_dump_pretty_to_file ((axlDoc *) (db->db), db->db_path, 3))
-				return false;
-			return true;
+			result = axl_doc_dump_pretty_to_file ((axlDoc *) (db->db), db->db_path, 3);
 		} /* end if */
 
 	} /* end if */
@@ -811,7 +859,11 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	if (release) 
 		axl_free ((char*) enc_password);
 
-	return false;
+	/* unlock the mutex */
+	UNLOCK;
+
+	/* return result */
+	return result;
 }
 
 /** 
@@ -843,11 +895,15 @@ bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
 	const char * user_id;
+	bool         result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL)
 		return false;
+
+	/* lock the mutex */
+	LOCK;
 
 	/* get the appropiate database */
 	if (serverName == NULL)
@@ -857,8 +913,12 @@ bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 	}
 	
 	/* check if the database was found */
-	if (db == NULL)
+	if (db == NULL) {
+
+		/* unlock the mutex */
+		UNLOCK;
 		return false;
+	}
 
 	/* according to the database backend, do */
 	if (db->type == SASL_BACKEND_XML) {
@@ -881,10 +941,9 @@ bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 				axl_node_set_attribute (node, "disabled", disable ? "yes" : "no");
 				
 				/* dump the db */
-				if (! axl_doc_dump_pretty_to_file (auth_db, db->db_path, 3)) {
-					return false;
-				}
-				return true;
+				result = axl_doc_dump_pretty_to_file (auth_db, db->db_path, 3);
+				
+				break;
 			} /* end if */
 		
 			/* get next node */
@@ -893,7 +952,10 @@ bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 		} /* end while */
 	} /* end if */
 
-	return false;
+	/* unlock the mutex */
+	UNLOCK;
+
+	return result;
 }
 
 /** 
@@ -939,6 +1001,9 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
 	if (sasl_backend == NULL)
 		return false;
 
+	/* lock the mutex */
+	LOCK;
+
 	/* get the appropiate database */
 	if (serverName == NULL)
 		db = sasl_backend->default_db;
@@ -947,8 +1012,12 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
 	}
 	
 	/* check if the database was found */
-	if (db == NULL)
+	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+
 		return NULL;
+	}
 
 	/* according to the database backend, do */
 	if (db->type == SASL_BACKEND_XML) {
@@ -975,6 +1044,9 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
 		} /* end while */
 
 	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
 
 	/* returning the list */
 	return list;
@@ -1006,10 +1078,14 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	axlNode    * node;
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
+	bool         result = true;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL)
 		return false;
+
+	/* lock the mutex */
+	LOCK;
 
 	/* get the appropiate database */
 	if (serverName == NULL)
@@ -1020,8 +1096,11 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	
 	/* check if the database was found, so the user doesn't
 	 * exists, hence it is at least disabled */
-	if (db == NULL)
-		return true;
+	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+		return true; 
+	}
 
 	/* according to the database backend, do */
 	if (db->type == SASL_BACKEND_XML) {
@@ -1032,8 +1111,11 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 		while (node != NULL) {
 
 			if (axl_cmp (ATTR_VALUE (node, "user_id"), auth_id)) {
+
+
 				/* return the current status for the is disabled */
-				return HAS_ATTR_VALUE (node, "disabled", "yes");
+				result = HAS_ATTR_VALUE (node, "disabled", "yes");
+				break;
 			} /* end if */
 
 			/* get next node */
@@ -1042,10 +1124,13 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 		} /* end while */
 
 	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
 		
 	/* return true, the user is disabled mainly because it
 	 * doesn't exists */
-	return true;
+	return result;
 }
 
 /** 
@@ -1074,11 +1159,15 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
 	const char * user_id;
+	bool         result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL)
 		return false;
+
+	/* lock the mutex */
+	LOCK;
 
 	/* get the appropiate database */
 	if (serverName == NULL)
@@ -1088,8 +1177,12 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 	}
 	
 	/* check if the database was found */
-	if (db == NULL)
+	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+
 		return false;
+	}
 
 	/* according to the database backend, do */
 	if (db->type == SASL_BACKEND_XML) {
@@ -1109,10 +1202,9 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 				axl_node_remove (node, true);
 				
 				/* dump the db */
-				if (! axl_doc_dump_pretty_to_file (auth_db, db->db_path, 3)) {
-					return false;
-				}
-				return true;
+				result = axl_doc_dump_pretty_to_file (auth_db, db->db_path, 3);
+				
+				break;
 			} /* end if */
 		
 			/* get next node */
@@ -1122,7 +1214,10 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 
 	} /* end if */
 
-	return false;
+	/* unlock the mutex */
+	UNLOCK;
+
+	return result;
 }
 
 /** 
@@ -1139,7 +1234,7 @@ bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
 		return false;
 
 	/* lock the mutex */
-	vortex_mutex_lock (mutex);
+	LOCK;
 
 	/* nullify the document */
 	db->db = NULL;
@@ -1147,8 +1242,8 @@ bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
 	/* check file modification */
 	if (turbulence_last_modification (db->db_path) == db->db_time) {
 		
-		/* lock the mutex */
-		vortex_mutex_unlock (mutex);
+		/* unlock the mutex */
+		UNLOCK;
 
 		return true;
 	} /* end if */
@@ -1160,7 +1255,7 @@ bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
 	/* check db opened */
 	if (db->db == NULL) {
 		/* unlock the mutex */
-		vortex_mutex_unlock (mutex);
+		UNLOCK;
 
 		error ("failed to init the SASL profile, unable to auth db, error: %s",
 		       axl_error_get (error));
@@ -1172,8 +1267,8 @@ bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
 	db->db_time = turbulence_last_modification (db->db_path);
 
 	/* unlock the mutex */
-	vortex_mutex_unlock (mutex);
-	
+	UNLOCK;
+
 	return true;
 }
 
