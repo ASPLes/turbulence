@@ -76,7 +76,8 @@ bool      common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,
 				      VortexMutex      * mutex);
 
 bool      common_sasl_method_allowed (SaslAuthBackend  * sasl_backend,
-				      const char       * sasl_method);
+				      const char       * sasl_method,
+				      VortexMutex      * mutex);
 
 bool      common_sasl_user_exists    (SaslAuthBackend   * sasl_backend,
 				      const char        * auth_id,

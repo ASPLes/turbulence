@@ -104,7 +104,7 @@ static bool sasl_init ()
 		return false;
 
 	/* check for sasl methods to be activated */
-	if (common_sasl_method_allowed (sasl_backend, "plain")) {
+	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_xml_db_mutex)) {
 		/* accept plain profile */
 		vortex_sasl_set_plain_validation (mod_sasl_plain_validation);
 		
