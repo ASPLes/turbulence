@@ -566,10 +566,44 @@ bool test_03 ()
 		printf ("Expected to find user not disabled, but found in such state..\n");
 		return false;
 	} /* end if */
-
-
-	/* ADD AN API TO CHECK IF A USER IS DISABLED */
+	
 	/* CHECK ADDING/REMOVING/CHECKING USERS ON THE FLY */
+	if (! common_sasl_user_add (sasl_backend, "aspl2", "test", NULL, NULL)) {
+		printf ("Expected to add without problems user aspl2, but a failure was found..\n");
+		return false;
+	}
+
+	/* check new user added */
+	if (common_sasl_user_is_disabled (sasl_backend, "aspl2", NULL, NULL)) {
+		printf ("Expected to find user not disabled, but found in such state..\n");
+		return false;
+	} /* end if */
+
+	/* auth the new user */
+	if (! common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", NULL, NULL)) {
+		printf ("Expected to find proper validation for aspl user\n");
+		return false;
+	}
+
+	/* check if the user exists */
+	if (! common_sasl_user_exists (sasl_backend, "aspl2", NULL, &err, NULL)) {
+		printf ("It was expected to find the user \"aspl2\" but it wasn' found!....\n");
+		return false;
+	}
+
+	/* now remove */
+	if (! common_sasl_user_remove (sasl_backend, "aspl2", NULL, NULL)) {
+		printf ("Expected to add without problems user aspl2, but a failure was found..\n");
+		return false;
+	}
+	
+
+	/* check if the user do not exists, now */
+	if (common_sasl_user_exists (sasl_backend, "aspl2", NULL, &err, NULL)) {
+		printf ("It was expected to not find the user \"aspl2\" but it wasn' found!....\n");
+		return false;
+	}
+	axl_error_free (err);
 	
 
 	/* terminate the sasl module */
