@@ -1,4 +1,4 @@
-EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml
+EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml 
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -17,6 +17,7 @@ mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h $(sasl_
 mod_sasl_la_LDFLAGS  = -module -ldl
 
 # reconfigure module installation directory
+oldlibdir = $(libdir)
 libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
@@ -39,3 +40,9 @@ endif
 # additional files produced by xml-rpc-gen 
 $(sasl_radmin_files): sasl-radmin.idl
 	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
+
+pkgconfigdir = $(prefix)/lib/pkgconfig
+pkgconfig_DATA = sasl-radmin.pc
+
+saslradmindir   = $(datadir)/mod-sasl/radmin
+saslradmin_DATA = sasl-radmin.idl
