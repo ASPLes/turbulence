@@ -631,6 +631,69 @@ bool test_03 ()
 }
 
 /** 
+ * @brief Allows to check the module support provided by
+ * turbulence. It tries to load the mod-test module installed in the
+ * base code.
+ * 
+ * 
+ * @return true if module support is working, otherwise, false is
+ * returned.
+ */
+bool test_04 ()
+{
+	TurbulenceModule * module = NULL;
+	const char       * path;
+	bool               registered = false;
+
+ test_04_load_again:
+	/* load the module, checking the appropiate match */
+	path = "../modules/mod-test/.libs/mod-test.so";
+	if (vortex_support_file_test (path, FILE_EXISTS)) {
+		printf ("Test 04: found module at: %s, opening..\n", path);
+		module = turbulence_module_open (path);
+		goto test_04_check;
+	} 
+
+	/* load the module, checking the appropiate match */
+	path = "../modules/mod-test/mod-test.so";
+	if (vortex_support_file_test (path, FILE_EXISTS)) {
+		printf ("Test 04: found module at: %s, opening..\n", path);
+		module = turbulence_module_open (path);
+		goto test_04_check;
+	} 
+	
+	/* load the module, checking the appropiate match */
+	path = "../modules/mod-test/mod-test.dll";
+	if (vortex_support_file_test (path, FILE_EXISTS)) {
+		printf ("Test 04: found module at: %s, opening..\n", path);
+		module = turbulence_module_open (path);
+		goto test_04_check;
+	} 
+
+ test_04_check:
+	if (module == NULL) {
+		printf ("Test 04: unable to open module, failed to execute test..\n");
+		return false;
+	}
+	
+	if (! registered) {
+		/* close the module */
+		turbulence_module_free (module);
+
+		/* load again the module */
+		registered = true;
+		goto test_04_load_again;
+	} else {
+		/* register the module */
+		turbulence_module_register (module);
+	}
+
+
+	/* test ok */
+	return true;
+}
+
+/** 
  * @brief General regression test to check all features inside
  * turbulence.
  */
@@ -659,6 +722,9 @@ int main (int argc, char ** argv)
 
 	/* init turbulence db list */
 	turbulence_db_list_init ();
+	
+	/* init module functions */
+	turbulence_module_init ();
 
 	/* test dblist */
 	if (test_01 ()) {
@@ -677,8 +743,15 @@ int main (int argc, char ** argv)
 
 	if (test_03 ()) {
 		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [   OK   ]\n");
-	}else {
+	} else {
 		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_04 ()) {
+		printf ("Test 04: Check module loading support  [   OK   ]\n");
+	} else {
+		printf ("Test 03: Check module loading support  [ FAILED ]\n");
 		return -1;
 	}
 
@@ -687,7 +760,9 @@ int main (int argc, char ** argv)
 
 	/* terminate the db list */
 	turbulence_db_list_cleanup ();
-
+	
+	/* terminate module functions */
+	turbulence_module_cleanup ();
 
 	/* terminate */
 	return 0;
