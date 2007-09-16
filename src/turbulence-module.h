@@ -42,17 +42,19 @@
 
 typedef struct _TurbulenceModule TurbulenceModule;
 
-void               turbulence_module_init      ();
+void               turbulence_module_init        ();
 
-TurbulenceModule * turbulence_module_open      (const char * module);
+TurbulenceModule * turbulence_module_open        (const char * module);
 
-ModInitFunc        turbulence_module_get_init  (TurbulenceModule * module);
+ModInitFunc        turbulence_module_get_init    (TurbulenceModule * module);
 
-ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module);
+ModCloseFunc       turbulence_module_get_close   (TurbulenceModule * module);
 
-void               turbulence_module_register  (TurbulenceModule * module);
+void               turbulence_module_register    (TurbulenceModule * module);
 
-void               turbulence_module_free      (TurbulenceModule * module);
+void               turbulence_module_unregister  (TurbulenceModule * module);
+
+void               turbulence_module_free        (TurbulenceModule * module);
 
 void               turbulence_module_notify_reload_conf ();
 

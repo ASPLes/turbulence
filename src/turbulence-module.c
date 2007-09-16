@@ -50,7 +50,8 @@ struct _TurbulenceModule {
 /** 
  * @internal A list of modules registered.
  */
-axlList * __registered_modules = NULL;
+axlList     * _registered_modules = NULL;
+VortexMutex   _registered_modules_mutex;
 
 /** 
  * @brief Starts the turbulence module initializing all internal
@@ -59,8 +60,10 @@ axlList * __registered_modules = NULL;
 void               turbulence_module_init      ()
 {
 	/* a list of all modules loaded */
-	__registered_modules = axl_list_new (axl_list_always_return_1, 
-					     (axlDestroyFunc) turbulence_module_free);
+	_registered_modules = axl_list_new (axl_list_always_return_1, 
+					    (axlDestroyFunc) turbulence_module_free);
+	/* init mutex */
+	vortex_mutex_create (&_registered_modules_mutex);
 	return;
 }
 
@@ -158,7 +161,27 @@ ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
 void               turbulence_module_register  (TurbulenceModule * module)
 {
 	/* register the module */
-	axl_list_add (__registered_modules, module);
+	vortex_mutex_lock (&_registered_modules_mutex);
+	axl_list_add (_registered_modules, module);
+	vortex_mutex_unlock (&_registered_modules_mutex);
+
+	return;
+}
+
+/** 
+ * @brief Unregister the module provided from the list of modules
+ * loaded. The function do not close the module (\ref
+ * turbulence_module_close). This is required to be done by the
+ * caller.
+ * 
+ * @param module The module to unregister.
+ */
+void               turbulence_module_unregister  (TurbulenceModule * module)
+{
+	/* register the module */
+	vortex_mutex_lock (&_registered_modules_mutex);
+	axl_list_unlink (_registered_modules, module);
+	vortex_mutex_unlock (&_registered_modules_mutex);
 
 	return;
 }
@@ -200,9 +223,10 @@ void               turbulence_module_notify_reload_conf ()
 	TurbulenceModule * module;
 
 	int iterator = 0;
-	while (iterator < axl_list_length (__registered_modules)) {
+	vortex_mutex_lock (&_registered_modules_mutex);
+	while (iterator < axl_list_length (_registered_modules)) {
 		/* get the module */
-		module = axl_list_get_nth (__registered_modules, iterator);
+		module = axl_list_get_nth (_registered_modules, iterator);
 
 		/* notify if defined reconf function */
 		if (module->def->reconf != NULL) {
@@ -214,6 +238,9 @@ void               turbulence_module_notify_reload_conf ()
 		iterator++;
 
 	} /* end if */
+	vortex_mutex_unlock (&_registered_modules_mutex);
+
+	return;
 }
 
 /** 
@@ -223,7 +250,10 @@ void               turbulence_module_notify_reload_conf ()
 void               turbulence_module_cleanup   ()
 {
 	/* release the list and all modules */
-	axl_list_free (__registered_modules);
+	axl_list_free (_registered_modules);
+	vortex_mutex_destroy (&_registered_modules_mutex);
+
+	return;
 }
 
 
