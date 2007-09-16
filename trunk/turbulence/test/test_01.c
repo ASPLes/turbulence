@@ -422,6 +422,8 @@ bool test_03 ()
 	axlList         * users;
 	SaslUser        * user;
 	VortexMutex       mutex;
+	char            * serverName   = NULL;
+	char            * acceptedUser = "aspl";
 
 	/* init the mutex */
 	vortex_mutex_create (&mutex);
@@ -433,7 +435,8 @@ bool test_03 ()
 	}
 	
 	/* check if the default aspl user exists */
-	if (! common_sasl_user_exists (sasl_backend, "aspl", NULL, &err, &mutex)) {
+ test_03_init:
+	if (! common_sasl_user_exists (sasl_backend, acceptedUser, serverName, &err, &mutex)) {
 		printf ("Failed while checking if the user already exists, error found: %s....\n",
 			axl_error_get (err));
 		axl_error_free (err);
@@ -441,7 +444,7 @@ bool test_03 ()
 	}
 
 	/* check we don't provide false positive values */
-	if (common_sasl_user_exists (sasl_backend, "aspl2", NULL, &err, &mutex)) {
+	if (common_sasl_user_exists (sasl_backend, "aspl2", serverName, &err, &mutex)) {
 		printf ("It was expected to not find the user \"aspl2\" but it was found!....\n");
 		return false;
 	}
@@ -449,13 +452,13 @@ bool test_03 ()
 	axl_error_free (err);
 
 	/* now check passwords */
-	if (! common_sasl_auth_user (sasl_backend, "aspl", NULL, "test", NULL, &mutex)) {
+	if (! common_sasl_auth_user (sasl_backend, acceptedUser, NULL, "test", serverName, &mutex)) {
 		printf ("Expected to find proper validation for aspl user\n");
 		return false;
 	}
 
 	/* now check passwords */
-	if (common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", NULL, &mutex)) {
+	if (common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", serverName, &mutex)) {
 		printf ("Expected to a failure while validating aspl2 user\n");
 		return false;
 	}
@@ -467,7 +470,7 @@ bool test_03 ()
 	}
 
 	/* get the list of users */
-	users = common_sasl_get_users (sasl_backend, NULL, &mutex);
+	users = common_sasl_get_users (sasl_backend, serverName, &mutex);
 	if (users == NULL || axl_list_length (users) == 0) {
 		printf ("Expected to find a list with one item: aspl..\n");
 		return false;
@@ -475,7 +478,7 @@ bool test_03 ()
 	
 	/* check users in the list */
 	user = axl_list_get_nth (users, 0);
-	if (! axl_cmp (user->auth_id, "aspl")) {
+	if (! axl_cmp (user->auth_id, acceptedUser)) {
 		printf ("Expected to find the user aspl..\n");
 		return false;
 	}
@@ -489,13 +492,13 @@ bool test_03 ()
 	axl_list_free (users);
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, true, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, true, &mutex)) {
 		printf ("failed to disable a user ..\n");
 		return false;
 	}
 
 	/* get the list of users */
-	users = common_sasl_get_users (sasl_backend, NULL, &mutex);
+	users = common_sasl_get_users (sasl_backend, serverName, &mutex);
 	if (users == NULL || axl_list_length (users) == 0) {
 		printf ("Expected to find a list with one item: aspl..\n");
 		return false;
@@ -503,7 +506,7 @@ bool test_03 ()
 
 	/* check users in the list */
 	user = axl_list_get_nth (users, 0);
-	if (! axl_cmp (user->auth_id, "aspl")) {
+	if (! axl_cmp (user->auth_id, acceptedUser)) {
 		printf ("Expected to find the user aspl..\n");
 		return false;
 	}
@@ -517,13 +520,13 @@ bool test_03 ()
 	axl_list_free (users);
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, false, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, false, &mutex)) {
 		printf ("failed to disable a user ..\n");
 		return false;
 	}
 
 	/* get the list of users */
-	users = common_sasl_get_users (sasl_backend, NULL, &mutex);
+	users = common_sasl_get_users (sasl_backend, serverName, &mutex);
 	if (users == NULL || axl_list_length (users) == 0) {
 		printf ("Expected to find a list with one item: aspl..\n");
 		return false;
@@ -531,7 +534,7 @@ bool test_03 ()
 
 	/* check users in the list */
 	user = axl_list_get_nth (users, 0);
-	if (! axl_cmp (user->auth_id, "aspl")) {
+	if (! axl_cmp (user->auth_id, acceptedUser)) {
 		printf ("Expected to find the user aspl..\n");
 		return false;
 	}
@@ -544,71 +547,79 @@ bool test_03 ()
 	/* dealloc the list associated */
 	axl_list_free (users);
 
-	if (common_sasl_user_is_disabled (sasl_backend, "aspl", NULL, &mutex)) {
+	if (common_sasl_user_is_disabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("Expected to find user not disabled, but found in such state..\n");
 		return false;
 	} /* end if */
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, true, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, true, &mutex)) {
 		printf ("failed to disable a user ..\n");
 		return false;
 	}
 
-	if (! common_sasl_user_is_disabled (sasl_backend, "aspl", NULL, &mutex)) {
+	if (! common_sasl_user_is_disabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("Expected to find user disabled, but found in such state..\n");
 		return false;
 	} /* end if */
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, "aspl", NULL, false, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, false, &mutex)) {
 		printf ("failed to enable a user ..\n");
 		return false;
 	}
 
-	if (common_sasl_user_is_disabled (sasl_backend, "aspl", NULL, &mutex)) {
+	if (common_sasl_user_is_disabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("Expected to find user not disabled, but found in such state..\n");
 		return false;
 	} /* end if */
 	
 	/* CHECK ADDING/REMOVING/CHECKING USERS ON THE FLY */
-	if (! common_sasl_user_add (sasl_backend, "aspl2", "test", NULL, &mutex)) {
+	if (! common_sasl_user_add (sasl_backend, "aspl2", "test", serverName, &mutex)) {
 		printf ("Expected to add without problems user aspl2, but a failure was found..\n");
 		return false;
 	}
 
 	/* check new user added */
-	if (common_sasl_user_is_disabled (sasl_backend, "aspl2", NULL, &mutex)) {
+	if (common_sasl_user_is_disabled (sasl_backend, "aspl2", serverName, &mutex)) {
 		printf ("Expected to find user not disabled, but found in such state..\n");
 		return false;
 	} /* end if */
 
 	/* auth the new user */
-	if (! common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", NULL, &mutex)) {
+	if (! common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", serverName, &mutex)) {
 		printf ("Expected to find proper validation for aspl user\n");
 		return false;
 	}
 
 	/* check if the user exists */
-	if (! common_sasl_user_exists (sasl_backend, "aspl2", NULL, &err, &mutex)) {
+	if (! common_sasl_user_exists (sasl_backend, "aspl2", serverName, &err, &mutex)) {
 		printf ("It was expected to find the user \"aspl2\" but it wasn' found!....\n");
 		return false;
 	}
 
 	/* now remove */
-	if (! common_sasl_user_remove (sasl_backend, "aspl2", NULL, &mutex)) {
+	if (! common_sasl_user_remove (sasl_backend, "aspl2", serverName, &mutex)) {
 		printf ("Expected to add without problems user aspl2, but a failure was found..\n");
 		return false;
 	}
 	
 
 	/* check if the user do not exists, now */
-	if (common_sasl_user_exists (sasl_backend, "aspl2", NULL, &err, &mutex)) {
+	if (common_sasl_user_exists (sasl_backend, "aspl2", serverName, &err, &mutex)) {
 		printf ("It was expected to not find the user \"aspl2\" but it wasn' found!....\n");
 		return false;
 	}
 	axl_error_free (err);
-	
+
+	/* now check the backend with a particular serverName
+	 * domain */
+	if (serverName == NULL) {
+		printf ("Test 03: checking serverName associated database support..\n");
+		serverName = "www.turbulence.ws";
+		acceptedUser = "aspl3";		
+		goto test_03_init;
+	}
 
 	/* terminate the sasl module */
 	common_sasl_free (sasl_backend);
