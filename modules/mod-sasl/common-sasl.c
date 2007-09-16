@@ -1358,11 +1358,20 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 					 const char       * resource_path,
 					 axlPointer         user_data)
 {
-	const char      * auth_id = AUTH_ID_FROM_CONN (conn);
+	const char      * auth_id;
 	SaslAuthBackend * sasl_backend = user_data;
 	SaslAuthDb      * db;
+
+	/* check resource associated to the sasl remote
+	 * administration */
+	if (! axl_cmp (resource_path, "sasl-radmin")) {
+		/* undefined resource, we are not handling such
+		 * resource */
+		return false;
+	}
 	
 	/* check the user id */
+	auth_id = AUTH_ID_FROM_CONN (conn);
 	if (auth_id == NULL) {
 		error ("Requested validation for remote SASL administration but no SASL credential was found");
 		return false;
