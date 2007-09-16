@@ -1,0 +1,39 @@
+/* -*- csharp -*-
+ * @brief Remote SASL administration API for mod-sasl.
+ */ 
+xml-rpc interface sasl-radmin {
+	/**
+	 * @brief List of allowed resources.
+	 */
+	allowed resources "sasl-radmin";
+
+	/**
+	 * @brief Structure used to represent a user installed on the
+	 * database.
+	 */
+	struct SaslUser {
+		/**
+		 * @brief The user installed in the database
+		 * (according to the kind of request).
+		 */
+		string auth_id;
+		/**
+		 * @brief If the user is disabled (no login can be
+		 * done with this user).
+		 */
+		bool   disabled;
+	}
+
+	/**
+	 * @brief Array of users.
+	 */
+	array SaslUserArray of SaslUser;
+
+	[resource="sasl-radmin"];
+	SaslUserArray get_users (string serverName) {
+
+		/* not implemented yet */
+		return NULL;
+	}
+	
+} /* end sasl-radmin */
