@@ -7,7 +7,7 @@ INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
 sasl_radmin_files = service_dispatch.h service_dispatch.c \
-	sasl_radmin_get_users_string.h sasl_radmin_get_users_string.c \
+	sasl_radmin_get_users.h sasl_radmin_get_users.c \
 	sasl_radmin_struct_sasluser_xml_rpc.h sasl_radmin_struct_sasluser_xml_rpc.c \
 	sasl_radmin_array_sasluserarray_xml_rpc.h sasl_radmin_array_sasluserarray_xml_rpc.c \
 	sasl_radmin_types.h

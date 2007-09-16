@@ -12,17 +12,28 @@
 #include <vortex.h>
 #include <sasl_radmin_types.h>
 
-SaslUserArray * get_users_1_string (const char * serverName, char ** fault_error, int * fault_code, VortexChannel * channel)
-{
-	
+/* external variables to implement the backend module */
+extern SaslAuthBackend * sasl_backend;
+extern VortexMutex       sasl_xml_db_mutex;
 
-		/* not implemented yet */
-		return NULL;
+SaslUserArray * get_users_0 (char ** fault_error, int * fault_code, VortexChannel * channel)
+{
+	axlList          * list;
+	VortexConnection * conn;
+
+	/* get the serverName */
+	const char       * serverName = SERVER_NAME_FROM_CHANNEL(channel);
+
+	/* get the user list associated to the current serverName */
+	list = common_sasl_get_users (sasl_backend, &sasl_xml_db_mutex);
+
+	/* not implemented yet */
+	return NULL;
 	
 }
 
 /* This is a support function to invoke 'get_users' service , do not modify it!! */
-XmlRpcMethodResponse * __get_users_1_string (XmlRpcMethodCall * method_call, VortexChannel * channel)
+XmlRpcMethodResponse * __get_users_0 (XmlRpcMethodCall * method_call, VortexChannel * channel)
 {
 	/* error support variables */
 	char * fault_error = NULL;
@@ -31,7 +42,7 @@ XmlRpcMethodResponse * __get_users_1_string (XmlRpcMethodCall * method_call, Vor
 
 	XmlRpcArray * _result;
 	/* call to the user implementation */
-	result = get_users_1_string (method_call_get_param_value_as_string (method_call, 0),  &fault_error, &fault_code, channel);
+	result = get_users_0 ( &fault_error, &fault_code, channel);
 
 	/* check error reply looking at the fault_error */
 	if (fault_error != NULL) {

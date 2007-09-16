@@ -29,8 +29,17 @@ xml-rpc interface sasl-radmin {
 	 */
 	array SaslUserArray of SaslUser;
 
+	/** 
+	 * @brief Allows to get the set of users created on current
+	 * channel created. The channel created defines the serverName
+	 * associated which configures the user domain.
+	 * 
+	 * 
+	 * @return A list of users associated to the domain requested
+	 * (serverName).
+	 */
 	[resource="sasl-radmin"];
-	SaslUserArray get_users (string serverName) {
+	SaslUserArray get_users () {
 
 		/* not implemented yet */
 		return NULL;
