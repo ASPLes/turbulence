@@ -15,8 +15,8 @@
 #include <vortex.h>
 #include <sasl_radmin_types.h>
 
-SaslUserArray * get_users_1_string (const char * serverName, char ** fault_error, int * fault_code, VortexChannel * channel);
+SaslUserArray * get_users_0 (char ** fault_error, int * fault_code, VortexChannel * channel);
 
-XmlRpcMethodResponse * __get_users_1_string (XmlRpcMethodCall * method_call, VortexChannel * channel);
+XmlRpcMethodResponse * __get_users_0 (XmlRpcMethodCall * method_call, VortexChannel * channel);
 
 #endif

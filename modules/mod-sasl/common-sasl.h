@@ -38,7 +38,11 @@
 #ifndef __COMMON_SASL_H__
 #define __COMMON_SASL_H__
 
+/* turbulence files */
 #include <turbulence.h>
+
+/* xml-rpc types */
+#include <sasl_radmin_types.h>
 
 /** 
  * @brief Public type representing a SASL backend loaded.
@@ -46,23 +50,6 @@
 typedef struct _SaslAuthBackend SaslAuthBackend;
 
 typedef struct _SaslAuthDb SaslAuthDb;
-
-/** 
- * @brief Public structure representing a user found in the
- * database. This structure is mainly used by the function \ref
- * common_sasl_get_users function.
- */
-typedef struct _SaslUser {
-	/** 
-	 * @brief Auth id for the user stored user.
-	 */
-	char * auth_id;
-	
-	/** 
-	 * @brief Flags if the user was disabled.
-	 */
-	bool   disabled;
-} SaslUser;
 
 bool      common_sasl_load_config    (SaslAuthBackend ** sasl_backend,
 				      const char       * alt_location,

@@ -1358,6 +1358,37 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 					 const char       * resource_path,
 					 axlPointer         user_data)
 {
+	const char      * auth_id = AUTH_ID_FROM_CONN (conn);
+	SaslAuthBackend * sasl_backend = user_data;
+	SaslAuthDb      * db;
+	
+	/* check the user id */
+	if (auth_id == NULL) {
+		error ("Requested validation for remote SASL administration but no SASL credential was found");
+		return false;
+	} /* end if */
+
+	/* now check the database */
+	if (serverName == NULL) {
+		/* requested validation for the default database, get
+		 * a reference to check its remote admin support */
+		db = sasl_backend->default_db;
+	} else {
+		/* requested validation for a particular database, get
+		 * a reference */
+		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+
+	/* now check remote admin support (the following code relay on
+	 * the fact that the associated database was found with a
+	 * remote admin list properly configured and the remote admin
+	 * flag activated). */
+	if (db != NULL && db->remote_admin) {
+		msg ("accepted xml-rpc SASL remote administration for %s domain",
+		     serverName ? serverName : "default");
+		return true;
+	}
+
 	/* return false */
 	return false;
 }

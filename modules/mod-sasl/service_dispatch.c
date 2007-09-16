@@ -9,7 +9,7 @@
  * Axl Library homepage:              http://xml.aspl.es
  * Advanced Software Production Line: http://www.aspl.es
  */
-#include <sasl_radmin_get_users_string.h>
+#include <sasl_radmin_get_users.h>
 
 
 XmlRpcMethodResponse *  service_dispatch (VortexChannel * channel, XmlRpcMethodCall * method_call, axlPointer user_data)
@@ -19,8 +19,8 @@ XmlRpcMethodResponse *  service_dispatch (VortexChannel * channel, XmlRpcMethodC
 	/* handle all services under the resource=sasl-radmin */
 	if (axl_cmp (vortex_xml_rpc_channel_get_resource (channel), "sasl-radmin")) {
 
-		if (method_call_is (method_call, "get_users", 1, XML_RPC_STRING_VALUE,  -1))
-			return __get_users_1_string (method_call, channel);
+		if (method_call_is (method_call, "get_users", 0,  -1))
+			return __get_users_0 (method_call, channel);
 
 		/* no more services under resource=sasl-radmin */
 		return NULL;
