@@ -11,6 +11,8 @@
  */
 #include <vortex.h>
 #include <sasl_radmin_types.h>
+#include <common-sasl.h>
+
 
 /* external variables to implement the backend module */
 extern SaslAuthBackend * sasl_backend;
@@ -19,16 +21,30 @@ extern VortexMutex       sasl_xml_db_mutex;
 SaslUserArray * get_users_0 (char ** fault_error, int * fault_code, VortexChannel * channel)
 {
 	axlList          * list;
-	VortexConnection * conn;
+	SaslUserArray    * users;
+	SaslUser         * user;
 
 	/* get the serverName */
 	const char       * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 
 	/* get the user list associated to the current serverName */
-	list = common_sasl_get_users (sasl_backend, &sasl_xml_db_mutex);
+	list     = common_sasl_get_users (sasl_backend, serverName, &sasl_xml_db_mutex);
+	users    = sasl_radmin_sasluserarray_new (axl_list_length (list));
+	while (axl_list_length (list) >= 0) {
+		/* get a user */
+		user = axl_list_get_first (list);
+		
+		/* store in the array */
+		sasl_radmin_sasluserarray_add (users, user);
+		
+		/* unlink from the list */
+		axl_list_unlink_first (list);
+
+	} /* end list */
+	axl_list_free (list);
 
 	/* not implemented yet */
-	return NULL;
+	return users;
 	
 }
 
