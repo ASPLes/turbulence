@@ -114,6 +114,17 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 
 void      common_sasl_free           (SaslAuthBackend  * backend);
 
+/* remote interface API */
+bool      common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
+					     VortexMutex     * mutex);
+
+bool      common_sasl_validate_resource (VortexConnection * conn,
+					 int                channel_num,
+					 const char       * serverName,
+					 const char       * resource_path,
+					 axlPointer         user_data);
+
+
 
 /* private API */
 bool common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,

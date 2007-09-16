@@ -1273,3 +1273,91 @@ bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
 }
 
 
+/** 
+ * @brief Allows to check if there is a remote administration
+ * interface activated for some database. 
+ * 
+ * @param sasl_backend 
+ * @param mutex 
+ * 
+ * @return The function returns true if there are at least one remote
+ * administration activated.
+ */
+bool      common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
+					     VortexMutex     * mutex)
+{
+	axlHashCursor * cursor;
+	SaslAuthDb    * db;
+
+	/* lock during operation */
+	LOCK;
+
+	/* check remote administration on default database */
+	if (sasl_backend->default_db != NULL && 
+	    sasl_backend->default_db->remote_admin) {
+		/* unlock the mutex */
+		UNLOCK;
+
+		return true;
+	}
+
+	/* check for the rest of auth dbs */
+	cursor = axl_hash_cursor_new (sasl_backend->dbs);
+	while (axl_hash_cursor_has_item (cursor)) {
+		/* get the database */
+		db = axl_hash_cursor_get_value (cursor);
+
+		if (db->remote_admin) {
+			/* found remote admin activated, dealloc
+			 * cursor */
+			axl_hash_cursor_free (cursor);
+		
+			/* unlock the mutex */
+			UNLOCK;
+
+			return true;
+		} /* end if */
+
+		/* next item to explore */
+		axl_hash_cursor_next (cursor);
+	} /* end while */
+	
+	/* free cursor */
+	axl_hash_cursor_free (cursor);
+
+	/* unlock the mutex */
+	UNLOCK;
+
+	return false;
+}
+
+/** 
+ * @internal SASL remote administration API. This function is executed
+ * to validate the service invocation against a particular user
+ * database, based on the value provided by serverName and the current
+ * authorization Id. It also takes into account the current SASL
+ * associated the list of remote admins allowed.
+ * 
+ * @param conn The connection where the verification is taking place.
+ *
+ * @param channel_num The channel number to be created.
+ *
+ * @param serverName The server name that is requested. This is the
+ * critical value that is pointing to the database to admin.
+ *
+ * @param resource_path The resource_path requested.
+ *
+ * @param user_data On this parameter is received the sasl_backend
+ * being used.
+ * 
+ * @return true to accept the request, otherwise false is returned.
+ */
+bool      common_sasl_validate_resource (VortexConnection * conn,
+					 int                channel_num,
+					 const char       * serverName,
+					 const char       * resource_path,
+					 axlPointer         user_data)
+{
+	/* return false */
+	return false;
+}

@@ -6,8 +6,14 @@ INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DDATADIR=\""$(datadir)"\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
+sasl_radmin_files = service_dispatch.h service_dispatch.c \
+	sasl_radmin_get_users_string.h sasl_radmin_get_users_string.c \
+	sasl_radmin_struct_sasluser_xml_rpc.h sasl_radmin_struct_sasluser_xml_rpc.c \
+	sasl_radmin_array_sasluserarray_xml_rpc.h sasl_radmin_array_sasluserarray_xml_rpc.c \
+	sasl_radmin_types.h
+
 lib_LTLIBRARIES   = mod-sasl.la
-mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h
+mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h $(sasl_radmin_files)
 mod_sasl_la_LDFLAGS  = -module -ldl
 
 # reconfigure module installation directory
@@ -29,3 +35,7 @@ tbc_sasl_conf_SOURCES = tbc-sasl-conf.c
 tbc_sasl_conf_LDFLAGS = $(EXARG_LIBS) $(AXL_LIBS) ../../src/libturbulence.la 
 tbc_sasl_conf_LDADD   = common-sasl.o
 endif
+
+# additional files produced by xml-rpc-gen 
+$(sasl_radmin_files): sasl-radmin.idl
+	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf

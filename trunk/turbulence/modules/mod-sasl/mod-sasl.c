@@ -36,6 +36,7 @@
  *         info@aspl.es - http://www.turbulence.ws
  */
 #include <mod-sasl.h>
+#include <service_dispatch.h>
 
 SaslAuthBackend * sasl_backend     = NULL;
 char            * sasl_xml_db_path = NULL;
@@ -79,6 +80,7 @@ bool sasl_load_config ()
 	return true;
 }
 
+
 /** 
  * @brief Init function, perform all the necessary code to register
  * profiles, configure Vortex, and any other task. The function must
@@ -113,7 +115,22 @@ static bool sasl_init ()
 			error ("Unable accept incoming SASL PLAIN profile");
 		} /* end if */			
 	} /* end if */
-	
+
+	/* check databases that have remote admin */
+	if (common_sasl_activate_remote_admin (sasl_backend, &sasl_xml_db_mutex)) {
+		/* install the xml-rpc profile support to handle session share
+		 * services */
+		vortex_xml_rpc_accept_negociation (
+			/* no resource validation function */
+			common_sasl_validate_resource,
+			/* no user space data for the validation resource
+			 * function. */
+			sasl_backend,
+			service_dispatch,
+			/* no user space data for the dispatch function. */
+			sasl_backend);
+	}
+
 	return true;
 }
 
