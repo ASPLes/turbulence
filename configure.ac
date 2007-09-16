@@ -160,6 +160,7 @@ modules/mod-tunnel/Makefile
 modules/mod-tunnel/mod-tunnel.xml
 modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
+modules/mod-sasl/sasl-radmin.pc
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile
