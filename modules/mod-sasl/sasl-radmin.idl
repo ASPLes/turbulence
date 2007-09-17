@@ -68,5 +68,59 @@ xml-rpc interface sasl-radmin {
 	} options {
 		include on body "get-users-include.c";
 	}
+
+	/** 
+	 * @brief Allows to perform several operations on a particular
+	 * sasl user.
+	 *
+	 * Operations supported:
+	 *
+	 * 1: Create a new SASL user.
+	 *    The additional_value will be used as password.
+	 *
+	 * 2: Remove the sasl user provided.
+	 *
+	 * 3: Update the password of the provided sasl user.
+	 *    The additional_value will be used as password.
+	 *
+	 * 4: Edit the sasl user id.
+	 *    The additional_value will be used as the new sasl user_id.
+	 *
+	 * 5: Make the user provided to have remote administration
+	 *    access.
+	 *   
+	 * 
+	 * @param auth_id The sasl auth id to be used.
+	 *
+	 * @param additional_value The additional value to be
+	 * associated to the operation. Maybe editing the sasl auth id
+	 * or the password.
+	 *
+	 * @param operation The kind of operation to perform.
+	 * 
+	 * @return true if the operation was completed, otherwise
+	 * false is returned.
+	 */
+	[resource="sasl-radmin"];
+	bool operate_sasl_user (string auth_id,
+				string additional_value,
+				int    operation) {
+		switch (operation) {
+		case 1:
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		default:
+			/* operation not implemented */
+			return false;
+		}
+	} options {
+		include on body "operate-sasl-user.c";
+	}
+			       
 	
 } /* end sasl-radmin */

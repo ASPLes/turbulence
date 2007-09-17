@@ -1392,7 +1392,7 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 	 * the fact that the associated database was found with a
 	 * remote admin list properly configured and the remote admin
 	 * flag activated). */
-	if (db != NULL && db->remote_admin) {
+	if (db != NULL && db->remote_admin && turbulence_db_list_exists (db->allowed_admins, auth_id)) {
 		msg ("accepted xml-rpc SASL remote administration for %s domain",
 		     serverName ? serverName : "default");
 		return true;

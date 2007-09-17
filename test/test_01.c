@@ -53,6 +53,9 @@ bool test_01 ()
 	TurbulenceDbList * dblist;
 	axlError         * err;
 	axlList          * list;
+
+	/* init turbulence db list */
+	turbulence_db_list_init ();
 	
 	/* test if the file exists and remote it */
 	if (turbulence_file_test_v ("test_01.xml", FILE_EXISTS)) {
@@ -219,6 +222,23 @@ bool test_01 ()
 
 	/* close the db list */
 	turbulence_db_list_close (dblist);
+
+	/* terminate the db list */
+	turbulence_db_list_cleanup ();
+
+	/* init turbulence db list */
+	turbulence_db_list_init ();
+
+	/* open again the list */
+	dblist = turbulence_db_list_open (&err, "test_01.xml", NULL);
+	if (dblist == NULL) {
+		printf ("Failed to open db list, %s\n", axl_error_get (err));
+		axl_error_free (err);
+		return false;
+	} /* end if */
+
+	/* terminate the db list */
+	turbulence_db_list_cleanup ();
 	
 	return true;
 }
@@ -718,11 +738,8 @@ int main (int argc, char ** argv)
 	/* uncomment the following tree lines to get debug */
 /*	turbulence_console_install_options ();
 	exarg_parse (argc, argv);
-	turbulence_console_process_options (); */
+	turbulence_console_process_options ();  */
 
-	/* init turbulence db list */
-	turbulence_db_list_init ();
-	
 	/* init module functions */
 	turbulence_module_init ();
 
@@ -758,9 +775,6 @@ int main (int argc, char ** argv)
 	/* terminate turbulence support module */
 	vortex_support_cleanup ();
 
-	/* terminate the db list */
-	turbulence_db_list_cleanup ();
-	
 	/* terminate module functions */
 	turbulence_module_cleanup ();
 
