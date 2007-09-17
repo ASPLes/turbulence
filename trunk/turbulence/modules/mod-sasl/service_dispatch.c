@@ -10,6 +10,7 @@
  * Advanced Software Production Line: http://www.aspl.es
  */
 #include <sasl_radmin_get_users.h>
+#include <sasl_radmin_operate_sasl_user_string_string_int.h>
 
 
 XmlRpcMethodResponse *  service_dispatch (VortexChannel * channel, XmlRpcMethodCall * method_call, axlPointer user_data)
@@ -21,6 +22,9 @@ XmlRpcMethodResponse *  service_dispatch (VortexChannel * channel, XmlRpcMethodC
 
 		if (method_call_is (method_call, "get_users", 0,  -1))
 			return __get_users_0 (method_call, channel);
+
+		if (method_call_is (method_call, "operate_sasl_user", 3, XML_RPC_STRING_VALUE, XML_RPC_STRING_VALUE, XML_RPC_INT_VALUE,  -1))
+			return __operate_sasl_user_3_string_string_int (method_call, channel);
 
 		/* no more services under resource=sasl-radmin */
 		return NULL;

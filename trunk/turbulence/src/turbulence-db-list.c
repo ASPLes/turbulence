@@ -643,7 +643,10 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list)
 	/* remove the list from the opened db list */
 	vortex_mutex_lock (&turbulence_db_list_mutex);
 
-	/* remove the item */
+	/* remove the item from the list without deallocating */
+	axl_list_unlink (turbulence_db_list_opened, list);
+
+	/* clear memmory associated */
 	turbulence_db_list_close_internal (list);
 
 	/* unlock and return */
@@ -672,9 +675,6 @@ bool               turbulence_db_list_close_internal  (TurbulenceDbList * list)
 		if (! axl_doc_dump_pretty_to_file (list->doc, list->full_path, 4))
 			error ("failed to dump: %s", list->full_path);
 	} /* end if */
-
-	/* add the db list opened */
-	axl_list_unlink (turbulence_db_list_opened, list);
 
 	/* dealloc */
 	axl_doc_free (list->doc);
