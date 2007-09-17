@@ -38,7 +38,7 @@ tbc_sasl_conf_LDADD   = common-sasl.o
 endif
 
 # additional files produced by xml-rpc-gen 
-$(sasl_radmin_files): sasl-radmin.idl
+sasl-radmin.idl: 
 	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
 
 pkgconfigdir = $(prefix)/lib/pkgconfig
