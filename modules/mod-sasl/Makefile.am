@@ -37,6 +37,9 @@ tbc_sasl_conf_LDFLAGS = $(EXARG_LIBS) $(AXL_LIBS) ../../src/libturbulence.la
 tbc_sasl_conf_LDADD   = common-sasl.o
 endif
 
+update-radmin: 
+	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
+
 # additional files produced by xml-rpc-gen 
 sasl-radmin.idl: 
 	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf

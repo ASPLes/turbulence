@@ -50,7 +50,7 @@ xml-rpc interface sasl-radmin {
 		/* get the user list associated to the current serverName */
 		list     = common_sasl_get_users (sasl_backend, serverName, &sasl_xml_db_mutex);
 		users    = sasl_radmin_sasluserarray_new (axl_list_length (list));
-		while (axl_list_length (list) >= 0) {
+		while (axl_list_length (list) > 0) {
 			/* get a user */
 			user = axl_list_get_first (list);
 			
