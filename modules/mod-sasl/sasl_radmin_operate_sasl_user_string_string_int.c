@@ -23,9 +23,9 @@ extern VortexMutex       sasl_xml_db_mutex;
 
 int operate_sasl_user_3_string_string_int (const char * auth_id, const char * additional_value, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
 {
+	/* get the serverName from the current channel */
 	const char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 	
-
 	switch (operation) {
 	case 1:
 		/* add create a new sasl user */
