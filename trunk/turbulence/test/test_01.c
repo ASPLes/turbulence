@@ -55,7 +55,10 @@ bool test_01 ()
 	axlList          * list;
 
 	/* init turbulence db list */
-	turbulence_db_list_init ();
+	if (! turbulence_db_list_init ()) {
+		printf ("Unable to initialize the turbulence db-list module..\n");
+		return false;
+	}
 	
 	/* test if the file exists and remote it */
 	if (turbulence_file_test_v ("test_01.xml", FILE_EXISTS)) {
@@ -227,7 +230,10 @@ bool test_01 ()
 	turbulence_db_list_cleanup ();
 
 	/* init turbulence db list */
-	turbulence_db_list_init ();
+	if (! turbulence_db_list_init ()) {
+		printf ("Unable to initialize the turbulence db-list module..\n");
+		return false;
+	}
 
 	/* open again the list */
 	dblist = turbulence_db_list_open (&err, "test_01.xml", NULL);
@@ -448,6 +454,12 @@ bool test_03 ()
 	/* init the mutex */
 	vortex_mutex_create (&mutex);
 
+	/* init the db list support */
+	if (! turbulence_db_list_init ()) {
+		printf ("Unable to initialize the turbulence db-list module..\n");
+		return false;
+	}
+
 	/* start the sasl backend */
 	if (! common_sasl_load_config (&sasl_backend, "test_03.sasl.conf", &mutex)) {
 		printf ("Unable to initialize the sasl backend..\n");
@@ -632,6 +644,41 @@ bool test_03 ()
 	}
 	axl_error_free (err);
 
+	/* check remote admin activation support */
+	if (common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
+		printf ("It was expected to not find activated remote administration support for %s inside %s\n", 
+			acceptedUser, serverName);
+		return false;
+	} /* end if */
+
+	/* activate remote admin */
+	if (! common_sasl_enable_remote_admin (sasl_backend, acceptedUser, serverName, true, &mutex)) {
+		printf ("It was expected to be able to enable remote administration support for %s inside %s\n",
+			acceptedUser, serverName);
+		return false;
+	}
+
+	/* check remote admin activation support */
+	if (! common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
+		printf ("It was expected to find activated remote administration support for %s inside %s\n", 
+			acceptedUser, serverName);
+		return false;
+	} /* end if */
+
+	/* activate remote admin */
+	if (! common_sasl_enable_remote_admin (sasl_backend, acceptedUser, serverName, false, &mutex)) {
+		printf ("It was expected to be able to disable remote administration support for %s inside %s\n",
+			acceptedUser, serverName);
+		return false;
+	}
+
+	/* check remote admin activation support */
+	if (common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
+		printf ("It was expected to not find activated remote administration support for %s inside %s, after configuring it.\n", 
+			acceptedUser, serverName);
+		return false;
+	} /* end if */
+
 	/* now check the backend with a particular serverName
 	 * domain */
 	if (serverName == NULL) {
@@ -646,6 +693,10 @@ bool test_03 ()
 
 	/* release the mutex */
 	vortex_mutex_destroy (&mutex);
+
+	/* terminate db list support (this is used by the remote
+	 * administration support) */
+	turbulence_db_list_cleanup ();
 
 	return true;
 }
@@ -738,10 +789,13 @@ int main (int argc, char ** argv)
 	/* uncomment the following tree lines to get debug */
 /*	turbulence_console_install_options ();
 	exarg_parse (argc, argv);
-	turbulence_console_process_options ();  */
+	turbulence_console_process_options ();   */
 
 	/* init module functions */
 	turbulence_module_init ();
+
+	/* configure an additional path to run tests */
+	vortex_support_add_domain_search_path     ("turbulence-data", "../data");
 
 	/* test dblist */
 	if (test_01 ()) {
