@@ -115,6 +115,8 @@ xml-rpc interface sasl-radmin {
 				bool   disabled,
 				int    operation) {
 
+	
+
 		/* get the serverName from the current channel */
 		const char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 		
@@ -145,9 +147,18 @@ xml-rpc interface sasl-radmin {
 				return false;
 			} /* end if */
 
-			/* now configure if the user is administrator */
-			
-			
+			/* now configure remote administration support */
+			if (! common_sasl_enable_remote_admin (sasl_backend,
+							       auth_id, serverName, remote_admin, &sasl_xml_db_mutex)) {
+				error ("failed to configured remote administration support provided=%d, unable to create the user",
+				       remote_admin);
+
+				/* failed to disabled the operation, remote the user */
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				return false;
+			} /* end if */
+
+			return true;
 
 		case 2:
 			/* remove a paritcular sasl user */
@@ -181,6 +192,8 @@ xml-rpc interface sasl-radmin {
 	
 		/* operation not implemented */
 		return false;
+		
+	
 		
 		
 	} options {

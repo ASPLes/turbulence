@@ -25,6 +25,8 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 {
 	
 
+	
+
 		/* get the serverName from the current channel */
 		const char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 		
@@ -101,6 +103,8 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 		/* operation not implemented */
 		return false;
 		
+	
+		
 		
 	
 }
@@ -114,11 +118,7 @@ XmlRpcMethodResponse * __operate_sasl_user_5_string_string_bool_bool_int (XmlRpc
 	int    result = false;
 
 	/* call to the user implementation */
-	result = operate_sasl_user_5_string_string_bool_bool_int (method_call_get_param_value_as_string (method_call, 0), 
-								  method_call_get_param_value_as_string (method_call, 1), 
-								  method_call_get_param_value_as_int (method_call, 2), 
-								  method_call_get_param_value_as_int (method_call, 3), 
-								  method_call_get_param_value_as_int (method_call, 4),  &fault_error, &fault_code, channel);
+	result = operate_sasl_user_5_string_string_bool_bool_int (method_call_get_param_value_as_string (method_call, 0), method_call_get_param_value_as_string (method_call, 1), method_call_get_param_value_as_int (method_call, 2), method_call_get_param_value_as_int (method_call, 3), method_call_get_param_value_as_int (method_call, 4),  &fault_error, &fault_code, channel);
 
 	/* check error reply looking at the fault_error */
 	if (fault_error != NULL) {
