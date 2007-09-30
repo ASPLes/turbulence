@@ -77,6 +77,9 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("list", "l", EXARG_NONE, 
 			   "List the content inside the provided db list.");
 
+	exarg_install_arg ("touch", "t", EXARG_NONE, 
+			   "Creates an empty db-list.");
+
 	/* install turbulence tool options */
 	turbulence_console_install_options ();
 
@@ -130,6 +133,12 @@ int main (int argc, char ** argv)
 			return -1;
 		}
 		msg ("done");
+
+	} else if (exarg_is_defined ("touch")) {
+		
+		/* ...and close */
+		turbulence_db_list_close (list);
+
 	} else if (exarg_is_defined ("list")) {
 		/* get current content */
 		content = turbulence_db_list_get (list);
