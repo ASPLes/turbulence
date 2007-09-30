@@ -88,6 +88,17 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 					const char       * auth_id, 
 					const char       * serverName,
 					VortexMutex      * mutex);
+
+bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
+					    const char       * auth_id, 
+					    const char       * serverName,
+					    bool               enable,
+					    VortexMutex      * mutex);
+
+bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
+					       const char       * auth_id, 
+					       const char       * serverName,
+					       VortexMutex      * mutex);
 					
 
 axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
