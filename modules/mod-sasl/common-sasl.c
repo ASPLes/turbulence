@@ -367,8 +367,12 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				/* relative, try to load */
 				path               = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "remote-admins"));
 				if (path != NULL) {
+					msg ("loading allowed admins from: %s..", path);
 					db->allowed_admins = turbulence_db_list_open (&err, path, NULL);
 					axl_free (path);
+				} else {
+					error ("unable to find a file (%s) at the locations configured..",
+					       ATTR_VALUE (node, "remote-admins"));
 				} /* end if */
 			} /* end if */
 			
@@ -1133,6 +1137,200 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	/* return true, the user is disabled mainly because it
 	 * doesn't exists */
 	return result;
+}
+
+/** 
+ * @brief Allows to enable remote administration on the provided
+ * domain (serverName) for the provided user.
+ * 
+ * @param sasl_backend The sasl backend where the operation will take
+ * place.
+ *
+ * @param auth_id The auth id that is going to be enabled/disabled to
+ * perform remote administration.
+ *
+ * @param serverName The associated serverName where the operation
+ * will take place.
+ *
+ * @param enable Activate or not the remote administration.
+ *
+ * @param mutex Optional mutex.
+ * 
+ * @return true if the operation was completed, otherwise false is
+ * returned.
+ */
+bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
+					    const char       * auth_id, 
+					    const char       * serverName,
+					    bool               enable,
+					    VortexMutex      * mutex)
+{
+	axlNode    * node;
+	SaslAuthDb * db;
+	axlDoc     * auth_db;
+	const char * user_id;
+	bool         result = false;
+
+	/* return if minimum parameters aren't found. */
+	if (sasl_backend == NULL ||
+	    auth_id      == NULL)
+		return false;
+
+	/* lock the mutex */
+	LOCK;
+
+	/* get the appropiate database */
+	if (serverName == NULL)
+		db = sasl_backend->default_db;
+	else {
+		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+	
+	/* check if the database was found */
+	if (db == NULL) {
+
+		/* unlock the mutex */
+		UNLOCK;
+		return false;
+	}
+
+	/* now activate the database remote administration, but first
+	 * check if the user exists */
+	if (db->type == SASL_BACKEND_XML) {
+		
+		/* search the user */
+		auth_db  = (axlDoc *) db->db;
+		node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+		while (node != NULL) {
+			
+			/* get the user */
+			user_id = ATTR_VALUE (node, "user_id");
+			
+			/* check the user id */
+			if (axl_cmp (auth_id, user_id)) {
+
+				/* according to the status, add or
+				 * remove */
+				if (enable) {
+					/* user found, check if the already is
+					 * located in the database */
+					if (turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+						/* unlock the mutex */
+						UNLOCK;
+						
+						return true;
+					}
+					
+					/* it doesn't exists, activate it */
+					turbulence_db_list_add (db->allowed_admins, auth_id);
+				} else {
+					/* just remove */
+					turbulence_db_list_remove (db->allowed_admins, auth_id);
+				} /* end if */
+
+				/* unlock the mutex */
+				UNLOCK;
+				
+				return true;
+			} /* end if */
+		
+			/* get next node */
+			node     = axl_node_get_next (node);
+
+		} /* end while */
+	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
+
+	return result;	
+}
+
+/** 
+ * @brief Allows to check if the provided user have the remote
+ * administration activated.
+ * 
+ * @param sasl_backend The sasl backend where the operation will take place.
+ *
+ * @param auth_id The sasl auth id that is going to be activated to
+ * support remote administration.
+ *
+ * @param serverName The serverName that defines the sasl database to be operated.
+ *
+ * @param mutex Optional mutex.
+ * 
+ * @return true if the provided user (auth_id) has remote
+ * administration activated on the provided serverName auth database.
+ */
+bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
+					       const char       * auth_id, 
+					       const char       * serverName,
+					       VortexMutex      * mutex)
+{
+	axlNode    * node;
+	SaslAuthDb * db;
+	axlDoc     * auth_db;
+	const char * user_id;
+	bool         result = false;
+
+	/* return if minimum parameters aren't found. */
+	if (sasl_backend == NULL ||
+	    auth_id      == NULL)
+		return false;
+
+	/* lock the mutex */
+	LOCK;
+
+	/* get the appropiate database */
+	if (serverName == NULL)
+		db = sasl_backend->default_db;
+	else {
+		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+	
+	/* check if the database was found */
+	if (db == NULL) {
+
+		/* unlock the mutex */
+		UNLOCK;
+		return false;
+	}
+	
+	/* now activate the database remote administration, but first
+	 * check if the user exists */
+	if (db->type == SASL_BACKEND_XML) {
+		
+		/* search the user */
+		auth_db  = (axlDoc *) db->db;
+		node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+		while (node != NULL) {
+			
+			/* get the user */
+			user_id = ATTR_VALUE (node, "user_id");
+			
+			/* check the user id */
+			if (axl_cmp (auth_id, user_id)) {
+
+				/* user found, check if the already is
+				 * located in the database */
+				result = turbulence_db_list_exists (db->allowed_admins, auth_id);
+
+				/* unlock the mutex */
+				UNLOCK;
+				
+				return result;
+			} /* end if */
+		
+			/* get next node */
+			node     = axl_node_get_next (node);
+
+		} /* end while */
+	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
+
+	return false;
 }
 
 /** 
