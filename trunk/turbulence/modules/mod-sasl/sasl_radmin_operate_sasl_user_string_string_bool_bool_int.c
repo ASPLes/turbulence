@@ -24,21 +24,50 @@ extern VortexMutex       sasl_xml_db_mutex;
 int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, bool remote_admin, bool disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
 {
 	
+
 		/* get the serverName from the current channel */
 		const char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
+		
 		
 		switch (operation) {
 		case 1:
 			/* add create a new sasl user */
-			return common_sasl_user_add (sasl_backend, 
-						     /* sasl user */
-						     auth_id,
-						     /* sasl password */
-						     additional_value,
-						     /* no server name */
-						     serverName,
-						     /* mutex */
-						     &sasl_xml_db_mutex);
+			if (! common_sasl_user_add (sasl_backend, 
+						    /* sasl user */
+						    auth_id,
+						    /* sasl password */
+						    additional_value,
+						    /* no server name */
+						    serverName,
+						    /* mutex */
+						    &sasl_xml_db_mutex)) {
+				error ("failed to create the user %s", auth_id);
+				return false;
+			} /* end if */
+
+			/* now configure additional values */
+			if (! common_sasl_user_disable (sasl_backend,
+							auth_id, serverName, disabled, &sasl_xml_db_mutex)) {
+				error ("failed to set disabled state to user, unable to create the user");
+
+				/* failed to disabled the operation, remote the user */
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				return false;
+			} /* end if */
+
+			/* now configure remote administration support */
+			if (! common_sasl_enable_remote_admin (sasl_backend,
+							       auth_id, serverName, remote_admin, &sasl_xml_db_mutex)) {
+				error ("failed to configured remote administration support provided=%d, unable to create the user",
+				       remote_admin);
+
+				/* failed to disabled the operation, remote the user */
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				return false;
+			} /* end if */
+
+			return true;
+
 		case 2:
 			/* remove a paritcular sasl user */
 			return common_sasl_user_remove (sasl_backend, 
@@ -72,6 +101,7 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 		/* operation not implemented */
 		return false;
 		
+		
 	
 }
 
@@ -84,7 +114,11 @@ XmlRpcMethodResponse * __operate_sasl_user_5_string_string_bool_bool_int (XmlRpc
 	int    result = false;
 
 	/* call to the user implementation */
-	result = operate_sasl_user_5_string_string_bool_bool_int (method_call_get_param_value_as_string (method_call, 0), method_call_get_param_value_as_string (method_call, 1), method_call_get_param_value_as_bool (method_call, 2), method_call_get_param_value_as_bool (method_call, 3), method_call_get_param_value_as_int (method_call, 4),  &fault_error, &fault_code, channel);
+	result = operate_sasl_user_5_string_string_bool_bool_int (method_call_get_param_value_as_string (method_call, 0), 
+								  method_call_get_param_value_as_string (method_call, 1), 
+								  method_call_get_param_value_as_int (method_call, 2), 
+								  method_call_get_param_value_as_int (method_call, 3), 
+								  method_call_get_param_value_as_int (method_call, 4),  &fault_error, &fault_code, channel);
 
 	/* check error reply looking at the fault_error */
 	if (fault_error != NULL) {
