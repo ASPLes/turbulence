@@ -365,9 +365,11 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				db->allowed_admins = turbulence_db_list_open (&err, ATTR_VALUE (node, "remote-admins"), NULL);
 			} else {
 				/* relative, try to load */
-				path               = turbulence_base_dir (ATTR_VALUE(node, "location"));
-				db->allowed_admins = turbulence_db_list_open (&err, path, ATTR_VALUE (node, "remote-admins"), NULL);
-				axl_free (path);
+				path               = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "remote-admins"));
+				if (path != NULL) {
+					db->allowed_admins = turbulence_db_list_open (&err, path, NULL);
+					axl_free (path);
+				} /* end if */
 			} /* end if */
 			
 			if (db->allowed_admins == NULL) {
@@ -1386,6 +1388,26 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 		/* requested validation for a particular database, get
 		 * a reference */
 		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+
+	/* check to report errors */
+	if (db == NULL) {
+		error ("Unable to find associated database for the serverName='%s'",
+		       serverName ? serverName : "none");
+		return false;
+	} /* end if */
+
+	if (! db->remote_admin) {
+		error ("Requested to manage a SASL db associated to serverName='%s' which is not configured to do so",
+		       serverName ? serverName : "none");
+		return false;
+	}
+
+	if (! turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+		error ("Requested to manage a SASL db associated to serverName='%s' with auth_id='%s' not allowed",
+		       serverName ? serverName : "none",
+		       auth_id ? auth_id : "none");
+		return false;
 	}
 
 	/* now check remote admin support (the following code relay on
