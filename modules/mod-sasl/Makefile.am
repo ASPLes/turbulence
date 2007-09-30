@@ -10,7 +10,7 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_get_users.h sasl_radmin_get_users.c \
 	sasl_radmin_struct_sasluser_xml_rpc.h sasl_radmin_struct_sasluser_xml_rpc.c \
 	sasl_radmin_array_sasluserarray_xml_rpc.h sasl_radmin_array_sasluserarray_xml_rpc.c \
-	sasl_radmin_operate_sasl_user_string_string_int.c sasl_radmin_operate_sasl_user_string_string_int.h \
+	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.c sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
 	sasl_radmin_types.h
 
 lib_LTLIBRARIES   = mod-sasl.la
