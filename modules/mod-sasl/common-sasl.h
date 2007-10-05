@@ -78,6 +78,18 @@ bool      common_sasl_user_add       (SaslAuthBackend  * sasl_backend,
 				      const char       * serverName, 
 				      VortexMutex      * mutex);
 
+bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
+					    const char      * auth_id,
+					    const char      * new_password,
+					    const char      * serverName,
+					    VortexMutex     * mutex);
+
+bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
+					       const char       * auth_id, 
+					       const char       * new_auth_id,
+					       const char       * serverName, 
+					       VortexMutex      * mutex);
+
 bool      common_sasl_user_disable      (SaslAuthBackend  * sasl_backend, 
 					 const char       * auth_id, 
 					 const char       * serverName,
