@@ -751,6 +751,48 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 }
 
 /** 
+ * @brief Common implementation to encode password stored.
+ * 
+ * @param format The format to be used.
+ * @param password 
+ * @param release 
+ * 
+ * @return 
+ */
+char * _common_sasl_encode_password (SaslStorageFormat format, const char * password, bool * release)
+{
+	char * enc_password;
+
+	/* according to the format encode */
+	switch (format) {
+	case SASL_STORAGE_FORMAT_MD5:
+		/* redifine values */
+		enc_password = vortex_tls_get_digest (VORTEX_MD5, password);
+		*release     = true;
+		break;
+	case SASL_STORAGE_FORMAT_SHA1:
+		/* redifine values */
+		enc_password = vortex_tls_get_digest (VORTEX_SHA1, password);
+		*release     = true;
+		break;
+	case SASL_STORAGE_FORMAT_PLAIN:
+		/* plain do not require additional format */
+		enc_password = (char*) password;
+		*release     = false;
+		break;
+	default:
+		/* option not supported */
+		break;
+	} /* end switch */
+
+	/* error, unable to find the proper keying material
+	 * encoding configuration */
+	error ("unable to find the proper format for keying material (inside sasl.conf)");
+	*release = false;
+	return NULL;
+} /* end _common_sasl_encode_password */
+
+/** 
  * @brief Allows to add the provided user under the database
  * associated to the provided serverName. 
  *
@@ -810,29 +852,12 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 
 	/* encode the password received according to the encoding
 	 * configured */
-	switch (db->format) {
-	case SASL_STORAGE_FORMAT_MD5:
-		/* redifine values */
-		enc_password = vortex_tls_get_digest (VORTEX_MD5, password);
-		release      = true;
-		break;
-	case SASL_STORAGE_FORMAT_SHA1:
-		/* redifine values */
-		enc_password = vortex_tls_get_digest (VORTEX_SHA1, password);
-		release      = true;
-		break;
-	case SASL_STORAGE_FORMAT_PLAIN:
-		/* plain do not require additional format */
-		enc_password = (char*) password;
-		release      = false;
-		break;
-	default:
+	enc_password = _common_sasl_encode_password (db->format, password, &release);
+	if (enc_password == NULL) {
 		/* unlock the mutex */
 		UNLOCK;
-
-		/* error, unable to find the proper keying material
-		 * encoding configuration */
-		error ("unable to find the proper format for keying material (inside sasl.conf)");
+		
+		/* failed to encode */
 		return false;
 	} /* end switch */
 
@@ -869,6 +894,215 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	UNLOCK;
 
 	/* return result */
+	return result;
+}
+
+/** 
+ * @brief Allows to change password associated to the provided auth
+ * id, inside the context of serverName. 
+ * 
+ * @param sasl_backend The sasl backend where the operation will be
+ * performed.
+ *
+ * @param auth_id The sasl user id that will change its password.
+ *
+ * @param new_password The new password to configure.
+ *
+ * @param serverName The serverName context the operation will be
+ * performed.
+ *
+ * @param mutex Optional mutex to lock the backend implementation.
+ * 
+ * @return true if the operation was performed, otherwise false is
+ * returned.
+ */
+bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
+					    const char      * auth_id,
+					    const char      * new_password,
+					    const char      * serverName,
+					    VortexMutex     * mutex)
+{
+	axlNode    * node;
+	const char * user_id;
+	SaslAuthDb * db;
+	char       * enc_password;
+	bool         release = false;
+	bool         result;
+
+	/* return if minimum parameters aren't found. */
+	if (sasl_backend == NULL ||
+	    auth_id      == NULL) {
+		return false;
+	}
+
+	/* lock the mutex */
+	LOCK;
+
+	/* get the appropiate database */
+	if (serverName == NULL)
+		db = sasl_backend->default_db;
+	else {
+		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+	
+	/* check if the database was found */
+	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+		
+		return false;
+	}
+
+	/* according to the database backend, do */
+	if (db->type == SASL_BACKEND_XML) {
+		node     = axl_doc_get ((axlDoc*) db->db, "/sasl-auth-db/auth");
+
+		while (node != NULL) {
+			
+			/* get the user */
+			user_id = ATTR_VALUE (node, "user_id");
+
+			/* check the user id */
+			if (axl_cmp (auth_id, user_id)) {
+
+				/* user found change password */
+				enc_password = _common_sasl_encode_password (db->format, new_password, &release);
+				
+				/* replace attribute */
+				axl_node_remove_attribute (node, "password");
+				axl_node_set_attribute (node, "password", enc_password);
+				if (! HAS_ATTR_VALUE (node, "password", enc_password)) {
+					/* unlock the mutex */
+					UNLOCK;
+
+					return false;
+				}
+
+				/* release if signaled */
+				if (release)
+					axl_free (enc_password);
+
+				/* dump the db */
+				result = axl_doc_dump_pretty_to_file ((axlDoc*) db->db, db->db_path, 3);
+
+				/* unlock the mutex */
+				UNLOCK;
+
+				return result;
+			} /* end if */
+			
+			/* get next node */
+			node     = axl_node_get_next (node);
+
+		} /* end while */
+
+		/* unlock the mutex */
+		UNLOCK;
+		
+		return false;
+	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
+
+	return false;
+}
+
+/** 
+ * @brief Allows to change the associated sasl user id, keeping all
+ * settings associated.
+ * 
+ * @param sasl_backend The sasl backend where the operation will be
+ * performed.
+ *
+ * @param auth_id The associated sasl auth id to be edited.
+ *
+ * @param new_auth_id The new sasl auth id to be placed.
+ *
+ * @param serverName The serverName context that identifies the database to use.
+ *
+ * @param mutex Optional mutex used to lock the backend while
+ * operating.
+ * 
+ * @return true if the edit operation was properly done, otherwise
+ * false if it fails. The operation will also fails if the user
+ * doesn't exists.
+ */
+bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
+					       const char       * auth_id, 
+					       const char       * new_auth_id,
+					       const char       * serverName, 
+					       VortexMutex      * mutex)
+{
+	axlNode    * node;
+	SaslAuthDb * db;
+	axlDoc     * auth_db;
+	bool         result = true;
+
+	/* return if minimum parameters aren't found. */
+	if (sasl_backend == NULL)
+		return false;
+
+	/* change if both user ids are equal */
+	if (axl_cmp (auth_id, new_auth_id))
+		return true;
+
+	/* lock the mutex */
+	LOCK;
+
+	/* get the appropiate database */
+	if (serverName == NULL)
+		db = sasl_backend->default_db;
+	else {
+		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
+	}
+	
+	/* check if the database was found, so the user doesn't
+	 * exists, hence it is at least disabled */
+	if (db == NULL) {
+		/* unlock the mutex */
+		UNLOCK;
+		return true; 
+	}
+
+	/* according to the database backend, do */
+	if (db->type == SASL_BACKEND_XML) {
+		
+		/* search the user */
+		auth_db  = (axlDoc *) db->db;
+		node     = axl_doc_get (auth_db, "/sasl-auth-db/auth");
+		while (node != NULL) {
+
+			if (axl_cmp (ATTR_VALUE (node, "user_id"), auth_id)) {
+
+				/* user found, change its value */
+				axl_node_remove_attribute (node, "user_id");
+				axl_node_set_attribute (node, "user_id", new_auth_id);
+
+				/* remove the user from the remote administration interface */
+				if (turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+					turbulence_db_list_remove (db->allowed_admins, auth_id);
+					turbulence_db_list_add (db->allowed_admins, new_auth_id);
+				} /* end if */
+
+				/* unlock the mutex */
+				UNLOCK;
+				
+				return true;
+			} /* end if */
+
+			/* get next node */
+			node     = axl_node_get_next (node);
+		
+		} /* end while */
+
+	} /* end if */
+
+	/* unlock the mutex */
+	UNLOCK;
+		
+	/* return true, the user is disabled mainly because it
+	 * doesn't exists */
 	return result;
 }
 
