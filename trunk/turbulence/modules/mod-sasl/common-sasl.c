@@ -761,7 +761,7 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
  */
 char * _common_sasl_encode_password (SaslStorageFormat format, const char * password, bool * release)
 {
-	char * enc_password;
+	char * enc_password = NULL;
 
 	/* according to the format encode */
 	switch (format) {
@@ -782,14 +782,15 @@ char * _common_sasl_encode_password (SaslStorageFormat format, const char * pass
 		break;
 	default:
 		/* option not supported */
+		/* error, unable to find the proper keying material
+		 * encoding configuration */
+		error ("unable to find the proper format for keying material (inside sasl.conf)");
+		*release = false;
 		break;
 	} /* end switch */
 
-	/* error, unable to find the proper keying material
-	 * encoding configuration */
-	error ("unable to find the proper format for keying material (inside sasl.conf)");
-	*release = false;
-	return NULL;
+	return enc_password;
+	
 } /* end _common_sasl_encode_password */
 
 /** 
