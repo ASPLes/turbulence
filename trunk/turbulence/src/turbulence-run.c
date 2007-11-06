@@ -112,6 +112,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		module = turbulence_module_open (ATTR_VALUE (axl_doc_get_root (doc), "location"));
 		if (module == NULL) {
 			wrn ("unable to open module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
+			goto next;
 		} /* end if */
 
 		/* init the module */

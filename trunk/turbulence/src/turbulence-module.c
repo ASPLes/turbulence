@@ -88,7 +88,7 @@ TurbulenceModule * turbulence_module_open (const char * module)
 	/* check loaded module */
 	if (result->handle == NULL) {
 		/* unable to load the module */
-		error ("unable to load module (%s): %s", dlerror ());
+		error ("unable to load module (%s): %s", module, dlerror ());
 
 		/* free the result and return */
 		turbulence_module_free (result);
@@ -198,7 +198,7 @@ void               turbulence_module_free (TurbulenceModule * module)
 		return;
 
 	/* call to close the module */
-	if (module->def->close != NULL) {
+	if (module->def != NULL && module->def->close != NULL) {
 		msg ("closing module: %s", module->def->mod_name);
 		module->def->close ();
 	}
