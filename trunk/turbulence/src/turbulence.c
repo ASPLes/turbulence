@@ -276,11 +276,6 @@ void turbulence_cleanup ()
 {
 	msg ("cleaning up..");
 
-	/* terminate all modules */
-	turbulence_module_cleanup ();
-	turbulence_config_cleanup ();
-	turbulence_db_list_cleanup ();
-
 	/* terminate vortex */
 	msg ("terminating vortex library..");
 	vortex_exit ();
@@ -291,6 +286,15 @@ void turbulence_cleanup ()
 	/* terminate exarg */
 	msg ("terminating exarg library..");
 	exarg_end ();
+
+	/* terminate all modules */
+	turbulence_config_cleanup ();
+
+	/* and finally the turbulence module loading. This must be
+	 * done after vortex termination to avoid unmapping memory
+	 * region used by handlers configured inside vortex */
+	turbulence_module_cleanup ();
+	turbulence_db_list_cleanup ();
 
 	/* the last module to clean up */
 	turbulence_log_cleanup ();
