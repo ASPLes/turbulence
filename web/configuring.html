@@ -20,7 +20,8 @@
  <li><a href="#configuring_log_files">Configuring turbulence log files</a></li>
  <li><a href="#modules_conf">Turbulence modules configuration</a></li>
  <li><a href="#profile_path_conf">Profile path configuration</a></li>
- </ol>
+ <li><a href="#flags_allow_if_success">Profile path configuration: flags supported by &lt;allow> and &lt;if-success></a></li>
+</ol>
   
 <h2> <a name="how_is_configured">How turbulence is configured (configuration file location)</a></h2>
   
@@ -316,21 +317,29 @@ connection is rejected. </p>
  the connection in other to allow the connection to accept a profile
  or the content of the following profiles.</p>
 
+<h2> <a name="flags_allow_if_success">Profile path configuration: flags supported by &lt;allow> and &lt;if-success></a></h2>
+
+<p>The following are the flags supported by <b>&lt;allow></b> and <b>&lt;if-success></b>:</p>
+
 <ol>
  <li><p><b>preconnmark</b>: if used, it means that the connection must
  have the "mark" provided before the profile can be accepted to be
- initiated.</p></li>
+ initiated. SUPPORTED: &lt;allow>, &lt;if-success></p></li>
  
  <li><p><b>connmark</b>: can only be used from &lt;if-success> nodes, and
  allows to protect the profile path content inside the
  &lt;if-success> node, enforcing to not only create a channel under
- the profile provided but also having the mark. </p>
+ the profile provided but also having the mark. SUPPORTED: &lt;if-success></p></li>
 
  <p>This is particular
  useful for the SASL case because having a SASL channel created
  isn't a warranty of a connection authenticated. Thus, an additional
  mark is required to properly ensure that the connection was
  authenticated.</p></li>
+
+ <li><p><b>max-per-con</b>: allows to configure the maximum amount of
+ channels running the profile provided in the particular connection
+instance. SUPPORTED: &lt;allow>, &lt;if-success></p></li>
 
 </ol>
  
