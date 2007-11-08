@@ -76,6 +76,10 @@ struct _TurbulencePPathItem {
 	/* optional expression to match a mark that must have a
 	 * connection holding the profile */
 	char * connmark;
+	
+	/* optional configuration that allows to configure the number
+	   number of channels opened with a particular profile */
+	int    max_per_con;
 
 	/* optional expression to match a pre-mark that must have the
 	 * connection before accepting the profile. */
@@ -396,6 +400,14 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 		result->preconnmark = axl_strdup (ATTR_VALUE (node, "preconnmark"));
 	}
 
+	/* get max per con flag */
+	if (HAS_ATTR (node, "max-per-conn")) {
+		/* get the value and normalize */
+		result->max_per_con = atoi (ATTR_VALUE (node, "max-per-conn"));
+		if (result->max_per_con < 0)
+			result->max_per_con = 0;
+	} /* end if */
+
 	/* configure the profile path item type */
 	if (NODE_CMP_NAME (node, "allow")) {
 		result->type = PROFILE_ALLOW;
@@ -458,6 +470,18 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 				/* the mark doesn't match the connection */
 				iterator++;
 				continue; 
+			} /* end if */
+		} /* end if */
+
+		/* check item count */
+		if (item->max_per_con > 0) {
+			/* check if the profile was used more than the
+			 * value configured */
+
+			if (vortex_connection_get_channel_count (connection, (const char *) item->profile) >= item->max_per_con) {
+				/* too much channels opened for the same uri */
+				iterator++;
+				continue;
 			} /* end if */
 		} /* end if */
 

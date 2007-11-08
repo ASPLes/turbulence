@@ -66,13 +66,15 @@
 	  src            CDATA #IMPLIED >
 
 <!ATTLIST if-success 
-          profile     CDATA #REQUIRED
-          connmark    CDATA #IMPLIED 
-          preconnmark CDATA #IMPLIED >
+          profile      CDATA #REQUIRED
+          connmark     CDATA #IMPLIED
+	  max-per-conn CDATA #IMPLIED 
+          preconnmark  CDATA #IMPLIED >
 	  
 <!ATTLIST allow
-          profile     CDATA #REQUIRED 
-          preconnmark CDATA #IMPLIED >
+          profile      CDATA #REQUIRED 
+	  max-per-conn CDATA #IMPLIED
+          preconnmark  CDATA #IMPLIED >
           
 
 
