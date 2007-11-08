@@ -335,8 +335,6 @@ bool turbulence_run_config    ()
 			/* flag that at least one listener was
 			 * created */
 			at_least_one_listener = true;
-			
-
 		next:
 			/* get the next port */
 			port = axl_node_get_next_called (port, "port");

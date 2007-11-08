@@ -30,12 +30,14 @@ lib_LTLIBRARIES          = libturbulence.la
 libturbulenceinclude_HEADERS    = \
 	turbulence-moddef.h \
 	turbulence.h \
+	turbulence-handlers.h \
 	turbulence-run.h \
 	turbulence-module.h \
 	turbulence-log.h \
 	turbulence-ppath.h \
 	turbulence-config.h \
-	turbulence-db-list.h
+	turbulence-db-list.h \
+	turbulence-conn-mgr.h
 
 libturbulence_la_SOURCES = \
 	turbulence.c \
@@ -44,7 +46,8 @@ libturbulence_la_SOURCES = \
 	turbulence-module.c \
 	turbulence-log.c \
 	turbulence-ppath.c \
-	turbulence-db-list.c
+	turbulence-db-list.c \
+	turbulence-conn-mgr.c
 
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'

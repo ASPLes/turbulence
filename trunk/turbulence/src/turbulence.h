@@ -53,6 +53,7 @@
 #include <exarg.h>
 
 /* local includes */
+#include <turbulence-handlers.h>
 #include <turbulence-moddef.h>
 #include <turbulence-config.h>
 #include <turbulence-run.h>
@@ -60,6 +61,7 @@
 #include <turbulence-log.h>
 #include <turbulence-ppath.h>
 #include <turbulence-db-list.h>
+#include <turbulence-conn-mgr.h>
 
 /**
  * \addtogroup turbulence

@@ -145,6 +145,7 @@ bool turbulence_init (int argc, char ** argv)
 	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 
 	vortex_mutex_create (&turbulence_exit_mutex);
+	turbulence_conn_mgr_init ();
 	turbulence_module_init ();
 	turbulence_db_list_init ();
 
@@ -275,6 +276,9 @@ void turbulence_exit (int value)
 void turbulence_cleanup ()
 {
 	msg ("cleaning up..");
+
+	/* unref all connections */
+	turbulence_conn_mgr_cleanup ();
 
 	/* terminate vortex */
 	msg ("terminating vortex library..");
@@ -426,7 +430,7 @@ void turbulence_error (const char * file, int line, const char * format, ...)
 }
 
 /** 
- * @bried Allows to check if the debug is activated (\ref msg type).
+ * @brief Allows to check if the debug is activated (\ref msg type).
  * 
  * @return true if activated, otherwise false is returned.
  */
@@ -921,6 +925,8 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  *  - \ref turbulence_moddef
  *  - \ref turbulence_config
  *  - \ref turbulence_db_list
+ *  - \ref turbulence_conn_mgr
+ *  - \ref turbulence_handlers
  */
 
 
