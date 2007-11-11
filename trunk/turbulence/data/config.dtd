@@ -1,5 +1,5 @@
 <!-- main configuration setting -->
-<!ELEMENT turbulence (global-settings, modules, features, profile-path-configuration)>
+<!ELEMENT turbulence (global-settings, modules, features?, profile-path-configuration)>
 
 <!-- global-settings -->
 <!ELEMENT global-settings (ports, 
@@ -51,7 +51,7 @@
 <!ATTLIST directory src   CDATA #REQUIRED>
 
 <!-- features -->
-<!ELEMENT features       (request-x-client-close)>
+<!ELEMENT features       (request-x-client-close?)>
 
 <!ELEMENT request-x-client-close       EMPTY>
 <!ATTLIST request-x-client-close value (yes|no) #REQUIRED>
