@@ -209,6 +209,7 @@ bool turbulence_run_config    ()
 	VortexConnection * con_listener;
 
 	/* mod turbulence dtd */
+	char             * features = NULL;
 	char             * dtd_file;
 	char             * string_aux;
 	int                int_aux;
@@ -276,6 +277,36 @@ bool turbulence_run_config    ()
 		
 		return false;
 	}
+
+	/* check features here */
+	node = axl_doc_get (doc, "/turbulence/features");
+	if (node != NULL) {
+		
+		/* get first node posibily containing a feature */
+		node = axl_node_get_first_child (node);
+		while (node != NULL) {
+			/* check for supported features */
+			if (NODE_CMP_NAME (node, "request-x-client-close") && HAS_ATTR_VALUE (node, "value", "yes")) {
+				string_aux = features;
+				features   = axl_concat (string_aux, string_aux ? " x-client-close" : "x-client-close");
+				axl_free (string_aux);
+				msg ("feature found: x-client-close");
+			} /* end if */
+
+			/* ENTER HERE new features */
+
+			/* process next feature */
+			node = axl_node_get_next (node);
+
+		} /* end while */
+
+		/* now set features (if defined) */
+		if (features != NULL) {
+			vortex_greetings_set_features (features);
+			axl_free (features);
+		}
+
+	} /* end if */
 
 	/* now load all modules found */
 	turbulence_run_load_modules (doc, dtd);

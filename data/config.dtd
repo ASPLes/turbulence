@@ -1,5 +1,5 @@
 <!-- main configuration setting -->
-<!ELEMENT turbulence (global-settings, modules, profile-path-configuration)>
+<!ELEMENT turbulence (global-settings, modules, features, profile-path-configuration)>
 
 <!-- global-settings -->
 <!ELEMENT global-settings (ports, 
@@ -35,6 +35,7 @@
 <!ATTLIST on-bad-signal action (hold|ignore|quit|exit) #REQUIRED>
 
 <!ELEMENT clean-start       EMPTY>
+<!ATTLIST clean-start   value  (yes|no) #REQUIRED>
 <!ATTLIST on-bad-signal action (yes|no) #REQUIRED>
 
 <!ELEMENT connections       (max-connections)>
@@ -48,6 +49,12 @@
 
 <!ELEMENT directory       EMPTY>
 <!ATTLIST directory src   CDATA #REQUIRED>
+
+<!-- features -->
+<!ELEMENT features       (request-x-client-close)>
+
+<!ELEMENT request-x-client-close       EMPTY>
+<!ATTLIST request-x-client-close value (yes|no) #REQUIRED>
 
 <!-- listener to be started -->
 <!ELEMENT listener    (name+)>
