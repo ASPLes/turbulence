@@ -386,58 +386,6 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 }
 
 /** 
- * @brief Allows to get a snapshot of the current status of items
- * stored on the provided db list.
- *
- * This function is useful if you want to have a reference to all
- * items stored on a particular time without taking into consideration
- * race conditions, etc.
- * 
- * @param list The list to be used to produce the snapshot list.
- * 
- * @return A refernece to a newly allocated axlList or NULL if it
- * fails. The axl list will contains strings stored. Using
- * axl_list_free to release the list returned.
- */
-axlList          * turbulence_db_list_status (TurbulenceDbList * list)
-{
-	axlNode * node;
-	axlList * result;
-
-	/* check values received */
-	if (list == NULL)
-		return NULL;
-
-	/* reload the document */
-	turbulence_db_list_reload (list);
-	
-	/* lock */
-	vortex_mutex_lock (&(list->mutex));
-
-	/* create the list */
-	result = axl_list_new (axl_list_always_return_1, axl_free);
-
-	/* get the first node */
-	node = list->first;
-	while (node != NULL) {
-
-		/* add the item found */
-		axl_list_add (result, axl_strdup (ATTR_VALUE (node, "value")));
-		
-		/* get next node */
-		node = axl_node_get_next_called (node, "item");
-		
-	} /* end while */
-	/* unlock */
-	vortex_mutex_unlock (&(list->mutex));
-
-	/* return the content */
-	return result;
-}
-
-
-
-/** 
  * @brief Allows to remove the provided content (first reference) on
  * the provided db list.
  * 
