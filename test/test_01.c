@@ -113,7 +113,7 @@ bool test_01 ()
 	}
 
 	/* get the list */
-	list = turbulence_db_list_status (dblist);
+	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 3) {
 		printf ("Expected to a list with 3 items but it wasn't found..\n");
 		return false;
@@ -153,7 +153,7 @@ bool test_01 ()
 	}
 
 	/* get the list */
-	list = turbulence_db_list_status (dblist);
+	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 2) {
 		printf ("Expected to a list with 2 items but it wasn't found..\n");
 		return false;
@@ -189,7 +189,7 @@ bool test_01 ()
 	}
 
 	/* get the list */
-	list = turbulence_db_list_status (dblist);
+	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 1) {
 		printf ("Expected to a list with 1 items but it wasn't found..\n");
 		return false;
@@ -216,7 +216,7 @@ bool test_01 ()
 	} /* end if */
 
 	/* get the list */
-	list = turbulence_db_list_status (dblist);
+	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 0) {
 		printf ("Expected to find empty list but it wasn't found..\n");
 		return false;
