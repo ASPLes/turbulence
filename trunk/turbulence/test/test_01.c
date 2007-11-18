@@ -41,6 +41,12 @@
 /* local include to check mod-sasl */
 #include <common-sasl.h>
 
+bool test_01_remove_all (const char * item_stored, axlPointer user_data)
+{
+	/* just remove dude! */
+	return true;
+}
+
 /** 
  * @brief Check the turbulence db list implementation.
  * 
@@ -226,6 +232,41 @@ bool test_01 ()
 	/* close the db list */
 	turbulence_db_list_close (dblist);
 
+	/* create a new turbulence db list */
+	dblist = turbulence_db_list_open (&err, "test_01.xml", NULL);
+	if (dblist == NULL) {
+		printf ("Failed to open db list, %s\n", axl_error_get (err));
+		axl_error_free (err);
+		return false;
+	} /* end if */
+
+	/* add items */
+	turbulence_db_list_add (dblist, "TEST");
+	turbulence_db_list_add (dblist, "TEST 2");
+	turbulence_db_list_add (dblist, "TEST 3");
+	turbulence_db_list_add (dblist, "TEST 4");
+	turbulence_db_list_add (dblist, "TEST 5");
+	
+	/* check the count of items inside */
+	if (turbulence_db_list_count (dblist) != 5) {
+		printf ("Expected to find 5 items stored in the db-list, but found: %d\n", 
+			turbulence_db_list_count (dblist));
+		return false;
+	} /* end if */
+
+	/* remove all items */
+	turbulence_db_list_remove_by_func (dblist, test_01_remove_all, NULL);
+
+	/* check the count of items inside */
+	if (turbulence_db_list_count (dblist) != 0) {
+		printf ("Expected to find 0 items stored in the db-list, but found: %d\n", 
+			turbulence_db_list_count (dblist));
+		return false;
+	} /* end if */
+
+	/* close the db list */
+	turbulence_db_list_close (dblist);
+	
 	/* terminate the db list */
 	turbulence_db_list_cleanup ();
 

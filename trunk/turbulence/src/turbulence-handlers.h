@@ -66,6 +66,21 @@
  */
 typedef bool (*TurbulenceConnMgrFilter) (VortexConnection * conn, axlPointer user_data);
 
+/** 
+ * @brief A function which is called to know if an item must be
+ * removed from the turbulence-db list. This handler is used by \ref
+ * turbulence_db_list_remove_by_func.
+ * 
+ * @param item_stored The item which is being requested to be removed or not.
+ *
+ * @param user_data User defined pointer passed to the function and
+ * configured at \ref turbulence_db_list_remove_by_func.
+ * 
+ * @return true if the item must be removed, otherwise false must be
+ * returned.
+ */
+typedef bool (*TurbulenceDbListRemoveFunc) (const char * item_stored, axlPointer user_data);
+
 #endif
 
 /**

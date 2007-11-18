@@ -450,6 +450,78 @@ bool               turbulence_db_list_remove (TurbulenceDbList * list,
 }
 
 /** 
+ * @brief Allows to produce a remove operation (or several remove
+ * operation) using an external function which is called to check if
+ * the item should be removed or not.
+ * 
+ * @param list The list to be filtered by removing all items selected by the provided function.
+ *
+ * @param func A handler configure to check if an item must be removed
+ * or not. If the function returns true the item will be
+ * removed. Otherwise it will remain.
+ *
+ * @param user_data User defined pointer which is passed to the filter
+ * (remove) function.
+ * 
+ * @return true if the operation was fully completed, otherwise false
+ * is returned.
+ */
+bool               turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
+						      TurbulenceDbListRemoveFunc   func,
+						      axlPointer                   user_data)
+{
+	axlNode * node;
+	axlNode * nodeAux;
+
+	/* check values received */
+	if (list == NULL)
+		return false;
+	if (func == NULL)
+		return false;
+
+	/* reload the document */
+	turbulence_db_list_reload (list);
+	
+	/* lock */
+	vortex_mutex_lock (&(list->mutex));
+
+	/* get the first node */
+	node = list->first;
+	while (node != NULL) {
+		
+		/* check the item */
+		if (func (ATTR_VALUE (node, "value"), user_data)) {
+
+			/* get next node */
+			nodeAux = axl_node_get_next_called (node, "item");
+			
+			/* found the node holding the value */
+			axl_node_remove (node, true);
+
+			/* update first node */
+			list->first = axl_doc_get_root (list->doc);
+			if (list->first != NULL)
+				list->first = axl_node_get_first_child (list->first);
+
+			/* update node */
+			node = nodeAux;
+			continue;
+
+		} /* end if */
+
+		/* get next node */
+		node = axl_node_get_next_called (node, "item");
+	} /* end if */
+
+	/* unlock */
+	vortex_mutex_unlock (&(list->mutex));
+
+	/* item removed either because it wasn't found or because it
+	 * was really removed */
+	return true;
+}
+
+/** 
  * @brief Allows to implement an edit operation on the provided dblist
  * in an atomic way.
  *
