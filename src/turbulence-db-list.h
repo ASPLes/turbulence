@@ -65,6 +65,10 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 bool               turbulence_db_list_remove (TurbulenceDbList * list,
 					      const char       * value);
 
+bool               turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
+						      TurbulenceDbListRemoveFunc   func,
+						      axlPointer                   user_data);
+
 bool               turbulence_db_list_edit   (TurbulenceDbList * list,
 					      const char       * oldValue,
 					      const char       * newValue);
