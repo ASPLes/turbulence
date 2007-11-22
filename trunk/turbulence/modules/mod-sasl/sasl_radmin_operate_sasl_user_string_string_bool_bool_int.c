@@ -23,12 +23,13 @@ extern VortexMutex       sasl_xml_db_mutex;
 
 int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, bool remote_admin, bool disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
 {
+	
 		/* get the serverName from the current channel */
 		const char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 
 		switch (operation) {
 		case 1:
-
+			
 			msg ("Received accepted request to create user: %s, remote_admin=%d, disabled=%d",
 			     auth_id, remote_admin, disabled);
 
@@ -122,6 +123,18 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 			/* check if the provided user is
 			 * administrator */
 			return common_sasl_is_remote_admin_enabled (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+		case 7:
+			/* now configure additional values */
+			if (! common_sasl_user_disable (sasl_backend,
+							auth_id, serverName, disabled, &sasl_xml_db_mutex)) {
+				error ("failed to set disabled state to user, unable to create the user");
+
+				/* failed to disabled the operation, remote the user */
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				return false;
+			} /* end if */
+			
+			return true;
 		default:
 			/* operation not implemented */
 			return false;
@@ -129,10 +142,6 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 	
 		/* operation not implemented */
 		return false;
-		
-	
-		
-		
 	
 }
 
