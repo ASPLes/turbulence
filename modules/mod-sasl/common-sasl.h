@@ -72,6 +72,11 @@ bool      common_sasl_user_exists    (SaslAuthBackend   * sasl_backend,
 				      axlError         ** err,
 				      VortexMutex       * mutex);
 
+bool      common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
+					 const char        * serverName,
+					 axlError         ** err,
+					 VortexMutex       * mutex);
+
 bool      common_sasl_user_add       (SaslAuthBackend  * sasl_backend, 
 				      const char       * auth_id, 
 				      const char       * password, 

@@ -777,6 +777,55 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 }
 
 /** 
+ * @brief Allows to check if the serverName provided recognized
+ * explicitly by the sasl backend. If the function returns true that
+ * means there is a auth-db configuration activated for the provided
+ * serverName. 
+ * 
+ * @param sasl_backend The SASL backend where the search operation
+ * will be performed.
+ *
+ * @param serverName The server name to configure the user database
+ * where to lookup. If the value provided is null, the default
+ * database will be used.
+ * 
+ * @param err An optional reference to an axlError where an textual
+ * diagnostic error is returned if the function fails.
+ *
+ * @param mutex An optional mutex used by the library to lock the
+ * database while operating.
+ * 
+ * @return true if the user already exists, otherwise false is
+ * returned.
+ */
+bool      common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
+					 const char        * serverName,
+					 axlError         ** err,
+					 VortexMutex       * mutex)
+{
+	bool result;
+
+
+	/* return if minimum parameters aren't found. */
+	if (sasl_backend == NULL ||
+	    serverName   == NULL) {
+		axl_error_new (-1, "SASL backend or serverName are null, unable to operate", NULL, err);
+		return false;
+	}
+
+	/* lock the mutex */
+	LOCK;
+
+	/* get the appropiate database */
+	result = axl_hash_exists (sasl_backend->dbs, (axlPointer) serverName);
+
+	/* unlock the mutex */
+	UNLOCK;
+
+	return result;
+}
+
+/** 
  * @brief Common implementation to encode password stored.
  * 
  * @param format The format to be used.
