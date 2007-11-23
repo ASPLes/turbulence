@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+<link rel="stylesheet" type="text/css" href="turbulence.css">
+<title>Turbulence: The BEEP application server, BEEP server, BEEP listener, BEEP server side </title>
+</head>
+
+<body>
+<div class="content">
+<a href="index.html"><img alt="[TURBULENCE HEADER]" src="images/turbulence-compact-header.png" /></a>
+<a class="alt-logo" href="http://www.aspl.es"><img alt="[ASPL LOGO]" src="images/aspl-alt-compat-logo.png"></a>
+
+<h1>Turbulence Db-List management</h1>
+
+<h2>Index</h2>
+
+ <ol>
+ <li><a href="#intro">Introduction</a></li>
+</ol>
+
+<h2><a name="intro">Site administrator introduction</a></h2>
+
+<p>Turbulence Db-list is an abstraction that allows to maintain a list
+of items in a persistent storage. It is a general purpose list of items
+that could be used by turbulence module developers as a convenience
+and unified interface to allow module configurations to end users and
+administrators.</p>
+
+<p>Currently it only supports a xml backend (through the Axl Library)
+but it is expected to provide more backend while maintaining the API
+(mysql, DBberkeley, etc).</p>
+
+<p>From a module developer's view, the Turbulence Db-List has an API
+that allows to read/manage Db-List instances, where all changes are
+stored and, if changes happens in the storage, they are detected and
+reloaded transparently to the module. The API is fully described here: <a
+href="http://www.turbulence.ws/html/index.html">http://www.turbulence.ws/html/index.html</a>. </p>
+
+<p>From a site administrator's view it is a file that contains
+information, list of items, used by modules installed (and in the future, metadata pointing or configuring the right persistent storage). This document is about managing
+such db-list.</p>
+
+<h2><a name="creating">Creating a db-list</a></h2>
+
+<p>You can create an empty db-list by using the following:</p>
+
+<pre>
+
+  >> tbc-dblist-mgr --touch test.xml
+  I: db list file not found, creating one: test.xml
+
+</pre>
+
+<p>As you see, the tool do not find a test.xml db-list already created
+and makes it for you. If you execute the command again, you'll find
+the tool do nothing:</p>
+
+<pre>
+
+  >> tbc-dblist-mgr --touch test.xml
+
+</pre>
+
+<p>Now add some items to the db-list for the next examples:</p>
+
+<pre>
+
+  >> tbc-dblist-mgr --add ITEM1 test.xml
+  I: done
+
+  >> tbc-dblist-mgr --add "ITEM 2" test.xml
+  I: done
+
+  >> tbc-dblist-mgr --add "ITEM1 3" test.xml
+  I: done
+
+</pre>
+
+<p>Note that, if a module has a opened reference to the db-list you
+are modifying, then the module will receive such updates in real-time
+(no reloaded or especial operation will be required by the
+module).</p>
+
+
+<h2><a name="listing">Listing the content of a db-list</a></h2>
+
+<p>To list the content just run:</p>
+
+<pre>
+
+  >> tbc-dblist-mgr --list test.xml
+  I: items found:
+    ITEM1
+    ITEM 2
+    ITEM 3
+
+</pre>
+
+<h2><a name="removing">Removing items from the db-list</a></h2>
+
+<p>Likewise adding items to the db-list, use the <b>--remove</b>
+option the delete items permanently:</p>
+
+<pre>
+
+  >> tbc-dblist-mgr --remove ITEM1 test.xml
+  I: done
+
+  >> tbc-dblist-mgr --remove "ITEM 2" test.xml
+  I: done
+
+  >> tbc-dblist-mgr --remove "ITEM1 3" test.xml
+  I: done
+
+</pre>
+
+<!-- end central section -->
+
+<div class="footer-notice">
+<div class="valid">  
+<a href="http://validator.w3.org/check?uri=referer"><img src="images/valid-html401.png" alt="Valid HTML 4.01 Transitional"></a><br>
+<a href="http://jigsaw.w3.org/css-validator/check/referer"><img src="images/vcss.png"  alt="Valid CSS!"></a>
+</div>
+<div class="footer-content">  
+ Copyright © 2007 Advanced Software Production Line, S.L.
+ All rights reversed.<br>
+ ASPL and its logo are trademarks of Advanced Software Production Line, S.L.<br>
+ Webmaster: <a href="mailto:webmaster@aspl.es">webmaster@aspl.es</a>
+</div> <!-- footer-content -->  
+</div> <!-- footer-notice -->  
+
+</div> <!-- div=content -->
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "UA-123192-8";
+urchinTracker();
+</script>
+</body> </html>
