@@ -1,17 +1,18 @@
-EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml 
+sasl_radmin_files = service_dispatch.h service_dispatch.c \
+	sasl_radmin_get_users.h sasl_radmin_get_users.c \
+	sasl_radmin_struct_sasluser_xml_rpc.h sasl_radmin_struct_sasluser_xml_rpc.c \
+	sasl_radmin_array_sasluserarray_xml_rpc.h sasl_radmin_array_sasluserarray_xml_rpc.c \
+	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.c \
+	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
+	sasl_radmin_types.h
+
+EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
 	   -DDATADIR=\""$(datadir)"\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
-
-sasl_radmin_files = service_dispatch.h service_dispatch.c \
-	sasl_radmin_get_users.h sasl_radmin_get_users.c \
-	sasl_radmin_struct_sasluser_xml_rpc.h sasl_radmin_struct_sasluser_xml_rpc.c \
-	sasl_radmin_array_sasluserarray_xml_rpc.h sasl_radmin_array_sasluserarray_xml_rpc.c \
-	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.c sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
-	sasl_radmin_types.h
 
 lib_LTLIBRARIES   = mod-sasl.la
 mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h $(sasl_radmin_files)

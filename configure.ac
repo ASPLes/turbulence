@@ -41,6 +41,8 @@ TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
 
 AC_CONFIG_AUX_DIR(.)
+dnl allow including long file names 
+AM_INIT_AUTOMAKE([1.9 tar-ustar])
 AM_INIT_AUTOMAKE(turbulence, $TURBULENCE_VERSION)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
@@ -54,7 +56,7 @@ AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.4.8) 
+PKG_CHECK_MODULES(AXL, axl >= 0.4.12) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
@@ -63,7 +65,7 @@ AXL_VERSION=`pkg-config --modversion axl`
 AC_SUBST(AXL_VERSION)
 
 dnl external dependencies
-PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.7) 
+PKG_CHECK_MODULES(VORTEX, vortex >= 1.0.11) 
 
 dnl general libries subsitution
 AC_SUBST(VORTEX_CFLAGS)

@@ -17,6 +17,7 @@
  <ol>
  <li><a href="#how_is_configured">How turbulence is configured (configuration file location)</a></li>
  <li><a href="#addresses_and_ports">Turbulence addresses and ports used</a></li>
+ <li><a href="turbulence_debuging">Debugging turbulence and clean start</a></li>
  <li><a href="#configuring_log_files">Configuring turbulence log files</a></li>
  <li><a href="#modules_conf">Turbulence modules configuration</a></li>
  <li><a href="#profile_path_conf">Profile path configuration</a></li>
@@ -105,6 +106,57 @@ properly constructed at a minimum syntax level.</p>
  served on each port. For example, you can provide TUNNEL support
  only on port 604 (though not recommended: see <a href="beep-applications-and-ports.html">Building wrong port oriented network applications</a>). </p>
 
+<h2><a name="turbulence_debuging">Debugging turbulence and clean start</a></h2>
+
+<p>During turbulence configuration you can use the <b>clean-start</b>
+feature to ensure your turbulence configuration loads a server with
+all features requested, failing to start if something goes wrong. This
+is really useful to ensure a proper startup: for example all ports are
+allocated. </p>
+
+<p>This is configured inside the <b>global-settings</b> section:</p>
+
+<pre>
+
+   &lt;<span class="node">global-settings</span>>
+      <span class="comment">&lt;!-- ... more settings ... --></span>
+
+      <span class="comment">&lt;!--  Configure the default turbulence behavior to start or stop
+            if a configuration or module error is found. By default
+            Turbulence will stop if a failure is found.
+        --></span>
+      &lt;<span class="node">clean-start</span> value=<span class="attrvalue">"yes"</span> />
+   &lt;/<span class="node">global-settings</span>>
+
+</pre>
+
+<p>Alternatively, during development or when it is found a turbulence
+bug, it is handy to configure the default action to take on server
+crash (bad signal received). This is done by configuring the following:</p>
+
+<pre>
+
+   &lt;<span class="node">global-settings</span>>
+      <span class="comment">&lt;!--  ....more settings ....  --></span>
+      <span class="comment">&lt;!--  crash settings 
+       [*] hold:   lock the current instance so a developer can attach to the
+                   process  to debug what's happening.
+
+       [*] ignore: just ignore the signal, and try to keep running.
+
+       [*] quit,exit: terminates turbulence execution.
+      --></span>
+      &lt;<span class="node">on-bad-signal</span> action=<span class="attrvalue">"hold"</span> />
+   &lt;/<span class="node">global-settings</span>>
+
+</pre>
+
+<p>The <b>"hold"</b> option is really useful for real time debugging
+because it hangs right after the signal is received. This allows to
+launch the debugger and attach to the process to see what's
+happening. Inside production environment it is recommended <b>"ignore"</b>.</p>
+
+
 <h2><a name="configuring_log_files">Configuring turbulence log files</a></h2>
 
 <p> Turbulence, its base library (libturbulence), modules and the
@@ -152,7 +204,7 @@ configured at the at the <b>&lt;global-settings></b> section:</p>
  and shows previous messages plus new messages that are considered
  to have more details.</p></li>
 
- <li><p><b>--debub3</b>: makes log output activated to include more
+ <li><p><b>--debug3</b>: makes log output activated to include more
  details at the place it was launched (file and line), process pid,
  etc.</p></li>
 

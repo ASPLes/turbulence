@@ -33,6 +33,7 @@ turbulence_db_list_opened
 turbulence_db_list_reload
 turbulence_db_list_reload_module
 turbulence_db_list_remove
+turbulence_db_list_remove_by_func
 turbulence_error
 turbulence_exit
 turbulence_exit_mutex
