@@ -262,3 +262,6 @@ span.header {
   text-align: center;
 }
 
+ol li.explain { 
+   padding-bottom: 7px;
+}

@@ -13,11 +13,21 @@
 
 <h1>mod-sasl: SASL support for Turbulence</h1>
 
+<h2>Index</h2>
+
+ <ol>
+ <li><a href="#intro">Introduction</a></li>
+ <li><a href="#base">Base configuration</a></li>
+ <li><a href="#virtual">Virtual host configuration for SASL module</a></li>
+ <li><a href="#command-line">Command line interface to the mod-sasl: tbc-sasl-conf</a></li>
+ <li><a href="#sasl-radmin">SASL-RADMIN: xml-rpc interface to manage SASL databases </a></li>
+</ol>
+
 <h2><a name="intro">Introduction</a></h2>
 
 <p><b>mod-sasl</b> module provides user authentication to
   Turbulence. Inside BEEP, the SASL protocol is used by default to
-  provide user identification. </p>
+  provide user authentication. </p>
   
 <h2><a name="base">Base configuration</a></h2>
 
@@ -44,35 +54,120 @@ mod-sasl is activated you must configure it. This is done by updating
 
 <pre>
 
-    &lt;<span class="node">mod-sasl</span>>
-        <span class="comment">&lt;!-- db users --></span>
-        &lt;<span class="node">auth-db</span> type=<span class="attrvalue">"xml"</span> location=<span class="attrvalue">"auth-db.xml"</span> />
-    
-        <span class="comment">&lt;!-- allowed sasl profiles --></span>
-        &lt;<span class="node">method-allowed</span>>
-          &lt;<span class="node">method</span> value=<span class="attrvalue">"plain"</span> />
-        &lt;/<span class="node">method-allowed</span>>
-    &lt;/<span class="node">mod-sasl</span>>
+   &lt;<span class="node">mod-sasl</span>>
+      <span class="comment">&lt;!--  db users:
+
+         type: allows to configure the kind of format that is expected
+            to be found while reading the attribute location.
+
+         location: allows to configure the location of the auth
+            database. It can use relative paths, starting from the
+            location of the current file.
+
+         serverName: essential configuration item. Attention
+            required. This attribute allows to configure the SASL
+            database to be used according to the serverName. This
+            serverName is a fundamental attribute configured at the
+            BEEP session.
+
+            This attribute is mainly used to configure different SASL
+            users databases with different capabilities (the most
+            notable, remote administration).  It is only allowed one
+            default SASL database, that is, an <auth-db> configuration
+            without serverName.
+        
+         format: allows to configure the format used to store and
+            retrieve keys stored. By default, if nothing is configured
+            md5 is used.  Allowed values are: plain, md5 and sha-1 (in
+            security order).  It is recommended to either use md5 or
+            sha-1.
+
+         remote: allows to configure the remote module configuration
+            for that particular entry. If no value is provided, by
+            default is to disable remote administration. See module
+            documentation to know more about remote administration.
+  
+         remote-admins: this attribute allows to configure a list of
+            users that are allowed to use the remote administration
+            protocol. If this attribute is not defined all users will
+            be allowed to admin the users database.
+       --></span>
+      &lt;<span class="node">auth-db</span> remote-admins=<span class="attrvalue">"remote-admins.xml"</span> 
+               remote=<span class="attrvalue">"no"</span> 
+               format=<span class="attrvalue">"md5"</span> 
+               location=<span class="attrvalue">"auth-db.xml"</span> 
+               type=<span class="attrvalue">"xml"</span> />
+      <span class="comment">&lt;!--  allowed sasl profiles  --></span>
+      &lt;<span class="node">method-allowed</span>>
+         &lt;<span class="node">method</span> value=<span class="attrvalue">"plain"</span> />
+      &lt;/<span class="node">method-allowed</span>>
+   &lt;/<span class="node">mod-sasl</span>>
 
 </pre>
 
-<p>Current implementation allows to configure the back end to store
-users and passwords. At this moment only xml back end is supported. In
-this case, the users database is stored at <b>auth-db.xml</b> (default
-configuration).</p>
+<p>Previous configuration file example states that there is a default
+authentication database (no <b>serverName</b> configured), using the
+md5 format to store passwords (<b>format</b>), storing such user
+and password using the default xml backend provided by turbulence
+(<b>type</b>), which is located at the file provided (<b>location</b>).</p>
 
-<p>Following to the users database configuration is provided which
-SASL profiles can be used. Currently, only SASL PLAIN profile is
-supported by <b>mod-sasl</b>.</p>
+<p>The two remaining parameters (<b>remote-admins</b> and
+<b>remote</b>) allows to configure the remote mod-sasl xml-rpc based
+administration interface and to configure the set of allowed users
+that could use this interface. See later for more details.</p>
 
-<p>You must use the <b>tbc-sasl-conf</b> tool to update users
-database (<b>auth-db.xml</b>), rather than editing directly. You can add a user using the following: </p>
+<p>The rest of the file configures the allowed SASL profiles to be
+used by remote peers. Currently we only support <b>plain</b>.</p>
+
+<h2><a name="virtual">Virtual host configuration for SASL module</a></h2>
+
+<p>Previous example shows how to configure the default backend used
+for all serverName configurations. Inside BEEP, once a channel is
+created, it is allowed to configure the serverName parameter asking
+the server to act using such role. This value can be used to select
+the proper auth backend configuration.</p>
+
+<p>How the mod-sasl selects the proper auth-db is done as follows:</p>
+
+<ol>
+  <li>If the SASL request is being received in a connection
+  which has the serverName parameter configured (either due to a
+  previous channel created or due to the current SASL channel
+  exchange), then it is searched a <b>&lt;auth-db></b> node with
+  matches the serverName parameter.</li>
+
+  <li>If no match is found in the previous search, it is used the
+  first <b>&lt;auth-db></b> node found without the <b>serverName</b>
+  attribute configured. That is, the <b>&lt;auth-db></b> node
+  configured without <b>serverName</b> is used as fallback default
+  auth-db for all auth operations.
+  </li>
+
+</ol>
+
+<h2><a name="command-line">Command line interface to the mod-sasl: tbc-sasl-conf</a></h2>
+
+<p>If you have a shell account into the turbulence machine, you can
+use the <b>tbc-sasl-conf</b> tool to update users database
+(<b>auth-db.xml</b>), rather than editing directly. You can add a user
+using the following: </p>
 
 <pre>
 
    >> tbc-sasl-conf --add-user beep-test
-   I: loading sasl auth xml-db..
-   I: using db: /etc/turbulence/sasl/auth-db.xml
+   I: adding user: beep-test..
+   Password:
+   Type again:
+   I: user beep-test added!
+
+</pre>
+
+<p>You can use the <b>--serverName</b> option to select the auth-db to
+be used by the tool.</p>
+
+<pre>
+
+   >> tbc-sasl-conf --add-user beep-test --serverName beep.aspl.es
    I: adding user: beep-test..
    Password:
    Type again:
@@ -81,6 +176,99 @@ database (<b>auth-db.xml</b>), rather than editing directly. You can add a user 
 </pre>
 
 <p>Use <b>tbc-sasl-conf --help</b> to get full help.</p>
+
+<h2><a name="sasl-radmin">SASL-RADMIN: xml-rpc interface to manage SASL databases </a></h2>
+
+<p>Starting from Turbulence 0.3.0, it is included a xml-rpc interface
+that allows full management for all sasl databases installed. This
+interface is mainly provided as a way to integrate into third party
+applications the possibility to manage users, passwords, etc for
+applications developed.</p>
+
+<p>The following are a minimal set of instructions that will serve you
+as starting point to integrate and use SASL-RADMIN.</p>
+
+<ol class="explain">
+  <li>First you must locate the idl interface installed in your
+  system. This is the sasl-radmin.idl file. On systems where
+  pkg-config is available you can find it by using the following
+
+<pre>
+
+   >> pkg-config --cflags sasl-radmin
+   /usr/share/mod-sasl/radmin/sasl-radmin.idl  
+
+</pre>
+  </li>
+
+  <li>This idl file includes not only the interface definition but
+  also the code for all services provided. To build the C client interface,
+  so you can perform XML-RPC invocations, you can do:
+
+<pre>
+
+   >> xml-rpc-gen --out-stub-dir . --only-client --disable-main-file
+                  --disable-autoconf /usr/share/mod-sasl/radmin/sasl-radmin.idl
+
+</pre>
+
+  In the case your system has pkg-config, you can do the following:
+<pre>
+
+   >> xml-rpc-gen --out-stub-dir . --only-client --disable-main-file
+                  --disable-autoconf `pkg-config --cflags sasl-radmin`
+   [ ok ] compiling: /usr/share/mod-sasl/radmin/sasl-radmin.idl..
+   [ ok ] detected IDL format definition..
+   [ ok ] detected xml-rpc definition: 'sasl-radmin'..
+   [ ok ] found enforced resource: sasl-radmin
+   [ ok ] registered valued attribute resource='sasl-radmin'..
+   [ ok ] service declaration get_users found..
+   [ ok ]   found additional options for get_users
+   [ ok ]   found include on body declaration for get_users
+   [ ok ]   found include on body file: get-users-include.c
+   [ EE ] Failed to open file: get-users-include.c
+   [ ok ] registered valued attribute resource='sasl-radmin'..
+   [ ok ] service declaration operate_sasl_user found..
+   [ ok ]   found additional options for operate_sasl_user
+   [ ok ]   found include on body declaration for operate_sasl_user
+   [ ok ]   found include on body file: operate-sasl-user.c
+   [ EE ] Failed to open file: operate-sasl-user.c
+   [ ok ] document is well-formed: /usr/share/mod-sasl/radmin/sasl-radmin.idl..
+   [ ok ] document is valid: /usr/share/mod-sasl/radmin/sasl-radmin.idl..
+   [ ok ] component name: 'sasl-radmin'..
+   [ ok ] using '.' as out directory..
+   [ ok ] generating client stub at: ...
+   [ ok ] creating file:             ./sasl_radmin_xml_rpc.h
+   [ ok ] creating file:             ./sasl_radmin_struct_sasluser_xml_rpc.h
+   [ ok ] creating file:             ./sasl_radmin_struct_sasluser_xml_rpc.c
+   [ ok ] creating file:             ./sasl_radmin_array_sasluserarray_xml_rpc.h
+   [ ok ] creating file:             ./sasl_radmin_array_sasluserarray_xml_rpc.c
+   [ ok ] creating file:             ./sasl_radmin_types.h
+   [ ok ] creating file:             ./sasl_radmin_xml_rpc.c
+   [ ok ] server stub have been disabled..
+   [ ok ] compilation ok
+
+</pre>
+
+   Don't mind about EE messages about missing files. Those ones are
+used by the server side component, which is not your case. Along with
+the output, the command list the set of files installed.
+  </li>
+  <li>This will build a set of files that must be integrated into your
+  client application according to your building tools. For autoconf
+  users just include that files into your <b>"product_SOURCES"</b>
+  directive.
+
+  See Vortex <a href="http://www.aspl.es/fact/files/af-arch/vortex/html/programming_with_xml_rpc.html">xml-rpc-gen tool documentation</a> for more information. As an initial explanation.
+  </li>
+
+  <li>As a last step, you must activate the remote administration on
+each domain that will be allowed to do so. This done by using the
+<b>remote</b> and <b>remote-admins</b> attributes. The first one must
+be set to <b>"yes"</b>. The second must point to a db-list having a
+list of allowed SASL administrators. See <a href="db-list.html">Db-list management</a> to setup the administrator list.</li>
+  
+</ol>
 
 <!-- end central section -->
 
