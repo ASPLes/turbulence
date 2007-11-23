@@ -225,6 +225,15 @@ int main (int argc, char ** argv)
 
 	msg2 ("sasl auth-db loaded..");
 
+	/* check the serverName if configured */
+	if (exarg_is_defined ("serverName")) {
+		if (! common_sasl_serverName_exists (sasl_backend, 
+						     exarg_get_string ("serverName"), NULL, NULL)) {
+			error ("Provided a serverName value for which no auth-db is found, finish..");
+			goto finish;
+		} /* end if */
+	} /* end if */
+
 	/* check if the user want to add a new user */
 	if (exarg_is_defined ("add-user")) {
 
