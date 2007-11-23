@@ -215,6 +215,7 @@ bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
 	axlNode         * node;
 	axlError        * err;
 	SaslAuthBackend * result;
+	char            * path;
 
 
 	/* nullify before doing anyting */
@@ -243,9 +244,19 @@ bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
 		
 	} /* end if */
 
+	/* check if the path provided is valid */
+	if (result->sasl_conf_path == NULL) {
+		/* failed to load backend */
+		path = vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", "sasl.conf", NULL);
+		error ("Unable to find sasl.conf file. A usual location for this file is %s. Check your installation.", path);
+		axl_free (path);
+		       
+		return false;
+	}
+
 	/* load the document */
 	result->sasl_xml_conf   = axl_doc_parse_from_file (result->sasl_conf_path, &err);
-	
+
 	/* check result */
 	if (result->sasl_xml_conf == NULL) {
 		/* release sasl_backend */
@@ -324,10 +335,25 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	/* create one db */
 	db           = axl_new (SaslAuthDb, 1);
 	db->type     = SASL_BACKEND_XML;
-	
+
 	/* find the file */
 	db->db_path  = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "location"));
-	
+
+	/* check if the path provided is valid */
+	if (db->db_path == NULL) {
+		/* failed to load backend */
+		path = vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", NULL);
+		error ("Unable to find %s file. A usual location for this file is %s. Check your installation.", 
+		       ATTR_VALUE (node, "location"), path);
+		axl_free (path);
+
+		/* free node created */
+		axl_free (db);
+		       
+		return false;
+	}
+
+
 	/* load db in xml format */
 	if (! common_sasl_load_users_db (db, mutex)) {
 		/* failed to load database */
@@ -338,7 +364,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		axl_free (db->db_path);
 		axl_free (db);
 	} else {
-		msg ("sasl auth db: %s", db->db_path);
+		msg2 ("sasl auth db: %s", db->db_path);
 
 		/* configure the rest of parameters */
 		db->remote_admin = HAS_ATTR_VALUE (node, "remote", "yes");
@@ -359,7 +385,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			db->remote_admin = true;
 			
 			/* load the turbulence db list */
-			msg ("found remote admins, loading dblist: '%s'", ATTR_VALUE (node, "remote-admins"));
+			msg2 ("found remote admins, loading dblist: '%s'", ATTR_VALUE (node, "remote-admins"));
 			if (turbulence_file_is_fullpath (ATTR_VALUE (node, "remote-admins"))) {
 				/* full path, try to load */
 				db->allowed_admins = turbulence_db_list_open (&err, ATTR_VALUE (node, "remote-admins"), NULL);
@@ -367,7 +393,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				/* relative, try to load */
 				path               = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "remote-admins"));
 				if (path != NULL) {
-					msg ("loading allowed admins from: %s..", path);
+					msg2 ("loading allowed admins from: %s..", path);
 					db->allowed_admins = turbulence_db_list_open (&err, path, NULL);
 					axl_free (path);
 				} else {

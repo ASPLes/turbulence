@@ -51,7 +51,7 @@ SaslAuthBackend * sasl_backend = NULL;
 
 void tbc_sasl_add_user ()
 {
-	const char  * serverName   = NULL;
+	const char  * serverName   = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	const char  * new_user_id  = exarg_get_string ("add-user");
 	const char  * password     = NULL;
 	const char  * password2    = NULL;
@@ -109,7 +109,7 @@ void tbc_sasl_add_user ()
 void tbc_sasl_disable_user ()
 {
 	const char * user_id_to_disable = exarg_get_string ("disable-user");
-	const char * serverName         = NULL;
+	const char * serverName         = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 
 	/* call to disable user */
 	if (! common_sasl_user_disable (sasl_backend, user_id_to_disable, serverName, true, NULL))
@@ -126,7 +126,7 @@ void tbc_sasl_disable_user ()
  */
 void tbc_sasl_list_users ()
 {
-	const char * serverName = NULL;
+	const char * serverName = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	axlList    * list;
 	int          iterator   = 0;
 	SaslUser   * user;
@@ -158,7 +158,7 @@ void tbc_sasl_list_users ()
  */
 void tbc_sasl_remove_user ()
 {
-	const char * serverName        = NULL;
+	const char * serverName        = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	const char * user_id_to_remove = exarg_get_string ("remove-user");
 
 	/* call to remove the user */
@@ -197,6 +197,9 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("list-users", "l", EXARG_NONE,
 			   "Allows to list current users created.");
 
+	exarg_install_arg ("serverName", "S", EXARG_STRING,
+			   "Allows to configure the serverName value which will allow to select the proper SASL backend. If no value is provided for this option the default backend will be used.");
+
 	/* do not accept free arguments */
 	exarg_accept_free_args (0);
 
@@ -219,7 +222,9 @@ int main (int argc, char ** argv)
 	/* load sasl module configuration */
 	if (! common_sasl_load_config (&sasl_backend, NULL, NULL))
 		goto finish;
-	
+
+	msg2 ("sasl auth-db loaded..");
+
 	/* check if the user want to add a new user */
 	if (exarg_is_defined ("add-user")) {
 
