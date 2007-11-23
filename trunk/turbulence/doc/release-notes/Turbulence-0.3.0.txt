@@ -1,0 +1,353 @@
+                     -= Turbulence 0.3.0  =-
+                   "Like in the movies release"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce the
+  Turbulence 0.3.0 "Like in the movies" release: an open source BEEP
+  general application server, written on top of Vortex Library.
+
+  Turbulence is a BEEP server extensible through modules and allows to
+  implement server side profiles that are used and combined later with
+  other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.turbulence.ws
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://www.sf.net/projects/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  Next major release for Turbulence including lot of new features and
+  bug fixes, mostly located at the Turbulence core and the
+  mod-sasl. Added initial implementation for the turbulence
+  regression.
+
+  Now the mod-sasl allows virtual hosting configuration: this allows
+  to configure auth-db associated to particular serverName
+  configurations. Along with this, the mod-sasl is shipped with a new
+  XML-RPC remote administration interface (SASL-RADMIN) which allows
+  third party applications to perform SASL administrative tasks in all
+  domains. A security update allows mod-sasl to store password
+  hashed with md5 and sha-1.
+
+  At the Turbulence core, an initial connection manager implementation
+  has been added, including a function to broadcast a message over all
+  connections having a particular profile. Now Turbulence allows to
+  configure the maximum number of channels running a profile per
+  connection.
+
+  
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.2.1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+turbulence:
+
+* [new] Updated turbulence db list module to include a new removal
+  function which delete items according to an external handler. API
+  added:
+
+  - turbulence_db_list_remove_by_func
+  - TurbulenceDbListRemoveFunc (handler)
+
+  Updated regression tests to check this.
+
+* [fix] Removed turbulence_db_list_status function. It is an api
+  duplicated on turbulence_db_list_get.
+
+* [fix] Making features configuration to be optional at the config
+  DTD.
+
+* [fix] Added initial code to support the "x-client-close" feature.
+  Pending to check its real effect.
+
+* [new] Added new module to control all connections created under the
+  context of the turbulence server. Added initial code to provide
+  broadcasting services over all connections, that have a selected
+  profile. Public API added:
+
+  - turbulence_conn_mgr_broadcast_msg
+  - TurbulenceConnMgrFilter (handler)
+
+* [new] Updated turbulence engine to allow configuring the maximum
+  number of channels that can be running a particular profile, inside
+  the profile path configuration. Updated documentation to include
+  some references.
+
+* [fix] Making turbulence exit/signal handling to terminate turbulence
+  modules just after vortex termination to avoid unmapping memory
+  regions that contains handlers configured inside vortex library.
+
+* [fix] Making turbulence runtime and turbulence module to better
+  reach to modules that wan't loaded properly (undefined symbol).
+
+* [fix] Fixed bug inside the common sasl module, while changing auth
+  passwords..
+
+* [fix] Added missing index to the db list documentation.
+
+* [fix] Updated documentation to include some references to the
+  tbc-dblist-mgr usage and the new support provided by mod-sasl for
+  virtual hosting configuration.
+
+* [new] Updated operate_sasl_user service, inside the remote sasl
+  administration, to remote, edit, change password, check/set remote
+  administration flag.
+
+* [new] Added support to the tbc-dblist-mgr tool to create empty list
+  by using the --touch option.
+
+* [fix] Updated regression test to check two new functions at the
+  mod-sasl to enable/disabled and check status for remote
+  administration support.
+
+* [fix] Fixed bug inside turbulence_db_list_close and
+  turbulence_db_list_cleanup which was causing double deallocation
+  operation under different situations but especially for those db
+  list opened but not closed manually. Updated regression test to
+  check both situations (manually and automatic close).
+
+* [new] Added initial code to implement all operations required to
+  operate sasl users inside the xml-rpc sasl remote admin.
+
+* [fix] Fixed common sasl validation function to also check that the
+  auth_id is inside the remote admins list.
+
+* [fix] Integrating changes to the get users service.
+
+* [fix] Updated autoconf files to include new pkg-config file to
+  export sasl-radmin.idl file.
+
+* [fix] Configured mod-sasl source code to install a pkg-config file
+  to allow locating IDL file used to implement the client side of the
+  remote administration interface.
+
+* [fix] Implemented initial version for the get_users service for the
+  SASL remote administration.
+
+* [fix] Fixed validation service provided by the common sasl module to
+  only accept services under the sasl-radmin resource.
+
+* [fix] Started and committing initial files for the remote SASL
+  administration.  Added initial implementation for the resource
+  validation function. Added initial implementation for the get_users
+  service.
+
+* [fix] Updated turbulence module internals to secure the list of
+  modules loaded with a mutex.
+
+* [new] Updated regression test to check turbulence module loading
+  code.  Updated the turbulence module API to include a function to
+  unregister a module from the list of modules loaded.
+
+* [fix] Updated regression test to check sasl support for several auth-db
+  associated to different server names.
+
+* [new] Added a new function to the sasl module to check if a
+  particular auth Id is disabled. Updated regression test to check
+  this. API added:
+
+   - common_sasl_user_is_disabled
+
+* [fix] More progress on regression test. Updated
+  common_sasl_user_disable to allow enabling/disabling a particular
+  user rather only allowing to disable.
+
+* [fix] making progress on general regression test and fixing bugs
+  exposed. Updated common_sasl_user_exists and user database loading
+  related functions.
+
+* [new] Added new function to the support module to check in a
+  portable way the base dir and the file name for a provided
+  path. Updated regression test to check this. API added:
+
+   - turbulence_base_dir
+   - turbulence_file_name
+
+* [fix] Committing initial checking for the sasl backend inside the
+  regression test.  Not finished yet. Added required files.
+
+* [fix] Updated regression test to check full path function checking
+  and fixed a bug exposed by the regression test on the unix platform.
+
+* [fix] Updated the regression test to cover turbulence_db_list_count,
+  turbulence_db_list_exists and turbulence_db_list_status.
+
+* [fix] Updated autoconf files to include the regression test.
+
+* [fix] Fixed bug inside turbulence_db_list_add and
+  turbulence_db_list_remove which was causing to not update the first
+  item on the list.
+
+* [new] Added initial code to implement a regression test for all
+  modules and the base library provided by turbulence. This helped to
+  remove a but at the dblist implementation.
+
+* [fix] Fixed bug inside turbulence_db_list_close which was causing to
+  double dealloc references.
+
+* [new] Added a new function to be base library to check if a file is
+  a full path or relative one. API added:
+
+   - turbulence_file_is_fullpath
+
+* [fix] General update to the sasl module to allow supporting several
+  users database according to the server name provided.
+
+* [fix] Updated turbulence default example to include some comments to
+  improve its usage.
+
+* [fix] General update to the mod-sasl module to allow storing user
+  passwords with other formats than clear text. Now it is also
+  supported md5 and sha-1. Updated tools and authentication code. This
+  change makes previous database format to be not compatible.
+
+* [new] Updated turbulence dblist API to include a function that
+  allows to get the current status as a snapshot. Added a new function
+  that allows to edit an element in an atomic form. API added:
+
+   - turbulence_db_list_status
+   - turbulence_db_list_edit
+
+* [fix] Fixed minor bug while compiling the turbulence code without
+  pcre support.
+
+* [fix] Updating axl and vortex package references.
+
+* [fix] Making turbulence to skip backup files inside the mod enabled
+  directory.
+
+* [fix] Updated update-web.sh file.
+
+* [fix] Adding missing article about BEEP ports.
+
+* [new] Installed a new option (--vortex-debug2) that enables
+  activating vortex second level log. Added two new functions to
+  enable modules and turbulence to check current log to console
+  status:
+
+    - turbulence_log_enabled
+    - turbulence_log2_enabled
+
+* [new] Updated turbulence startup to check if all settings were read
+  and started properly, including modules, and to stop or not
+  according to a "clean start" configuration provided at the main
+  file.
+
+* [fix] Updating Makefile.am file to produce a .def file including all
+  entry points required by libturbulence.dll. Added libturbulence.def.
+
+mod-sasl:
+
+* [fix] Updated core implementation to allow checking if a serverName
+  parameter has an auth-db activated. Making tbc-sasl-conf to use this
+  to check the serverName value received. API added:
+
+   - common_sasl_serverName_exists
+
+* [fix] Updated tbc-sasl-conf tool to allow configuring the serverName
+  value to be used to properly select the auth backend.
+
+* [fix] Updated backend loading code to better report when some file
+  is missing.
+
+* [fix] Updated sasl-radmin implementation, conciliating changes into
+  the IDL and added a new operation to operate_sasl_user to disable a
+  sasl auth according to the value provided.
+
+* [fix] Integrated latest changes from operate_sasl_user inside the
+  IDL.
+
+* [fix] Committing first implementation that is able to create users,
+  on a particular domain (serverName), that can be included into the
+  allowed admins and enabled/disabled...
+
+* [new] Updated common mod-sasl implementation to include two new
+  functions to enable/disable remote administration support and check
+  its current status. 
+
+* [fix] Updated sasl-radmin.idl to makes changes to the
+  operate_sasl_user service, extending its function to support user
+  disabling and user remote administrator support.
+
+* [fix] Making the db-list loading of remote administrator list, when
+  it is found a relative path, to use services from vortex_support
+  module.
+
+* [fix] Fixed bug inside get_users service.
+
+* [new] Starting remote administration interface for the
+  mod-sasl. Committing initial files (xml-rpc IDL file and stuff
+  created..).
+
+* [fix] Updated common implementation to use mutex where
+  required. Checked regression test to use that mutex.
+
+* [fix] Updated regression test to check add/remove functions from the
+  mod-sasl module.
+
+* [fix] Updated sasl backend loading to allow configuring an
+  alternative file path to be used. Updated the rest of the tools
+  associated.  API updated:
+
+   - common_sasl_load_config.
+
+* [fix] Fixing bug inside the xml loading backend which wasn't
+  nullifying the reference received, caused to return a cuenca's
+  pointer on error.
+
+* [fix] Checked default behavior to not load a database configuration
+  if found two default ones.
+
+* [fix] Updated tbc-sasl-conf tool to allow listing with the current
+  sasl engine, and updated the code to check that no memory is lost.
+
+About Us
+~~~~~~~~
+
+  Aspl (Advanced Software Production Line) is a Spanish company that
+  provides services and support to introduce open source products into
+  organizations.
+
+  It has more than 7 years of experience and its main development line
+  is to provide software development and support to install GNU/Linux
+  enterprise servers.
+
+  Contact us, English or Spanish, to get commercial support and/or
+  BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope Vortex Library and Turbulence help you. Enjoy Turbulence!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+23th nov 2007, Madrid (Spain)
+  
+

@@ -125,6 +125,8 @@ ul.news {
 ul.news li { 
   list-style: none;
   font-size: 11px;
+  padding-bottom: 6px;
+  padding-top: 2px;
 }
 
 ul.images { 
