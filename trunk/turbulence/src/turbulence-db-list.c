@@ -883,7 +883,7 @@ bool               turbulence_db_list_init ()
 
 		/* if not found, try to open it directly */
 		if (turbulence_db_list_dtd == NULL) {
-			file = vortex_support_build_filename (DATADIR, "turbulence", "db-list.dtd", NULL);
+			file = vortex_support_build_filename (TBC_DATADIR, "turbulence", "db-list.dtd", NULL);
 			turbulence_db_list_dtd = axl_dtd_parse_from_file (file, &err);
 
 			/* check the file */
