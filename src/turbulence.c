@@ -141,7 +141,7 @@ bool turbulence_init (int argc, char ** argv)
 
 	/* configure lookup domain for turbulence data */
 	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-data"), 
-						   vortex_support_build_filename (DATADIR, "turbulence", NULL));
+						        vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
 	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 
 	vortex_mutex_create (&turbulence_exit_mutex);
@@ -152,11 +152,15 @@ bool turbulence_init (int argc, char ** argv)
 	/* install default signal handling */
 	signal (SIGINT,  turbulence_exit);
 	signal (SIGTERM, turbulence_exit);
-	signal (SIGKILL, turbulence_exit);
-	signal (SIGQUIT, turbulence_exit);
 	signal (SIGSEGV, turbulence_exit);
 	signal (SIGABRT, turbulence_exit);
+
+#if defined(AXL_OS_UNIX)
+	/* unix specific signals.. */
+	signal (SIGKILL, turbulence_exit);
+	signal (SIGQUIT, turbulence_exit);
 	signal (SIGHUP,  turbulence_reload_config);
+#endif
 
 	/* init ok */
 	return true;
@@ -189,8 +193,10 @@ void turbulence_reload_config (int value)
 	turbulence_module_notify_reload_conf ();
 	vortex_mutex_unlock (&turbulence_exit_mutex);
 
+#if defined(AXL_OS_UNIX)
 	/* reload signal */
 	signal (SIGHUP,  turbulence_reload_config);
+#endif
 	
 	return;
 } 
@@ -227,12 +233,14 @@ void turbulence_exit (int value)
 	case SIGTERM:
 		msg ("caught SIGTERM, terminating turbulence..");
 		break;
+#if defined(AXL_OS_UNIX)
 	case SIGKILL:
 		msg ("caught SIGKILL, terminating turbulence..");
 		break;
 	case SIGQUIT:
 		msg ("caught SIGQUIT, terminating turbulence..");
 		break;
+#endif
 	case SIGSEGV:
 	case SIGABRT:
 		error ("caught %s, anomalous termination (this is an internal turbulence or module error)",
@@ -703,7 +711,11 @@ bool     turbulence_create_dir  (const char * path)
 		return false;
 	
 	/* create the directory */
+#if defined(AXL_OS_WIN32)
+	return (_mkdir (path) == 0);
+#else
 	return (mkdir (path, 770) == 0);
+#endif
 }
 
 /** 
@@ -829,6 +841,7 @@ char   * turbulence_file_name           (const char * path)
  */
 char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 {
+#if defined(ENABLE_TERMIOS)
 	struct termios current_set;
 	struct termios new_set;
 	int input;
@@ -884,7 +897,7 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 
 		/* update the iterator */
 		iterator++;
-	}
+	} /* end while */
 
 	/* return terminal settings if modified */
 	if (flags & DISABLE_STDIN_ECHO) {
@@ -900,6 +913,10 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 
 	/* do not return anything from this point */
 	return result;
+#else
+	msg ("TERMIOS NOT ENABLED, RETURNING NULL");
+	return NULL;
+#endif
 }
 
 /* @} */

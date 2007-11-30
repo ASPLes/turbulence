@@ -1,0 +1,61 @@
+# Makefile for windows (mingw)
+OBJ  = turbulence.o \
+	turbulence-config.o \
+	turbulence-run.o \
+	turbulence-module.o \
+	turbulence-log.o \
+	turbulence-ppath.o \
+	turbulence-db-list.o \
+	turbulence-conn-mgr.o
+
+DLL        = $(turbulence_dll).dll
+IMPORT_DLL = $(DLL).a
+STATIC_LIB = $(turbulence_dll).a
+
+#LIBS = -Wall -g -L"$(BASE_DIR)/lib" \
+#	-L"$(BASE_DIR)/bin" \
+#	--add-stdcall-alias \
+#	-lws2_32 \
+#	-lintl  -liconv  -lm 
+LIBS = -Wall -g \
+	-L"../../libaxl/src/" -L"../../libvortex/src/" -L"../../libexarg/src" \
+	-lvortex -laxl -lexarg -lws2_32 $(OPENSSL_LIBS) $(GSASL_LIBS) $(search_lib_path) 
+
+#INCS       =  -I"$(BASE_DIR)/include" \
+
+# build vortex with log support
+INCS = -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex/src" -I"../../libexarg/src" 
+
+CFLAGS = $(INCS) -DVERSION=\""$(TURBULENCE_VERSION)"\" \
+	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall -g $(OPENSSL_FLAGS) $(GSASL_FLAGS) \
+	-DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__ \
+	-DSYSCONFDIR=\""$(sysconfdir)"\" -DTBC_DATADIR=\""$(datadir)"\"
+RM = rm -f
+
+.PHONY: all clean
+
+all: $(DLL) turbulence.exe links
+
+clean: 
+	${RM} $(OBJ) $(DLL) *.a *.dll.a *.lib *.dll
+
+$(DLL): $(OBJ)
+# add the following line to create an import library. At this point this step
+# is not requiered because gcc automatically get an import library from the dll.
+# -Wl,--out-implib,libvortex.lib
+	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) --export-all-symbols \
+		  $(OBJ) -o $(DLL)        $(LIBS)
+	lib.exe /def:libturbulence.def
+
+turbulence.exe: main.o
+	$(CC) -mconsole $(OBJ) $< -o $@ $(LIBS)
+
+links:
+	cp ../../libvortex/src/libvortex.dll .
+	cp ../../libvortex/data/*.dtd .
+	cp ../../libaxl/src/libaxl.dll .
+	cp ../../libexarg/src/libexarg.dll .
+	cp $(OPENSSL_LIBS) .
+
+%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS)

@@ -37,7 +37,9 @@
  */
 
 #include <turbulence.h>
+#if defined(AXL_OS_UNIX)
 #include <dlfcn.h>
+#endif
 
 
 
@@ -83,12 +85,20 @@ TurbulenceModule * turbulence_module_open (const char * module)
 	/* allocate memory for the result */
 	result         = axl_new (TurbulenceModule, 1);
 	result->path   = axl_strdup (module);
+#if defined(AXL_OS_UNIX)
 	result->handle = dlopen (module, RTLD_LAZY);
+#elif defined(AXL_OS_WIN32)
+	result->handle = LoadLibrary (module);
+#endif
 
 	/* check loaded module */
 	if (result->handle == NULL) {
 		/* unable to load the module */
+#if defined(AXL_OS_UNIX)
 		error ("unable to load module (%s): %s", module, dlerror ());
+#elif defined(AXL_OS_WIN32)
+		error ("unable to load module (%s), error code: %d", module, GetLastError ());
+#endif
 
 		/* free the result and return */
 		turbulence_module_free (result);
@@ -96,10 +106,18 @@ TurbulenceModule * turbulence_module_open (const char * module)
 	} /* end if */
 
 	/* find the module */
-	result->def = dlsym (result->handle, "module_def");
+#if defined(AXL_OS_UNIX)
+	result->def = (TurbulenceModDef *) dlsym (result->handle, "module_def");
+#elif defined(AXL_OS_WIN32)
+	result->def = (TurbulenceModDef *) GetProcAddress (result->handle, "module_def");
+#endif
 	if (result->def == NULL) {
 		/* unable to find module def */
+#if defined(AXL_OS_UNIX)
 		error ("unable to find 'module_def' symbol, it seems it isn't a turbulence module: %s", dlerror ());
+#elif defined(AXL_OS_WIN32)
+		error ("unable to find 'module_def' symbol, it seems it isn't a turbulence module: error code %d", GetLastError ());
+#endif
 		
 		/* free the result and return */
 		turbulence_module_free (result);
@@ -205,8 +223,13 @@ void               turbulence_module_free (TurbulenceModule * module)
 
 	axl_free (module->path);
 	/* call to unload the module */
-	if (module->handle)
+	if (module->handle) {
+#if defined(AXL_OS_UNIX)
 		dlclose (module->handle);
+#elif defined(AXL_OS_WIN32)
+		FreeLibrary (module->handle);
+#endif
+	}
 	axl_free (module);
 	
 	
