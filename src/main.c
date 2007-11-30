@@ -47,7 +47,11 @@ int main (int argc, char ** argv)
 
 	/* check for conf-location option */
 	if (exarg_is_defined ("conf-location")) {
-		msg ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
+		printf ("VERSION:     %s\n", VERSION);
+		printf ("SYSCONFDIR:  %s\n", SYSCONFDIR);
+		printf ("TBC_DATADIR: %s\n", TBC_DATADIR);
+		printf ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
+		turbulence_cleanup (0);
 		return 0;
 	}
 

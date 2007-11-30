@@ -142,6 +142,11 @@ bool turbulence_init (int argc, char ** argv)
 	/* configure lookup domain for turbulence data */
 	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-data"), 
 						        vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
+#if defined(AXL_OS_WIN32)
+	/* make turbulence to add the path ../data to the search list
+	 * under windows as it is organized this way */
+	vortex_support_add_domain_search_path     ("turbulence-data", TBC_DATADIR);
+#endif
 	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 
 	vortex_mutex_create (&turbulence_exit_mutex);
