@@ -26,6 +26,9 @@ LIBS = -Wall -g \
 # build vortex with log support
 INCS = -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex/src" -I"../../libexarg/src" 
 
+datadir    = "../data"
+sysconfdir = "../etc"
+
 CFLAGS = $(INCS) -DVERSION=\""$(TURBULENCE_VERSION)"\" \
 	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall -g $(OPENSSL_FLAGS) $(GSASL_FLAGS) \
 	-DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__ \
@@ -37,7 +40,7 @@ RM = rm -f
 all: $(DLL) turbulence.exe links
 
 clean: 
-	${RM} $(OBJ) $(DLL) *.a *.dll.a *.lib *.dll
+	${RM} $(OBJ) $(DLL) main.o *.a *.dll.a *.lib *.dll
 
 $(DLL): $(OBJ)
 # add the following line to create an import library. At this point this step
