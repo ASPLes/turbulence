@@ -28,7 +28,7 @@ mod_DATA = mod-sasl.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/sasl
-modconf_DATA = sasl.conf auth-db.xml
+modconf_DATA = sasl.example.conf auth-db.example.xml
 
 # tool to admin sasl db 
 if ENABLE_TERMIOS
