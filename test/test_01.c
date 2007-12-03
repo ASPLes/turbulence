@@ -873,6 +873,8 @@ int main (int argc, char ** argv)
 	/* terminate module functions */
 	turbulence_module_cleanup ();
 
+	printf ("All tests passed OK!\n");
+
 	/* terminate */
 	return 0;
 	

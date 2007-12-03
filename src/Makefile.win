@@ -8,6 +8,11 @@ OBJ  = turbulence.o \
 	turbulence-db-list.o \
 	turbulence-conn-mgr.o
 
+version_file = ../../modules-version.txt
+axl_version         = `grep libaxl $(version_file) | cut -f2 -d " "`-MinGW32
+vortex_version      = `grep libvortex $(version_file) | cut -f2 -d " "`-MinGW32
+turbulence_version  = `grep turbulence $(version_file) | cut -f2 -d " "`-MinGW32
+
 DLL        = $(turbulence_dll).dll
 IMPORT_DLL = $(DLL).a
 STATIC_LIB = $(turbulence_dll).a
@@ -29,7 +34,7 @@ INCS = -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex/src" -I"../../libe
 datadir    = "../data"
 sysconfdir = "../etc"
 
-CFLAGS = $(INCS) -DVERSION=\""$(TURBULENCE_VERSION)"\" \
+CFLAGS = $(INCS) -DVERSION=\""$(turbulence_version)"\" \
 	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall -g $(OPENSSL_FLAGS) $(GSASL_FLAGS) \
 	-DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__ \
 	-DSYSCONFDIR=\""$(sysconfdir)"\" -DTBC_DATADIR=\""$(datadir)"\"
