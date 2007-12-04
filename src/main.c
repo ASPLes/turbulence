@@ -71,7 +71,10 @@ int main (int argc, char ** argv)
 	} /* end if */
 
 	/* load main turb */
-	msg ("using configuration file: %s", config);
+	if (config == NULL)
+		error ("Unable to find turbulence.conf file at the default location: %s/turbulence/turbulence.conf", SYSCONFDIR);
+	else 
+		msg ("using configuration file: %s", config);
 	if (! turbulence_config_load (config)) {
 		/* unable to load configuration */
 		return -1;
