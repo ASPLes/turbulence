@@ -88,7 +88,9 @@ TurbulenceModule * turbulence_module_open (const char * module)
 #if defined(AXL_OS_UNIX)
 	result->handle = dlopen (module, RTLD_LAZY);
 #elif defined(AXL_OS_WIN32)
-	result->handle = LoadLibrary (module);
+	result->handle = LoadLibraryEx (module, NULL, 0);
+	if (result->handle == NULL)
+		result->handle = LoadLibraryEx (module, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 #endif
 
 	/* check loaded module */

@@ -84,13 +84,11 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		/* notify file found */
 		msg ("file found: %s", fullpath);		
 
-#if defined(AXL_OS_UNIX)
 		/* check if the fullpath is ended with a ~ sign */
 		if (fullpath [strlen (fullpath) - 1] == '~') {
 			wrn ("skiping file %s which looks a backup one", fullpath);
 			goto next;
 		} /* end if */
-#endif
 
 		/* check its xml format */
 		doc = axl_doc_parse_from_file (fullpath, &error);
@@ -170,11 +168,16 @@ void turbulence_run_load_modules (axlDoc * doc, axlDtd * dtd)
 		path = ATTR_VALUE (directory, "src");
 		
 		/* try to open the directory */
-		dirHandle = opendir (path);
-		if (dirHandle == NULL) {
-			wrn ("unable to open mod directory '%s' (%s), skiping to the next", strerror (errno), path);
+		if (vortex_support_file_test (path, FILE_IS_DIR | FILE_EXISTS)) {
+			dirHandle = opendir (path);
+			if (dirHandle == NULL) {
+				wrn ("unable to open mod directory '%s' (%s), skiping to the next", strerror (errno), path);
+				goto next;
+			} /* end if */
+		} else {
+			wrn ("skiping mod directory: %s (no exists or not directory)", path);
 			goto next;
-		} /* end if */
+		}
 
 		/* directory found, now search for modules activated */
 		msg ("found mod directory: %s", path);
@@ -224,6 +227,12 @@ bool turbulence_run_config    ()
 	/* configure max connection settings here */
 	node       = axl_doc_get (doc, "/turbulence/global-settings/connections/max-connections");
 
+#if defined(AXL_OS_UNIX)
+	/* NOTE: currently, vortex_conf_set do not allows to configure
+	 * the hard connection limit on windows platform. Once done,
+	 * this section must be public (remove
+	 * defined(AXL_OS_UNIX)). */
+
 	/* set hard limit */
 	string_aux = (char*) ATTR_VALUE (node, "hard-limit");
 	int_aux    = strtol (string_aux, NULL, 10);
@@ -233,6 +242,7 @@ bool turbulence_run_config    ()
 		return false;
 	} /* end if */
 	msg ("configured max connections hard limit to: %s", string_aux);
+#endif
 
 	/* set soft limit */
 	string_aux = (char*) ATTR_VALUE (node, "soft-limit");
