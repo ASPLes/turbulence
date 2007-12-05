@@ -47,8 +47,8 @@
  * @{
  */
 
-VortexMutex   _turbulence_conn_mgr_mutex;
-axlHash     * _turbulence_conn_mgr_hash; 
+static VortexMutex   _turbulence_conn_mgr_mutex;
+static axlHash     * _turbulence_conn_mgr_hash; 
 
 void turbulence_conn_mgr_unref (axlPointer data)
 {

@@ -37,10 +37,10 @@
  */
 #include <turbulence.h>
 
-FILE * __general_log    = NULL;
-FILE * __error_log      = NULL;
-FILE * __vortex_log     = NULL;
-FILE * __access_log     = NULL;
+static FILE * __general_log    = NULL;
+static FILE * __error_log      = NULL;
+static FILE * __vortex_log     = NULL;
+static FILE * __access_log     = NULL;
 
 /** 
  * @brief Init the turbulence log module.
