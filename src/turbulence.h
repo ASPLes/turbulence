@@ -62,6 +62,7 @@
 #include <turbulence-ppath.h>
 #include <turbulence-db-list.h>
 #include <turbulence-conn-mgr.h>
+#include <turbulence-ctx.h>
 
 /**
  * \addtogroup turbulence

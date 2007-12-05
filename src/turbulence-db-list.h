@@ -90,9 +90,9 @@ int                turbulence_db_list_count          (TurbulenceDbList * list);
  * application code */
 bool               turbulence_db_list_init ();
 
-bool               turbulence_db_list_cleanup ();
-
 bool               turbulence_db_list_reload_module  ();
+
+int                turbulence_db_list_equal (axlPointer a, axlPointer b);
 
 #endif
 

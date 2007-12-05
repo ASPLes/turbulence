@@ -37,6 +37,9 @@
  */
 #include <turbulence.h>
 
+/* local include */
+#include <turbulence-ctx-private.h>
+
 /**
  * \defgroup turbulence_db_list Turbulence Db List: common abstract interface to store list of items (flushed to the storage device).
  */
@@ -45,19 +48,6 @@
  * \addtogroup turbulence_db_list
  * @{
  */
-
-/** 
- * @internal Mutex to protect the list of db list opened.
- */
-static VortexMutex turbulence_db_list_mutex;
-
-/**
- * @internal List of already opened db list, used to implement
- * automatic features such automatic closing on turbulence exit,
- * automatic reloading..
- */
-static axlList * turbulence_db_list_opened = NULL;
-static axlDtd  * turbulence_db_list_dtd    = NULL;
 
 struct _TurbulenceDbList {
 	axlDoc      * doc;
@@ -93,14 +83,19 @@ int turbulence_db_list_equal (axlPointer a, axlPointer b)
  */
 bool __turbulence_db_list_validate (axlDoc * doc, axlError **error)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
+	v_return_val_if_fail (ctx, false);
+
 	/* check dtd status */
-	if (turbulence_db_list_dtd == NULL) {
+	if (ctx->db_list_dtd == NULL) {
 		axl_error_new (-1, "tbc-dblist-mgr installation error, unable to find DTD to validate output", NULL, error);
 		return false;
 	}
 
 	/* return dtd validation result */
-	return axl_dtd_validate (doc, turbulence_db_list_dtd, error);
+	return axl_dtd_validate (doc, ctx->db_list_dtd, error);
 }
 
 /** 
@@ -172,11 +167,17 @@ TurbulenceDbList * turbulence_db_list_open   (axlError   ** error,
 					      const char  * token, 
 					      ...)
 {
+
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 	char             * full_path;
 	char             * aux;
 	char             * aux2;
 	TurbulenceDbList * list;
+
+	/* check context */
+	v_return_val_if_fail (ctx, NULL);
 
 	/* check reference */
 	if (token == NULL) {
@@ -257,13 +258,13 @@ TurbulenceDbList * turbulence_db_list_open   (axlError   ** error,
 	vortex_mutex_create (&(list->mutex));
 
 	/* add the db list to the list of files opened */
-	vortex_mutex_lock (&turbulence_db_list_mutex);
+	vortex_mutex_lock (&ctx->db_list_mutex);
 
 	/* add the db list opened */
-	axl_list_add (turbulence_db_list_opened, list);
+	axl_list_add (ctx->db_list_opened, list);
 
 	/* unlock and return */
-	vortex_mutex_unlock (&turbulence_db_list_mutex);
+	vortex_mutex_unlock (&ctx->db_list_mutex);
 
 	/* return reference */
 	return list;
@@ -654,6 +655,12 @@ axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
  */
 bool               turbulence_db_list_close  (TurbulenceDbList * list)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
+	/* failed to close */
+	v_return_val_if_fail (ctx, false);
+
 	/* if a null reference is received do not perform any
 	 * operation, and return ok status. */
 	if (list == NULL)
@@ -661,16 +668,16 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list)
 
 
 	/* remove the list from the opened db list */
-	vortex_mutex_lock (&turbulence_db_list_mutex);
+	vortex_mutex_lock (&ctx->db_list_mutex);
 
 	/* remove the item from the list without deallocating */
-	axl_list_unlink (turbulence_db_list_opened, list);
+	axl_list_unlink (ctx->db_list_opened, list);
 
 	/* clear memmory associated */
 	turbulence_db_list_close_internal (list);
 
 	/* unlock and return */
-	vortex_mutex_unlock (&turbulence_db_list_mutex);
+	vortex_mutex_unlock (&ctx->db_list_mutex);
 	
 	return true;
 }
@@ -859,73 +866,45 @@ int               turbulence_db_list_count          (TurbulenceDbList * list)
  */
 bool               turbulence_db_list_init ()
 {
-	char     * file;
-	axlError * err;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	char             * file;
+	axlError         * err;
 
-	/* init the mutex */
-	vortex_mutex_create (&turbulence_db_list_mutex);
+	/* check reference */
+	v_return_val_if_fail (ctx, false);
 
-	/* init the list if it werent */
-	if (turbulence_db_list_opened == NULL)
-		turbulence_db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close_internal);
-	
 	/* init dtd to validate data */
-	if (turbulence_db_list_dtd == NULL) {
-		file                   = vortex_support_domain_find_data_file ("turbulence-data", "db-list.dtd");
-		turbulence_db_list_dtd = axl_dtd_parse_from_file (file, &err);
+	if (ctx->db_list_dtd == NULL) {
+		file             = vortex_support_domain_find_data_file ("turbulence-data", "db-list.dtd");
+		ctx->db_list_dtd = axl_dtd_parse_from_file (file, &err);
 
 		/* db list */
-		if (turbulence_db_list_dtd == NULL) {
+		if (ctx->db_list_dtd == NULL) {
 			msg2 ("failed to open DTD: %s, error was: %s", file, axl_error_get (err));
 			axl_error_free (err);
 		} /* end if */
 		axl_free (file);
 
 		/* if not found, try to open it directly */
-		if (turbulence_db_list_dtd == NULL) {
-			file = vortex_support_build_filename (TBC_DATADIR, "turbulence", "db-list.dtd", NULL);
-			turbulence_db_list_dtd = axl_dtd_parse_from_file (file, &err);
+		if (ctx->db_list_dtd == NULL) {
+			file             = vortex_support_build_filename (TBC_DATADIR, "turbulence", "db-list.dtd", NULL);
+			ctx->db_list_dtd = axl_dtd_parse_from_file (file, &err);
 
 			/* check the file */
-			if (turbulence_db_list_dtd == NULL) {
+			if (ctx->db_list_dtd == NULL) {
 				msg2 ("failed to open DTD: %s, error was: %s", file, axl_error_get (err));
 				axl_error_free (err);
 			} /* end if */
 			axl_free (file);
 		} /* end if */
 
-		if (turbulence_db_list_dtd == NULL) {
+		if (ctx->db_list_dtd == NULL) {
 			msg ("failed to open DTD file to validate db-list content");
 			return false;
 		}
 
 	} /* end if */
-
-	return true;
-}
-
-/** 
- * @internal Service used cleanup and close al db list opened.
- * @return True if the module was properly stoped, otherwise false is
- * returned.
- */
-bool               turbulence_db_list_cleanup ()
-{
-	/* grab the mutex */
-	vortex_mutex_lock (&turbulence_db_list_mutex);
-
-	/* dealloc pending opened db-lists */
-	if (turbulence_db_list_opened != NULL)
-		axl_list_free (turbulence_db_list_opened);
-	turbulence_db_list_opened = NULL;
-
-	/* dealloc dtd */
-	if (turbulence_db_list_dtd != NULL)
-		axl_dtd_free (turbulence_db_list_dtd);
-	turbulence_db_list_dtd = NULL;
-
-	vortex_mutex_unlock  (&turbulence_db_list_mutex);
-	vortex_mutex_destroy (&turbulence_db_list_mutex);
 
 	return true;
 }
