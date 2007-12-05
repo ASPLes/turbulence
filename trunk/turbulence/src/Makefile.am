@@ -30,6 +30,8 @@ lib_LTLIBRARIES          = libturbulence.la
 libturbulenceinclude_HEADERS    = \
 	turbulence-moddef.h \
 	turbulence.h \
+	turbulence-ctx.h \
+	turbulence-ctx-private.h \
 	turbulence-handlers.h \
 	turbulence-run.h \
 	turbulence-module.h \
@@ -41,6 +43,7 @@ libturbulenceinclude_HEADERS    = \
 
 libturbulence_la_SOURCES = \
 	turbulence.c \
+	turbulence-ctx.c \
 	turbulence-config.c \
 	turbulence-run.c \
 	turbulence-module.c \

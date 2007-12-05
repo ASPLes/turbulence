@@ -6,7 +6,7 @@ OBJ  = turbulence.o \
 	turbulence-log.o \
 	turbulence-ppath.o \
 	turbulence-db-list.o \
-	turbulence-conn-mgr.o
+	turbulence-conn-mgr.o 
 
 version_file = ../../modules-version.txt
 axl_version         = `grep libaxl $(version_file) | cut -f2 -d " "`-MinGW32

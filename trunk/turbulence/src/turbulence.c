@@ -45,6 +45,9 @@
 #include <turbulence.h>
 #include <signal.h>
 
+/* local include */
+#include <turbulence-ctx-private.h>
+
 #if defined(__COMPILING_TURBULENCE__) && defined(__GNUC__)
 /* make happy gcc compiler */
 int fsync (int fd);
@@ -67,19 +70,6 @@ If you have question, bugs to report, patches, you can reach us\n\
 at <vortex@lists.aspl.es>."
 
 /** 
- * @internal Controls if messages must be send to the console log.
- */
-static bool        console_enabled        = false;
-static bool        console_debug          = false;
-static bool        console_debug2         = false;
-static bool        console_debug3         = false;
-static bool        console_color_debug    = false;
-static int         turbulence_pid         = -1;
-
-static bool        turbulence_is_existing = false;
-static VortexMutex turbulence_exit_mutex;
-
-/** 
  * @internal Starts turbulence execution, initializing all libraries
  * required by the server application.
  *
@@ -87,6 +77,12 @@ static VortexMutex turbulence_exit_mutex;
  */
 bool turbulence_init (int argc, char ** argv)
 {
+	/* creates the turbulence context */
+	TurbulenceCtx * ctx = turbulence_ctx_new ();
+
+	/* configure into the library */
+	turbulence_ctx_set (ctx);
+
 	/*** init exarg library ***/
 
 	/* install headers for help */
@@ -100,7 +96,7 @@ bool turbulence_init (int argc, char ** argv)
 			   "Main server configuration location.");
 
 	/* install console options */
-	console_debug = true;
+	ctx->console_debug = true;
 	turbulence_console_install_options (); 
 
 	exarg_install_arg ("vortex-debug", NULL, EXARG_NONE,
@@ -149,7 +145,6 @@ bool turbulence_init (int argc, char ** argv)
 #endif
 	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 
-	vortex_mutex_create (&turbulence_exit_mutex);
 	turbulence_conn_mgr_init ();
 	turbulence_module_init ();
 	turbulence_db_list_init ();
@@ -179,13 +174,17 @@ bool turbulence_init (int argc, char ** argv)
  */
 void turbulence_reload_config (int value)
 {
-	bool already_notified = false;
+	/* get turbulence context */
+	TurbulenceCtx * ctx              = turbulence_ctx_get ();
+	bool            already_notified = false;
+
+	
 	msg ("caught HUP signal, reloading configuration");
 	/* reconfigure signal received, notify turbulence modules the
 	 * signal */
-	vortex_mutex_lock (&turbulence_exit_mutex);
+	vortex_mutex_lock (&ctx->exit_mutex);
 	if (already_notified) {
-		vortex_mutex_unlock (&turbulence_exit_mutex);
+		vortex_mutex_unlock (&ctx->exit_mutex);
 		return;
 	}
 	already_notified = true;
@@ -196,7 +195,7 @@ void turbulence_reload_config (int value)
 	
 	/* reload modules */
 	turbulence_module_notify_reload_conf ();
-	vortex_mutex_unlock (&turbulence_exit_mutex);
+	vortex_mutex_unlock (&ctx->exit_mutex);
 
 #if defined(AXL_OS_UNIX)
 	/* reload signal */
@@ -214,22 +213,24 @@ void turbulence_reload_config (int value)
  */
 void turbulence_exit (int value)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	axlDoc           * doc;
 	axlNode          * node;
 	VortexAsyncQueue * queue;
 
 	/* lock the mutex and check */
-	vortex_mutex_lock (&turbulence_exit_mutex);
-	if (turbulence_is_existing) {
+	vortex_mutex_lock (&ctx->exit_mutex);
+	if (ctx->is_existing) {
 		/* other thread is already cleaning */
-		vortex_mutex_unlock (&turbulence_exit_mutex);
+		vortex_mutex_unlock (&ctx->exit_mutex);
 		return;
 	} /* end if */
 
 	/* flag that turbulence is existing and do all cleanup
 	 * operations */
-	turbulence_is_existing = true;
-	vortex_mutex_unlock (&turbulence_exit_mutex);
+	ctx->is_existing = true;
+	vortex_mutex_unlock (&ctx->exit_mutex);
 	
 	switch (value) {
 	case SIGINT:
@@ -288,6 +289,9 @@ void turbulence_exit (int value)
  */
 void turbulence_cleanup ()
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
 	msg ("cleaning up..");
 
 	/* unref all connections */
@@ -311,13 +315,12 @@ void turbulence_cleanup ()
 	 * done after vortex termination to avoid unmapping memory
 	 * region used by handlers configured inside vortex */
 	turbulence_module_cleanup ();
-	turbulence_db_list_cleanup ();
 
 	/* the last module to clean up */
 	turbulence_log_cleanup ();
 
 	/* terminate */
-	vortex_mutex_destroy (&turbulence_exit_mutex);
+	vortex_mutex_destroy (&ctx->exit_mutex);
 
 	return;
 }
@@ -326,13 +329,13 @@ void turbulence_cleanup ()
  * @internal Simple macro to check if the console output is activated
  * or not.
  */
-#define CONSOLE if (console_enabled) fprintf
+#define CONSOLE if (ctx->console_enabled) fprintf
 
 /** 
  * @internal Simple macro to check if the console output is activated
  * or not.
  */
-#define CONSOLEV if (console_enabled) vfprintf
+#define CONSOLEV if (ctx->console_enabled) vfprintf
 
 
 /** 
@@ -340,22 +343,25 @@ void turbulence_cleanup ()
  */
 void turbulence_console_process_options ()
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
 	/* get current process id */
-	turbulence_pid = getpid ();
+	ctx->pid = getpid ();
 
 	/* activate log console */
-	console_debug       = exarg_is_defined ("debug");
-	console_debug2      = exarg_is_defined ("debug2");
-	console_debug3      = exarg_is_defined ("debug3");
-	console_enabled     = console_debug || console_debug2 || console_debug3;
+	ctx->console_debug       = exarg_is_defined ("debug");
+	ctx->console_debug2      = exarg_is_defined ("debug2");
+	ctx->console_debug3      = exarg_is_defined ("debug3");
+	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
 
 	/* implicitly activate third and second console debug */
-	if (console_debug3)
-		console_debug2 = true;
-	if (console_debug2)
-		console_debug = true;
+	if (ctx->console_debug3)
+		ctx->console_debug2 = true;
+	if (ctx->console_debug2)
+		ctx->console_debug = true;
 	
-	console_color_debug = exarg_is_defined ("color-debug");
+	ctx->console_color_debug = exarg_is_defined ("color-debug");
 
 	return;
 }
@@ -375,8 +381,10 @@ void turbulence_console_process_options ()
  */
 void turbulence_console_install_options ()
 {
-	/* install default debug options. */
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 
+	/* install default debug options. */
 	exarg_install_arg ("debug", "d", EXARG_NONE,
 			   "Makes all log produced by the application, to be also dropped to the console in sort form.");
 
@@ -390,8 +398,8 @@ void turbulence_console_install_options ()
 			   "Makes console log to be colorified.");
 
 	/* check implicit activation */
-	if (console_debug) 
-		console_debug = false;
+	if (ctx->console_debug) 
+		ctx->console_debug = false;
 	else {
 		/* seems the caller is a tool, define the debug flag
 		 * to be activated. */
@@ -405,20 +413,21 @@ void turbulence_console_install_options ()
  */
 void turbulence_error (const char * file, int line, const char * format, ...)
 {
-	va_list args;
-	
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	va_list            args;
 	
 	/* check extended console log */
-	if (console_debug3) {
+	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
 		if (exarg_is_defined ("color-debug")) {
-			CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stderr, "(proc:%d) [err] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stderr, "(proc:%d) [err] (%s:%d) ", ctx->pid, file, line);
 	} else {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stderr, "\e[1;31mE: \e[0m");
 		} else
 #endif
@@ -449,7 +458,11 @@ void turbulence_error (const char * file, int line, const char * format, ...)
  */
 bool turbulence_log_enabled ()
 {
-	return console_debug;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	v_return_val_if_fail (ctx, false);
+
+	return ctx->console_debug;
 }
 
 /** 
@@ -460,7 +473,11 @@ bool turbulence_log_enabled ()
  */
 bool turbulence_log2_enabled ()
 {
-	return console_debug2;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	v_return_val_if_fail (ctx, false);
+	
+	return ctx->console_debug2;
 }
 
 /** 
@@ -468,19 +485,21 @@ bool turbulence_log2_enabled ()
  */
 void turbulence_msg (const char * file, int line, const char * format, ...)
 {
-	va_list args;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	va_list            args;
 
 	/* check extended console log */
-	if (console_debug3) {
+	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
-			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		if (ctx->console_color_debug) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", ctx->pid, file, line);
 	} else {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "\e[1;32mI: \e[0m");
 		} else
 #endif
@@ -509,19 +528,21 @@ void turbulence_msg (const char * file, int line, const char * format, ...)
  */
 void  turbulence_access   (const char * file, int line, const char * format, ...)
 {
-	va_list args;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	va_list            args;
 
 	/* check extended console log */
-	if (console_debug3) {
+	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
-			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
+		if (ctx->console_color_debug) {
+			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", ctx->pid, file, line);
 	} else {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "\e[1;32mI: \e[0m");
 		} else
 #endif
@@ -550,29 +571,30 @@ void  turbulence_access   (const char * file, int line, const char * format, ...
  */
 void turbulence_msg2 (const char * file, int line, const char * format, ...)
 {
-	va_list args;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	va_list            args;
 
 	/* check second level debug */
-	if (! console_debug2)
+	if (! ctx->console_debug2)
 		return;
 
 	/* check extended console log */
-	if (console_debug3) {
+	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
 		if (exarg_is_defined ("color-debug")) {
-			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", ctx->pid, file, line);
 	} else {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "\e[1;32mI: \e[0m");
 		} else
 #endif
 			CONSOLE (stdout, "I: ");
 	} /* end if */
-	
 	va_start (args, format);
 	
 	/* report to console */
@@ -595,19 +617,21 @@ void turbulence_msg2 (const char * file, int line, const char * format, ...)
  */
 void turbulence_wrn (const char * file, int line, const char * format, ...)
 {
-	va_list args;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	va_list            args;
 	
 	/* check extended console log */
-	if (console_debug3) {
+	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
 		if (exarg_is_defined ("color-debug")) {
-			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", ctx->pid, file, line);
 	} else {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "\e[1;33m!: \e[0m");
 		} else
 #endif
@@ -635,19 +659,21 @@ void turbulence_wrn (const char * file, int line, const char * format, ...)
  */
 void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
 {
-	va_list args;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	va_list            args;
 	
 	/* check extended console log */
-	if (console_debug3) {
+	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
 		if (exarg_is_defined ("color-debug")) {
-			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", turbulence_pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [!!!] (%s:%d) ", ctx->pid, file, line);
 	} else {
 #if defined(AXL_OS_UNIX)	
-		if (console_color_debug) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "\e[1;33m!: \e[0m");
 		} else
 #endif
