@@ -69,15 +69,15 @@ at <vortex@lists.aspl.es>."
 /** 
  * @internal Controls if messages must be send to the console log.
  */
-bool        console_enabled        = false;
-bool        console_debug          = false;
-bool        console_debug2         = false;
-bool        console_debug3         = false;
-bool        console_color_debug    = false;
-int         turbulence_pid         = -1;
+static bool        console_enabled        = false;
+static bool        console_debug          = false;
+static bool        console_debug2         = false;
+static bool        console_debug3         = false;
+static bool        console_color_debug    = false;
+static int         turbulence_pid         = -1;
 
-bool        turbulence_is_existing = false;
-VortexMutex turbulence_exit_mutex;
+static bool        turbulence_is_existing = false;
+static VortexMutex turbulence_exit_mutex;
 
 /** 
  * @internal Starts turbulence execution, initializing all libraries

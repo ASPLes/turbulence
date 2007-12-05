@@ -52,8 +52,8 @@ struct _TurbulenceModule {
 /** 
  * @internal A list of modules registered.
  */
-axlList     * _registered_modules = NULL;
-VortexMutex   _registered_modules_mutex;
+static axlList     * _registered_modules = NULL;
+static VortexMutex   _registered_modules_mutex;
 
 /** 
  * @brief Starts the turbulence module initializing all internal

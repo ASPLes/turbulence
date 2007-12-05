@@ -45,8 +45,7 @@
  * \addtogroup turbulence_config
  * @{
  */
-
-axlDoc * __turbulence_config = NULL;
+static axlDoc * __turbulence_config = NULL;
 
 /** 
  * @internal Loads the turbulence main file, which has all definitions to make

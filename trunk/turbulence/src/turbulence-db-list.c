@@ -49,15 +49,15 @@
 /** 
  * @internal Mutex to protect the list of db list opened.
  */
-VortexMutex turbulence_db_list_mutex;
+static VortexMutex turbulence_db_list_mutex;
 
 /**
  * @internal List of already opened db list, used to implement
  * automatic features such automatic closing on turbulence exit,
  * automatic reloading..
  */
-axlList * turbulence_db_list_opened = NULL;
-axlDtd  * turbulence_db_list_dtd    = NULL;
+static axlList * turbulence_db_list_opened = NULL;
+static axlDtd  * turbulence_db_list_dtd    = NULL;
 
 struct _TurbulenceDbList {
 	axlDoc      * doc;

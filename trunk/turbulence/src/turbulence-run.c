@@ -41,7 +41,7 @@
 /** 
  * @internal By default clean start is disabled.
  */
-bool turbulence_clean_start = false;
+static bool turbulence_clean_start = false;
 
 #define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (-1);exit (-1);}while (0);
 
