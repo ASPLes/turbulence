@@ -37,11 +37,13 @@
  */
 
 #include <turbulence.h>
+
+/* local include */
+#include <turbulence-ctx-private.h>
+
 #if defined(AXL_OS_UNIX)
 #include <dlfcn.h>
 #endif
-
-
 
 struct _TurbulenceModule {
 	char             * path;
@@ -50,22 +52,16 @@ struct _TurbulenceModule {
 };
 
 /** 
- * @internal A list of modules registered.
- */
-static axlList     * _registered_modules = NULL;
-static VortexMutex   _registered_modules_mutex;
-
-/** 
  * @brief Starts the turbulence module initializing all internal
  * variables.
  */
-void               turbulence_module_init      ()
+void               turbulence_module_init      (TurbulenceCtx * ctx)
 {
 	/* a list of all modules loaded */
-	_registered_modules = axl_list_new (axl_list_always_return_1, 
-					    (axlDestroyFunc) turbulence_module_free);
+	ctx->registered_modules = axl_list_new (axl_list_always_return_1, 
+						(axlDestroyFunc) turbulence_module_free);
 	/* init mutex */
-	vortex_mutex_create (&_registered_modules_mutex);
+	vortex_mutex_create (&ctx->registered_modules_mutex);
 	return;
 }
 
@@ -180,10 +176,13 @@ ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
  */
 void               turbulence_module_register  (TurbulenceModule * module)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
 	/* register the module */
-	vortex_mutex_lock (&_registered_modules_mutex);
-	axl_list_add (_registered_modules, module);
-	vortex_mutex_unlock (&_registered_modules_mutex);
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+	axl_list_add (ctx->registered_modules, module);
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
 	return;
 }
@@ -198,10 +197,13 @@ void               turbulence_module_register  (TurbulenceModule * module)
  */
 void               turbulence_module_unregister  (TurbulenceModule * module)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
 	/* register the module */
-	vortex_mutex_lock (&_registered_modules_mutex);
-	axl_list_unlink (_registered_modules, module);
-	vortex_mutex_unlock (&_registered_modules_mutex);
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+	axl_list_unlink (ctx->registered_modules, module);
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
 	return;
 }
@@ -245,13 +247,15 @@ void               turbulence_module_free (TurbulenceModule * module)
  */
 void               turbulence_module_notify_reload_conf ()
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	TurbulenceModule * module;
 
 	int iterator = 0;
-	vortex_mutex_lock (&_registered_modules_mutex);
-	while (iterator < axl_list_length (_registered_modules)) {
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+	while (iterator < axl_list_length (ctx->registered_modules)) {
 		/* get the module */
-		module = axl_list_get_nth (_registered_modules, iterator);
+		module = axl_list_get_nth (ctx->registered_modules, iterator);
 
 		/* notify if defined reconf function */
 		if (module->def->reconf != NULL) {
@@ -263,7 +267,7 @@ void               turbulence_module_notify_reload_conf ()
 		iterator++;
 
 	} /* end if */
-	vortex_mutex_unlock (&_registered_modules_mutex);
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
 	return;
 }
@@ -272,11 +276,12 @@ void               turbulence_module_notify_reload_conf ()
  * @brief Cleans the module, releasing all resources and unloading all
  * modules.
  */
-void               turbulence_module_cleanup   ()
+void               turbulence_module_cleanup   (TurbulenceCtx * ctx)
 {
 	/* release the list and all modules */
-	axl_list_free (_registered_modules);
-	vortex_mutex_destroy (&_registered_modules_mutex);
+	axl_list_free (ctx->registered_modules);
+	ctx->registered_modules = NULL;
+	vortex_mutex_destroy (&ctx->registered_modules_mutex);
 
 	return;
 }

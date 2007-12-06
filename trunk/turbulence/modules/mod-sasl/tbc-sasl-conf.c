@@ -205,7 +205,7 @@ int main (int argc, char ** argv)
 
 	/* install turbulence tool options */
 	turbulence_console_install_options ();
-	turbulence_db_list_init ();
+	turbulence_db_list_init_isolated ();
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);

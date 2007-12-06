@@ -40,8 +40,10 @@
 
 #include <turbulence.h>
 
-bool turbulence_ppath_init ();
+typedef struct _TurbulencePPath TurbulencePPath;
 
-void turbulence_ppath_cleanup ();
+bool turbulence_ppath_init (TurbulenceCtx * ctx);
+
+void turbulence_ppath_cleanup (TurbulenceCtx * ctx);
 
 #endif /* end __TURBULENCE_PPATH_H__ */

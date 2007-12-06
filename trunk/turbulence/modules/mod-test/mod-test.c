@@ -52,8 +52,12 @@ BEGIN_C_DECLS
  * must return true to signal that the module was properly initialized
  * Otherwise, false must be returned.
  */
-static bool test_init ()
+static bool test_init (VortexCtx * vCtx, TurbulenceCtx * tCtx)
 {
+	/* configure context */
+	vortex_ctx_set     (vCtx);
+	turbulence_ctx_set (tCtx);
+
 	msg ("Turbulence BEEP server, test module: init");
 
 	/* register all profiles without handlers: testing purposes */

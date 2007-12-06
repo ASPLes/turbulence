@@ -62,8 +62,22 @@ TurbulenceCtx * turbulence_ctx_new ()
 	vortex_mutex_create (&ctx->exit_mutex);
 
 	/* db list */
-	vortex_mutex_create (&ctx->db_list_mutex);
-	ctx->db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close_internal);
+	turbulence_db_list_init (ctx);
+
+	/* init turbulence-module.c */
+	turbulence_module_init (ctx);
+
+	/* init the log module */
+	turbulence_log_init (ctx);
+
+	/* init profile path module */
+	if (! turbulence_ppath_init (ctx)) {
+		turbulence_ppath_cleanup (ctx);
+		return NULL;
+	} /* end if */
+
+	/* init connection manager */
+	turbulence_conn_mgr_init (ctx);
 
 	/* return context created */
 	return ctx;
@@ -116,8 +130,22 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	axl_dtd_free (ctx->db_list_dtd);
 	ctx->db_list_dtd = NULL;
 
+	/* terminate profile path */
+	turbulence_ppath_cleanup (ctx);
+
 	/* free mutex */
 	vortex_mutex_destroy (&ctx->exit_mutex);
+
+	/* terminate all modules */
+	turbulence_config_cleanup (ctx);
+
+	/* and finally the turbulence module loading. This must be
+	 * done after vortex termination to avoid unmapping memory
+	 * region used by handlers configured inside vortex */
+	turbulence_module_cleanup (ctx);
+
+	/* init the log module */
+	turbulence_log_cleanup (ctx);
 
 	/* release the node itself */
 	axl_free (ctx);

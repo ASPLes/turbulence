@@ -88,7 +88,9 @@ int                turbulence_db_list_count          (TurbulenceDbList * list);
 
 /* internal services, used by turbulence engine, never by user
  * application code */
-bool               turbulence_db_list_init ();
+bool               turbulence_db_list_init (TurbulenceCtx * ctx);
+
+bool               turbulence_db_list_init_isolated ();
 
 bool               turbulence_db_list_reload_module  ();
 

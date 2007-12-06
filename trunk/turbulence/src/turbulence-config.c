@@ -37,6 +37,9 @@
  */
 #include <turbulence.h>
 
+/* local include */
+#include <turbulence-ctx-private.h>
+
 /**
  * \defgroup turbulence_config Turbulence Config: files to access to run-time Turbulence Config
  */
@@ -45,7 +48,6 @@
  * \addtogroup turbulence_config
  * @{
  */
-static axlDoc * __turbulence_config = NULL;
 
 /** 
  * @internal Loads the turbulence main file, which has all definitions to make
@@ -56,7 +58,7 @@ static axlDoc * __turbulence_config = NULL;
  * @return true if the configuration file looks ok and it is
  * syncatically correct.
  */
-bool turbulence_config_load (char * config)
+bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
 {
 	axlError * error;
 	axlDtd   * dtd_file;
@@ -70,8 +72,8 @@ bool turbulence_config_load (char * config)
 	} /* end if */
 
 	/* load the file */
-	__turbulence_config = axl_doc_parse_from_file (config, &error);
-	if (__turbulence_config == NULL) {
+	ctx->config = axl_doc_parse_from_file (config, &error);
+	if (ctx->config == NULL) {
 		error ("unable to load file (%s), it seems a xml error: %s", 
 		       config, axl_error_get (error));
 
@@ -95,7 +97,7 @@ bool turbulence_config_load (char * config)
 	dtd = vortex_support_domain_find_data_file ("turbulence-data", "config.dtd");
 	if (dtd == NULL) {
 		/* free document */
-		axl_doc_free (__turbulence_config);
+		axl_doc_free (ctx->config);
 		error ("unable to find turbulence config DTD definition (config.dtd), check your turbulence installation.");
 
 		turbulence_exit (-1);
@@ -106,7 +108,7 @@ bool turbulence_config_load (char * config)
 	msg ("found dtd file at: %s", dtd);
 	dtd_file = axl_dtd_parse_from_file (dtd, &error);
 	if (dtd_file == NULL) {
-		axl_doc_free (__turbulence_config);
+		axl_doc_free (ctx->config);
 		error ("unable to load DTD file %s, error: %s", dtd, axl_error_get (error));
 		axl_error_free (error);
 		axl_free (dtd);
@@ -115,13 +117,13 @@ bool turbulence_config_load (char * config)
 		return false;
 	} /* end if */
 
-	if (! axl_dtd_validate (__turbulence_config, dtd_file, &error)) {
+	if (! axl_dtd_validate (ctx->config, dtd_file, &error)) {
 		error ("unable to validate server configuration (%s), something is wrong: %s", 
 		       dtd, axl_error_get (error));
 
 		/* free and set a null reference */
-		axl_doc_free (__turbulence_config);
-		__turbulence_config = NULL;
+		axl_doc_free (ctx->config);
+		ctx->config = NULL;
 
 		axl_error_free (error);
 		axl_free (dtd);
@@ -148,20 +150,23 @@ bool turbulence_config_load (char * config)
  */
 axlDoc * turbulence_config_get ()
 {
+	/* get turbulence context */
+	TurbulenceCtx   * ctx = turbulence_ctx_get ();
+
 	/* return current reference */
-	return __turbulence_config;
+	return ctx->config;
 }
 
 /** 
  * @internal Cleanups the turbulence config module. This is called by
  * Turbulence itself on exit.
  */
-void turbulence_config_cleanup ()
+void turbulence_config_cleanup (TurbulenceCtx * ctx)
 {
 	/* free previous state */
-	if (__turbulence_config)
-		axl_doc_free (__turbulence_config);
-	__turbulence_config = NULL;
+	if (ctx->config)
+		axl_doc_free (ctx->config);
+	ctx->config = NULL;
 
 	return;
 } 

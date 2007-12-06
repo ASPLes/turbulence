@@ -42,7 +42,7 @@
 
 typedef struct _TurbulenceModule TurbulenceModule;
 
-void               turbulence_module_init        ();
+void               turbulence_module_init        (TurbulenceCtx * ctx);
 
 TurbulenceModule * turbulence_module_open        (const char * module);
 
@@ -58,6 +58,6 @@ void               turbulence_module_free        (TurbulenceModule * module);
 
 void               turbulence_module_notify_reload_conf ();
 
-void               turbulence_module_cleanup   ();
+void               turbulence_module_cleanup   (TurbulenceCtx * ctx);
 
 #endif

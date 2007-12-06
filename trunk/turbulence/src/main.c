@@ -40,7 +40,8 @@
 
 int main (int argc, char ** argv)
 {
-	char * config;
+	char          * config;
+	TurbulenceCtx * ctx;
 
 	/* init libraries */
 	turbulence_init (argc, argv);
@@ -75,22 +76,19 @@ int main (int argc, char ** argv)
 		error ("Unable to find turbulence.conf file at the default location: %s/turbulence/turbulence.conf", SYSCONFDIR);
 	else 
 		msg ("using configuration file: %s", config);
-	if (! turbulence_config_load (config)) {
+
+	/* get turbulence ctx */
+	ctx = turbulence_ctx_get ();
+
+	if (! turbulence_config_load (ctx, config)) {
 		/* unable to load configuration */
 		return -1;
 	}
 
-	/* rest of modules to initialize */
-	turbulence_log_init ();
-	
 	/* not required to free config var, already done by previous
 	 * function */
 	msg ("about to startup configuration found..");
 	if (! turbulence_run_config ())
-		return false;
-
-	/* init profile path */
-	if (! turbulence_ppath_init ())
 		return false;
 
 	/* look main thread until finished */

@@ -864,15 +864,18 @@ int               turbulence_db_list_count          (TurbulenceDbList * list)
  * @return True if the module was properly started, otherwise false is
  * returned.
  */
-bool               turbulence_db_list_init ()
+bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	char             * file;
 	axlError         * err;
 
 	/* check reference */
 	v_return_val_if_fail (ctx, false);
+
+	/* init global variables */
+	vortex_mutex_create (&ctx->db_list_mutex);
+	ctx->db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close_internal);
 
 	/* init dtd to validate data */
 	if (ctx->db_list_dtd == NULL) {
