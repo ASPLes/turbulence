@@ -38,6 +38,9 @@
 
 #include <turbulence.h>
 
+/* local include */
+#include <turbulence-ctx-private.h>
+
 /**
  * \defgroup turbulence_conn_mgr Turbulence Connection Manager: a module that controls all connections created under the turbulence execution
  */
@@ -46,9 +49,6 @@
  * \addtogroup turbulence_conn_mgr
  * @{
  */
-
-static VortexMutex   _turbulence_conn_mgr_mutex;
-static axlHash     * _turbulence_conn_mgr_hash; 
 
 void turbulence_conn_mgr_unref (axlPointer data)
 {
@@ -67,14 +67,17 @@ void turbulence_conn_mgr_unref (axlPointer data)
  */
 void turbulence_conn_mgr_on_close (VortexConnection * conn)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
 	/* new connection created: configure it */
-	vortex_mutex_lock (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* remove from the hash */
-	axl_hash_remove (_turbulence_conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
+	axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
 
 	/* unlock */
-	vortex_mutex_unlock (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	return;
 }
@@ -89,13 +92,16 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn)
  */
 void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
 {
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+
 	/* new connection created: configure it */
-	vortex_mutex_lock (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* store in the hash */
 	vortex_connection_ref (conn, "turbulence-conn-mgr");
 	msg ("Registering connection: %d", vortex_connection_get_id (conn));
-	axl_hash_insert_full (_turbulence_conn_mgr_hash, 
+	axl_hash_insert_full (ctx->conn_mgr_hash, 
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,
 			      /* data to store */
@@ -105,7 +111,7 @@ void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
 	vortex_connection_set_on_close (conn, turbulence_conn_mgr_on_close);
 
 	/* unlock */
-	vortex_mutex_unlock (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	return;
 }
@@ -113,13 +119,13 @@ void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
 /** 
  * @internal Module init.
  */
-void turbulence_conn_mgr_init ()
+void turbulence_conn_mgr_init (TurbulenceCtx * ctx)
 {
 	/* init mutex */
-	vortex_mutex_create (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_create (&ctx->conn_mgr_mutex);
 
 	/* init connection list hash */
-	_turbulence_conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
+	ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 
 	/* configure notification handlers */
 	vortex_connection_notify_new_connections (turbulence_conn_mgr_notify, NULL);
@@ -189,6 +195,9 @@ bool turbulence_conn_mgr_broadcast_msg (const void * message,
 					TurbulenceConnMgrFilter filter_conn,
 					axlPointer              filter_data)
 {
+
+	/* get turbulence context */
+	TurbulenceCtx          * ctx = turbulence_ctx_get ();
 	axlHashCursor          * cursor;
 	VortexConnection       * conn;
 	int                      conn_id;
@@ -199,10 +208,10 @@ bool turbulence_conn_mgr_broadcast_msg (const void * message,
 	v_return_val_if_fail (profile, false);
 
 	/* lock and send */
-	vortex_mutex_lock (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 	
 	/* create the cursor */
-	cursor = axl_hash_cursor_new (_turbulence_conn_mgr_hash);
+	cursor = axl_hash_cursor_new (ctx->conn_mgr_hash);
 
 	/* create the broadcast data */
 	broadcast               = axl_new (TurbulenceBroadCastMsg, 1);
@@ -236,7 +245,7 @@ bool turbulence_conn_mgr_broadcast_msg (const void * message,
 	}
 
 	/* unlock */
-	vortex_mutex_unlock (&_turbulence_conn_mgr_mutex);
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	/* free cursor hash and broadcast message */
 	axl_hash_cursor_free (cursor);
@@ -248,13 +257,13 @@ bool turbulence_conn_mgr_broadcast_msg (const void * message,
 /** 
  * @internal Module cleanup.
  */
-void turbulence_conn_mgr_cleanup ()
+void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 {
 	
 	/* destroy mutex */
-	vortex_mutex_destroy (&_turbulence_conn_mgr_mutex);
-	axl_hash_free (_turbulence_conn_mgr_hash);
-	_turbulence_conn_mgr_hash = NULL;
+	vortex_mutex_destroy (&ctx->conn_mgr_mutex);
+	axl_hash_free (ctx->conn_mgr_hash);
+	ctx->conn_mgr_hash = NULL;
 
 	return;
 }

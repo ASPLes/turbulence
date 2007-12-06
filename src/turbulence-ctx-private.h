@@ -42,27 +42,47 @@
 struct _TurbulenceCtx {
 	/* Controls if messages must be send to the console log.
 	 */
-	bool           console_enabled;
-	bool           console_debug;
-	bool           console_debug2;
-	bool           console_debug3;
-	bool           console_color_debug;
+	bool                 console_enabled;
+	bool                 console_debug;
+	bool                 console_debug2;
+	bool                 console_debug3;
+	bool                 console_color_debug;
 
 	/* Turbulence current pid (process identifier) */
-	int            pid;
+	int                  pid;
 	
 	/* some variables used to terminate turbulence. */
-	bool           is_existing;
-	VortexMutex    exit_mutex;
+	bool                 is_existing;
+	VortexMutex          exit_mutex;
 	
 	/* Mutex to protect the list of db list opened. */
-	VortexMutex    db_list_mutex;
+	VortexMutex          db_list_mutex;
 	
 	/* List of already opened db list, used to implement automatic
 	 * features such automatic closing on turbulence exit,
 	 * automatic reloading.. */
-	axlList      * db_list_opened;
-	axlDtd       * db_list_dtd;
+	axlList            * db_list_opened;
+	axlDtd             * db_list_dtd;
+
+	/* turbulence ppath module */
+	TurbulencePPath    * paths;
+
+	/* turbulence log module */
+	FILE               * general_log;
+	FILE               * error_log;
+	FILE               * vortex_log;
+	FILE               * access_log;
+
+	/* turbulence config module */
+	axlDoc             * config;
+
+	/* turbulence loading modules module */
+	axlList            * registered_modules;
+	VortexMutex          registered_modules_mutex;
+
+	/* turbulence connection manager module */
+	VortexMutex          conn_mgr_mutex;
+	axlHash            * conn_mgr_hash; 
 };
 
 #endif

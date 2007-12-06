@@ -40,7 +40,7 @@
 
 #include <turbulence.h>
 
-void turbulence_log_init ();
+void turbulence_log_init (TurbulenceCtx * ctx);
 
 typedef enum {LOG_REPORT_GENERAL = 1, 
 	      LOG_REPORT_ACCESS  = 1 << 2, 
@@ -54,6 +54,6 @@ void turbulence_log_report (LogReportType   type,
 			    const char    * file,
 			    int             line);
 
-void turbulence_log_cleanup ();
+void turbulence_log_cleanup (TurbulenceCtx * ctx);
 
 #endif

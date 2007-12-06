@@ -36,6 +36,10 @@
  *         info@aspl.es - http://www.turbulence.ws
  */
 #include <turbulence-ppath.h>
+
+/* local include */
+#include <turbulence-ctx-private.h>
+
 #if defined (ENABLE_PCRE_SUPPORT)
 #include <pcre.h>
 typedef struct _TurbuleceExpression {
@@ -110,20 +114,18 @@ typedef struct _TurbulencePPathDef {
 	
 } TurbulencePPathDef;
 
-typedef struct _TurbulencePPath {
-	/* list of profile paths found */
-	TurbulencePPathDef ** items;
-	
-} TurbulencePPath;
-
-TurbulencePPath * turbulence_paths = NULL;
-
 typedef struct _TurbulencePPathState {
 	/* a reference to the profile path selected for the
 	 * connection */
 	TurbulencePPathDef * path_selected;
 
 } TurbulencePPathState;
+
+struct _TurbulencePPath {
+	/* list of profile paths found */
+	TurbulencePPathDef ** items;
+	
+};
 
 /** 
  * @internal Function used to check if the string provided have
@@ -637,18 +639,23 @@ bool __turbulence_ppath_mask (VortexConnection * connection,
  */
 bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
 {
+	/* get turbulence context */
+	TurbulenceCtx        * ctx = turbulence_ctx_get ();
 	TurbulencePPathState * state;
 	TurbulencePPathDef   * def = NULL;
 	int                    iterator;
 	const char           * src;
 
+	/* check context received */
+	v_return_val_if_fail (ctx, false);
+
 	/* try to find a profile path that could match with the
 	 * provided source */
 	iterator = 0;
 	src      = vortex_connection_get_host (connection);
-	while (turbulence_paths->items[iterator] != NULL) {
+	while (ctx->paths->items[iterator] != NULL) {
 		/* get the profile path def */
-		def = turbulence_paths->items[iterator];
+		def = ctx->paths->items[iterator];
 		msg ("checking profile path def: %s", def->path_name ? def->path_name : "(no path name defined)");
 
 		/* try to match the src expression against the connection value */
@@ -693,13 +700,17 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
  * support according to the current configuration.
  * 
  */
-bool turbulence_ppath_init ()
+bool turbulence_ppath_init (TurbulenceCtx * ctx)
 {
+	/* get turbulence context */
 	axlNode            * node; 
 	axlNode            * pdef;
 	TurbulencePPathDef * definition;
 	int                  iterator;
 	int                  iterator2;
+
+	/* check turbulence context received */
+	v_return_val_if_fail (ctx, false);
 	
 	/* parse all profile path configurations */
 	pdef = axl_doc_get (turbulence_config_get (), "/turbulence/profile-path-configuration/path-def");
@@ -712,16 +723,16 @@ bool turbulence_ppath_init ()
 	node = axl_node_get_parent (pdef);
 	
 	/* create the turbulence ppath */
-	turbulence_paths        = axl_new (TurbulencePPath, 1);
-	turbulence_paths->items = axl_new (TurbulencePPathDef *, axl_node_get_child_num (node) + 1);
+	ctx->paths        = axl_new (TurbulencePPath, 1);
+	ctx->paths->items = axl_new (TurbulencePPathDef *, axl_node_get_child_num (node) + 1);
 
 	/* now parse each profile path def found */
 	iterator = 0;
 	while (pdef != NULL) {
 
 		/* get the reference to the profile path */
-		turbulence_paths->items[iterator] = axl_new (TurbulencePPathDef, 1);
-		definition                        = turbulence_paths->items[iterator];
+		ctx->paths->items[iterator] = axl_new (TurbulencePPathDef, 1);
+		definition                  = ctx->paths->items[iterator];
 
 		/* catch all data from the profile path def header */
 		if (HAS_ATTR (pdef, "path-name")) {
@@ -805,20 +816,20 @@ void __turbulence_ppath_free_item (TurbulencePPathItem * item)
  * @internal Terminates the profile path module, cleanup all memory
  * used.
  */
-void turbulence_ppath_cleanup ()
+void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 {
 	int iterator;
 	int iterator2;
 	TurbulencePPathDef * def;
 
 	/* terminate profile paths */
-	if (turbulence_paths != NULL) {
+	if (ctx->paths != NULL) {
 
 		/* for each profile path item iterator */
 		iterator = 0;
-		while (turbulence_paths->items[iterator] != NULL) {
+		while (ctx->paths->items[iterator] != NULL) {
 			/* get the definition */
-			def       = turbulence_paths->items[iterator];
+			def       = ctx->paths->items[iterator];
 
 			/* free profile path name definition */
 			axl_free (def->path_name);
@@ -844,9 +855,9 @@ void turbulence_ppath_cleanup ()
 		} /* end if */
 
 		/* free profile path array */
-		axl_free (turbulence_paths->items);
-		axl_free (turbulence_paths);
-		turbulence_paths = NULL;
+		axl_free (ctx->paths->items);
+		axl_free (ctx->paths);
+		ctx->paths = NULL;
 	} /* end if */
 }
 

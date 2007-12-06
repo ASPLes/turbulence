@@ -4,7 +4,7 @@ INCLUDES = -DCOMPILATION_DATE=`date +%s` -I ../../src \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" -DAXL_VERSION=\"$(AXL_VERSION)\" \
 	   -DVORTEX_VERSION=\"$(VORTEX_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
-	   -DDATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
+	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -ansi
 
 bin_PROGRAMS        = tbc-mod-gen

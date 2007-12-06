@@ -37,15 +37,13 @@
  */
 #include <turbulence.h>
 
-static FILE * __general_log    = NULL;
-static FILE * __error_log      = NULL;
-static FILE * __vortex_log     = NULL;
-static FILE * __access_log     = NULL;
+/* local include */
+#include <turbulence-ctx-private.h>
 
 /** 
  * @brief Init the turbulence log module.
  */
-void turbulence_log_init ()
+void turbulence_log_init (TurbulenceCtx * ctx)
 {
 	/* get current turbulence configuration */
 	axlDoc  * doc = turbulence_config_get ();
@@ -60,8 +58,8 @@ void turbulence_log_init ()
 
 	/* open all logs */
 	node      = axl_node_get_child_called (node, "general-log");
-	__general_log = fopen (ATTR_VALUE (node, "file"), "a");
-	if (__general_log == NULL) {
+	ctx->general_log = fopen (ATTR_VALUE (node, "file"), "a");
+	if (ctx->general_log == NULL) {
 		error ("unable to open general log: %s", ATTR_VALUE (node, "file"));
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
@@ -70,8 +68,8 @@ void turbulence_log_init ()
 
 	/* open error logs */
 	node      = axl_node_get_child_called (node, "error-log");
-	__error_log = fopen (ATTR_VALUE (node, "file"), "a");
-	if (__error_log == NULL) {
+	ctx->error_log = fopen (ATTR_VALUE (node, "file"), "a");
+	if (ctx->error_log == NULL) {
 		error ("unable to open error log: %s", ATTR_VALUE (node, "file"));
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
@@ -80,8 +78,8 @@ void turbulence_log_init ()
 
 	/* open access log */
 	node      = axl_node_get_child_called (node, "access-log");
-	__access_log  = fopen (ATTR_VALUE (node, "file"), "a");
-	if (__access_log == NULL) {
+	ctx->access_log  = fopen (ATTR_VALUE (node, "file"), "a");
+	if (ctx->access_log == NULL) {
 		error ("unable to open access log: %s", ATTR_VALUE (node, "file"));
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
@@ -89,8 +87,8 @@ void turbulence_log_init ()
 	node      = axl_node_get_parent (node);
 
 	node      = axl_node_get_child_called (node, "vortex-log");
-	__vortex_log  = fopen (ATTR_VALUE (node, "file"), "a");
-	if (__vortex_log == NULL) {
+	ctx->vortex_log  = fopen (ATTR_VALUE (node, "file"), "a");
+	if (ctx->vortex_log == NULL) {
 		error ("unable to open vortex log: %s", ATTR_VALUE (node, "file"));
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
@@ -131,37 +129,50 @@ void turbulence_log_report (LogReportType type,
 			    const char * file,
 			    int          line)
 {
-	time_t   time_val;
-	char   * time_str;
+	/* get turbulence context */
+	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	time_t             time_val;
+	char             * time_str;
 
 	/* according to the type received report */
 	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) 
-		REPORT (__general_log, message, args, file, line);
+		REPORT (ctx->general_log, message, args, file, line);
 	
 	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) 
-		REPORT (__error_log, message, args, file, line);
+		REPORT (ctx->error_log, message, args, file, line);
 	
 	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) 
-		REPORT (__access_log, message, args, file, line);
+		REPORT (ctx->access_log, message, args, file, line);
 
 	if ((type & LOG_REPORT_VORTEX) == LOG_REPORT_VORTEX) 
-		REPORT (__vortex_log, message, args, file, line);
+		REPORT (ctx->vortex_log, message, args, file, line);
 	return;
 }
 
 /** 
  * @brief Stops and dealloc all resources hold by the module.
  */
-void turbulence_log_cleanup ()
+void turbulence_log_cleanup (TurbulenceCtx * ctx)
 {
-	if (__general_log)
-		fclose (__general_log);
-	if (__error_log)
-		fclose (__error_log);
-	if (__access_log)
-		fclose (__access_log);
-	if (__vortex_log)
-		fclose (__vortex_log);
+	/* close the general log */
+	if (ctx->general_log)
+		fclose (ctx->general_log);
+	ctx->general_log = NULL;
+
+	/* close the error log */
+	if (ctx->error_log)
+		fclose (ctx->error_log);
+	ctx->error_log = NULL;
+
+	/* close the access log */
+	if (ctx->access_log)
+		fclose (ctx->access_log);
+	ctx->access_log = NULL;
+
+	/* close vortex log */
+	if (ctx->vortex_log)
+		fclose (ctx->vortex_log);
+	ctx->vortex_log = NULL;
 
 	return;
 }

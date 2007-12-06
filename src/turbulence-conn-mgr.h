@@ -39,9 +39,9 @@
 #define __TURBULENCE_CONN_MGR_H__
 
 /* internal use API */
-void turbulence_conn_mgr_init ();
+void turbulence_conn_mgr_init (TurbulenceCtx * ctx);
 
-void turbulence_conn_mgr_cleanup ();
+void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx);
 
 /* public API */
 bool turbulence_conn_mgr_broadcast_msg (const void * message,

@@ -145,10 +145,6 @@ bool turbulence_init (int argc, char ** argv)
 #endif
 	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 
-	turbulence_conn_mgr_init ();
-	turbulence_module_init ();
-	turbulence_db_list_init ();
-
 	/* install default signal handling */
 	signal (SIGINT,  turbulence_exit);
 	signal (SIGTERM, turbulence_exit);
@@ -294,33 +290,19 @@ void turbulence_cleanup ()
 
 	msg ("cleaning up..");
 
-	/* unref all connections */
-	turbulence_conn_mgr_cleanup ();
+	/* unref all connections (before calling to terminate vortex) */
+	turbulence_conn_mgr_cleanup (ctx);
 
 	/* terminate vortex */
 	msg ("terminating vortex library..");
 	vortex_exit ();
 
-	/* terminate profile path */
-	turbulence_ppath_cleanup ();
-	
 	/* terminate exarg */
 	msg ("terminating exarg library..");
 	exarg_end ();
 
-	/* terminate all modules */
-	turbulence_config_cleanup ();
-
-	/* and finally the turbulence module loading. This must be
-	 * done after vortex termination to avoid unmapping memory
-	 * region used by handlers configured inside vortex */
-	turbulence_module_cleanup ();
-
-	/* the last module to clean up */
-	turbulence_log_cleanup ();
-
-	/* terminate */
-	vortex_mutex_destroy (&ctx->exit_mutex);
+	/* release context */
+	turbulence_ctx_free (ctx);
 
 	return;
 }
