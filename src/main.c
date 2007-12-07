@@ -38,13 +38,63 @@
 
 #include <turbulence.h>
 
-int main (int argc, char ** argv)
+/** 
+ * @internal Init for all exarg functions provided by the turbulence
+ * command line.
+ */
+bool main_init_exarg (int argc, char ** argv)
 {
-	char          * config;
-	TurbulenceCtx * ctx;
+	/* install headers for help */
+	exarg_add_usage_header  (HELP_HEADER);
+	exarg_add_help_header   (HELP_HEADER);
+	exarg_post_help_header  (POST_HEADER);
+	exarg_post_usage_header (POST_HEADER);
 
-	/* init libraries */
-	turbulence_init (argc, argv);
+	/* install default debug options. */
+	exarg_install_arg ("debug", "d", EXARG_NONE,
+			   "Makes all log produced by the application, to be also dropped to the console in sort form.");
+
+	exarg_install_arg ("debug2", NULL, EXARG_NONE,
+			   "Increase the level of log to console produced.");
+
+	exarg_install_arg ("debug3", NULL, EXARG_NONE,
+			   "Makes logs produced to console to inclue more information about the place it was launched.");
+
+	exarg_install_arg ("color-debug", "c", EXARG_NONE,
+			   "Makes console log to be colorified.");
+
+	/* install exarg options */
+	exarg_install_arg ("config", "f", EXARG_STRING, 
+			   "Main server configuration location.");
+
+	exarg_install_arg ("vortex-debug", NULL, EXARG_NONE,
+			   "Enable vortex debug");
+
+	exarg_install_arg ("vortex-debug2", NULL, EXARG_NONE,
+			   "Enable second level vortex debug");
+
+	exarg_install_arg ("vortex-debug-color", NULL, EXARG_NONE,
+			   "Makes vortex debug to be done using colors according to the message type. If this variable is activated, vortex-debug variable is activated implicitly.");
+
+	exarg_install_arg ("conf-location", NULL, EXARG_NONE,
+			   "Allows to get the location of the turbulence configuration file that will be used by default");
+
+	/* call to parse arguments */
+	exarg_parse (argc, argv);
+
+	/* activate log console */
+	ctx->console_debug       = exarg_is_defined ("debug");
+	ctx->console_debug2      = exarg_is_defined ("debug2");
+	ctx->console_debug3      = exarg_is_defined ("debug3");
+	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
+
+	/* implicitly activate third and second console debug */
+	if (ctx->console_debug3)
+		ctx->console_debug2 = true;
+	if (ctx->console_debug2)
+		ctx->console_debug = true;
+	
+	ctx->console_color_debug = exarg_is_defined ("color-debug");
 
 	/* check for conf-location option */
 	if (exarg_is_defined ("conf-location")) {
@@ -52,9 +102,21 @@ int main (int argc, char ** argv)
 		printf ("SYSCONFDIR:  %s\n", SYSCONFDIR);
 		printf ("TBC_DATADIR: %s\n", TBC_DATADIR);
 		printf ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
-		turbulence_cleanup (0);
-		return 0;
-	}
+		return false;
+	}	
+
+	/* exarg properly configured */
+	return true;
+}
+
+int main (int argc, char ** argv)
+{
+	char          * config;
+	TurbulenceCtx * ctx;
+
+	/*** init exarg library ***/
+	if (! main_init_exarg (argc, argv))
+		return -1;
 
 	/* configure lookup domain, and load configuration file */
 	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
@@ -77,25 +139,30 @@ int main (int argc, char ** argv)
 	else 
 		msg ("using configuration file: %s", config);
 
-	/* get turbulence ctx */
-	ctx = turbulence_ctx_get ();
+	/* create the turbulence context */
+	ctx = turbulence_ctx_new ();
 
-	if (! turbulence_config_load (ctx, config)) {
-		/* unable to load configuration */
+	/* init libraries */
+	if (! turbulence_init (ctx)) {
+		/* free turbulence ctx */
+		turbulence_ctx_free (ctx);
 		return -1;
-	}
+	} /* end if */
 
 	/* not required to free config var, already done by previous
 	 * function */
 	msg ("about to startup configuration found..");
-	if (! turbulence_run_config ())
+	if (! turbulence_run_config (ctx))
 		return false;
 
 	/* look main thread until finished */
 	vortex_listener_wait ();
 	
 	/* terminate turbulence execution */
-	turbulence_cleanup (0);
+	turbulence_cleanup (ctx, 0);
+
+	/* free context */
+	turbulence_ctx_free (ctx);
 	
 	return 0;
 }

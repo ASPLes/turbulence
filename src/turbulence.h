@@ -70,13 +70,18 @@
  * @{
  */
 
-void turbulence_console_process_options ();
+bool turbulence_log_enabled  ();
 
-void turbulence_console_install_options (); 
-
-bool turbulence_log_enabled ();
+void turbulence_log_enable   (TurbulenceCtx * ctx, 
+			      bool value);
 
 bool turbulence_log2_enabled ();
+
+void turbulence_log2_enable  (TurbulenceCtx * ctx,
+			      bool value);
+
+void turbulence_color_log_enable (TurbulenceCtx * ctx,
+				  bool            value);
 
 /** 
  * Drop an error msg to the console stderr.
@@ -161,11 +166,11 @@ void  turbulence_wrn_sl   (const char * file, int line, const char * format, ...
 #define access(m,...)   do{turbulence_access (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_access   (const char * file, int line, const char * format, ...);
 
-bool turbulence_init (int argc, char ** argv);
+bool turbulence_init (TurbulenceCtx * ctx);
 
 void turbulence_exit (int value); 
 
-void turbulence_cleanup ();
+void turbulence_cleanup (TurbulenceCtx * ctx);
 
 void turbulence_reload_config (int value);
 

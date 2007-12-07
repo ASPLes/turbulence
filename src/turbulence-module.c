@@ -52,7 +52,7 @@ struct _TurbulenceModule {
 };
 
 /** 
- * @brief Starts the turbulence module initializing all internal
+ * @internal Starts the turbulence module initializing all internal
  * variables.
  */
 void               turbulence_module_init      (TurbulenceCtx * ctx)
