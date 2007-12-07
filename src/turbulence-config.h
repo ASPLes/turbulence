@@ -40,13 +40,13 @@
 
 #include <turbulence.h>
 
-bool            turbulence_config_load    (TurbulenceCtx * ctx, 
-					   char          * config);
+bool            turbulence_config_load     (TurbulenceCtx * ctx, 
+					    const char    * config);
 
 const    char * turbulence_config_mods_dir ();
 
-void            turbulence_config_cleanup (TurbulenceCtx * ctx);
+void            turbulence_config_cleanup  (TurbulenceCtx * ctx);
 
-axlDoc        * turbulence_config_get     ();
+axlDoc        * turbulence_config_get      ();
 
 #endif

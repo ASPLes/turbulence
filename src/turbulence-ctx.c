@@ -59,31 +59,38 @@ TurbulenceCtx * turbulence_ctx_new ()
 }
 
 /** 
- * @brief Allows to configure the turbulence context to be used.
+ * @brief Allows to configure the vortex context (VortexCtx)
+ * associated to the provided \ref TurbulenceCtx.
  * 
- * @param ctx The context reference to use.
+ * @param ctx \ref TurbulenceCtx to be configured.
+ * @param vortex_ctx Vortex context to be configured.
  */
-void            turbulence_ctx_set (TurbulenceCtx * ctx)
+void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx, 
+					       VortexCtx     * vortex_ctx)
 {
-	/* do nothing if a null context is received */
-	if (ctx == NULL)
-		return;
-
-	/* configure context */
-	turbulence_ctx_global = ctx;
+	v_return_if_fail (ctx);
+	
+	/* configure vortex ctx */
+	ctx->vortex_ctx = vortex_ctx;
 
 	return;
 }
 
 /** 
- * @brief Allows to get a reference to the current context configured.
- *
- * @return Reference to the current context configured.
+ * @brief Allows to get the \ref TurbulenceCtx associated to the
+ * vortex.
+ * 
+ * @param ctx The turbulence context where it is expected to find a
+ * Vortex context (VortexCtx).
+ * 
+ * @return A reference to the VortexCtx.
  */
-TurbulenceCtx * turbulence_ctx_get ()
+VortexCtx     * turbulence_ctx_get_vortex_ctx (TurbulenceCtx * ctx)
 {
-	/* return current context configured */
-	return turbulence_ctx_global;
+	v_return_val_if_fail (ctx, NULL);
+
+	/* return the vortex context associated */
+	return ctx->vortex_ctx;
 }
 
 /** 
@@ -96,31 +103,6 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	/* do not perform any operation */
 	if (ctx == NULL)
 		return;
-
-	/* db list */
-	vortex_mutex_destroy (&ctx->db_list_mutex);
-	axl_list_free (ctx->db_list_opened);
-	ctx->db_list_opened = NULL;
-
-	axl_dtd_free (ctx->db_list_dtd);
-	ctx->db_list_dtd = NULL;
-
-	/* terminate profile path */
-	turbulence_ppath_cleanup (ctx);
-
-	/* free mutex */
-	vortex_mutex_destroy (&ctx->exit_mutex);
-
-	/* terminate all modules */
-	turbulence_config_cleanup (ctx);
-
-	/* and finally the turbulence module loading. This must be
-	 * done after vortex termination to avoid unmapping memory
-	 * region used by handlers configured inside vortex */
-	turbulence_module_cleanup (ctx);
-
-	/* init the log module */
-	turbulence_log_cleanup (ctx);
 
 	/* release the node itself */
 	axl_free (ctx);

@@ -36,7 +36,24 @@
  *         info@aspl.es - http://www.turbulence.ws
  */
 
+/* libturbulence support */
 #include <turbulence.h>
+
+/* command line argument parsing support */
+#include <exarg.h>
+
+/* system includes */
+#include <signal.h>
+
+#define HELP_HEADER "Turbulence: BEEP application server\n\
+Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
+
+#define POST_HEADER "\n\
+If you have question, bugs to report, patches, you can reach us\n\
+at <vortex@lists.aspl.es>."
+
+/* global instance created */
+TurbulenceCtx * ctx;
 
 /** 
  * @internal Init for all exarg functions provided by the turbulence
@@ -82,26 +99,16 @@ bool main_init_exarg (int argc, char ** argv)
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
-	/* activate log console */
-	ctx->console_debug       = exarg_is_defined ("debug");
-	ctx->console_debug2      = exarg_is_defined ("debug2");
-	ctx->console_debug3      = exarg_is_defined ("debug3");
-	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
-
-	/* implicitly activate third and second console debug */
-	if (ctx->console_debug3)
-		ctx->console_debug2 = true;
-	if (ctx->console_debug2)
-		ctx->console_debug = true;
-	
-	ctx->console_color_debug = exarg_is_defined ("color-debug");
-
 	/* check for conf-location option */
 	if (exarg_is_defined ("conf-location")) {
 		printf ("VERSION:     %s\n", VERSION);
 		printf ("SYSCONFDIR:  %s\n", SYSCONFDIR);
 		printf ("TBC_DATADIR: %s\n", TBC_DATADIR);
 		printf ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
+
+		/* terminates exarg */
+		exarg_end ();
+
 		return false;
 	}	
 
@@ -109,14 +116,60 @@ bool main_init_exarg (int argc, char ** argv)
 	return true;
 }
 
+/** 
+ * @brief Termination signal received, notify.
+ * @param value The signal received.
+ */
+void main_terminate_signal_received (int value)
+{
+	/* notify */
+	turbulence_signal_exit (ctx, value);
+
+	return;	
+}
+
+/**
+ * @brief Reconf signal received, notify.
+ * @param value The signal received.
+ */
+void main_reconf_signal_received (int value)
+{
+	/* notify */
+	turbulence_reload_config (ctx, value);
+	
+	return;
+}
+
 int main (int argc, char ** argv)
 {
 	char          * config;
-	TurbulenceCtx * ctx;
 
 	/*** init exarg library ***/
 	if (! main_init_exarg (argc, argv))
-		return -1;
+		return 0;
+
+	/* create the turbulence context */
+	ctx = turbulence_ctx_new ();
+
+	/*** configure signal handling ***/
+	signal (SIGINT,  main_terminate_signal_received);
+	signal (SIGSEGV, main_terminate_signal_received);
+	signal (SIGABRT, main_terminate_signal_received);
+	signal (SIGTERM, main_terminate_signal_received);
+#if defined(AXL_OS_UNIX)
+	signal (SIGKILL, main_terminate_signal_received);
+	signal (SIGQUIT, main_terminate_signal_received);
+	signal (SIGHUP,  main_reconf_signal_received);
+#endif
+
+
+	/* configure context debug according to values received */
+	turbulence_log_enable  (ctx, exarg_is_defined ("debug"));
+	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
+	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
+
+	/* check console color debug */
+	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
 
 	/* configure lookup domain, and load configuration file */
 	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
@@ -139,14 +192,20 @@ int main (int argc, char ** argv)
 	else 
 		msg ("using configuration file: %s", config);
 
-	/* create the turbulence context */
-	ctx = turbulence_ctx_new ();
-
 	/* init libraries */
-	if (! turbulence_init (ctx)) {
+	if (! turbulence_init (ctx, config)) {
 		/* free turbulence ctx */
 		turbulence_ctx_free (ctx);
 		return -1;
+	} /* end if */
+
+	/* enable vortex debug: do this at this place because
+	 * turbulece_init makes a call to vortex_init */
+	vortex_log_enable  (exarg_is_defined ("vortex-debug"));
+	vortex_log2_enable (exarg_is_defined ("vortex-debug2"));
+	if (exarg_is_defined ("vortex-debug-color")) {
+		vortex_log_enable       (true);
+		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
 	} /* end if */
 
 	/* not required to free config var, already done by previous
@@ -159,10 +218,14 @@ int main (int argc, char ** argv)
 	vortex_listener_wait ();
 	
 	/* terminate turbulence execution */
-	turbulence_cleanup (ctx, 0);
+	turbulence_exit (ctx);
 
 	/* free context */
 	turbulence_ctx_free (ctx);
-	
+
+	/* terminate exarg */
+	msg ("terminating exarg library..");
+	exarg_end ();
+
 	return 0;
 }

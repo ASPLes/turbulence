@@ -53,12 +53,13 @@
  * @internal Loads the turbulence main file, which has all definitions to make
  * turbulence to start.
  * 
- * @param config 
+ * @param config The configuration file to load by the provided
+ * turbulence context.
  * 
  * @return true if the configuration file looks ok and it is
  * syncatically correct.
  */
-bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
+bool turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 {
 	axlError * error;
 	axlDtd   * dtd_file;
@@ -67,7 +68,6 @@ bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
 	/* check null value */
 	if (config == NULL) {
 		error ("config file not defined, terminating turbulence");
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
 
@@ -78,11 +78,9 @@ bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
 		       config, axl_error_get (error));
 
 		/* free resources */
-		axl_free (config);
 		axl_error_free (error);
 
 		/* call to finish turbulence */
-		turbulence_exit (-1);
 		return false;
 
 	} /* end if */
@@ -90,17 +88,12 @@ bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
 	/* drop a message */
 	msg ("file %s loaded, ok", config);
 
-	/* free resources */
-	axl_free (config);
-
 	/* now validates the turbulence file */
 	dtd = vortex_support_domain_find_data_file ("turbulence-data", "config.dtd");
 	if (dtd == NULL) {
 		/* free document */
 		axl_doc_free (ctx->config);
 		error ("unable to find turbulence config DTD definition (config.dtd), check your turbulence installation.");
-
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
  
@@ -112,8 +105,6 @@ bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
 		error ("unable to load DTD file %s, error: %s", dtd, axl_error_get (error));
 		axl_error_free (error);
 		axl_free (dtd);
-
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
 
@@ -127,8 +118,6 @@ bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
 
 		axl_error_free (error);
 		axl_free (dtd);
-
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
 
@@ -148,10 +137,10 @@ bool turbulence_config_load (TurbulenceCtx * ctx, char * config)
  * @return A reference to the axlDoc having all the configuration
  * loaded.
  */
-axlDoc * turbulence_config_get ()
+axlDoc * turbulence_config_get (TurbulenceCtx * ctx)
 {
-	/* get turbulence context */
-	TurbulenceCtx   * ctx = turbulence_ctx_get ();
+	/* null for the caller if a null is received */
+	v_return_val_if_fail (ctx, NULL);
 
 	/* return current reference */
 	return ctx->config;
@@ -163,6 +152,10 @@ axlDoc * turbulence_config_get ()
  */
 void turbulence_config_cleanup (TurbulenceCtx * ctx)
 {
+	/* do not operate */
+	if (ctx == NULL)
+		return;
+
 	/* free previous state */
 	if (ctx->config)
 		axl_doc_free (ctx->config);

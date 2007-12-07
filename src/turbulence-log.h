@@ -48,7 +48,8 @@ typedef enum {LOG_REPORT_GENERAL = 1,
 	      LOG_REPORT_ERROR   = 1 << 4
 } LogReportType;
 
-void turbulence_log_report (LogReportType   type, 
+void turbulence_log_report (TurbulenceCtx * ctx,
+			    LogReportType   type, 
 			    const char    * message,
 			    va_list         args,
 			    const char    * file,

@@ -72,7 +72,7 @@ void               turbulence_module_init      (TurbulenceCtx * ctx)
  * 
  * @return A reference to the module loaded or NULL if it fails.
  */
-TurbulenceModule * turbulence_module_open (const char * module)
+TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * module)
 {
 	TurbulenceModule * result;
 
@@ -99,7 +99,7 @@ TurbulenceModule * turbulence_module_open (const char * module)
 #endif
 
 		/* free the result and return */
-		turbulence_module_free (result);
+		turbulence_module_free (ctx, result);
 		return NULL;
 	} /* end if */
 
@@ -118,7 +118,7 @@ TurbulenceModule * turbulence_module_open (const char * module)
 #endif
 		
 		/* free the result and return */
-		turbulence_module_free (result);
+		turbulence_module_free (ctx, result);
 		return NULL;
 	} /* end if */
 	
@@ -174,10 +174,12 @@ ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
  * 
  * @param module The module being registered.
  */
-void               turbulence_module_register  (TurbulenceModule * module)
+void               turbulence_module_register  (TurbulenceCtx    * ctx, 
+						TurbulenceModule * module)
 {
-	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	/* check values received */
+	v_return_if_fail (ctx);
+	v_return_if_fail (module);
 
 	/* register the module */
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
@@ -195,10 +197,12 @@ void               turbulence_module_register  (TurbulenceModule * module)
  * 
  * @param module The module to unregister.
  */
-void               turbulence_module_unregister  (TurbulenceModule * module)
+void               turbulence_module_unregister  (TurbulenceCtx    * ctx, 
+						  TurbulenceModule * module)
 {
-	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	/* check values received */
+	v_return_if_fail (ctx);
+	v_return_if_fail (module);
 
 	/* register the module */
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
@@ -213,16 +217,17 @@ void               turbulence_module_unregister  (TurbulenceModule * module)
  * 
  * @param module The module reference to free and close.
  */
-void               turbulence_module_free (TurbulenceModule * module)
+void               turbulence_module_free (TurbulenceCtx    * ctx,
+					   TurbulenceModule * module)
 {
-	/* check the module reference */
-	if (module == NULL)
-		return;
+	/* check values received */
+	v_return_if_fail (ctx);
+	v_return_if_fail (module);
 
 	/* call to close the module */
 	if (module->def != NULL && module->def->close != NULL) {
 		msg ("closing module: %s", module->def->mod_name);
-		module->def->close ();
+		module->def->close (ctx);
 	}
 
 	axl_free (module->path);
@@ -245,10 +250,9 @@ void               turbulence_module_free (TurbulenceModule * module)
  * @brief Allows to notify all modules loaded, that implements the
  * \ref ModReconfFunc, to reload its configuration data.
  */
-void               turbulence_module_notify_reload_conf ()
+void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	TurbulenceModule * module;
 
 	int iterator = 0;
@@ -260,7 +264,7 @@ void               turbulence_module_notify_reload_conf ()
 		/* notify if defined reconf function */
 		if (module->def->reconf != NULL) {
 			/* call to reconfigured */
-			module->def->reconf ();
+			module->def->reconf (ctx);
 		}
 
 		/* next iterator */
@@ -278,6 +282,10 @@ void               turbulence_module_notify_reload_conf ()
  */
 void               turbulence_module_cleanup   (TurbulenceCtx * ctx)
 {
+	/* do not operate if a null value is received */
+	if (ctx == NULL)
+		return;
+
 	/* release the list and all modules */
 	axl_list_free (ctx->registered_modules);
 	ctx->registered_modules = NULL;

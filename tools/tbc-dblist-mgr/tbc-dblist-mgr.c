@@ -50,6 +50,8 @@ To remove an item from a particular list use:\n\n\
 If you have question, bugs to report, patches, you can reach us\n\
 at <vortex@lists.aspl.es>."
 
+/* " */
+
 int main (int argc, char ** argv)
 {
 	TurbulenceDbList * list;
@@ -57,6 +59,7 @@ int main (int argc, char ** argv)
 	axlListCursor    * cursor;
 	axlError         * err;
 	ExArgument       * arg;
+	TurbulenceCtx    * ctx;
 
 	/* install headers for help */
 	exarg_add_usage_header  (HELP_HEADER);
@@ -80,22 +83,42 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("touch", "t", EXARG_NONE, 
 			   "Creates an empty db-list.");
 
-	/* install turbulence tool options */
-	turbulence_console_install_options ();
+	exarg_install_arg ("debug2", NULL, EXARG_NONE,
+			   "Increase the level of log to console produced.");
+
+	exarg_install_arg ("debug3", NULL, EXARG_NONE,
+			   "Makes logs produced to console to inclue more information about the place it was launched.");
+
+	exarg_install_arg ("color-debug", "c", EXARG_NONE,
+			   "Makes console log to be colorified.");
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
-	/* process turbulence tool options */
-	turbulence_console_process_options ();
+	/* init turbulence context */
+	ctx = turbulence_ctx_new ();
+
+	/* configure context debug according to values received */
+	turbulence_log_enable  (ctx, true);
+	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
+	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
+
+	/* check console color debug */
+	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
 
 	/* check version argument */
 	if (exarg_is_defined ("version")) {
+		/* free turbulence context */
+		turbulence_ctx_free (ctx);
+
 		msg ("%s version: %s", argv[0], VERSION);
 		return 0;
 	}
 
 	if (exarg_get_params_num () == 0) {
+		/* free turbulence context */
+		turbulence_ctx_free (ctx);
+
 		error ("you didn't provide the db-list file to oper.");
 		return -1;
 	}
@@ -104,13 +127,13 @@ int main (int argc, char ** argv)
 	arg = exarg_get_params ();
 
 	/* init the turbulence db list */
-	if (! turbulence_db_list_init ()) {
+	if (! turbulence_db_list_init (ctx)) {
 		error ("failed to init the turbulence db list module, unable to perform operation");
 		return -1;
 	}
 
 	/* open the list */
-	list = turbulence_db_list_open (&err, exarg_param_get (arg), NULL);
+	list = turbulence_db_list_open (ctx, &err, exarg_param_get (arg), NULL);
 	if (list == NULL) {
 		error ("failed to open db-list: %s, error was: %s", 
 		       exarg_param_get (arg), axl_error_get (err));
@@ -120,7 +143,7 @@ int main (int argc, char ** argv)
 
 	if (exarg_is_defined ("add")) {
 		/* do add operation */
-		if (! turbulence_db_list_add (list, exarg_get_string ("add"))) {
+		if (! turbulence_db_list_add (ctx, list, exarg_get_string ("add"))) {
 			error ("failed to add provided value: %s", exarg_get_string ("add"));
 			return -1;
 		}
@@ -128,7 +151,7 @@ int main (int argc, char ** argv)
 		msg ("done");
 	} else if (exarg_is_defined ("remove")) {
 		/* do remove operation */
-		if (! turbulence_db_list_remove (list, exarg_get_string ("remove"))) {
+		if (! turbulence_db_list_remove (ctx, list, exarg_get_string ("remove"))) {
 			error ("failed to remove provided value: %s", exarg_get_string ("remove"));
 			return -1;
 		}
@@ -137,11 +160,11 @@ int main (int argc, char ** argv)
 	} else if (exarg_is_defined ("touch")) {
 		
 		/* ...and close */
-		turbulence_db_list_close (list);
+		turbulence_db_list_close (ctx, list);
 
 	} else if (exarg_is_defined ("list")) {
 		/* get current content */
-		content = turbulence_db_list_get (list);
+		content = turbulence_db_list_get (ctx, list);
 		cursor  = axl_list_cursor_new (content);
 
 		/* for each item found in the cursor */
@@ -162,7 +185,10 @@ int main (int argc, char ** argv)
 	} 
 
 	/* terminate turbulence db list */
-	turbulence_db_list_cleanup ();
+	turbulence_db_list_cleanup (ctx);
+
+	/* free context */
+	turbulence_ctx_free (ctx);
 
 	return 0;
 }

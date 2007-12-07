@@ -130,11 +130,14 @@ VortexTunnelSettings * tunnel_resolver (const char * profile_content,
  * return true to signal that the module was initialized
  * ok. Otherwise, false must be returned.
  */
-static bool tunnel_init ()
+static bool tunnel_init (TurbulenceCtx * ctx)
 {
 	axlNode  * node;
 	axlError * error;
 	char     * config;
+
+	/* configure current vortex context before doing anything */
+	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
 	
 	msg ("turbulence TUNNEL init");
 
@@ -193,7 +196,7 @@ static bool tunnel_init ()
  * unload the module or it is being closed. All resource deallocation
  * and stop operation required must be done here.
  */
-static void tunnel_close ()
+static void tunnel_close (TurbulenceCtx * ctx)
 {
 	msg ("turbulence TUNNEL close");
 	axl_doc_free (tunnel_conf);

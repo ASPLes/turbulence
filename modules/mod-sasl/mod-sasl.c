@@ -45,8 +45,12 @@ VortexMutex       sasl_xml_db_mutex;
 bool     mod_sasl_plain_validation  (VortexConnection * connection,
 				     const char       * auth_id,
 				     const char       * authorization_id,
-				     const char       * password)
+				     const char       * password,
+				     axlPointer         user_data)
 {
+	/* get current turbulence ctx */
+	TurbulenceCtx * ctx = user_data;
+
 	msg ("required to auth: auth_id=%s, authorization_id=%s", 
 	     auth_id ? auth_id : "", authorization_id ? authorization_id : "");
 
@@ -68,10 +72,10 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 /** 
  * @brief Loads current sasl configuration and user databases.
  */
-bool sasl_load_config ()
+bool sasl_load_config (TurbulenceCtx * ctx)
 {
 	/* load and check sasl conf */
-	if (! common_sasl_load_config (&sasl_backend, NULL, &sasl_xml_db_mutex)) {
+	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, &sasl_xml_db_mutex)) {
 		/* failed to load sasl module */
 		return false;
 	}
@@ -87,14 +91,16 @@ bool sasl_load_config ()
  * return true to signal that the module was initialized
  * ok. Otherwise, false must be returned.
  */
-static bool sasl_init ()
+static bool sasl_init (TurbulenceCtx * ctx)
 {
+	/* configure current vortex context before doing anything */
+	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
+
 	msg ("turbulence SASL init");
 
 	/* check for SASL support */
 	if (!vortex_sasl_is_enabled ()) {
 		error ("Unable to start SASL support, vortex library found doesn't have SASL support activated");
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
 
@@ -102,16 +108,16 @@ static bool sasl_init ()
 	vortex_mutex_create (&sasl_xml_db_mutex);
 
 	/* load configuration file */
-	if (! sasl_load_config ())
+	if (! sasl_load_config (ctx))
 		return false;
 
 	/* check for sasl methods to be activated */
 	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_xml_db_mutex)) {
 		/* accept plain profile */
-		vortex_sasl_set_plain_validation (mod_sasl_plain_validation);
+		vortex_sasl_set_plain_validation_full (mod_sasl_plain_validation);
 		
 		/* accept SASL PLAIN incoming requests */
-		if (! vortex_sasl_accept_negociation (VORTEX_SASL_PLAIN)) {
+		if (! vortex_sasl_accept_negociation_full (VORTEX_SASL_PLAIN, ctx)) {
 			error ("Unable accept incoming SASL PLAIN profile");
 		} /* end if */			
 	} /* end if */
@@ -139,7 +145,7 @@ static bool sasl_init ()
  * unload the module or it is being closed. All resource deallocation
  * and stop operation required must be done here.
  */
-static void sasl_close ()
+static void sasl_close (TurbulenceCtx * ctx)
 {
 	msg ("turbulence SASL close");
 	common_sasl_free (sasl_backend);

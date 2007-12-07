@@ -43,20 +43,24 @@ Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
 If you have question, bugs to report, patches, you can reach us\n\
 at <vortex@lists.aspl.es>."
 
+/* turbulence includes */
 #include <turbulence.h>
 #include <common-sasl.h>
 
+/* local include */
+#include <exarg.h>
+
 
 SaslAuthBackend * sasl_backend = NULL;
+TurbulenceCtx   * ctx          = NULL;
 
 void tbc_sasl_add_user ()
 {
 	const char  * serverName   = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	const char  * new_user_id  = exarg_get_string ("add-user");
-	const char  * password     = NULL;
-	const char  * password2    = NULL;
-	bool          dealloc     = false;
-
+	const char       * password     = NULL;
+	const char       * password2    = NULL;
+	bool               dealloc     = false;
 	/* check if the user already exists */
 	if (common_sasl_user_exists (sasl_backend,
 				     new_user_id, 
@@ -200,18 +204,31 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("serverName", "S", EXARG_STRING,
 			   "Allows to configure the serverName value which will allow to select the proper SASL backend. If no value is provided for this option the default backend will be used.");
 
+	exarg_install_arg ("debug2", NULL, EXARG_NONE,
+			   "Increase the level of log to console produced.");
+
+	exarg_install_arg ("debug3", NULL, EXARG_NONE,
+			   "Makes logs produced to console to inclue more information about the place it was launched.");
+
+	exarg_install_arg ("color-debug", "c", EXARG_NONE,
+			   "Makes console log to be colorified.");
+
 	/* do not accept free arguments */
 	exarg_accept_free_args (0);
-
-	/* install turbulence tool options */
-	turbulence_console_install_options ();
-	turbulence_db_list_init_isolated ();
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 	
-	/* process turbulence tool options */
-	turbulence_console_process_options ();
+	/* init turbulence context */
+	ctx = turbulence_ctx_new ();
+
+	/* configure context debug according to values received */
+	turbulence_log_enable  (ctx, true);
+	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
+	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
+
+	/* check console color debug */
+	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
 
 	/* check empty arguments */
 	if (argc == 1) {
@@ -219,8 +236,14 @@ int main (int argc, char ** argv)
 		goto finish;
 	}
 
+	/* init the turbulence db list */
+	if (! turbulence_db_list_init (ctx)) {
+		error ("failed to init the turbulence db list module, unable to perform operation");
+		return -1;
+	}
+
 	/* load sasl module configuration */
-	if (! common_sasl_load_config (&sasl_backend, NULL, NULL))
+	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, NULL))
 		goto finish;
 
 	msg2 ("sasl auth-db loaded..");
@@ -263,7 +286,7 @@ int main (int argc, char ** argv)
 	common_sasl_free (sasl_backend); 
 
 	/* stop pieces of turbulence started */
-	turbulence_db_list_cleanup ();
+	turbulence_db_list_cleanup (ctx);
 	vortex_support_cleanup ();
 
 	return 0;

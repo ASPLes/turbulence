@@ -41,6 +41,11 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
+typedef struct _TurbulenceConnMgrState {
+	VortexConnection * conn;
+	TurbulenceCtx    * ctx;
+} TurbulenceConnMgrState;
+
 /**
  * \defgroup turbulence_conn_mgr Turbulence Connection Manager: a module that controls all connections created under the turbulence execution
  */
@@ -52,9 +57,18 @@
 
 void turbulence_conn_mgr_unref (axlPointer data)
 {
+	/* get a reference to the state */
+	TurbulenceConnMgrState * state = data;
+	TurbulenceCtx          * ctx   = state->ctx;
+
 	/* unref the connection */
-	msg ("Unregistering connection: %d", vortex_connection_get_id ((VortexConnection*) data));
-	vortex_connection_unref ((VortexConnection*) data, "turbulence-conn-mgr");
+	msg ("Unregistering connection: %d", vortex_connection_get_id ((VortexConnection*) state->conn));
+	vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
+
+	/* nullify and free */
+	state->conn = NULL;
+	state->ctx  = NULL;
+	axl_free (state);
 
 	return;
 }
@@ -65,16 +79,18 @@ void turbulence_conn_mgr_unref (axlPointer data)
  * 
  * @param conn The connection to close.
  */
-void turbulence_conn_mgr_on_close (VortexConnection * conn)
+void turbulence_conn_mgr_on_close (VortexConnection * conn, 
+				   axlPointer         user_data)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	TurbulenceConnMgrState * state = user_data;
+	TurbulenceCtx          * ctx   = state->ctx;
 
 	/* new connection created: configure it */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* remove from the hash */
-	axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
+	axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (state->conn)));
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
@@ -93,22 +109,28 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn)
 void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	TurbulenceConnMgrState * state;
+	TurbulenceCtx          * ctx = user_data;
 
 	/* new connection created: configure it */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
-	/* store in the hash */
+	/* create state */
+	state       = axl_new (TurbulenceConnMgrState, 1);
+	state->conn = conn;
 	vortex_connection_ref (conn, "turbulence-conn-mgr");
+	state->ctx  = ctx;
+
+	/* store in the hash */
 	msg ("Registering connection: %d", vortex_connection_get_id (conn));
 	axl_hash_insert_full (ctx->conn_mgr_hash, 
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,
 			      /* data to store */
-			      conn, turbulence_conn_mgr_unref);
+			      state, turbulence_conn_mgr_unref);
 
 	/* configure on close */
-	vortex_connection_set_on_close (conn, turbulence_conn_mgr_on_close);
+	vortex_connection_set_on_close_full (conn, turbulence_conn_mgr_on_close, state);
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
@@ -128,21 +150,23 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx)
 	ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 
 	/* configure notification handlers */
-	vortex_connection_notify_new_connections (turbulence_conn_mgr_notify, NULL);
+	vortex_connection_notify_new_connections (turbulence_conn_mgr_notify, ctx);
 
 	return;
 }
 
 typedef struct _TurbulenceBroadCastMsg {
-	const void * message;
-	int          message_size;
-	const char * profile;
+	const void      * message;
+	int               message_size;
+	const char      * profile;
+	TurbulenceCtx   * ctx;
 } TurbulenceBroadCastMsg;
 
 bool _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data, axlPointer user_data)
 {
 	VortexChannel          * channel   = data;
 	TurbulenceBroadCastMsg * broadcast = user_data;
+	TurbulenceCtx          * ctx       = broadcast->ctx;
 
 	/* check the channel profile */
 	if (! axl_cmp (vortex_channel_get_profile (channel), broadcast->profile)) 
@@ -189,15 +213,15 @@ bool _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
  * connections. The function could return false but it has no support
  * to notify which was the connection(s) or channel(s) that failed.
  */
-bool turbulence_conn_mgr_broadcast_msg (const void * message,
-					int          message_size,
-					const char * profile,
-					TurbulenceConnMgrFilter filter_conn,
-					axlPointer              filter_data)
+bool turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
+					const void               * message,
+					int                        message_size,
+					const char               * profile,
+					TurbulenceConnMgrFilter    filter_conn,
+					axlPointer                 filter_data)
 {
 
 	/* get turbulence context */
-	TurbulenceCtx          * ctx = turbulence_ctx_get ();
 	axlHashCursor          * cursor;
 	VortexConnection       * conn;
 	int                      conn_id;
@@ -218,6 +242,7 @@ bool turbulence_conn_mgr_broadcast_msg (const void * message,
 	broadcast->message      = message;
 	broadcast->message_size = message_size;
 	broadcast->profile      = profile;
+	broadcast->ctx          = ctx;
 
 	while (axl_hash_cursor_has_item (cursor)) {
 		

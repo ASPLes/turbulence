@@ -49,12 +49,10 @@
 /* XML support */
 #include <axl.h>
 
-/* command line argument parsing support */
-#include <exarg.h>
-
 /* local includes */
 #include <turbulence-ctx.h>
 #include <turbulence-handlers.h>
+#include <turbulence-signal.h>
 #include <turbulence-moddef.h>
 #include <turbulence-config.h>
 #include <turbulence-run.h>
@@ -70,15 +68,20 @@
  * @{
  */
 
-bool turbulence_log_enabled  ();
+bool turbulence_log_enabled      (TurbulenceCtx * ctx);
 
-void turbulence_log_enable   (TurbulenceCtx * ctx, 
-			      bool value);
+void turbulence_log_enable       (TurbulenceCtx * ctx, 
+				  bool value);
 
-bool turbulence_log2_enabled ();
+bool turbulence_log2_enabled     (TurbulenceCtx * ctx);
 
-void turbulence_log2_enable  (TurbulenceCtx * ctx,
-			      bool value);
+void turbulence_log2_enable      (TurbulenceCtx * ctx,
+				  bool value);
+
+bool turbulence_log3_enabled     (TurbulenceCtx * ctx);
+
+void turbulence_log3_enable      (TurbulenceCtx * ctx,
+				  bool value);
 
 void turbulence_color_log_enable (TurbulenceCtx * ctx,
 				  bool            value);
@@ -93,8 +96,8 @@ void turbulence_color_log_enable (TurbulenceCtx * ctx,
  * 
  * @param m The error message to output.
  */
-#define error(m,...) do{turbulence_error (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_error (const char * file, int line, const char * format, ...);
+#define error(m,...) do{turbulence_error (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_error (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 /** 
  * Drop a msg to the console stdout.
@@ -106,8 +109,8 @@ void  turbulence_error (const char * file, int line, const char * format, ...);
  * 
  * @param m The console message to output.
  */
-#define msg(m,...)   do{turbulence_msg (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_msg   (const char * file, int line, const char * format, ...);
+#define msg(m,...)   do{turbulence_msg (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_msg   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 /** 
  * Drop a second level msg to the console stdout.
@@ -119,8 +122,8 @@ void  turbulence_msg   (const char * file, int line, const char * format, ...);
  * 
  * @param m The console message to output.
  */
-#define msg2(m,...)   do{turbulence_msg2 (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_msg2   (const char * file, int line, const char * format, ...);
+#define msg2(m,...)   do{turbulence_msg2 (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_msg2   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 
 
@@ -134,8 +137,8 @@ void  turbulence_msg2   (const char * file, int line, const char * format, ...);
  * 
  * @param m The warning message to output.
  */
-#define wrn(m,...)   do{turbulence_wrn (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_wrn   (const char * file, int line, const char * format, ...);
+#define wrn(m,...)   do{turbulence_wrn (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_wrn   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 /** 
  * Drops to the console stdout a warning, placing the content prefixed
@@ -149,8 +152,8 @@ void  turbulence_wrn   (const char * file, int line, const char * format, ...);
  * 
  * @param m The warning message to output.
  */
-#define wrn_sl(m,...)   do{turbulence_wrn_sl (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_wrn_sl   (const char * file, int line, const char * format, ...);
+#define wrn_sl(m,...)   do{turbulence_wrn_sl (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 /** 
  * Reports an access message, a message that is sent to the access log
@@ -163,23 +166,22 @@ void  turbulence_wrn_sl   (const char * file, int line, const char * format, ...
  * 
  * @param m The console message to output.
  */
-#define access(m,...)   do{turbulence_access (__AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_access   (const char * file, int line, const char * format, ...);
+#define access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
-bool turbulence_init (TurbulenceCtx * ctx);
+bool turbulence_init (TurbulenceCtx * ctx, 
+		      const char    * config);
 
-void turbulence_exit (int value); 
+void     turbulence_exit                (TurbulenceCtx * ctx);
 
-void turbulence_cleanup (TurbulenceCtx * ctx);
+void     turbulence_reload_config       (TurbulenceCtx * ctx, int value);
 
-void turbulence_reload_config (int value);
+bool     turbulence_file_test_v         (const char * format, 
+					 VortexFileTest test, ...);
 
-bool     turbulence_file_test_v (const char * format, 
-				 VortexFileTest test, ...);
+bool     turbulence_create_dir          (const char * path);
 
-bool     turbulence_create_dir  (const char * path);
-
-long int turbulence_last_modification (const char * file);
+long int turbulence_last_modification   (const char * file);
 
 bool     turbulence_file_is_fullpath (const char * file);
 

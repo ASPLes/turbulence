@@ -42,12 +42,13 @@
 
 typedef struct _TurbulenceCtx TurbulenceCtx;
 
-TurbulenceCtx * turbulence_ctx_new ();
+TurbulenceCtx * turbulence_ctx_new            ();
 
-void            turbulence_ctx_set (TurbulenceCtx * ctx);
+void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx, 
+					       VortexCtx     * vortex_ctx);
 
-TurbulenceCtx * turbulence_ctx_get ();
+VortexCtx     * turbulence_ctx_get_vortex_ctx (TurbulenceCtx * ctx);
 
-void            turbulence_ctx_free (TurbulenceCtx * ctx);
+void            turbulence_ctx_free           (TurbulenceCtx * ctx);
 
 #endif

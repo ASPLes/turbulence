@@ -123,14 +123,14 @@ void turbulence_log_init (TurbulenceCtx * ctx)
  *
  * @param message The message to report.
  */
-void turbulence_log_report (LogReportType type, 
-			    const char * message, 
-			    va_list args,
-			    const char * file,
-			    int          line)
+void turbulence_log_report (TurbulenceCtx   * ctx,
+			    LogReportType     type, 
+			    const char      * message, 
+			    va_list           args,
+			    const char      * file,
+			    int               line)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	time_t             time_val;
 	char             * time_str;
 

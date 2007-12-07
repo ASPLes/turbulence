@@ -52,45 +52,56 @@
  */
 typedef struct _TurbulenceDbList TurbulenceDbList;
 
-TurbulenceDbList * turbulence_db_list_open   (axlError   ** error, 
-					      const char  * token, 
+TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
+					      axlError       ** error, 
+					      const char      * token, 
 					      ...);
 
-bool               turbulence_db_list_exists (TurbulenceDbList * list,
+bool               turbulence_db_list_exists (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * value);
 
-bool               turbulence_db_list_add    (TurbulenceDbList * list,
+bool               turbulence_db_list_add    (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * value);
 
-bool               turbulence_db_list_remove (TurbulenceDbList * list,
+bool               turbulence_db_list_remove (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * value);
 
-bool               turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
+bool               turbulence_db_list_remove_by_func (TurbulenceCtx              * ctx,
+						      TurbulenceDbList           * list,
 						      TurbulenceDbListRemoveFunc   func,
 						      axlPointer                   user_data);
 
-bool               turbulence_db_list_edit   (TurbulenceDbList * list,
+bool               turbulence_db_list_edit   (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * oldValue,
 					      const char       * newValue);
 
-axlList          * turbulence_db_list_get            (TurbulenceDbList * list);
+axlList          * turbulence_db_list_get            (TurbulenceCtx    * ctx,
+						      TurbulenceDbList * list);
 
-bool               turbulence_db_list_close          (TurbulenceDbList * list);
+bool               turbulence_db_list_close          (TurbulenceCtx    * ctx,
+						      TurbulenceDbList * list);
 
-bool   	           turbulence_db_list_close_internal (TurbulenceDbList * list);
+bool   	           turbulence_db_list_close_internal (TurbulenceCtx    * ctx,
+						      TurbulenceDbList * list);
 
-bool               turbulence_db_list_reload         (TurbulenceDbList * list);
+bool               turbulence_db_list_reload         (TurbulenceCtx    * ctx,
+						      TurbulenceDbList * list);
 
-bool               turbulence_db_list_flush          (TurbulenceDbList * list);
+bool               turbulence_db_list_flush          (TurbulenceCtx    * ctx,
+						      TurbulenceDbList * list);
 
 int                turbulence_db_list_count          (TurbulenceDbList * list);
 
 
 /* internal services, used by turbulence engine, never by user
  * application code */
-bool               turbulence_db_list_init (TurbulenceCtx * ctx);
+bool               turbulence_db_list_init           (TurbulenceCtx * ctx);
 
-bool               turbulence_db_list_init_isolated ();
+void               turbulence_db_list_cleanup        (TurbulenceCtx * ctx);
 
 bool               turbulence_db_list_reload_module  ();
 
