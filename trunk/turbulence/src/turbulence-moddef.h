@@ -57,7 +57,7 @@
  * 
  * @return true if the module is usable or false if not.
  */
-typedef bool (*ModInitFunc)  ();
+typedef bool (*ModInitFunc)  (TurbulenceCtx * ctx);
 
 /** 
  * @brief Public definition for the close function that must implement
@@ -65,14 +65,14 @@ typedef bool (*ModInitFunc)  ();
  * 
  * The function doesn't receive and return any data.
  */
-typedef void (*ModCloseFunc) ();
+typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
 
 /** 
  * @brief Public definition for the reconfiguration function that must
  * be implemented to receive notification if the turbulence server
  * configuration is reloaded.
  */
-typedef void (*ModReconfFunc) ();
+typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
 
 
 /**

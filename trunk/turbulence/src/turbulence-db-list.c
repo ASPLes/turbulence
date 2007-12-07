@@ -81,10 +81,8 @@ int turbulence_db_list_equal (axlPointer a, axlPointer b)
  * @internal Function that allows to validate db-list xml files
  * loaded.  
  */
-bool __turbulence_db_list_validate (axlDoc * doc, axlError **error)
+bool __turbulence_db_list_validate (TurbulenceCtx * ctx, axlDoc * doc, axlError **error)
 {
-	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 
 	v_return_val_if_fail (ctx, false);
 
@@ -163,13 +161,13 @@ bool __turbulence_db_list_validate (axlDoc * doc, axlError **error)
  * required to perform a close operation when no longer needed. This
  * is already done by Turbulence.
  */
-TurbulenceDbList * turbulence_db_list_open   (axlError   ** error, 
-					      const char  * token, 
+TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
+					      axlError       ** error, 
+					      const char      * token, 
 					      ...)
 {
 
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 	char             * full_path;
 	char             * aux;
@@ -226,14 +224,14 @@ TurbulenceDbList * turbulence_db_list_open   (axlError   ** error,
 		list->doc = axl_doc_parse_from_file (list->full_path, error);
 		if (list->doc == NULL) {
 			/* free handler */
-			turbulence_db_list_close (list);
+			turbulence_db_list_close (ctx, list);
 			return NULL;
 		} /* end if */
 
 		/* validate the list */
-		if (! __turbulence_db_list_validate (list->doc, error)) {
+		if (! __turbulence_db_list_validate (ctx, list->doc, error)) {
 			/* free handler */
-			turbulence_db_list_close (list);
+			turbulence_db_list_close (ctx, list);
 			return NULL;
 		} 
 
@@ -283,7 +281,8 @@ TurbulenceDbList * turbulence_db_list_open   (axlError   ** error,
  * @return true if the list contains the value provided (first
  * reference), otherwise false is returned.
  */
-bool               turbulence_db_list_exists (TurbulenceDbList * list,
+bool               turbulence_db_list_exists (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * value)
 {
 	axlNode * node;
@@ -295,7 +294,7 @@ bool               turbulence_db_list_exists (TurbulenceDbList * list,
 		return false;
 
 	/* reload the document */
-	turbulence_db_list_reload (list);
+	turbulence_db_list_reload (ctx, list);
 	
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
@@ -336,7 +335,8 @@ bool               turbulence_db_list_exists (TurbulenceDbList * list,
  * @return true if the item was properly added, false if an error was
  * found.
  */
-bool               turbulence_db_list_add    (TurbulenceDbList * list,
+bool               turbulence_db_list_add    (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * value)
 {
 	axlNode * node;
@@ -348,7 +348,7 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 		return false;
 
 	/* reload the document */
-	turbulence_db_list_reload (list);
+	turbulence_db_list_reload (ctx, list);
 	
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
@@ -383,7 +383,7 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
 	vortex_mutex_unlock (&(list->mutex));
 
 	/* flush the content */
-	return turbulence_db_list_flush (list);
+	return turbulence_db_list_flush (ctx, list);
 }
 
 /** 
@@ -397,7 +397,8 @@ bool               turbulence_db_list_add    (TurbulenceDbList * list,
  * 
  * @return true if the item was removed, otherwise false is returned.
  */
-bool               turbulence_db_list_remove (TurbulenceDbList * list,
+bool               turbulence_db_list_remove (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * value)
 {
 
@@ -410,7 +411,7 @@ bool               turbulence_db_list_remove (TurbulenceDbList * list,
 		return false;
 
 	/* reload the document */
-	turbulence_db_list_reload (list);
+	turbulence_db_list_reload (ctx, list);
 	
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
@@ -433,7 +434,7 @@ bool               turbulence_db_list_remove (TurbulenceDbList * list,
 			vortex_mutex_unlock (&(list->mutex));
 
 			/* flush */
-			turbulence_db_list_flush (list);
+			turbulence_db_list_flush (ctx, list);
 
 			return true;
 		} /* end if */
@@ -467,7 +468,8 @@ bool               turbulence_db_list_remove (TurbulenceDbList * list,
  * @return true if the operation was fully completed, otherwise false
  * is returned.
  */
-bool               turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
+bool               turbulence_db_list_remove_by_func (TurbulenceCtx              * ctx,
+						      TurbulenceDbList           * list,
 						      TurbulenceDbListRemoveFunc   func,
 						      axlPointer                   user_data)
 {
@@ -481,7 +483,7 @@ bool               turbulence_db_list_remove_by_func (TurbulenceDbList          
 		return false;
 
 	/* reload the document */
-	turbulence_db_list_reload (list);
+	turbulence_db_list_reload (ctx, list);
 	
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
@@ -543,7 +545,8 @@ bool               turbulence_db_list_remove_by_func (TurbulenceDbList          
  * @return true if the operation was properly completed, otherwise
  * false is returned.
  */
-bool               turbulence_db_list_edit   (TurbulenceDbList * list,
+bool               turbulence_db_list_edit   (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list,
 					      const char       * oldValue,
 					      const char       * newValue)
 {
@@ -558,7 +561,7 @@ bool               turbulence_db_list_edit   (TurbulenceDbList * list,
 		return false;
 
 	/* reload the document */
-	turbulence_db_list_reload (list);
+	turbulence_db_list_reload (ctx, list);
 	
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
@@ -578,7 +581,7 @@ bool               turbulence_db_list_edit   (TurbulenceDbList * list,
 			vortex_mutex_unlock (&(list->mutex));
 
 			/* flush */
-			turbulence_db_list_flush (list);
+			turbulence_db_list_flush (ctx, list);
 
 			return true;
 		} /* end if */
@@ -611,7 +614,8 @@ bool               turbulence_db_list_edit   (TurbulenceDbList * list,
  * reference returned is owned by the caller and a call to
  * axl_list_free is required when no longer needed the data returned.
  */
-axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
+axlList          * turbulence_db_list_get    (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list)
 {
 	axlNode * node;
 	axlList * result;
@@ -621,7 +625,7 @@ axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
 		return false;
 
 	/* reload the document */
-	turbulence_db_list_reload (list);
+	turbulence_db_list_reload (ctx, list);
 	
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
@@ -653,10 +657,9 @@ axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
  * @return true if the list was properly close, otherwise false is
  * returned. 
  */
-bool               turbulence_db_list_close  (TurbulenceDbList * list)
+bool               turbulence_db_list_close  (TurbulenceCtx    * ctx, 
+					      TurbulenceDbList * list)
 {
-	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 
 	/* failed to close */
 	v_return_val_if_fail (ctx, false);
@@ -674,7 +677,7 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list)
 	axl_list_unlink (ctx->db_list_opened, list);
 
 	/* clear memmory associated */
-	turbulence_db_list_close_internal (list);
+	turbulence_db_list_close_internal (ctx, list);
 
 	/* unlock and return */
 	vortex_mutex_unlock (&ctx->db_list_mutex);
@@ -690,7 +693,7 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list)
  * @return true if the list was properly close, otherwise false is
  * returned. 
  */
-bool               turbulence_db_list_close_internal  (TurbulenceDbList * list)
+bool               turbulence_db_list_close_internal  (TurbulenceCtx * ctx, TurbulenceDbList * list)
 {
 	/* if a null reference is received do not perform any
 	 * operation, and return ok status. */
@@ -722,7 +725,8 @@ bool               turbulence_db_list_close_internal  (TurbulenceDbList * list)
  * @return true if the reload operation was done, otherwise false is
  * returned.
  */
-bool               turbulence_db_list_reload (TurbulenceDbList * list)
+bool               turbulence_db_list_reload (TurbulenceCtx    * ctx, 
+					      TurbulenceDbList * list)
 {
 	axlDoc   * newContent;
 	axlDoc   * temp;
@@ -795,7 +799,8 @@ bool               turbulence_db_list_reload (TurbulenceDbList * list)
  * @return true if the flush operation was properly done, otherwise
  * false is returned.
  */
-bool               turbulence_db_list_flush  (TurbulenceDbList * list)
+bool               turbulence_db_list_flush  (TurbulenceCtx    * ctx,
+					      TurbulenceDbList * list)
 {
 	
 	/* if a null reference is received do not perform any
@@ -910,6 +915,34 @@ bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 	} /* end if */
 
 	return true;
+}
+
+/** 
+ * @brief Allows to cleanup the turbulence db-list module. This call
+ * is usually done from the \ref turbulence_init function, but it may
+ * be used directly from those modules that only makes use from the
+ * db-list by only calling to \ref turbulence_db_list_init.
+ * 
+ * @param ctx The context to cleanup.
+ */
+void               turbulence_db_list_cleanup (TurbulenceCtx * ctx)
+{
+	/* do not perform any operation if null is received */
+	if (ctx == NULL)
+		return;
+
+	/* clean mutex */
+	vortex_mutex_destroy (&ctx->db_list_mutex);
+
+	/* clean list */
+	axl_list_free (ctx->db_list_opened);
+	ctx->db_list_opened = NULL;
+	
+	/* clean dtd */
+	axl_dtd_free (ctx->db_list_dtd);
+	ctx->db_list_dtd = NULL;
+
+	return;
 }
 
 /** 

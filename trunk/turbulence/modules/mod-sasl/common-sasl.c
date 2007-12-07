@@ -150,6 +150,11 @@ struct _SaslAuthBackend {
 	 * @brief Path to the sasl conf file opened.
 	 */
 	char             * sasl_conf_path;
+
+	/**
+	 * @brief Reference to the turbulence context.
+	 */ 
+	TurbulenceCtx    * ctx;
 };
 
 /** 
@@ -158,13 +163,13 @@ struct _SaslAuthBackend {
  * 
  * @param db A reference to the database to dealloc.
  */
-void common_sasl_db_free (SaslAuthDb * db)
+void common_sasl_db_free (TurbulenceCtx * ctx, SaslAuthDb * db)
 {
 	if (db == NULL)
 		return;
 
 	/* close allowed domains */
-	turbulence_db_list_close (db->allowed_admins);
+	turbulence_db_list_close (ctx, db->allowed_admins);
 	axl_free (db->serverName);
 	axl_free (db->db_path);
 
@@ -178,6 +183,24 @@ void common_sasl_db_free (SaslAuthDb * db)
 	return;
 }
 
+/** 
+ * @brief Allows to get the TurbulenceCtx object associated to the
+ * provided sasl backend.
+ * 
+ * @param backend The SASL backend.
+ * 
+ * @return A reference to the TurbulenceCtx object or NULL if it
+ * fails.
+ */
+TurbulenceCtx * common_sasl_get_context (SaslAuthBackend * backend)
+{
+	v_return_val_if_fail (backend, NULL);
+
+	/* return current sasl status */
+	return backend->ctx;
+}
+
+
 
 void common_sasl_free (SaslAuthBackend * backend)
 {
@@ -188,7 +211,7 @@ void common_sasl_free (SaslAuthBackend * backend)
 	axl_free            (backend->sasl_conf_path);
 	axl_doc_free        (backend->sasl_xml_conf);
 	axl_hash_free       (backend->dbs);
-	common_sasl_db_free (backend->default_db);
+	common_sasl_db_free (backend->ctx, backend->default_db);
 	axl_free            (backend);
 
 	return;
@@ -208,7 +231,8 @@ void common_sasl_free (SaslAuthBackend * backend)
  * @param mutex Optional mutex variable used to lock the
  * implementation to avoid race conditions between threads.
  */
-bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
+bool common_sasl_load_config (TurbulenceCtx    * ctx,
+			      SaslAuthBackend ** sasl_backend,
 			      const char       * alt_location,
 			      VortexMutex      * mutex)
 {
@@ -217,6 +241,8 @@ bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
 	SaslAuthBackend * result;
 	char            * path;
 
+	/* do not oper if a null context is received */
+	v_return_val_if_fail (ctx, false);
 
 	/* nullify before doing anyting */
 	if (sasl_backend)
@@ -225,6 +251,9 @@ bool common_sasl_load_config (SaslAuthBackend ** sasl_backend,
 	/* create the sasl back end node */
 	result      = axl_new (SaslAuthBackend, 1);
 	result->dbs = axl_hash_new (axl_hash_string, axl_hash_equal_string);
+
+	/* configure turbulence ctx */
+	result->ctx = ctx;
 
 	/* check alternative location */
 	if (alt_location == NULL) {
@@ -328,9 +357,11 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				   axlNode         * node,
 				   VortexMutex     * mutex)
 {
-	SaslAuthDb * db;
-	axlError   * err  = NULL;
-	char       * path;
+	/* get a reference to the turbulence context */
+	TurbulenceCtx * ctx = sasl_backend->ctx;
+	SaslAuthDb    * db;
+	axlError      * err  = NULL;
+	char          * path;
 
 	/* create one db */
 	db           = axl_new (SaslAuthDb, 1);
@@ -355,7 +386,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 
 
 	/* load db in xml format */
-	if (! common_sasl_load_users_db (db, mutex)) {
+	if (! common_sasl_load_users_db (ctx, db, mutex)) {
 		/* failed to load database */
 		wrn ("Unable to load database from: %s, this database won't be usable", 
 		     db->db_path);
@@ -388,13 +419,13 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			msg2 ("found remote admins, loading dblist: '%s'", ATTR_VALUE (node, "remote-admins"));
 			if (turbulence_file_is_fullpath (ATTR_VALUE (node, "remote-admins"))) {
 				/* full path, try to load */
-				db->allowed_admins = turbulence_db_list_open (&err, ATTR_VALUE (node, "remote-admins"), NULL);
+				db->allowed_admins = turbulence_db_list_open (ctx, &err, ATTR_VALUE (node, "remote-admins"), NULL);
 			} else {
 				/* relative, try to load */
 				path               = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "remote-admins"));
 				if (path != NULL) {
 					msg2 ("loading allowed admins from: %s..", path);
-					db->allowed_admins = turbulence_db_list_open (&err, path, NULL);
+					db->allowed_admins = turbulence_db_list_open (ctx, &err, path, NULL);
 					axl_free (path);
 				} else {
 					error ("unable to find a file (%s) at the locations configured..",
@@ -418,7 +449,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			 * added for the same serverName */
 			if (axl_hash_exists (sasl_backend->dbs, (axlPointer) ATTR_VALUE (node, "serverName"))) {
 				error ("found a serverName database associated to the current database (serverName configured twice!)");
-				common_sasl_db_free (db);
+				common_sasl_db_free (ctx, db);
 				return false;
 			}
 			
@@ -436,7 +467,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			 * a default database */
 			if (sasl_backend->default_db != NULL) {
 				error ("it was found several default users databases (serverName empty or not found)");
-				common_sasl_db_free (db);
+				common_sasl_db_free (ctx, db);
 				return false;
 			} /* end if */
 			
@@ -460,10 +491,11 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
  * @return true if the authentication was successful, otherwise false
  * is returned.
  */
-bool common_sasl_auth_db_xml (SaslAuthDb * db, 
-			      const char * auth_id, 
-			      const char * authorization_id, 
-			      const char * password)
+bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
+			      SaslAuthDb      * db, 
+			      const char      * auth_id, 
+			      const char      * authorization_id, 
+			      const char      * password)
 {
 	axlNode     * node;
 	axlDoc      * doc;
@@ -547,15 +579,20 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 				   const char       * serverName,
 				   VortexMutex      * mutex)
 {
-	SaslAuthDb * db      = NULL;
-	bool         release = false;
-	bool         result  = false;
+	/* get a reference to the turbulence context */
+	TurbulenceCtx * ctx     = NULL;
+	SaslAuthDb    * db      = NULL;
+	bool            release = false;
+	bool            result  = false;
 
 	/* no backend, no authentication */
-	if (sasl_backend == NULL) {
+	if (sasl_backend == NULL || sasl_backend->ctx == NULL) {
 		error ("no sasl backend was provided, unable to perform SASL authentication.");
 		return false;
 	}
+
+	/* get a reference to the context */
+	ctx = sasl_backend->ctx;
 
 	/* lock the mutex */
 	LOCK;
@@ -612,7 +649,7 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	switch (db->type) {
 	case SASL_BACKEND_XML:
 		/* get result */
-		result = common_sasl_auth_db_xml (db, auth_id, authorization_id, password);
+		result = common_sasl_auth_db_xml (ctx, db, auth_id, authorization_id, password);
 		break;
 	default:
 		/* no support db format found */
@@ -834,7 +871,10 @@ bool      common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
  * 
  * @return 
  */
-char * _common_sasl_encode_password (SaslStorageFormat format, const char * password, bool * release)
+char * _common_sasl_encode_password (TurbulenceCtx      * ctx, 
+				     SaslStorageFormat    format, 
+				     const char         * password, 
+				     bool               * release)
 {
 	char * enc_password = NULL;
 
@@ -928,7 +968,7 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 
 	/* encode the password received according to the encoding
 	 * configured */
-	enc_password = _common_sasl_encode_password (db->format, password, &release);
+	enc_password = _common_sasl_encode_password (sasl_backend->ctx, db->format, password, &release);
 	if (enc_password == NULL) {
 		/* unlock the mutex */
 		UNLOCK;
@@ -998,18 +1038,24 @@ bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 					    const char      * serverName,
 					    VortexMutex     * mutex)
 {
-	axlNode    * node;
-	const char * user_id;
-	SaslAuthDb * db;
-	char       * enc_password;
-	bool         release = false;
-	bool         result;
+	/* reference to the turbulence context */
+	TurbulenceCtx * ctx = NULL;
+	axlNode       * node;
+	const char    * user_id;
+	SaslAuthDb    * db;
+	char          * enc_password;
+	bool            release = false;
+	bool            result;
 
 	/* return if minimum parameters aren't found. */
-	if (sasl_backend == NULL ||
-	    auth_id      == NULL) {
+	if (sasl_backend      == NULL ||
+	    auth_id           == NULL ||
+	    sasl_backend->ctx == NULL) {
 		return false;
-	}
+	} /* end if */
+
+	/* get a reference to the context */
+	ctx = sasl_backend->ctx;
 
 	/* lock the mutex */
 	LOCK;
@@ -1042,7 +1088,7 @@ bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 			if (axl_cmp (auth_id, user_id)) {
 
 				/* user found change password */
-				enc_password = _common_sasl_encode_password (db->format, new_password, &release);
+				enc_password = _common_sasl_encode_password (ctx, db->format, new_password, &release);
 				
 				/* replace attribute */
 				axl_node_remove_attribute (node, "password");
@@ -1110,14 +1156,19 @@ bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 					       const char       * serverName, 
 					       VortexMutex      * mutex)
 {
-	axlNode    * node;
-	SaslAuthDb * db;
-	axlDoc     * auth_db;
-	bool         result = true;
+	/* get a reference to the turbulence context */
+	TurbulenceCtx * ctx = NULL;
+	axlNode       * node;
+	SaslAuthDb    * db;
+	axlDoc        * auth_db;
+	bool            result = true;
 
 	/* return if minimum parameters aren't found. */
-	if (sasl_backend == NULL)
+	if (sasl_backend == NULL || sasl_backend->ctx == NULL)
 		return false;
+
+	/* get a reference to the context */
+	ctx = sasl_backend->ctx;
 
 	/* change if both user ids are equal */
 	if (axl_cmp (auth_id, new_auth_id))
@@ -1156,9 +1207,9 @@ bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 				axl_node_set_attribute (node, "user_id", new_auth_id);
 
 				/* remove the user from the remote administration interface */
-				if (turbulence_db_list_exists (db->allowed_admins, auth_id)) {
-					turbulence_db_list_remove (db->allowed_admins, auth_id);
-					turbulence_db_list_add (db->allowed_admins, new_auth_id);
+				if (turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
+					turbulence_db_list_remove (ctx, db->allowed_admins, auth_id);
+					turbulence_db_list_add (ctx, db->allowed_admins, new_auth_id);
 				} /* end if */
 
 				/* unlock the mutex */
@@ -1475,16 +1526,21 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 					    bool               enable,
 					    VortexMutex      * mutex)
 {
-	axlNode    * node;
-	SaslAuthDb * db;
-	axlDoc     * auth_db;
-	const char * user_id;
-	bool         result = false;
+	TurbulenceCtx  * ctx = NULL;
+	axlNode        * node;
+	SaslAuthDb     * db;
+	axlDoc         * auth_db;
+	const char     * user_id;
+	bool             result = false;
 
 	/* return if minimum parameters aren't found. */
-	if (sasl_backend == NULL ||
-	    auth_id      == NULL)
+	if (sasl_backend      == NULL ||
+	    auth_id           == NULL  ||
+	    sasl_backend->ctx == NULL)
 		return false;
+
+	/* get a reference to the context */
+	ctx = sasl_backend->ctx;
 
 	/* lock the mutex */
 	LOCK;
@@ -1524,7 +1580,7 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 				if (enable) {
 					/* user found, check if the already is
 					 * located in the database */
-					if (turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+					if (turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
 						/* unlock the mutex */
 						UNLOCK;
 						
@@ -1532,10 +1588,10 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 					}
 					
 					/* it doesn't exists, activate it */
-					turbulence_db_list_add (db->allowed_admins, auth_id);
+					turbulence_db_list_add (ctx, db->allowed_admins, auth_id);
 				} else {
 					/* just remove */
-					turbulence_db_list_remove (db->allowed_admins, auth_id);
+					turbulence_db_list_remove (ctx, db->allowed_admins, auth_id);
 				} /* end if */
 
 				/* unlock the mutex */
@@ -1577,17 +1633,22 @@ bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 					       const char       * serverName,
 					       VortexMutex      * mutex)
 {
-	axlNode    * node;
-	SaslAuthDb * db;
-	axlDoc     * auth_db;
-	const char * user_id;
-	bool         result = false;
+	TurbulenceCtx    * ctx = NULL;
+	axlNode          * node;
+	SaslAuthDb       * db;
+	axlDoc           * auth_db;
+	const char       * user_id;
+	bool               result = false;
 
 	/* return if minimum parameters aren't found. */
-	if (sasl_backend == NULL ||
-	    auth_id      == NULL)
+	if (sasl_backend      == NULL ||
+	    auth_id           == NULL ||
+	    sasl_backend->ctx == NULL)
 		return false;
 
+	/* get a reference to the context */
+	ctx = sasl_backend->ctx;
+	
 	/* lock the mutex */
 	LOCK;
 
@@ -1623,7 +1684,7 @@ bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 
 				/* user found, check if the already is
 				 * located in the database */
-				result = turbulence_db_list_exists (db->allowed_admins, auth_id);
+				result = turbulence_db_list_exists (ctx, db->allowed_admins, auth_id);
 
 				/* unlock the mutex */
 				UNLOCK;
@@ -1735,7 +1796,9 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
  * 
  * @return true if the db was properly loaded.
  */
-bool common_sasl_load_users_db (SaslAuthDb * db, VortexMutex * mutex)
+bool common_sasl_load_users_db (TurbulenceCtx  * ctx, 
+				SaslAuthDb     * db, 
+				VortexMutex    * mutex)
 {
 	axlError * error;
 	
@@ -1868,9 +1931,17 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 					 const char       * resource_path,
 					 axlPointer         user_data)
 {
-	const char      * auth_id;
-	SaslAuthBackend * sasl_backend = user_data;
-	SaslAuthDb      * db;
+	const char       * auth_id;
+	SaslAuthBackend  * sasl_backend = user_data;
+	TurbulenceCtx    * ctx = NULL;
+	SaslAuthDb       * db;
+
+	/* do not validate if a null reference is received */
+	if (sasl_backend == NULL)
+		return false;
+
+	/* get a reference to the context */
+	ctx = sasl_backend->ctx;
 
 	/* check resource associated to the sasl remote
 	 * administration */
@@ -1911,7 +1982,7 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 		return false;
 	}
 
-	if (! turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+	if (! turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
 		error ("Requested to manage a SASL db associated to serverName='%s' with auth_id='%s' not allowed",
 		       serverName ? serverName : "none",
 		       auth_id ? auth_id : "none");
@@ -1922,7 +1993,7 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 	 * the fact that the associated database was found with a
 	 * remote admin list properly configured and the remote admin
 	 * flag activated). */
-	if (db != NULL && db->remote_admin && turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+	if (db != NULL && db->remote_admin && turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
 		msg ("accepted xml-rpc SASL remote administration for %s domain",
 		     serverName ? serverName : "default");
 		return true;

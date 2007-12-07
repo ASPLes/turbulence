@@ -43,7 +43,7 @@
  */
 static bool turbulence_clean_start = false;
 
-#define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (-1);exit (-1);}while (0);
+#define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (ctx);exit (-1);}while (0);
 
 /** 
  * @brief Tries to load all modules found at the directory already
@@ -52,7 +52,7 @@ static bool turbulence_clean_start = false;
  * 
  * @param dirHandle The directory that will be inspected for modules.
  */
-void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, axlDtd * dtd)
+void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * path, DIR * dirHandle, axlDtd * dtd)
 {
 	struct dirent    * entry;
 	char             * fullpath = NULL;
@@ -107,7 +107,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		msg ("loading mod turbulence pointer: %s", fullpath);
 
 		/* load the module man!!! */
-		module = turbulence_module_open (ATTR_VALUE (axl_doc_get_root (doc), "location"));
+		module = turbulence_module_open (ctx, ATTR_VALUE (axl_doc_get_root (doc), "location"));
 		if (module == NULL) {
 			wrn ("unable to open module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 			goto next;
@@ -117,7 +117,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		init = turbulence_module_get_init (module);
 		
 		/* check init */
-		if (! init ()) {
+		if (! init (ctx)) {
 			wrn ("init module: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 			CLEAN_START();
 		} else {
@@ -128,7 +128,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
 		axl_doc_free (doc);
 
 		/* register the module to be loaded */
-		turbulence_module_register (module);
+		turbulence_module_register (ctx, module);
 
 	next:
 		/* free the error */
@@ -150,7 +150,7 @@ void turbulence_run_load_modules_from_path (const char * path, DIR * dirHandle, 
  * 
  * @param doc The turbulence run time configuration.
  */
-void turbulence_run_load_modules (axlDoc * doc, axlDtd * dtd)
+void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc, axlDtd * dtd)
 {
 	axlNode     * directory;
 	const char  * path;
@@ -181,7 +181,7 @@ void turbulence_run_load_modules (axlDoc * doc, axlDtd * dtd)
 
 		/* directory found, now search for modules activated */
 		msg ("found mod directory: %s", path);
-		turbulence_run_load_modules_from_path (path, dirHandle, dtd);
+		turbulence_run_load_modules_from_path (ctx, path, dirHandle, dtd);
 		
 		/* close the directory handle */
 		closedir (dirHandle);
@@ -201,7 +201,7 @@ void turbulence_run_load_modules (axlDoc * doc, axlDtd * dtd)
  * @return false if the function is not able to properly start
  * turbulence or the configuration will produce bad results.
  */
-bool turbulence_run_config    ()
+bool turbulence_run_config    (TurbulenceCtx * ctx)
 {
 	/* get the document configuration */
 	axlDoc           * doc = turbulence_config_get ();
@@ -272,7 +272,6 @@ bool turbulence_run_config    ()
 	if (dtd_file == NULL) {
 		/* free document */
 		error ("unable to find mod turbulence DTD definition (mod-turbulence.dtd), check your turbulence installation.");
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
  
@@ -281,12 +280,9 @@ bool turbulence_run_config    ()
 	dtd = axl_dtd_parse_from_file (dtd_file, &error);
 	if (dtd == NULL) {
 		error ("unable to load mod-turbulence.dtd file: %s", axl_error_get (error));
-		
 		axl_error_free (error);
-		turbulence_exit (-1);
-		
 		return false;
-	}
+	} /* end if */
 
 	/* check features here */
 	node = axl_doc_get (doc, "/turbulence/features");
@@ -319,7 +315,7 @@ bool turbulence_run_config    ()
 	} /* end if */
 
 	/* now load all modules found */
-	turbulence_run_load_modules (doc, dtd);
+	turbulence_run_load_modules (ctx, doc, dtd);
 	
 	/* free dtds */
 	axl_free (dtd_file);
@@ -329,7 +325,6 @@ bool turbulence_run_config    ()
 	/* now check for profiles already activated */
 	if (vortex_profiles_registered () == 0) {
 		error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
-		turbulence_exit (-1);
 		return false;
 	} /* end if */
 	
@@ -389,7 +384,6 @@ bool turbulence_run_config    ()
 
 	if (! at_least_one_listener) {
 		error ("Unable to start turbulence, no listener configuration was started, either due to configuration error or to startup problems. Terminating..");
-		turbulence_exit (-1);
 		return false;
 	}
 

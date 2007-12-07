@@ -51,83 +51,88 @@ typedef struct _SaslAuthBackend SaslAuthBackend;
 
 typedef struct _SaslAuthDb SaslAuthDb;
 
-bool      common_sasl_load_config    (SaslAuthBackend ** sasl_backend,
-				      const char       * alt_location,
-				      VortexMutex      * mutex);
-
-bool      common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,
-				      const char       * auth_id,
-				      const char       * authorization_id,
-				      const char       * password,
-				      const char       * serverName,
-				      VortexMutex      * mutex);
-
-bool      common_sasl_method_allowed (SaslAuthBackend  * sasl_backend,
-				      const char       * sasl_method,
-				      VortexMutex      * mutex);
-
-bool      common_sasl_user_exists    (SaslAuthBackend   * sasl_backend,
-				      const char        * auth_id,
-				      const char        * serverName,
-				      axlError         ** err,
-				      VortexMutex       * mutex);
-
-bool      common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
-					 const char        * serverName,
-					 axlError         ** err,
-					 VortexMutex       * mutex);
-
-bool      common_sasl_user_add       (SaslAuthBackend  * sasl_backend, 
-				      const char       * auth_id, 
-				      const char       * password, 
-				      const char       * serverName, 
-				      VortexMutex      * mutex);
-
-bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
-					    const char      * auth_id,
-					    const char      * new_password,
-					    const char      * serverName,
-					    VortexMutex     * mutex);
-
-bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
-					       const char       * auth_id, 
-					       const char       * new_auth_id,
-					       const char       * serverName, 
-					       VortexMutex      * mutex);
-
-bool      common_sasl_user_disable      (SaslAuthBackend  * sasl_backend, 
-					 const char       * auth_id, 
-					 const char       * serverName,
-					 bool               disable,
-					 VortexMutex      * mutex);
-
-bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
-					const char       * auth_id, 
-					const char       * serverName,
-					VortexMutex      * mutex);
-
-bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
-					    const char       * auth_id, 
-					    const char       * serverName,
-					    bool               enable,
+bool            common_sasl_load_config    (TurbulenceCtx    * ctx,
+					    SaslAuthBackend ** sasl_backend,
+					    const char       * alt_location,
 					    VortexMutex      * mutex);
 
-bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
+bool            common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,
+					    const char       * auth_id,
+					    const char       * authorization_id,
+					    const char       * password,
+					    const char       * serverName,
+					    VortexMutex      * mutex);
+
+bool            common_sasl_method_allowed (SaslAuthBackend  * sasl_backend,
+					    const char       * sasl_method,
+					    VortexMutex      * mutex);
+
+bool            common_sasl_user_exists    (SaslAuthBackend   * sasl_backend,
+					    const char        * auth_id,
+					    const char        * serverName,
+					    axlError         ** err,
+					    VortexMutex       * mutex);
+
+bool            common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
+					       const char        * serverName,
+					       axlError         ** err,
+					       VortexMutex       * mutex);
+
+bool            common_sasl_user_add       (SaslAuthBackend  * sasl_backend, 
+					    const char       * auth_id, 
+					    const char       * password, 
+					    const char       * serverName, 
+					    VortexMutex      * mutex);
+
+bool            common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
+						  const char      * auth_id,
+						  const char      * new_password,
+						  const char      * serverName,
+						  VortexMutex     * mutex);
+
+bool            common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
+						     const char       * auth_id, 
+						     const char       * new_auth_id,
+						     const char       * serverName, 
+						     VortexMutex      * mutex);
+
+bool            common_sasl_user_disable      (SaslAuthBackend  * sasl_backend, 
 					       const char       * auth_id, 
 					       const char       * serverName,
+					       bool               disable,
 					       VortexMutex      * mutex);
+
+bool            common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
+					      const char       * auth_id, 
+					      const char       * serverName,
+					      VortexMutex      * mutex);
+
+bool            common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
+						  const char       * auth_id, 
+						  const char       * serverName,
+						  bool               enable,
+						  VortexMutex      * mutex);
+
+bool            common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
+						     const char       * auth_id, 
+						     const char       * serverName,
+						     VortexMutex      * mutex);
 					
 
-axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
-				      const char       * serverName,
-				      VortexMutex      * mutex);
+axlList *       common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
+					    const char       * serverName,
+					    VortexMutex      * mutex);
 
-bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
-				      const char       * auth_id, 
-				      const char       * serverName, 
-				      VortexMutex      * mutex);
+bool            common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
+					    const char       * auth_id, 
+					    const char       * serverName, 
+					    VortexMutex      * mutex);
 
-void      common_sasl_free           (SaslAuthBackend  * backend);
+TurbulenceCtx * common_sasl_get_context    (SaslAuthBackend * backend);
+
+void            common_sasl_free           (SaslAuthBackend  * backend);
+
+
 
 /* remote interface API */
 bool      common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
@@ -146,7 +151,8 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
 				   axlNode          * node,
 				   VortexMutex      * mutex);
 				   
-bool common_sasl_load_users_db    (SaslAuthDb       * db,
+bool common_sasl_load_users_db    (TurbulenceCtx    * ctx,
+				   SaslAuthDb       * db,
 				   VortexMutex      * mutex);
 
 #endif

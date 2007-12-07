@@ -52,11 +52,10 @@ BEGIN_C_DECLS
  * must return true to signal that the module was properly initialized
  * Otherwise, false must be returned.
  */
-static bool test_init (VortexCtx * vCtx, TurbulenceCtx * tCtx)
+static bool test_init (TurbulenceCtx * ctx)
 {
-	/* configure context */
-	vortex_ctx_set     (vCtx);
-	turbulence_ctx_set (tCtx);
+	/* configure current vortex context before doing anything */
+	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
 
 	msg ("Turbulence BEEP server, test module: init");
 
@@ -89,7 +88,7 @@ static bool test_init (VortexCtx * vCtx, TurbulenceCtx * tCtx)
  * unload the module or it is being closed. All resource deallocation
  * and stop operation required must be done here.
  */
-static void test_close ()
+static void test_close (TurbulenceCtx * ctx)
 {
 	msg ("Turbulence BEEP server, test module: close");
 }
@@ -100,7 +99,7 @@ static void test_close ()
  * modules that could have configuration and run time change support,
  * should reread its files. It is an optional handler.
  */
-static void test_reconf () {
+static void test_reconf (TurbulenceCtx * ctx) {
 	msg ("Turbulence BEEP server configuration have change");
 }
 

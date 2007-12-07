@@ -14,7 +14,7 @@ INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__\
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
 	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
-	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -ansi
+	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall 
 
 bin_PROGRAMS = turbulence
 
@@ -39,7 +39,8 @@ libturbulenceinclude_HEADERS    = \
 	turbulence-ppath.h \
 	turbulence-config.h \
 	turbulence-db-list.h \
-	turbulence-conn-mgr.h
+	turbulence-conn-mgr.h \
+	turbulence-signal.h
 
 libturbulence_la_SOURCES = \
 	turbulence.c \
@@ -50,9 +51,10 @@ libturbulence_la_SOURCES = \
 	turbulence-log.c \
 	turbulence-ppath.c \
 	turbulence-db-list.c \
-	turbulence-conn-mgr.c
+	turbulence-conn-mgr.c \
+	turbulence-signal.c
 
-libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) $(PCRE_LIBS)
+libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'
 
 libturbulenceincludedir = $(includedir)/turbulence

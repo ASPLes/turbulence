@@ -43,7 +43,6 @@
 #endif
 
 #include <turbulence.h>
-#include <signal.h>
 
 /* local include */
 #include <turbulence-ctx-private.h>
@@ -62,20 +61,14 @@ int fsync (int fd);
  * @{
  */
 
-#define HELP_HEADER "Turbulence: BEEP application server\n\
-Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
-
-#define POST_HEADER "\n\
-If you have question, bugs to report, patches, you can reach us\n\
-at <vortex@lists.aspl.es>."
-
 /** 
  * @internal Starts turbulence execution, initializing all libraries
  * required by the server application.
  *
  * A call to turbulence_exit is required before exit.
  */
-bool turbulence_init (TurbulenceCtx * ctx)
+bool turbulence_init (TurbulenceCtx * ctx, 
+		      const char    * config)
 {
 	/* no initialization done if null reference received */
 	if (ctx == NULL)
@@ -92,28 +85,22 @@ bool turbulence_init (TurbulenceCtx * ctx)
 	vortex_mutex_create (&ctx->exit_mutex);
 
 	/* db list */
-	turbulence_db_list_init (ctx);
+	if (! turbulence_db_list_init (ctx)) {
+		error ("failed to init the turbulence console");
+		return false;
+	} /* end if */
 
 	/* init turbulence-module.c */
 	turbulence_module_init (ctx);
-
-
-	/* check if the console is defined */
-	turbulence_console_process_options (); 
-
-	/* enable vortex debug */
-	vortex_log_enable (exarg_is_defined ("vortex-debug"));
-	vortex_log2_enable (exarg_is_defined ("vortex-debug2"));
-	if (exarg_is_defined ("vortex-debug-color")) {
-		vortex_log_enable       (true);
-		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
-	} /* end if */
 
 	/*** init the vortex library ***/
 	if (! vortex_init ()) {
 		error ("unable to start vortex library, terminating turbulence execution..");
 		return false;
 	} /* end if */
+
+	/* configure the vortex context created */
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx_get ());
 
 	/*** not required to initialize axl library, already done by vortex ***/
 
@@ -129,29 +116,15 @@ bool turbulence_init (TurbulenceCtx * ctx)
 #endif
 	vortex_support_add_domain_search_path     ("turbulence-data", ".");
 
-	/* install default signal handling */
-	signal (SIGINT,  turbulence_exit);
-	signal (SIGTERM, turbulence_exit);
-	signal (SIGSEGV, turbulence_exit);
-	signal (SIGABRT, turbulence_exit);
-
-#if defined(AXL_OS_UNIX)
-	/* unix specific signals.. */
-	signal (SIGKILL, turbulence_exit);
-	signal (SIGQUIT, turbulence_exit);
-	signal (SIGHUP,  turbulence_reload_config);
-#endif
-
 	/* load current turbulence configuration */
 	if (! turbulence_config_load (ctx, config)) {
 		/* unable to load configuration */
-		return -1;
+		return false;
 	}
 
 	/* init profile path module */
 	if (! turbulence_ppath_init (ctx)) {
-		turbulence_ppath_cleanup (ctx);
-		return NULL;
+		return false;
 	} /* end if */
 
 	/* init connection manager */
@@ -161,18 +134,17 @@ bool turbulence_init (TurbulenceCtx * ctx)
 	return true;
 } /* end if */
 
+#if defined(AXL_OS_UNIX)
 /** 
  * @internal Function that performs a reload operation for the current
  * turbulence instance.
  * 
  * @param value The signal number caught.
  */
-void turbulence_reload_config (int value)
+void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 {
 	/* get turbulence context */
-	TurbulenceCtx * ctx              = turbulence_ctx_get ();
 	bool            already_notified = false;
-
 	
 	msg ("caught HUP signal, reloading configuration");
 	/* reconfigure signal received, notify turbulence modules the
@@ -192,102 +164,26 @@ void turbulence_reload_config (int value)
 	turbulence_module_notify_reload_conf ();
 	vortex_mutex_unlock (&ctx->exit_mutex);
 
-#if defined(AXL_OS_UNIX)
-	/* reload signal */
-	signal (SIGHUP,  turbulence_reload_config);
-#endif
-	
 	return;
 } 
+#endif /* defined(AXL_OS_UNIX) */
 
 /** 
- * @brief Terminates the turbulence excution, returing the exit value
- * provided as first parameter.
- * 
- * @param value The exit code to return.
+ * @brief Performs all operations required to cleanup turbulence
+ * runtime execution (calling to all module cleanups).
  */
-void turbulence_exit (int value)
+void turbulence_exit (TurbulenceCtx * ctx)
 {
-	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
-	axlDoc           * doc;
-	axlNode          * node;
-	VortexAsyncQueue * queue;
-
-	/* lock the mutex and check */
-	vortex_mutex_lock (&ctx->exit_mutex);
-	if (ctx->is_existing) {
-		/* other thread is already cleaning */
-		vortex_mutex_unlock (&ctx->exit_mutex);
-		return;
-	} /* end if */
-
-	/* flag that turbulence is existing and do all cleanup
-	 * operations */
-	ctx->is_existing = true;
-	vortex_mutex_unlock (&ctx->exit_mutex);
-	
-	switch (value) {
-	case SIGINT:
-		msg ("caught SIGINT, terminating turbulence..");
-		break;
-	case SIGTERM:
-		msg ("caught SIGTERM, terminating turbulence..");
-		break;
-#if defined(AXL_OS_UNIX)
-	case SIGKILL:
-		msg ("caught SIGKILL, terminating turbulence..");
-		break;
-	case SIGQUIT:
-		msg ("caught SIGQUIT, terminating turbulence..");
-		break;
-#endif
-	case SIGSEGV:
-	case SIGABRT:
-		error ("caught %s, anomalous termination (this is an internal turbulence or module error)",
-		       value == SIGSEGV ? "SIGSEGV" : "SIGABRT");
-		
-		/* check current termination option */
-		doc  = turbulence_config_get ();
-		node = axl_doc_get (doc, "/turbulence/global-settings/on-bad-signal");
-		if (HAS_ATTR_VALUE (node, "action", "ignore")) {
-			/* ignore the signal emision */
-			return;
-		} else if (HAS_ATTR_VALUE (node, "action", "hold")) {
-			/* lock the process */
-			error ("Bad signal found, locking process, now you can attach or terminate pid: %d", 
-			       getpid ());
-			queue = vortex_async_queue_new ();
-			vortex_async_queue_pop (queue);
-			return;
-		}
-		
-		/* let turbulence to exit */
-		break;
-	default:
-		msg ("terminating turbulence..");
-		break;
-	} /* end if */
-
-	/* Unlock the listener here. Do not perform any deallocation
-	 * operation here because we are in the middle of a signal
-	 * handler execution. By unlocking the listener, the
-	 * turbulence_cleanup is called cleaning the room. */
-	vortex_listener_unlock ();
-
-	return;
-}
-
-/** 
- * @internal Performs all operations required to cleanup turbulence
- * runtime execution.
- */
-void turbulence_cleanup ()
-{
-	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	/* do not perform any change if a null context is received */
+	v_return_if_fail (ctx);
 
 	msg ("cleaning up..");
+
+	/* terminate all modules */
+	turbulence_config_cleanup (ctx);
+
+	/* terminate turbulence db list module */
+	turbulence_db_list_cleanup (ctx);
 
 	/* unref all connections (before calling to terminate vortex) */
 	turbulence_conn_mgr_cleanup (ctx);
@@ -296,12 +192,18 @@ void turbulence_cleanup ()
 	msg ("terminating vortex library..");
 	vortex_exit ();
 
-	/* terminate exarg */
-	msg ("terminating exarg library..");
-	exarg_end ();
+	/* terminate profile path */
+	turbulence_ppath_cleanup (ctx);
 
-	/* release context */
-	turbulence_ctx_free (ctx);
+	/* clean up modules before terminating vortex */
+	/* terminate turbulence module */
+	turbulence_module_cleanup (ctx);
+
+	/* do not release the context (this is done by the caller) */
+	turbulence_log_cleanup (ctx);
+
+	/* free mutex */
+	vortex_mutex_destroy (&ctx->exit_mutex);
 
 	return;
 }
@@ -323,16 +225,15 @@ void turbulence_cleanup ()
 /** 
  * @internal function that actually handles the console error.
  */
-void turbulence_error (const char * file, int line, const char * format, ...)
+void turbulence_error (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
-		if (exarg_is_defined ("color-debug")) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
@@ -352,7 +253,7 @@ void turbulence_error (const char * file, int line, const char * format, ...)
 	CONSOLEV (stderr, format, args);
 
 	/* report to log */
-	turbulence_log_report (LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
 	
 	va_end (args);
 
@@ -368,14 +269,37 @@ void turbulence_error (const char * file, int line, const char * format, ...)
  * 
  * @return true if activated, otherwise false is returned.
  */
-bool turbulence_log_enabled ()
+bool turbulence_log_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	v_return_val_if_fail (ctx, false);
 
 	return ctx->console_debug;
 }
+
+/** 
+ * @brief Allows to activate the turbulence console log (by default
+ * disabled).
+ * 
+ * @param ctx The turbulence context to configure.  @param value The
+ * value to configure to enable/disable console log.
+ */
+void turbulence_log_enable       (TurbulenceCtx * ctx, 
+				  bool value)
+{
+	v_return_if_fail (ctx);
+
+	/* configure the value */
+	ctx->console_debug = value;
+
+	/* update the global console activation */
+	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
+
+	return;
+}
+
+
+
 
 /** 
  * @brief Allows to check if the second level debug is activated (\ref
@@ -383,22 +307,107 @@ bool turbulence_log_enabled ()
  * 
  * @return true if activated, otherwise false is returned.
  */
-bool turbulence_log2_enabled ()
+bool turbulence_log2_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	v_return_val_if_fail (ctx, false);
 	
 	return ctx->console_debug2;
 }
 
 /** 
- * @internal function that actually handles the console msg.
+ * @brief Allows to activate the second level console log. This level
+ * of debug automatically activates the previous one. Once activated
+ * it provides more information to the console.
+ * 
+ * @param ctx The turbulence context to configure.
+ * @param value The value to configure.
  */
-void turbulence_msg (const char * file, int line, const char * format, ...)
+void turbulence_log2_enable      (TurbulenceCtx * ctx,
+				  bool value)
+{
+	v_return_if_fail (ctx);
+
+	/* set the value */
+	ctx->console_debug2 = value;
+
+	/* update the global console activation */
+	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
+
+	/* makes implicit activations */
+	if (ctx->console_debug2)
+		ctx->console_debug = true;
+
+	return;
+}
+
+/** 
+ * @brief Allows to check if the third level debug is activated (\ref
+ * msg2 with additional information).
+ * 
+ * @return true if activated, otherwise false is returned.
+ */
+bool turbulence_log3_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
+	v_return_val_if_fail (ctx, false);
+
+	return ctx->console_debug3;
+}
+
+/** 
+ * @brief Allows to activate the third level console log. This level
+ * of debug automatically activates the previous one. Once activated
+ * it provides more information to the console.
+ * 
+ * @param ctx The turbulence context to configure.
+ * @param value The value to configure.
+ */
+void turbulence_log3_enable      (TurbulenceCtx * ctx,
+				  bool value)
+{
+	v_return_if_fail (ctx);
+
+	/* set the value */
+	ctx->console_debug3 = value;
+
+	/* update the global console activation */
+	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
+
+	/* makes implicit activations */
+	if (ctx->console_debug3)
+		ctx->console_debug2 = true;
+
+	return;
+}
+
+/** 
+ * @brief Allows to configure if the console log produced is colorfied
+ * according to the status reported (red: (error,criticals), yellow:
+ * (warning), green: (info, debug).
+ * 
+ * @param ctx The turbulence context to configure.
+ *
+ * @param value The value to configure. This function could take no
+ * effect on system where ansi values are not available.
+ */
+void turbulence_color_log_enable (TurbulenceCtx * ctx,
+				  bool            value)
+{
+	v_return_if_fail (ctx);
+
+	/* configure the value */
+	ctx->console_color_debug = value;
+
+	return;
+}
+
+/** 
+ * @internal function that actually handles the console msg.
+ */
+void turbulence_msg (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
+{
+	/* get turbulence context */
 	va_list            args;
 
 	/* check extended console log */
@@ -424,7 +433,7 @@ void turbulence_msg (const char * file, int line, const char * format, ...)
 	CONSOLEV (stdout, format, args);
 
 	/* report to log */
-	turbulence_log_report (LOG_REPORT_GENERAL, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_GENERAL, format, args, file, line);
 
 	va_end (args);
 
@@ -438,10 +447,9 @@ void turbulence_msg (const char * file, int line, const char * format, ...)
 /** 
  * @internal function that actually handles the console access
  */
-void  turbulence_access   (const char * file, int line, const char * format, ...)
+void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 
 	/* check extended console log */
@@ -467,7 +475,7 @@ void  turbulence_access   (const char * file, int line, const char * format, ...
 	CONSOLEV (stdout, format, args);
 
 	/* report to log */
-	turbulence_log_report (LOG_REPORT_ACCESS, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_ACCESS, format, args, file, line);
 
 	va_end (args);
 
@@ -481,10 +489,9 @@ void  turbulence_access   (const char * file, int line, const char * format, ...
 /** 
  * @internal function that actually handles the console msg (second level debug)
  */
-void turbulence_msg2 (const char * file, int line, const char * format, ...)
+void turbulence_msg2 (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 
 	/* check second level debug */
@@ -494,7 +501,7 @@ void turbulence_msg2 (const char * file, int line, const char * format, ...)
 	/* check extended console log */
 	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
-		if (exarg_is_defined ("color-debug")) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
@@ -513,7 +520,7 @@ void turbulence_msg2 (const char * file, int line, const char * format, ...)
 	CONSOLEV (stdout, format, args);
 
 	/* report to log */
-	turbulence_log_report (LOG_REPORT_GENERAL, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_GENERAL, format, args, file, line);
 
 	va_end (args);
 
@@ -527,16 +534,15 @@ void turbulence_msg2 (const char * file, int line, const char * format, ...)
 /** 
  * @internal function that actually handles the console wrn.
  */
-void turbulence_wrn (const char * file, int line, const char * format, ...)
+void turbulence_wrn (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
-		if (exarg_is_defined ("color-debug")) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
@@ -555,7 +561,7 @@ void turbulence_wrn (const char * file, int line, const char * format, ...)
 	CONSOLEV (stdout, format, args);
 
 	/* report to log */
-	turbulence_log_report (LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
 
 	va_end (args);
 
@@ -569,16 +575,15 @@ void turbulence_wrn (const char * file, int line, const char * format, ...)
 /** 
  * @internal function that actually handles the console wrn_sl.
  */
-void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
+void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
 {
 	/* get turbulence context */
-	TurbulenceCtx    * ctx = turbulence_ctx_get ();
 	va_list            args;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
-		if (exarg_is_defined ("color-debug")) {
+		if (ctx->console_color_debug) {
 			CONSOLE (stdout, "(proc:%d) [\e[1;33m!!!\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
@@ -597,7 +602,7 @@ void turbulence_wrn_sl (const char * file, int line, const char * format, ...)
 	CONSOLEV (stdout, format, args);
 
 	/* report to log */
-	turbulence_log_report (LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
 
 	va_end (args);
 

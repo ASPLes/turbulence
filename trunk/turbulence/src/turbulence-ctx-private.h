@@ -40,6 +40,10 @@
 
 
 struct _TurbulenceCtx {
+	/* Reference to the turbulence vortex context associated.
+	 */
+	VortexCtx          * vortex_ctx;
+
 	/* Controls if messages must be send to the console log.
 	 */
 	bool                 console_enabled;

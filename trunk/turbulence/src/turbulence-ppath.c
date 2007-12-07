@@ -119,6 +119,9 @@ typedef struct _TurbulencePPathState {
 	 * connection */
 	TurbulencePPathDef * path_selected;
 
+
+	/* turbulence context */
+	TurbulenceCtx      * ctx;
 } TurbulencePPathState;
 
 struct _TurbulencePPath {
@@ -260,7 +263,7 @@ const char * __turbulence_ppath_check_negative_expr (const char * expression, bo
  * just copy the string if turbulence wasn't built without pcre
  * support.
  */
-axlPointer __turbulence_ppath_compile_expr (const char * expression, const char * error_msg)
+axlPointer __turbulence_ppath_compile_expr (TurbulenceCtx * ctx, const char * expression, const char * error_msg)
 {
 #if defined(ENABLE_PCRE_SUPPORT)
 	TurbulenceExpression * expr;
@@ -375,7 +378,7 @@ bool __turbulence_ppath_match_expr (axlPointer _expr, const char * subject)
 #endif
 }
 
-TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
+TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode * node)
 {
 	axlNode             * child;
 	int                   iterator;
@@ -383,6 +386,8 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 
 	/* get the profile expression */
 	result->profile = __turbulence_ppath_compile_expr (
+		/* turbulence context */
+		ctx, 
 		/* the expression */
 		ATTR_VALUE (node, "profile"), 
 		/* error message */
@@ -425,7 +430,7 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 		iterator           = 0;
 		while (child != NULL) {
 			/* get the first definition */
-			result->ppath_item[iterator] = __turbulence_ppath_get_item (child);
+			result->ppath_item[iterator] = __turbulence_ppath_get_item (ctx, child);
 			
 			/* next profile path item */
 			child = axl_node_get_next (child);
@@ -440,7 +445,8 @@ TurbulencePPathItem * __turbulence_ppath_get_item (axlNode * node)
 
 #define TURBULENCE_PPATH_STATE "tu::pp:st"
 
-bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items, 
+bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
+				    TurbulencePPathItem ** ppath_items, 
 				    TurbulencePPathState * state, 
 				    const char           * uri, 
 				    const char           * serverName,
@@ -547,7 +553,8 @@ bool __turbulence_ppath_mask_items (TurbulencePPathItem ** ppath_items,
 
 						/* check if the profile provided is found in the allow
 						 * configuration */
-						if (! __turbulence_ppath_mask_items (item->ppath_item, 
+						if (! __turbulence_ppath_mask_items (ctx, 
+										     item->ppath_item, 
 										     state, uri, serverName, channel_num, connection, profile_content)) {
 							/* profile allowed, do not filter */
 							return false;
@@ -585,10 +592,12 @@ bool __turbulence_ppath_mask (VortexConnection * connection,
 {
 	/* get a reference to the turbulence profile path state */
 	TurbulencePPathState  * state = user_data;
+	TurbulenceCtx         * ctx    = state->ctx;
 
 	/* check if the profile provided is found in the <allow> or
 	 * <if-success> configuration */
-	if (! __turbulence_ppath_mask_items (state->path_selected->ppath_item, 
+	if (! __turbulence_ppath_mask_items (ctx, 
+					     state->path_selected->ppath_item, 
 					     state, uri, serverName, channel_num, connection, profile_content)) {
 
 		/* only drop a message if the channel number have a
@@ -640,11 +649,14 @@ bool __turbulence_ppath_mask (VortexConnection * connection,
 bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
 {
 	/* get turbulence context */
-	TurbulenceCtx        * ctx = turbulence_ctx_get ();
 	TurbulencePPathState * state;
 	TurbulencePPathDef   * def = NULL;
+	TurbulenceCtx        * ctx;
 	int                    iterator;
 	const char           * src;
+
+	/* get the current context (TurbulenceCtx) */
+	ctx = data;
 
 	/* check context received */
 	v_return_val_if_fail (ctx, false);
@@ -682,6 +694,7 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	/* create and store */
 	state                = axl_new (TurbulencePPathState, 1);
 	state->path_selected = def;
+	state->ctx           = ctx;
 	vortex_connection_set_data_full (connection, 
 					 /* the key and its associated value */
 					 TURBULENCE_PPATH_STATE, state,
@@ -742,12 +755,14 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 
 		/* catch server name match */
 		if (HAS_ATTR (pdef, "server-name")) {
-			definition->serverName = __turbulence_ppath_compile_expr (ATTR_VALUE (pdef, "server-name"),
+			definition->serverName = __turbulence_ppath_compile_expr (ctx, 
+										  ATTR_VALUE (pdef, "server-name"),
 										  "Failed to parse \"server-name\" expression at profile def");
 		} /* end if HAS_ATTR (pdef, "server-name")) */
 
 		if (HAS_ATTR (pdef, "src")) {
-			definition->src = __turbulence_ppath_compile_expr (ATTR_VALUE (pdef, "src"),
+			definition->src = __turbulence_ppath_compile_expr (ctx,
+									   ATTR_VALUE (pdef, "src"),
 									   "Failed to parse \"src\" expression at profile def");
 		} /* end if (HAS_ATTR (pdef, "src")) */
 
@@ -761,7 +776,7 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 		definition->ppath_item = axl_new (TurbulencePPathItem *, axl_node_get_child_num (pdef) + 1);
 		while (node != NULL) {
 			/* get the first definition */
-			definition->ppath_item[iterator2] = __turbulence_ppath_get_item (node);
+			definition->ppath_item[iterator2] = __turbulence_ppath_get_item (ctx, node);
 			
 			/* next profile path item */
 			node = axl_node_get_next (node);
@@ -775,7 +790,7 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 	} /* end while */
 
 	/* install server connection accepted */
-	vortex_listener_set_on_connection_accepted (__turbulence_ppath_handle_connection, NULL);
+	vortex_listener_set_on_connection_accepted (__turbulence_ppath_handle_connection, ctx);
 	
 	msg ("profile path definition ok..");
 

@@ -28,40 +28,19 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
+ *         C/ Dr. Michavila NÂº 14
  *         Coslada 28820 Madrid
  *         Spain
  *
  *      Email address:
  *         info@aspl.es - http://www.turbulence.ws
  */
-#ifndef __TURBULENCE_MODULE_H__
-#define __TURBULENCE_MODULE_H__
+#ifndef __TURBULENCE_SIGNAL_H__
+#define __TURBULENCE_SIGNAL_H__
 
 #include <turbulence.h>
 
-typedef struct _TurbulenceModule TurbulenceModule;
+void turbulence_signal_exit (TurbulenceCtx * ctx, int value);
 
-void               turbulence_module_init        (TurbulenceCtx * ctx);
+#endif /* __TURBULENCE_SIGNAL_H__ */
 
-TurbulenceModule * turbulence_module_open        (TurbulenceCtx * ctx, 
-						  const char    * module);
-
-ModInitFunc        turbulence_module_get_init    (TurbulenceModule * module);
-
-ModCloseFunc       turbulence_module_get_close   (TurbulenceModule * module);
-
-void               turbulence_module_register    (TurbulenceCtx    * ctx,
-						  TurbulenceModule * module);
-
-void               turbulence_module_unregister  (TurbulenceCtx    * ctx,
-						  TurbulenceModule * module);
-
-void               turbulence_module_free        (TurbulenceCtx     * ctx,
-						  TurbulenceModule  * module);
-
-void               turbulence_module_notify_reload_conf ();
-
-void               turbulence_module_cleanup   (TurbulenceCtx * ctx);
-
-#endif
