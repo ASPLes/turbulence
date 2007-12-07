@@ -40,11 +40,6 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-/* 
- * @internal Context variable used to hold current turbulence status.
- */
-TurbulenceCtx * turbulence_ctx_global = NULL;
-
 /** 
  * @brief Allows to create a new turbulence context (an object used by
  * the turbulence runtime to hold its current run time configuration).
@@ -58,26 +53,6 @@ TurbulenceCtx * turbulence_ctx_new ()
 
 	/* create the context */
 	ctx      = axl_new (TurbulenceCtx, 1);
-	ctx->pid = -1;
-	vortex_mutex_create (&ctx->exit_mutex);
-
-	/* db list */
-	turbulence_db_list_init (ctx);
-
-	/* init turbulence-module.c */
-	turbulence_module_init (ctx);
-
-	/* init the log module */
-	turbulence_log_init (ctx);
-
-	/* init profile path module */
-	if (! turbulence_ppath_init (ctx)) {
-		turbulence_ppath_cleanup (ctx);
-		return NULL;
-	} /* end if */
-
-	/* init connection manager */
-	turbulence_conn_mgr_init (ctx);
 
 	/* return context created */
 	return ctx;
