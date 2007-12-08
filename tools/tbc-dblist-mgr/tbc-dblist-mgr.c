@@ -143,7 +143,7 @@ int main (int argc, char ** argv)
 
 	if (exarg_is_defined ("add")) {
 		/* do add operation */
-		if (! turbulence_db_list_add (ctx, list, exarg_get_string ("add"))) {
+		if (! turbulence_db_list_add (list, exarg_get_string ("add"))) {
 			error ("failed to add provided value: %s", exarg_get_string ("add"));
 			return -1;
 		}
@@ -151,7 +151,7 @@ int main (int argc, char ** argv)
 		msg ("done");
 	} else if (exarg_is_defined ("remove")) {
 		/* do remove operation */
-		if (! turbulence_db_list_remove (ctx, list, exarg_get_string ("remove"))) {
+		if (! turbulence_db_list_remove (list, exarg_get_string ("remove"))) {
 			error ("failed to remove provided value: %s", exarg_get_string ("remove"));
 			return -1;
 		}
@@ -160,11 +160,11 @@ int main (int argc, char ** argv)
 	} else if (exarg_is_defined ("touch")) {
 		
 		/* ...and close */
-		turbulence_db_list_close (ctx, list);
+		turbulence_db_list_close (list);
 
 	} else if (exarg_is_defined ("list")) {
 		/* get current content */
-		content = turbulence_db_list_get (ctx, list);
+		content = turbulence_db_list_get (list);
 		cursor  = axl_list_cursor_new (content);
 
 		/* for each item found in the cursor */

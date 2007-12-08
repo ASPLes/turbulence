@@ -50,6 +50,8 @@ at <vortex@lists.aspl.es>."
 
 const char * out_dir = NULL;
 
+TurbulenceCtx * ctx = NULL;
+
 /** 
  * @brief Allows to get output directory to be used, appending this
  * value to files that are created.
@@ -126,7 +128,7 @@ bool tbc_mod_gen_template_create ()
 	axl_node_set_cdata_content (nodeAux, "/* Place here all your optional reconf code if the HUP signal is received */", -1);
 
 	/* dump the xml document */
-	support_dump_file (doc, 3, "%stemplate.xml", get_out_dir ());
+	support_dump_file (ctx, doc, 3, "%stemplate.xml", get_out_dir ());
 
 	/* free document */
 	axl_doc_free (doc);
@@ -204,7 +206,7 @@ bool tbc_mod_gen_compile ()
 	mod_name = support_clean_name (mod_name);
 	tolower  = support_to_lower (mod_name);
 	toupper  = support_to_upper (mod_name);
-	support_open_file ("%s%s.c", get_out_dir (), mod_name);
+	support_open_file (ctx, "%s%s.c", get_out_dir (), mod_name);
 
 	/* place copyright if found */
 	node     = axl_doc_get (doc, "/mod-def/copyright");
@@ -279,7 +281,7 @@ bool tbc_mod_gen_compile ()
 	support_close_file ();
 
 	/* create the makefile required */
-	support_open_file ("%sMakefile.am", get_out_dir ());
+	support_open_file (ctx, "%sMakefile.am", get_out_dir ());
 	
 	write ("# Module definition\n");
 	write ("EXTRA_DIST = %s\n\n", exarg_get_string ("compile"));
@@ -320,7 +322,7 @@ bool tbc_mod_gen_compile ()
 		msg ("found autoconf support files request..");
 		
 		/* create the autogen.sh */
-		support_open_file ("%sautogen.sh", get_out_dir ());
+		support_open_file (ctx, "%sautogen.sh", get_out_dir ());
 
 		write ("# autogen.sh file created by tbc-mod-gen\n");
 		write ("PACKAGE=\"%s: %s\"\n\n", mod_name, description);
@@ -359,11 +361,11 @@ bool tbc_mod_gen_compile ()
 
 		support_close_file ();
 
-		support_make_executable ("%sautogen.sh", get_out_dir ());
+		support_make_executable (ctx, "%sautogen.sh", get_out_dir ());
 
 		/* now create the configure.ac file */
 
-		support_open_file ("%sconfigure.ac", get_out_dir ());
+		support_open_file (ctx, "%sconfigure.ac", get_out_dir ());
 
 		write ("dnl configure.ac template file created by tbc-mod-gen\n");
 		write ("AC_INIT(%s.c)\n\n", mod_name);
@@ -432,7 +434,7 @@ bool tbc_mod_gen_compile ()
 	axl_doc_free (doc);
 
 	/* create the script file */
-	support_open_file ("%sgen-code", get_out_dir ());
+	support_open_file (ctx, "%sgen-code", get_out_dir ());
 
 	write ("#!/bin/sh\n\n");
 
@@ -441,7 +443,7 @@ bool tbc_mod_gen_compile ()
 	
 	support_close_file ();
 
-	support_make_executable ("%sgen-code", get_out_dir ());
+	support_make_executable (ctx, "%sgen-code", get_out_dir ());
 
 	msg ("%s created!", mod_name);
 	axl_free (mod_name);
@@ -474,14 +476,27 @@ int main (int argc, char ** argv)
 	exarg_install_arg ("enable-autoconf", "e", EXARG_NONE,
 			   "Makes the output to produce autoconf support files: autogen.sh and configure.ac. It provides an starting point to build and compile your module.");
 
-	/* install turbulence tool options */
-	turbulence_console_install_options ();
+	exarg_install_arg ("debug2", NULL, EXARG_NONE,
+			   "Increase the level of log to console produced.");
+
+	exarg_install_arg ("debug3", NULL, EXARG_NONE,
+			   "Makes logs produced to console to inclue more information about the place it was launched.");
+
+	exarg_install_arg ("color-debug", "c", EXARG_NONE,
+			   "Makes console log to be colorified.");	
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
-	/* process turbulence tool options */
-	turbulence_console_process_options ();
+	ctx = turbulence_ctx_new ();
+
+	/* configure context debug according to values received */
+	turbulence_log_enable  (ctx, true);
+	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
+	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
+
+	/* check console color debug */
+	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
 
 	/* check version argument */
 	if (exarg_is_defined ("version")) {
@@ -497,6 +512,9 @@ int main (int argc, char ** argv)
 
 	/* no argument was produced */
 	error ("no argument was provided, try to use %s --help", argv[0]);
+
+	/* free turbulence ctx */
+	turbulence_ctx_free (ctx);
 
 	return 0;
 }

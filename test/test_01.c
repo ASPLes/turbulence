@@ -41,6 +41,12 @@
 /* local include to check mod-sasl */
 #include <common-sasl.h>
 
+/* turbulence context */
+TurbulenceCtx * ctx = NULL;
+
+/* vortex context */
+VortexCtx     * vortex_ctx = NULL;
+
 bool test_01_remove_all (const char * item_stored, axlPointer user_data)
 {
 	/* just remove dude! */
@@ -61,7 +67,7 @@ bool test_01 ()
 	axlList          * list;
 
 	/* init turbulence db list */
-	if (! turbulence_db_list_init ()) {
+	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");
 		return false;
 	}
@@ -76,7 +82,7 @@ bool test_01 ()
 	} /* end if */
 	
 	/* create a new turbulence db list */
-	dblist = turbulence_db_list_open (&err, "test_01.xml", NULL);
+	dblist = turbulence_db_list_open (ctx, &err, "test_01.xml", NULL);
 	if (dblist == NULL) {
 		printf ("Failed to open db list, %s\n", axl_error_get (err));
 		axl_error_free (err);
@@ -233,7 +239,7 @@ bool test_01 ()
 	turbulence_db_list_close (dblist);
 
 	/* create a new turbulence db list */
-	dblist = turbulence_db_list_open (&err, "test_01.xml", NULL);
+	dblist = turbulence_db_list_open (ctx, &err, "test_01.xml", NULL);
 	if (dblist == NULL) {
 		printf ("Failed to open db list, %s\n", axl_error_get (err));
 		axl_error_free (err);
@@ -268,16 +274,16 @@ bool test_01 ()
 	turbulence_db_list_close (dblist);
 	
 	/* terminate the db list */
-	turbulence_db_list_cleanup ();
+	turbulence_db_list_cleanup (ctx);
 
 	/* init turbulence db list */
-	if (! turbulence_db_list_init ()) {
+	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");
 		return false;
 	}
 
 	/* open again the list */
-	dblist = turbulence_db_list_open (&err, "test_01.xml", NULL);
+	dblist = turbulence_db_list_open (ctx, &err, "test_01.xml", NULL);
 	if (dblist == NULL) {
 		printf ("Failed to open db list, %s\n", axl_error_get (err));
 		axl_error_free (err);
@@ -285,7 +291,7 @@ bool test_01 ()
 	} /* end if */
 
 	/* terminate the db list */
-	turbulence_db_list_cleanup ();
+	turbulence_db_list_cleanup (ctx);
 	
 	return true;
 }
@@ -496,13 +502,13 @@ bool test_03 ()
 	vortex_mutex_create (&mutex);
 
 	/* init the db list support */
-	if (! turbulence_db_list_init ()) {
+	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");
 		return false;
 	}
 
 	/* start the sasl backend */
-	if (! common_sasl_load_config (&sasl_backend, "test_03.sasl.conf", &mutex)) {
+	if (! common_sasl_load_config (ctx, &sasl_backend, "test_03.sasl.conf", &mutex)) {
 		printf ("Unable to initialize the sasl backend..\n");
 		return false;
 	}
@@ -737,7 +743,7 @@ bool test_03 ()
 
 	/* terminate db list support (this is used by the remote
 	 * administration support) */
-	turbulence_db_list_cleanup ();
+	turbulence_db_list_cleanup (ctx);
 
 	return true;
 }
@@ -762,7 +768,7 @@ bool test_04 ()
 	path = "../modules/mod-test/.libs/mod-test.so";
 	if (vortex_support_file_test (path, FILE_EXISTS)) {
 		printf ("Test 04: found module at: %s, opening..\n", path);
-		module = turbulence_module_open (path);
+		module = turbulence_module_open (ctx, path);
 		goto test_04_check;
 	} 
 
@@ -770,7 +776,7 @@ bool test_04 ()
 	path = "../modules/mod-test/mod-test.so";
 	if (vortex_support_file_test (path, FILE_EXISTS)) {
 		printf ("Test 04: found module at: %s, opening..\n", path);
-		module = turbulence_module_open (path);
+		module = turbulence_module_open (ctx, path);
 		goto test_04_check;
 	} 
 	
@@ -778,7 +784,7 @@ bool test_04 ()
 	path = "../modules/mod-test/mod-test.dll";
 	if (vortex_support_file_test (path, FILE_EXISTS)) {
 		printf ("Test 04: found module at: %s, opening..\n", path);
-		module = turbulence_module_open (path);
+		module = turbulence_module_open (ctx, path);
 		goto test_04_check;
 	} 
 
@@ -827,13 +833,21 @@ int main (int argc, char ** argv)
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
 
+	/* init vortex context and support module */
+	vortex_ctx = vortex_ctx_new ();
+
+	/* configure the context to be used by the library: WARNING
+	 * this function will disapear in the future. */
+	vortex_ctx_set (vortex_ctx);
+
+	/* init vortex support */
+	vortex_support_init (vortex_ctx);
+
 	/* uncomment the following tree lines to get debug */
-/*	turbulence_console_install_options ();
-	exarg_parse (argc, argv);
-	turbulence_console_process_options ();   */
+	ctx = turbulence_ctx_new ();
 
 	/* init module functions */
-	turbulence_module_init ();
+	turbulence_module_init (ctx);
 
 	/* configure an additional path to run tests */
 	vortex_support_add_domain_search_path     ("turbulence-data", "../data");
@@ -868,10 +882,14 @@ int main (int argc, char ** argv)
 	}
 
 	/* terminate turbulence support module */
-	vortex_support_cleanup ();
+	vortex_support_cleanup (vortex_ctx);
 
 	/* terminate module functions */
-	turbulence_module_cleanup ();
+	turbulence_module_cleanup (ctx);
+
+	/* free context */
+	vortex_ctx_free (vortex_ctx);
+	turbulence_ctx_free (ctx);
 
 	printf ("All tests passed OK!\n");
 

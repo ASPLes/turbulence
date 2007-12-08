@@ -128,7 +128,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		axl_doc_free (doc);
 
 		/* register the module to be loaded */
-		turbulence_module_register (ctx, module);
+		turbulence_module_register (module);
 
 	next:
 		/* free the error */
@@ -394,7 +394,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 /** 
  * @brief Allows to cleanup the module.
  */
-void turbulence_run_cleanup ()
+void turbulence_run_cleanup (TurbulenceCtx * ctx)
 {
 	return;
 }

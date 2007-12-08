@@ -103,7 +103,6 @@ bool turbulence_init (TurbulenceCtx * ctx,
 	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx_get ());
 
 	/*** not required to initialize axl library, already done by vortex ***/
-
 	msg ("turbulence internal init");
 
 	/* configure lookup domain for turbulence data */
@@ -161,7 +160,7 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 	turbulence_db_list_reload_module ();
 	
 	/* reload modules */
-	turbulence_module_notify_reload_conf ();
+	turbulence_module_notify_reload_conf (ctx);
 	vortex_mutex_unlock (&ctx->exit_mutex);
 
 	return;
