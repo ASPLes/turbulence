@@ -53,6 +53,7 @@ at <vortex@lists.aspl.es>."
 
 SaslAuthBackend * sasl_backend = NULL;
 TurbulenceCtx   * ctx          = NULL;
+VortexCtx       * vortex_ctx   = NULL;
 
 void tbc_sasl_add_user ()
 {
@@ -222,6 +223,14 @@ int main (int argc, char ** argv)
 	/* init turbulence context */
 	ctx = turbulence_ctx_new ();
 
+	/* create the vortex context and init the support module */
+	vortex_ctx = vortex_ctx_new ();
+	vortex_support_init (vortex_ctx);
+
+	/* configure the context. WARNING: this function will be
+	 * removed in the future. */
+	vortex_ctx_set (vortex_ctx);
+
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, true);
 	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
@@ -287,7 +296,10 @@ int main (int argc, char ** argv)
 
 	/* stop pieces of turbulence started */
 	turbulence_db_list_cleanup (ctx);
-	vortex_support_cleanup ();
+	vortex_support_cleanup (vortex_ctx);
+
+	vortex_ctx_free (vortex_ctx);
+	turbulence_ctx_free (ctx);
 
 	return 0;
 }

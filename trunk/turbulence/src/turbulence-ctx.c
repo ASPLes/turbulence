@@ -42,7 +42,17 @@
 
 /** 
  * @brief Allows to create a new turbulence context (an object used by
- * the turbulence runtime to hold its current run time configuration).
+ * the turbulence runtime to hold its current run time state). 
+ *
+ * The idea behind the turbulence initialization is to create a
+ * context object and the call to \ref turbulence_init with that
+ * context object to create a new run-time. This function also calls
+ * to init the vortex context associated. You can get it with \ref
+ * turbulence_ctx_get_vortex_ctx.
+ *
+ * Once required to finish the context created a call to \ref
+ * turbulence_exit is required, followed by a call to \ref
+ * turbulence_ctx_free.
  * 
  * @return A newly allocated reference to the Turbulence context
  * created. This function is already called by the turbulence engine.

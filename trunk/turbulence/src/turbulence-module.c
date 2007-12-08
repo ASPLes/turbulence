@@ -46,9 +46,13 @@
 #endif
 
 struct _TurbulenceModule {
+	/* module attributes */
 	char             * path;
 	void             * handle;
 	TurbulenceModDef * def;
+
+	/* context that loaded the module */
+	TurbulenceCtx    * ctx;
 };
 
 /** 
@@ -81,6 +85,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 	/* allocate memory for the result */
 	result         = axl_new (TurbulenceModule, 1);
 	result->path   = axl_strdup (module);
+	result->ctx    = ctx;
 #if defined(AXL_OS_UNIX)
 	result->handle = dlopen (module, RTLD_LAZY);
 #elif defined(AXL_OS_WIN32)
@@ -99,7 +104,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 #endif
 
 		/* free the result and return */
-		turbulence_module_free (ctx, result);
+		turbulence_module_free (result);
 		return NULL;
 	} /* end if */
 
@@ -118,7 +123,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 #endif
 		
 		/* free the result and return */
-		turbulence_module_free (ctx, result);
+		turbulence_module_free (result);
 		return NULL;
 	} /* end if */
 	
@@ -174,12 +179,15 @@ ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
  * 
  * @param module The module being registered.
  */
-void               turbulence_module_register  (TurbulenceCtx    * ctx, 
-						TurbulenceModule * module)
+void               turbulence_module_register  (TurbulenceModule * module)
 {
+	TurbulenceCtx * ctx;
+
 	/* check values received */
-	v_return_if_fail (ctx);
 	v_return_if_fail (module);
+
+	/* get context reference */
+	ctx = module->ctx;
 
 	/* register the module */
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
@@ -197,12 +205,15 @@ void               turbulence_module_register  (TurbulenceCtx    * ctx,
  * 
  * @param module The module to unregister.
  */
-void               turbulence_module_unregister  (TurbulenceCtx    * ctx, 
-						  TurbulenceModule * module)
+void               turbulence_module_unregister  (TurbulenceModule * module)
 {
+	TurbulenceCtx    * ctx;
+
 	/* check values received */
-	v_return_if_fail (ctx);
 	v_return_if_fail (module);
+
+	/* get a reference to the context */
+	ctx = module->ctx;
 
 	/* register the module */
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
@@ -217,12 +228,15 @@ void               turbulence_module_unregister  (TurbulenceCtx    * ctx,
  * 
  * @param module The module reference to free and close.
  */
-void               turbulence_module_free (TurbulenceCtx    * ctx,
-					   TurbulenceModule * module)
+void               turbulence_module_free (TurbulenceModule * module)
 {
+	TurbulenceCtx    * ctx;
+
 	/* check values received */
-	v_return_if_fail (ctx);
 	v_return_if_fail (module);
+
+	/* get a reference to the context */
+	ctx = module->ctx;
 
 	/* call to close the module */
 	if (module->def != NULL && module->def->close != NULL) {

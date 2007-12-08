@@ -45,10 +45,10 @@ int            support_num_tabs           = 0;
  * @param from The source destination.
  * @param to The file destination.
  */
-void   support_move_file (char * from, char * to)
+void   support_move_file (TurbulenceCtx * ctx, char * from, char * to)
 {
 
-#ifdef G_OS_WIN32
+#ifdef AXL_OS_WIN32
 	/* first remove the file to be overwrited. On unix platforms
 	 * this is not necesary because move (rename) already
 	 * overwrite destination file. On windows platform is not
@@ -130,7 +130,7 @@ bool support_are_equal (char * file1 , char * file2)
  * 
  * @param format A path that identifies the file to be opened.
  */
-void    support_open_file       (const char * format, ...)
+void    support_open_file       (TurbulenceCtx * ctx, const char * format, ...)
 {
 	
 	va_list   args;
@@ -243,7 +243,7 @@ char * next_line (FILE * file)
 /** 
  * @brief Close the current opened file.
  */
-void    support_close_file      ()
+void    support_close_file      (TurbulenceCtx * ctx)
 {
 	char    * path  = original_user_file_to_merge;
 	char    * reply = NULL;
@@ -287,7 +287,7 @@ void    support_close_file      ()
 		msg ("creating file:             %s", path);
 
 		/* move the file to the final destination */
-		support_move_file (opened_file_name, original_user_file_to_merge);
+		support_move_file (ctx, opened_file_name, original_user_file_to_merge);
 	} /* end if */
 	
  finish_close_file:
@@ -394,7 +394,7 @@ void    support_pop_indent      ()
  * 
  * @return true if the document was dumped, false if not.
  */
-bool support_dump_file (axlDoc * doc, int tabular, const char * format_path, ...)
+bool support_dump_file (TurbulenceCtx * ctx, axlDoc * doc, int tabular, const char * format_path, ...)
 {
 	va_list   args;
 	bool      result = false;
@@ -568,7 +568,7 @@ char  * support_to_upper            (const char * name)
  * @param format The file to be executable, especified by the a
  * printf-like path.
  */
-void    support_make_executable (const char * format, ...)
+void    support_make_executable (TurbulenceCtx * ctx, const char * format, ...)
 {
 	char * result;
 	

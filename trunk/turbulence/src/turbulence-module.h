@@ -51,16 +51,13 @@ ModInitFunc        turbulence_module_get_init    (TurbulenceModule * module);
 
 ModCloseFunc       turbulence_module_get_close   (TurbulenceModule * module);
 
-void               turbulence_module_register    (TurbulenceCtx    * ctx,
-						  TurbulenceModule * module);
+void               turbulence_module_register    (TurbulenceModule * module);
 
-void               turbulence_module_unregister  (TurbulenceCtx    * ctx,
-						  TurbulenceModule * module);
+void               turbulence_module_unregister  (TurbulenceModule * module);
 
-void               turbulence_module_free        (TurbulenceCtx     * ctx,
-						  TurbulenceModule  * module);
+void               turbulence_module_free        (TurbulenceModule  * module);
 
-void               turbulence_module_notify_reload_conf ();
+void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx);
 
 void               turbulence_module_cleanup   (TurbulenceCtx * ctx);
 

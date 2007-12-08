@@ -169,8 +169,8 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
 #define access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
-bool turbulence_init (TurbulenceCtx * ctx, 
-		      const char    * config);
+bool     turbulence_init (TurbulenceCtx * ctx, 
+			  const char    * config);
 
 void     turbulence_exit                (TurbulenceCtx * ctx);
 

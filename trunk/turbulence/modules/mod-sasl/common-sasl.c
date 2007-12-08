@@ -163,13 +163,13 @@ struct _SaslAuthBackend {
  * 
  * @param db A reference to the database to dealloc.
  */
-void common_sasl_db_free (TurbulenceCtx * ctx, SaslAuthDb * db)
+void common_sasl_db_free (SaslAuthDb * db)
 {
 	if (db == NULL)
 		return;
 
 	/* close allowed domains */
-	turbulence_db_list_close (ctx, db->allowed_admins);
+	turbulence_db_list_close (db->allowed_admins);
 	axl_free (db->serverName);
 	axl_free (db->db_path);
 
@@ -211,7 +211,7 @@ void common_sasl_free (SaslAuthBackend * backend)
 	axl_free            (backend->sasl_conf_path);
 	axl_doc_free        (backend->sasl_xml_conf);
 	axl_hash_free       (backend->dbs);
-	common_sasl_db_free (backend->ctx, backend->default_db);
+	common_sasl_db_free (backend->default_db);
 	axl_free            (backend);
 
 	return;
@@ -449,7 +449,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			 * added for the same serverName */
 			if (axl_hash_exists (sasl_backend->dbs, (axlPointer) ATTR_VALUE (node, "serverName"))) {
 				error ("found a serverName database associated to the current database (serverName configured twice!)");
-				common_sasl_db_free (ctx, db);
+				common_sasl_db_free (db);
 				return false;
 			}
 			
@@ -467,7 +467,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			 * a default database */
 			if (sasl_backend->default_db != NULL) {
 				error ("it was found several default users databases (serverName empty or not found)");
-				common_sasl_db_free (ctx, db);
+				common_sasl_db_free (db);
 				return false;
 			} /* end if */
 			
@@ -1207,9 +1207,9 @@ bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 				axl_node_set_attribute (node, "user_id", new_auth_id);
 
 				/* remove the user from the remote administration interface */
-				if (turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
-					turbulence_db_list_remove (ctx, db->allowed_admins, auth_id);
-					turbulence_db_list_add (ctx, db->allowed_admins, new_auth_id);
+				if (turbulence_db_list_exists (db->allowed_admins, auth_id)) {
+					turbulence_db_list_remove (db->allowed_admins, auth_id);
+					turbulence_db_list_add (db->allowed_admins, new_auth_id);
 				} /* end if */
 
 				/* unlock the mutex */
@@ -1580,7 +1580,7 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 				if (enable) {
 					/* user found, check if the already is
 					 * located in the database */
-					if (turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
+					if (turbulence_db_list_exists (db->allowed_admins, auth_id)) {
 						/* unlock the mutex */
 						UNLOCK;
 						
@@ -1588,10 +1588,10 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 					}
 					
 					/* it doesn't exists, activate it */
-					turbulence_db_list_add (ctx, db->allowed_admins, auth_id);
+					turbulence_db_list_add (db->allowed_admins, auth_id);
 				} else {
 					/* just remove */
-					turbulence_db_list_remove (ctx, db->allowed_admins, auth_id);
+					turbulence_db_list_remove (db->allowed_admins, auth_id);
 				} /* end if */
 
 				/* unlock the mutex */
@@ -1684,7 +1684,7 @@ bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 
 				/* user found, check if the already is
 				 * located in the database */
-				result = turbulence_db_list_exists (ctx, db->allowed_admins, auth_id);
+				result = turbulence_db_list_exists (db->allowed_admins, auth_id);
 
 				/* unlock the mutex */
 				UNLOCK;
@@ -1982,7 +1982,7 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 		return false;
 	}
 
-	if (! turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
+	if (! turbulence_db_list_exists (db->allowed_admins, auth_id)) {
 		error ("Requested to manage a SASL db associated to serverName='%s' with auth_id='%s' not allowed",
 		       serverName ? serverName : "none",
 		       auth_id ? auth_id : "none");
@@ -1993,7 +1993,7 @@ bool      common_sasl_validate_resource (VortexConnection * conn,
 	 * the fact that the associated database was found with a
 	 * remote admin list properly configured and the remote admin
 	 * flag activated). */
-	if (db != NULL && db->remote_admin && turbulence_db_list_exists (ctx, db->allowed_admins, auth_id)) {
+	if (db != NULL && db->remote_admin && turbulence_db_list_exists (db->allowed_admins, auth_id)) {
 		msg ("accepted xml-rpc SASL remote administration for %s domain",
 		     serverName ? serverName : "default");
 		return true;

@@ -33,7 +33,11 @@
 
 #include <turbulence.h>
 
-void    support_open_file (const char * format, ...);
+/* command line argument parsing */
+#include <exarg.h>
+
+void    support_open_file (TurbulenceCtx * ctx,
+			   const char    * format, ...);
 
 void    support_close_file      ();
 
@@ -56,12 +60,14 @@ void    support_pop_indent      ();
 bool    support_are_equal           (char * file1 , 
 				     char * file2);
 
-void    support_move_file           (char * from, 
-				     char * to);
+void    support_move_file           (TurbulenceCtx * ctx,
+				     char          * from, 
+				     char          * to);
 
-bool    support_dump_file           (axlDoc * doc, 
-				     int tabular, 
-				     const char * format_path, ...);
+bool    support_dump_file           (TurbulenceCtx * ctx,
+				     axlDoc        * doc, 
+				     int             tabular, 
+				     const char    * format_path, ...);
 
 char  * support_clean_name          (const char * name);
 
@@ -69,6 +75,7 @@ char  * support_to_upper            (const char * name);
 
 char  * support_to_lower            (const char * name);
 
-void    support_make_executable     (const char * format, ...);
+void    support_make_executable     (TurbulenceCtx * ctx,
+				     const char    * format, ...);
 
 #endif
