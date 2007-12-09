@@ -41,16 +41,13 @@
 SaslAuthBackend * sasl_backend     = NULL;
 char            * sasl_xml_db_path = NULL;
 VortexMutex       sasl_xml_db_mutex;
+TurbulenceCtx   * ctx              = NULL;
 
 bool     mod_sasl_plain_validation  (VortexConnection * connection,
 				     const char       * auth_id,
 				     const char       * authorization_id,
-				     const char       * password,
-				     axlPointer         user_data)
+				     const char       * password)
 {
-	/* get current turbulence ctx */
-	TurbulenceCtx * ctx = user_data;
-
 	msg ("required to auth: auth_id=%s, authorization_id=%s", 
 	     auth_id ? auth_id : "", authorization_id ? authorization_id : "");
 
@@ -91,10 +88,12 @@ bool sasl_load_config (TurbulenceCtx * ctx)
  * return true to signal that the module was initialized
  * ok. Otherwise, false must be returned.
  */
-static bool sasl_init (TurbulenceCtx * ctx)
+static bool sasl_init (TurbulenceCtx * _ctx)
 {
-	/* configure current vortex context before doing anything */
-	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
+	bool at_least_one_method = false;
+
+	/* prepare mod-sasl module */
+	TBC_MOD_PREPARE (_ctx);
 
 	msg ("turbulence SASL init");
 
@@ -113,13 +112,21 @@ static bool sasl_init (TurbulenceCtx * ctx)
 
 	/* check for sasl methods to be activated */
 	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_xml_db_mutex)) {
+		
+		msg ("configuring PLAIN authentication method..");
 		/* accept plain profile */
-		vortex_sasl_set_plain_validation_full (mod_sasl_plain_validation);
+		vortex_sasl_set_plain_validation (mod_sasl_plain_validation);
 		
 		/* accept SASL PLAIN incoming requests */
-		if (! vortex_sasl_accept_negociation_full (VORTEX_SASL_PLAIN, ctx)) {
+		if (! vortex_sasl_accept_negociation (VORTEX_SASL_PLAIN)) {
 			error ("Unable accept incoming SASL PLAIN profile");
 		} /* end if */			
+		
+		/* set that at least one method is activated */
+		at_least_one_method = true;
+	} else {
+		error ("not allowed PLAIN authentication method..");
+		
 	} /* end if */
 
 	/* check databases that have remote admin */
@@ -137,7 +144,8 @@ static bool sasl_init (TurbulenceCtx * ctx)
 			sasl_backend);
 	}
 
-	return true;
+	/* return if one authentication method as activated */
+	return at_least_one_method;
 }
 
 /** 

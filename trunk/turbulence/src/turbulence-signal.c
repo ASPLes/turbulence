@@ -87,7 +87,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int value)
 		       value == SIGSEGV ? "SIGSEGV" : "SIGABRT");
 		
 		/* check current termination option */
-		doc  = turbulence_config_get ();
+		doc  = turbulence_config_get (ctx);
 		node = axl_doc_get (doc, "/turbulence/global-settings/on-bad-signal");
 		if (HAS_ATTR_VALUE (node, "action", "ignore")) {
 			/* ignore the signal emision */

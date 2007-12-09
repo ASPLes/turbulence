@@ -112,6 +112,17 @@ typedef struct _TurbulenceModDef {
 	ModReconfFunc  reconf;
 } TurbulenceModDef;
 
+/** 
+ * @brief Allows to prepare de module with the turbulence context (and
+ * the vortex context associated).
+ *
+ * This macro must be called inside the module init, before any
+ * operation is done. 
+ * 
+ * @param ctx The context received by the module at the init functio.
+ */
+#define TBC_MOD_PREPARE(_ctx) do{vortex_ctx_set (turbulence_ctx_get_vortex_ctx (_ctx)); ctx = _ctx;}while(0)
+
 #endif
 
 /* @} */

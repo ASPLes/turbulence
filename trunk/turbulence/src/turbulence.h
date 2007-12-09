@@ -170,9 +170,12 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
 void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 bool     turbulence_init (TurbulenceCtx * ctx, 
+			  VortexCtx     * vortex_ctx,
 			  const char    * config);
 
-void     turbulence_exit                (TurbulenceCtx * ctx);
+void     turbulence_exit                (TurbulenceCtx * ctx,
+					 bool            free_ctx,
+					 bool            free_vortex_ctx);
 
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value);
 

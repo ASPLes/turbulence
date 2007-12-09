@@ -68,11 +68,18 @@ int fsync (int fd);
  * A call to turbulence_exit is required before exit.
  */
 bool turbulence_init (TurbulenceCtx * ctx, 
+		      VortexCtx     * vortex_ctx,
 		      const char    * config)
 {
 	/* no initialization done if null reference received */
-	if (ctx == NULL)
+	if (ctx == NULL) {
+		fprintf (stderr, "Received a null turbulence context, failed to init the turbulence");
 		return false;
+	} /* end if */
+	if (config == NULL) {
+		fprintf (stderr, "Received a null reference to the turbulence configuration, failed to init the turbulence");
+		return false;
+	} /* end if */
 
 	/* get current process id */
 	ctx->pid = getpid ();
@@ -93,14 +100,21 @@ bool turbulence_init (TurbulenceCtx * ctx,
 	/* init turbulence-module.c */
 	turbulence_module_init (ctx);
 
+	/* if a null value is received for the vortex context, create
+	 * a new empty one */
+	if (vortex_ctx == NULL)
+		vortex_ctx = vortex_ctx_new ();
+
 	/*** init the vortex library ***/
-	if (! vortex_init ()) {
+	if (! vortex_init_ctx (vortex_ctx)) {
 		error ("unable to start vortex library, terminating turbulence execution..");
 		return false;
 	} /* end if */
 
 	/* configure the vortex context created */
 	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx_get ());
+
+	msg ("turbulence ctx: %p, vortex ctx: %p", ctx, vortex_ctx_get ());
 
 	/*** not required to initialize axl library, already done by vortex ***/
 	msg ("turbulence internal init");
@@ -171,8 +185,12 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
  * @brief Performs all operations required to cleanup turbulence
  * runtime execution (calling to all module cleanups).
  */
-void turbulence_exit (TurbulenceCtx * ctx)
+void turbulence_exit (TurbulenceCtx * ctx, 
+		      bool            free_ctx,
+		      bool            free_vortex_ctx)
 {
+	VortexCtx * vortex_ctx;
+
 	/* do not perform any change if a null context is received */
 	v_return_if_fail (ctx);
 
@@ -181,15 +199,17 @@ void turbulence_exit (TurbulenceCtx * ctx)
 	/* terminate all modules */
 	turbulence_config_cleanup (ctx);
 
-	/* terminate turbulence db list module */
-	turbulence_db_list_cleanup (ctx);
-
 	/* unref all connections (before calling to terminate vortex) */
 	turbulence_conn_mgr_cleanup (ctx);
 
 	/* terminate vortex */
 	msg ("terminating vortex library..");
-	vortex_exit ();
+
+	/* get the vortex context assocaited */
+	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
+
+	/* terminate the vortex ejecution context */
+	vortex_exit_ctx (vortex_ctx, free_vortex_ctx);
 
 	/* terminate profile path */
 	turbulence_ppath_cleanup (ctx);
@@ -198,11 +218,19 @@ void turbulence_exit (TurbulenceCtx * ctx)
 	/* terminate turbulence module */
 	turbulence_module_cleanup (ctx);
 
+	/* terminate turbulence db list module at this point to avoid
+	 * modules referring to db-list to lost references */
+	turbulence_db_list_cleanup (ctx);
+
 	/* do not release the context (this is done by the caller) */
 	turbulence_log_cleanup (ctx);
 
 	/* free mutex */
 	vortex_mutex_destroy (&ctx->exit_mutex);
+
+	/* free ctx */
+	if (free_ctx)
+		turbulence_ctx_free (ctx);
 
 	return;
 }

@@ -143,13 +143,16 @@ void main_reconf_signal_received (int value)
 int main (int argc, char ** argv)
 {
 	char          * config;
+	VortexCtx     * vortex_ctx;
 
 	/*** init exarg library ***/
 	if (! main_init_exarg (argc, argv))
 		return 0;
 
-	/* create the turbulence context */
-	ctx = turbulence_ctx_new ();
+	/* create the turbulence and vortex context */
+	ctx        = turbulence_ctx_new ();
+	vortex_ctx = vortex_ctx_new ();
+	vortex_ctx_set (vortex_ctx);
 
 	/*** configure signal handling ***/
 	signal (SIGINT,  main_terminate_signal_received);
@@ -168,8 +171,21 @@ int main (int argc, char ** argv)
 	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
 	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
 
+	/* enable vortex debug: do this at this place because
+	 * turbulece_init makes a call to vortex_init */
+	vortex_log_enable  (exarg_is_defined ("vortex-debug"));
+	vortex_log2_enable (exarg_is_defined ("vortex-debug2"));
+	if (exarg_is_defined ("vortex-debug-color")) {
+		vortex_log_enable       (true);
+		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
+	} /* end if */
+
 	/* check console color debug */
 	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
+
+	/* init the vortex support module to allow finding the
+	 * configuration file */
+	vortex_support_init (vortex_ctx);
 
 	/* configure lookup domain, and load configuration file */
 	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
@@ -193,20 +209,17 @@ int main (int argc, char ** argv)
 		msg ("using configuration file: %s", config);
 
 	/* init libraries */
-	if (! turbulence_init (ctx, config)) {
+	if (! turbulence_init (ctx, vortex_ctx, config)) {
+		/* free config */
+		axl_free (config);
+
 		/* free turbulence ctx */
 		turbulence_ctx_free (ctx);
 		return -1;
 	} /* end if */
 
-	/* enable vortex debug: do this at this place because
-	 * turbulece_init makes a call to vortex_init */
-	vortex_log_enable  (exarg_is_defined ("vortex-debug"));
-	vortex_log2_enable (exarg_is_defined ("vortex-debug2"));
-	if (exarg_is_defined ("vortex-debug-color")) {
-		vortex_log_enable       (true);
-		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
-	} /* end if */
+	/* free config */
+	axl_free (config);
 
 	/* not required to free config var, already done by previous
 	 * function */
@@ -218,14 +231,15 @@ int main (int argc, char ** argv)
 	vortex_listener_wait ();
 	
 	/* terminate turbulence execution */
-	turbulence_exit (ctx);
-
-	/* free context */
-	turbulence_ctx_free (ctx);
+	turbulence_exit (ctx, false, false);
 
 	/* terminate exarg */
 	msg ("terminating exarg library..");
 	exarg_end ();
+
+	/* free context (the very last operation) */
+	turbulence_ctx_free (ctx);
+	vortex_ctx_free (vortex_ctx);
 
 	return 0;
 }

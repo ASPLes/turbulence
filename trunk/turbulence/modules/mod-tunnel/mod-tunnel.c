@@ -37,8 +37,9 @@
  */
 #include <mod-tunnel.h>
 
-axlDoc * mod_tunnel_resolver = NULL;
-axlDoc * tunnel_conf         = NULL;
+axlDoc          * mod_tunnel_resolver = NULL;
+axlDoc          * tunnel_conf         = NULL;
+TurbulenceCtx   * ctx              = NULL;
 
 bool find_and_replace (const char * conf, axlNode * node)
 {
@@ -130,14 +131,14 @@ VortexTunnelSettings * tunnel_resolver (const char * profile_content,
  * return true to signal that the module was initialized
  * ok. Otherwise, false must be returned.
  */
-static bool tunnel_init (TurbulenceCtx * ctx)
+static bool tunnel_init (TurbulenceCtx * _ctx)
 {
 	axlNode  * node;
 	axlError * error;
 	char     * config;
 
-	/* configure current vortex context before doing anything */
-	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
+	/* prepare mod-sasl module */
+	TBC_MOD_PREPARE (_ctx);
 	
 	msg ("turbulence TUNNEL init");
 

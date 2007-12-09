@@ -46,7 +46,7 @@
 void turbulence_log_init (TurbulenceCtx * ctx)
 {
 	/* get current turbulence configuration */
-	axlDoc  * doc = turbulence_config_get ();
+	axlDoc  * doc = turbulence_config_get (ctx);
 	axlNode * node;
 
 	/* check log reporting */
