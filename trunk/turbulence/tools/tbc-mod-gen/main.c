@@ -48,9 +48,9 @@ Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
 If you have question, bugs to report, patches, you can reach us\n\
 at <vortex@lists.aspl.es>."
 
-const char * out_dir = NULL;
-
-TurbulenceCtx * ctx = NULL;
+char          * out_dir    = NULL;
+TurbulenceCtx * ctx        = NULL;
+VortexCtx     * vortex_ctx = NULL;
 
 /** 
  * @brief Allows to get output directory to be used, appending this
@@ -206,6 +206,8 @@ bool tbc_mod_gen_compile ()
 	mod_name = support_clean_name (mod_name);
 	tolower  = support_to_lower (mod_name);
 	toupper  = support_to_upper (mod_name);
+
+	/* out dir */
 	support_open_file (ctx, "%s%s.c", get_out_dir (), mod_name);
 
 	/* place copyright if found */
@@ -221,6 +223,9 @@ bool tbc_mod_gen_compile ()
 	write (" * names. */\n");
 	write ("BEGIN_C_DECLS\n\n");
 
+	write ("/* global turbulence context reference */\n");
+	write ("TurbulenceCtx * ctx = NULL;\n\n");
+
 	/* place here additional content */
 	node    = axl_doc_get (doc, "/mod-def/source-code/additional-content");
 	if (node != NULL) {
@@ -229,7 +234,13 @@ bool tbc_mod_gen_compile ()
 
 	/* init handler */
 	write ("/* %s init handler */\n", mod_name);
-	write ("static bool %s_init () {\n", tolower);
+	write ("static bool %s_init (TurbulenceCtx * _ctx) {\n", tolower);
+
+	push_indent ();
+	write ("/* configure the module */\n");
+	write ("TBC_MOD_PREPARE (_ctx);\n\n");
+	pop_indent ();
+
 	node = axl_doc_get (doc, "/mod-def/source-code/init");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
@@ -239,7 +250,7 @@ bool tbc_mod_gen_compile ()
 
 	/* close handler */
 	write ("/* %s close handler */\n", mod_name);
-	write ("static void %s_close () {\n", tolower);
+	write ("static void %s_close (TurbulenceCtx * _ctx) {\n", tolower);
 	node = axl_doc_get (doc, "/mod-def/source-code/close");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
@@ -249,7 +260,7 @@ bool tbc_mod_gen_compile ()
 
 	/* reconf handler */
 	write ("/* %s reconf handler */\n", mod_name);
-	write ("static void %s_reconf () {\n", tolower);
+	write ("static void %s_reconf (TurbulenceCtx * _ctx) {\n", tolower);
 	node = axl_doc_get (doc, "/mod-def/source-code/reconf");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
@@ -278,7 +289,7 @@ bool tbc_mod_gen_compile ()
 	write ("END_C_DECLS\n\n");
 	
 	/* close content */
-	support_close_file ();
+	support_close_file (ctx);
 
 	/* create the makefile required */
 	support_open_file (ctx, "%sMakefile.am", get_out_dir ());
@@ -307,14 +318,15 @@ bool tbc_mod_gen_compile ()
 	
 	write ("# configure site module installation\n");
 	write ("modconfdir   = `turbulence-config --mod-xml`\n");
-	write ("modconf_DATA = %s.xml\n\n", mod_name);
+	write ("modconf_DATA = %s.xml %s.win32.xml\n\n", mod_name, mod_name);
 	
-	write ("%s.xml:\n", mod_name);
+	write ("%s.xml %s.win32.xml:\n", mod_name, mod_name);
 	push_indent ();
 	write ("echo \"<mod-turbulence location=\\\"`turbulence-config --mod-dir`/%s.so\\\"/>\" > %s.xml\n", mod_name, mod_name);
+	write ("echo \"<mod-turbulence location=\\\"../modules/%s.dll\\\"/>\" > %s.win32.xml\n", mod_name);
 	pop_indent ();
 
-	support_close_file ();
+	support_close_file (ctx);
 
 	/* create autoconf if defined */
 	if (exarg_is_defined ("enable-autoconf")) {
@@ -359,7 +371,7 @@ bool tbc_mod_gen_compile ()
 
 		write ("./configure $@ --enable-maintainer-mode --enable-compile-warnings\n");
 
-		support_close_file ();
+		support_close_file (ctx);
 
 		support_make_executable (ctx, "%sautogen.sh", get_out_dir ());
 
@@ -425,12 +437,13 @@ bool tbc_mod_gen_compile ()
 		write ("echo \"--     NOW TYPE: make; make install     --\"\n");
 		write ("echo \"------------------------------------------\"\n");
 
-		support_close_file ();
+		support_close_file (ctx);
 		
 	} /* end if */
 
 	/* dealloc */
 	axl_free (tolower);
+	axl_free (toupper);
 	axl_doc_free (doc);
 
 	/* create the script file */
@@ -441,7 +454,7 @@ bool tbc_mod_gen_compile ()
 	/* write the mod gen */
 	write ("tbc-mod-gen --compile %s --out-dir %s\n", exarg_get_string ("compile"), exarg_get_string ("out-dir"));
 	
-	support_close_file ();
+	support_close_file (ctx);
 
 	support_make_executable (ctx, "%sgen-code", get_out_dir ());
 
@@ -490,6 +503,11 @@ int main (int argc, char ** argv)
 
 	ctx = turbulence_ctx_new ();
 
+	/* create a vortex context and init the support module */
+	vortex_ctx = vortex_ctx_new ();
+	vortex_support_init (vortex_ctx);
+	vortex_ctx_set (vortex_ctx);
+
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, true);
 	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
@@ -501,20 +519,30 @@ int main (int argc, char ** argv)
 	/* check version argument */
 	if (exarg_is_defined ("version")) {
 		msg ("tbc-mod-gen version: %s", VERSION);
-		return 0;
+		goto finish;
 	} else if (exarg_is_defined ("template")) {
 		/* produce a template definition */
-		return tbc_mod_gen_template_create ();
+		tbc_mod_gen_template_create ();
 	} else if (exarg_is_defined ("compile")) {
 		/* compile template provided */
-		return tbc_mod_gen_compile ();
+		tbc_mod_gen_compile ();
+	} else {
+
+		/* no argument was produced */
+		error ("no argument was provided, try to use %s --help", argv[0]);
 	}
 
-	/* no argument was produced */
-	error ("no argument was provided, try to use %s --help", argv[0]);
+ finish:
+	/* terminate exarg */
+	exarg_end ();
 
-	/* free turbulence ctx */
+	/* cleanup support module */
+	vortex_support_cleanup (vortex_ctx);
+	axl_free (out_dir);
+
+	/* free context */
 	turbulence_ctx_free (ctx);
+	vortex_ctx_free (vortex_ctx);
 
 	return 0;
 }

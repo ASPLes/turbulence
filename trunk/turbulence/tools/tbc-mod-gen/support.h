@@ -36,10 +36,10 @@
 /* command line argument parsing */
 #include <exarg.h>
 
-void    support_open_file (TurbulenceCtx * ctx,
-			   const char    * format, ...);
+void    support_open_file       (TurbulenceCtx * ctx,
+				 const char    * format, ...);
 
-void    support_close_file      ();
+void    support_close_file      (TurbulenceCtx * ctx);
 
 #define write support_write
 
