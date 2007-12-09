@@ -658,8 +658,9 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	/* get the current context (TurbulenceCtx) */
 	ctx = data;
 
-	/* check context received */
-	v_return_val_if_fail (ctx, false);
+	fprintf (stderr, "Profile path applied on context: %p", ctx);
+	fflush (stderr);
+	
 
 	/* try to find a profile path that could match with the
 	 * provided source */
@@ -726,7 +727,7 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 	v_return_val_if_fail (ctx, false);
 	
 	/* parse all profile path configurations */
-	pdef = axl_doc_get (turbulence_config_get (), "/turbulence/profile-path-configuration/path-def");
+	pdef = axl_doc_get (turbulence_config_get (ctx), "/turbulence/profile-path-configuration/path-def");
 	if (pdef == NULL) {
 		error ("No profile path configuration was found, you must set at least one profile path.");
 		return false;

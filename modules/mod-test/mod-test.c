@@ -56,13 +56,9 @@ TurbulenceCtx * ctx = NULL;
  */
 static bool test_init (TurbulenceCtx * _ctx)
 {
-	/* configure current vortex context before doing anything */
-	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
-
-	/* store turbulence context for later use */
-	ctx = _ctx;
+	/* configure the module */
+	TBC_MOD_PREPARE (_ctx);
 	
-
 	msg ("Turbulence BEEP server, test module: init");
 
 	/* register all profiles without handlers: testing purposes */

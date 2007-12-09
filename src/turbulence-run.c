@@ -43,7 +43,7 @@
  */
 static bool turbulence_clean_start = false;
 
-#define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (ctx);exit (-1);}while (0);
+#define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (ctx, true, true);exit (-1);}while (0);
 
 /** 
  * @brief Tries to load all modules found at the directory already
@@ -204,7 +204,7 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc, axlDtd * dt
 bool turbulence_run_config    (TurbulenceCtx * ctx)
 {
 	/* get the document configuration */
-	axlDoc           * doc = turbulence_config_get ();
+	axlDoc           * doc = turbulence_config_get (ctx);
 	axlNode          * port;
 	axlNode          * listener;
 	axlNode          * name;
