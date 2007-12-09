@@ -46,16 +46,22 @@ BEGIN_C_DECLS
 #define MOD_TEST_URI3 "http://turbulence.ws/profiles/test3"
 #define MOD_TEST_URI4 "http://turbulence.ws/profiles/test4"
 
+TurbulenceCtx * ctx = NULL;
+
 /** 
  * @brief Init function, perform all the necessary code to register
  * profiles, configure Vortex, and any other init task. The function
  * must return true to signal that the module was properly initialized
  * Otherwise, false must be returned.
  */
-static bool test_init (TurbulenceCtx * ctx)
+static bool test_init (TurbulenceCtx * _ctx)
 {
 	/* configure current vortex context before doing anything */
 	vortex_ctx_set (turbulence_ctx_get_vortex_ctx (ctx));
+
+	/* store turbulence context for later use */
+	ctx = _ctx;
+	
 
 	msg ("Turbulence BEEP server, test module: init");
 
