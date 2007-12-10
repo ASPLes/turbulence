@@ -263,7 +263,9 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 	vortex_mutex_lock (&ctx->db_list_mutex);
 
 	/* add the db list opened */
-	axl_list_add (ctx->db_list_opened, list);
+	axl_list_append (ctx->db_list_opened, list);
+	msg2 ("added list %p to axlList %p, current count: %d", 
+	      list, ctx->db_list_opened, axl_list_length (ctx->db_list_opened));
 
 	/* unlock and return */
 	vortex_mutex_unlock (&ctx->db_list_mutex);
@@ -668,7 +670,7 @@ bool               turbulence_db_list_close  (TurbulenceDbList * list)
 	vortex_mutex_lock (&ctx->db_list_mutex);
 
 	/* remove the item from the list without deallocating */
-	axl_list_unlink (ctx->db_list_opened, list);
+	axl_list_unlink_ptr (ctx->db_list_opened, list);
 
 	/* clear memmory associated */
 	turbulence_db_list_close_internal (list);
@@ -697,6 +699,8 @@ bool               turbulence_db_list_close_internal  (TurbulenceDbList * list)
 
 	/* get turbulence context */
 	ctx = list->ctx;
+
+	msg2 ("closing list %p", list);
 
 	/* dump the document content */
 	if (list->doc != NULL) {
