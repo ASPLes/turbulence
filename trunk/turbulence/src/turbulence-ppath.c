@@ -658,10 +658,6 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	/* get the current context (TurbulenceCtx) */
 	ctx = data;
 
-	fprintf (stderr, "Profile path applied on context: %p", ctx);
-	fflush (stderr);
-	
-
 	/* try to find a profile path that could match with the
 	 * provided source */
 	iterator = 0;
