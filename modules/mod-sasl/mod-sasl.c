@@ -115,10 +115,10 @@ static bool sasl_init (TurbulenceCtx * _ctx)
 		
 		msg ("configuring PLAIN authentication method..");
 		/* accept plain profile */
-		vortex_sasl_set_plain_validation (mod_sasl_plain_validation);
+		vortex_sasl_set_plain_validation (TBC_VORTEX_CTX(ctx), mod_sasl_plain_validation);
 		
 		/* accept SASL PLAIN incoming requests */
-		if (! vortex_sasl_accept_negociation (VORTEX_SASL_PLAIN)) {
+		if (! vortex_sasl_accept_negociation (TBC_VORTEX_CTX(ctx), VORTEX_SASL_PLAIN)) {
 			error ("Unable accept incoming SASL PLAIN profile");
 		} /* end if */			
 		
@@ -134,6 +134,8 @@ static bool sasl_init (TurbulenceCtx * _ctx)
 		/* install the xml-rpc profile support to handle session share
 		 * services */
 		vortex_xml_rpc_accept_negociation (
+			/* vortex context */
+			TBC_VORTEX_CTX(ctx), 
 			/* no resource validation function */
 			common_sasl_validate_resource,
 			/* no user space data for the validation resource

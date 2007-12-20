@@ -152,10 +152,10 @@ bool tbc_mod_gen_compile ()
 	char     * description;
 
 	/* configure lookup domain for tbc-mod-gen settings */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("tbc-mod-gen"), 
+	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("tbc-mod-gen"), 
 						   vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
 	/* now find the file */
-	file = vortex_support_domain_find_data_file ("tbc-mod-gen", "tbc-mod-gen.dtd");
+	file = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tbc-mod-gen", "tbc-mod-gen.dtd");
 
 	if (file == NULL) {
 		error ("Installation problem, unable to find dtd definition file: tbc-mod-gen.dtd");
@@ -505,8 +505,8 @@ int main (int argc, char ** argv)
 
 	/* create a vortex context and init the support module */
 	vortex_ctx = vortex_ctx_new ();
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
 	vortex_support_init (vortex_ctx);
-	vortex_ctx_set (vortex_ctx);
 
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, true);

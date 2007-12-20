@@ -58,26 +58,33 @@ static bool test_init (TurbulenceCtx * _ctx)
 {
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
+
+	/* using TBC_VORTEX_CTX allows to get the vortex context from
+	 * the turbulence ctx */
 	
 	msg ("Turbulence BEEP server, test module: init");
 
 	/* register all profiles without handlers: testing purposes */
-	vortex_profiles_register (MOD_TEST_URI1,
+	vortex_profiles_register (TBC_VORTEX_CTX (ctx),
+				  MOD_TEST_URI1,
 				  NULL, NULL,
 				  NULL, NULL,
 				  NULL, NULL);
 
-	vortex_profiles_register (MOD_TEST_URI2,
+	vortex_profiles_register (TBC_VORTEX_CTX (ctx),
+				  MOD_TEST_URI2,
 				  NULL, NULL,
 				  NULL, NULL,
 				  NULL, NULL);
 
-	vortex_profiles_register (MOD_TEST_URI3,
+	vortex_profiles_register (TBC_VORTEX_CTX (ctx),
+				  MOD_TEST_URI3,
 				  NULL, NULL,
 				  NULL, NULL,
 				  NULL, NULL);
 
-	vortex_profiles_register (MOD_TEST_URI4,
+	vortex_profiles_register (TBC_VORTEX_CTX (ctx),
+				  MOD_TEST_URI4,
 				  NULL, NULL,
 				  NULL, NULL,
 				  NULL, NULL);

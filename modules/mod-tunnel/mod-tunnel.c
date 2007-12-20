@@ -120,7 +120,7 @@ VortexTunnelSettings * tunnel_resolver (const char * profile_content,
 	axl_doc_dump (doc, &content, &size);
 
 	/* create settings, free content and return value */
-	settings = vortex_tunnel_settings_new_from_xml (content, size);
+	settings = vortex_tunnel_settings_new_from_xml (TBC_VORTEX_CTX(ctx), content, size);
 	axl_free (content);
 	return settings;
 }
@@ -149,11 +149,11 @@ static bool tunnel_init (TurbulenceCtx * _ctx)
 	} /* end if */
 
 	/* configure lookup domain for mod tunnel settings */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("tunnel"), 
+	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("tunnel"), 
 						   vortex_support_build_filename (SYSCONFDIR, "turbulence", "tunnel", NULL));
 
 	/* load module settings */
-	config       = vortex_support_domain_find_data_file ("tunnel", "tunnel.conf");
+	config       = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tunnel", "tunnel.conf");
 	tunnel_conf  = axl_doc_parse_from_file (config, &error);
 	axl_free (config);
 	if (tunnel_conf == NULL) {
@@ -168,7 +168,7 @@ static bool tunnel_init (TurbulenceCtx * _ctx)
 	if (HAS_ATTR_VALUE (node, "type", "xml") &&
 	    HAS_ATTR (node, "location")) {
 		/* find the file to load */
-		config              = vortex_support_domain_find_data_file ("tunnel", ATTR_VALUE (node, "location"));
+		config              = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tunnel", ATTR_VALUE (node, "location"));
 		mod_tunnel_resolver = axl_doc_parse_from_file (config, NULL);
 		if (mod_tunnel_resolver == NULL) {
 			error ("failed to open resolver file, TUNNEL translation settings will not be applied, error: %s",
@@ -181,13 +181,13 @@ static bool tunnel_init (TurbulenceCtx * _ctx)
 
 	/* activates the tunnel profile to accept connections
 	 * (tunneling them or forwarding them to the next hop) */
-	if (! vortex_tunnel_accept_negotiation (NULL, NULL)) {
+	if (! vortex_tunnel_accept_negotiation (TBC_VORTEX_CTX(ctx), NULL, NULL)) {
 		error ("failed to init the TUNNEL profile");
 		return false;
 	} /* end if */
 
 	/* configure tunnel settings translation */
-	vortex_tunnel_set_resolver (tunnel_resolver, NULL);
+	vortex_tunnel_set_resolver (TBC_VORTEX_CTX(ctx), tunnel_resolver, NULL);
 		
 	return true;
 }

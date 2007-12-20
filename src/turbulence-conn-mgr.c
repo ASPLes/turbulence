@@ -143,14 +143,19 @@ void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
  */
 void turbulence_conn_mgr_init (TurbulenceCtx * ctx)
 {
-	/* init mutex */
-	vortex_mutex_create (&ctx->conn_mgr_mutex);
+	VortexCtx  * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* init connection list hash */
-	ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
+	if (ctx->conn_mgr_hash == NULL) {
+		/* init mutex */
+		vortex_mutex_create (&ctx->conn_mgr_mutex);
+		
+		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 
-	/* configure notification handlers */
-	vortex_connection_notify_new_connections (turbulence_conn_mgr_notify, ctx);
+		/* configure notification handlers */
+		vortex_connection_notify_new_connections (vortex_ctx, turbulence_conn_mgr_notify, ctx);
+		
+	} /* end if */
 
 	return;
 }

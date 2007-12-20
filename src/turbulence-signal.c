@@ -52,6 +52,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int value)
 	axlDoc           * doc;
 	axlNode          * node;
 	VortexAsyncQueue * queue;
+	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* lock the mutex and check */
 	vortex_mutex_lock (&ctx->exit_mutex);
@@ -112,7 +113,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int value)
 	 * operation here because we are in the middle of a signal
 	 * handler execution. By unlocking the listener, the
 	 * turbulence_cleanup is called cleaning the room. */
-	vortex_listener_unlock ();
+	vortex_listener_unlock (vortex_ctx);
 
 	return;
 } /* end if */

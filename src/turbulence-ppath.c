@@ -459,6 +459,7 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 	axlList             * profiles;
 	int                   iterator2;
 	char                * uri2;
+	VortexCtx           * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	iterator = 0;
 	while (ppath_items[iterator]) {
@@ -527,7 +528,7 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		 * check all <allow> and <if-success> nodes inside. */
 		if (item->type == PROFILE_IF) {
 			/* try to find a profile that matches the expression found */
-			profiles = vortex_profiles_get_actual_list_ref ();
+			profiles = vortex_profiles_get_actual_list_ref (vortex_ctx);
 			iterator2 = 0;
 			while (iterator2 < axl_list_length (profiles)) {
 
@@ -718,6 +719,7 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 	TurbulencePPathDef * definition;
 	int                  iterator;
 	int                  iterator2;
+	VortexCtx          * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* check turbulence context received */
 	v_return_val_if_fail (ctx, false);
@@ -787,7 +789,7 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 	} /* end while */
 
 	/* install server connection accepted */
-	vortex_listener_set_on_connection_accepted (__turbulence_ppath_handle_connection, ctx);
+	vortex_listener_set_on_connection_accepted (vortex_ctx, __turbulence_ppath_handle_connection, ctx);
 	
 	msg ("profile path definition ok..");
 

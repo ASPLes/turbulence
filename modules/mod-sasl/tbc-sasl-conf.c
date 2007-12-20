@@ -225,11 +225,8 @@ int main (int argc, char ** argv)
 
 	/* create the vortex context and init the support module */
 	vortex_ctx = vortex_ctx_new ();
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
 	vortex_support_init (vortex_ctx);
-
-	/* configure the context. WARNING: this function will be
-	 * removed in the future. */
-	vortex_ctx_set (vortex_ctx);
 
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, true);
