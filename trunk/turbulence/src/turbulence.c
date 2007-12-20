@@ -112,22 +112,22 @@ bool turbulence_init (TurbulenceCtx * ctx,
 	} /* end if */
 
 	/* configure the vortex context created */
-	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx_get ());
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
 
-	msg ("turbulence ctx: %p, vortex ctx: %p", ctx, vortex_ctx_get ());
+	msg ("turbulence ctx: %p, vortex ctx: %p", ctx, vortex_ctx);
 
 	/*** not required to initialize axl library, already done by vortex ***/
 	msg ("turbulence internal init");
 
 	/* configure lookup domain for turbulence data */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-data"), 
-						        vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
+	vortex_support_add_domain_search_path_ref (vortex_ctx, axl_strdup ("turbulence-data"), 
+						   vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
 #if defined(AXL_OS_WIN32)
 	/* make turbulence to add the path ../data to the search list
 	 * under windows as it is organized this way */
-	vortex_support_add_domain_search_path     ("turbulence-data", TBC_DATADIR);
+	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", TBC_DATADIR);
 #endif
-	vortex_support_add_domain_search_path     ("turbulence-data", ".");
+	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", ".");
 
 	/* load current turbulence configuration */
 	if (! turbulence_config_load (ctx, config)) {

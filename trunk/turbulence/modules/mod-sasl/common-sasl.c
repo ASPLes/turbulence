@@ -258,14 +258,14 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 	/* check alternative location */
 	if (alt_location == NULL) {
 		/* configure lookup domain for mod sasl settings */
-		vortex_support_add_domain_search_path_ref (axl_strdup ("sasl"), 
+		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"), 
 							   vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", NULL));
 		
 		/* find and load the file */
-		result->sasl_conf_path  = vortex_support_domain_find_data_file ("sasl", "sasl.conf");
+		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
 	} else {
 		/* configure lookup domain for mod sasl settings */
-		vortex_support_add_domain_search_path_ref (axl_strdup ("sasl"),
+		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"),
 							   turbulence_base_dir (alt_location));
 
 		/* us the alternative location to load the document */
@@ -368,7 +368,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	db->type     = SASL_BACKEND_XML;
 
 	/* find the file */
-	db->db_path  = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "location"));
+	db->db_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "location"));
 
 	/* check if the path provided is valid */
 	if (db->db_path == NULL) {
@@ -422,7 +422,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				db->allowed_admins = turbulence_db_list_open (ctx, &err, ATTR_VALUE (node, "remote-admins"), NULL);
 			} else {
 				/* relative, try to load */
-				path               = vortex_support_domain_find_data_file ("sasl", ATTR_VALUE (node, "remote-admins"));
+				path               = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "remote-admins"));
 				if (path != NULL) {
 					msg2 ("loading allowed admins from: %s..", path);
 					db->allowed_admins = turbulence_db_list_open (ctx, &err, path, NULL);

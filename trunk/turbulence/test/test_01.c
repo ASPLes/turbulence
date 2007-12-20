@@ -836,21 +836,18 @@ int main (int argc, char ** argv)
 	/* init vortex context and support module */
 	vortex_ctx = vortex_ctx_new ();
 
-	/* configure the context to be used by the library: WARNING
-	 * this function will disapear in the future. */
-	vortex_ctx_set (vortex_ctx);
-
 	/* init vortex support */
 	vortex_support_init (vortex_ctx);
 
 	/* uncomment the following tree lines to get debug */
 	ctx = turbulence_ctx_new ();
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
 
 	/* init module functions */
 	turbulence_module_init (ctx);
 
 	/* configure an additional path to run tests */
-	vortex_support_add_domain_search_path     ("turbulence-data", "../data");
+	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", "../data");
 
 	/* test dblist */
 	if (test_01 ()) {

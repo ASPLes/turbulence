@@ -121,7 +121,18 @@ typedef struct _TurbulenceModDef {
  * 
  * @param ctx The context received by the module at the init functio.
  */
-#define TBC_MOD_PREPARE(_ctx) do{vortex_ctx_set (turbulence_ctx_get_vortex_ctx (_ctx)); ctx = _ctx;}while(0)
+#define TBC_MOD_PREPARE(_ctx) do{ctx = _ctx;}while(0)
+
+/** 
+ * @brief Allows to get the vortex context associated to the
+ * turbulence context provided.
+ * 
+ * @param _ctx The turbulence context which is required to return the
+ * vortex context associated.
+ * 
+ * @return A reference to the vortex context associated.
+ */
+#define TBC_VORTEX_CTX(_ctx) (turbulence_ctx_get_vortex_ctx (_ctx))
 
 #endif
 

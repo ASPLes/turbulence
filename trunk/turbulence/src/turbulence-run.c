@@ -89,7 +89,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 			wrn ("skiping file %s which looks a backup one", fullpath);
 			goto next;
 		} /* end if */
-
+		
 		/* check its xml format */
 		doc = axl_doc_parse_from_file (fullpath, &error);
 		if (doc == NULL) {
@@ -204,15 +204,16 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc, axlDtd * dt
 bool turbulence_run_config    (TurbulenceCtx * ctx)
 {
 	/* get the document configuration */
-	axlDoc           * doc = turbulence_config_get (ctx);
+	axlDoc           * doc        = turbulence_config_get (ctx);
 	axlNode          * port;
 	axlNode          * listener;
 	axlNode          * name;
 	axlNode          * node;
 	VortexConnection * con_listener;
+	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* mod turbulence dtd */
-	char             * features = NULL;
+	char             * features   = NULL;
 	char             * dtd_file;
 	char             * string_aux;
 	int                int_aux;
@@ -236,7 +237,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	/* set hard limit */
 	string_aux = (char*) ATTR_VALUE (node, "hard-limit");
 	int_aux    = strtol (string_aux, NULL, 10);
-	if (! vortex_conf_set (VORTEX_HARD_SOCK_LIMIT, int_aux, NULL)) {
+	if (! vortex_conf_set (vortex_ctx, VORTEX_HARD_SOCK_LIMIT, int_aux, NULL)) {
 		error ("failed to set hard limit to=%s (int value=%d), terminating turbulence..",
 		       string_aux, int_aux);
 		return false;
@@ -247,7 +248,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	/* set soft limit */
 	string_aux = (char*) ATTR_VALUE (node, "soft-limit");
 	int_aux    = strtol (string_aux, NULL, 10);
-	if (! vortex_conf_set (VORTEX_SOFT_SOCK_LIMIT, int_aux, NULL)) {
+	if (! vortex_conf_set (vortex_ctx, VORTEX_SOFT_SOCK_LIMIT, int_aux, NULL)) {
 		error ("failed to set soft limit to=%s (int value=%d), terminating turbulence..",
 		       string_aux, int_aux);
 		return false;
@@ -268,7 +269,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	} /* end if */
 
 	/* find turbulence module dtd validation */
-	dtd_file = vortex_support_domain_find_data_file ("turbulence-data", "mod-turbulence.dtd");
+	dtd_file = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-data", "mod-turbulence.dtd");
 	if (dtd_file == NULL) {
 		/* free document */
 		error ("unable to find mod turbulence DTD definition (mod-turbulence.dtd), check your turbulence installation.");
@@ -308,7 +309,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 
 		/* now set features (if defined) */
 		if (features != NULL) {
-			vortex_greetings_set_features (features);
+			vortex_greetings_set_features (vortex_ctx, features);
 			axl_free (features);
 		}
 
@@ -323,7 +324,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	
 
 	/* now check for profiles already activated */
-	if (vortex_profiles_registered () == 0) {
+	if (vortex_profiles_registered (vortex_ctx) == 0) {
 		error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
 		return false;
 	} /* end if */
@@ -340,6 +341,9 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 
 			/* start the listener */
 			con_listener = vortex_listener_new (
+				/* the context where the listener will
+				 * be started */
+				vortex_ctx,
 				/* listener name */
 				axl_node_get_content (name, NULL),
 				/* port to use */

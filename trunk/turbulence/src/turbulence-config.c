@@ -61,9 +61,10 @@
  */
 bool turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 {
-	axlError * error;
-	axlDtd   * dtd_file;
-	char     * dtd;
+	axlError   * error;
+	axlDtd     * dtd_file;
+	char       * dtd;
+	VortexCtx  * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* check null value */
 	if (config == NULL) {
@@ -89,7 +90,7 @@ bool turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 	msg ("file %s loaded, ok", config);
 
 	/* now validates the turbulence file */
-	dtd = vortex_support_domain_find_data_file ("turbulence-data", "config.dtd");
+	dtd = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-data", "config.dtd");
 	if (dtd == NULL) {
 		/* free document */
 		axl_doc_free (ctx->config);

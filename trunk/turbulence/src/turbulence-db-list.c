@@ -882,6 +882,7 @@ bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 	/* get turbulence context */
 	char             * file;
 	axlError         * err;
+	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* check reference */
 	v_return_val_if_fail (ctx, false);
@@ -893,7 +894,7 @@ bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 
 	/* init dtd to validate data */
 	if (ctx->db_list_dtd == NULL) {
-		file             = vortex_support_domain_find_data_file ("turbulence-data", "db-list.dtd");
+		file             = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-data", "db-list.dtd");
 		ctx->db_list_dtd = axl_dtd_parse_from_file (file, &err);
 
 		/* db list */

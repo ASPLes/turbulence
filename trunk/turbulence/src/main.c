@@ -152,7 +152,6 @@ int main (int argc, char ** argv)
 	/* create the turbulence and vortex context */
 	ctx        = turbulence_ctx_new ();
 	vortex_ctx = vortex_ctx_new ();
-	vortex_ctx_set (vortex_ctx);
 
 	/*** configure signal handling ***/
 	signal (SIGINT,  main_terminate_signal_received);
@@ -173,11 +172,11 @@ int main (int argc, char ** argv)
 
 	/* enable vortex debug: do this at this place because
 	 * turbulece_init makes a call to vortex_init */
-	vortex_log_enable  (exarg_is_defined ("vortex-debug"));
-	vortex_log2_enable (exarg_is_defined ("vortex-debug2"));
+	vortex_log_enable  (vortex_ctx, exarg_is_defined ("vortex-debug"));
+	vortex_log2_enable (vortex_ctx, exarg_is_defined ("vortex-debug2"));
 	if (exarg_is_defined ("vortex-debug-color")) {
-		vortex_log_enable       (true);
-		vortex_color_log_enable (exarg_is_defined ("vortex-debug-color"));
+		vortex_log_enable       (vortex_ctx, true);
+		vortex_color_log_enable (vortex_ctx, exarg_is_defined ("vortex-debug-color"));
 	} /* end if */
 
 	/* check console color debug */
@@ -188,9 +187,9 @@ int main (int argc, char ** argv)
 	vortex_support_init (vortex_ctx);
 
 	/* configure lookup domain, and load configuration file */
-	vortex_support_add_domain_search_path_ref (axl_strdup ("turbulence-conf"), 
+	vortex_support_add_domain_search_path_ref (vortex_ctx, axl_strdup ("turbulence-conf"), 
 						   vortex_support_build_filename (SYSCONFDIR, "turbulence", NULL));
-	vortex_support_add_domain_search_path     ("turbulence-conf", ".");
+	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-conf", ".");
 
 	/* find the configuration file */
 	if (exarg_is_defined ("config")) {
@@ -199,7 +198,7 @@ int main (int argc, char ** argv)
 	} else {
 		/* get the default configuration defined at
 		 * compilation time */
-		config = vortex_support_domain_find_data_file ("turbulence-conf", "turbulence.conf");
+		config = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-conf", "turbulence.conf");
 	} /* end if */
 
 	/* load main turb */
@@ -228,7 +227,7 @@ int main (int argc, char ** argv)
 		return false;
 
 	/* look main thread until finished */
-	vortex_listener_wait ();
+	vortex_listener_wait (vortex_ctx);
 	
 	/* terminate turbulence execution */
 	turbulence_exit (ctx, false, false);
