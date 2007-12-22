@@ -62,7 +62,7 @@ void turbulence_conn_mgr_unref (axlPointer data)
 	TurbulenceCtx          * ctx   = state->ctx;
 
 	/* unref the connection */
-	msg ("Unregistering connection: %d", vortex_connection_get_id ((VortexConnection*) state->conn));
+	msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
 	vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
 
 	/* nullify and free */
@@ -122,7 +122,7 @@ void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
 	state->ctx  = ctx;
 
 	/* store in the hash */
-	msg ("Registering connection: %d", vortex_connection_get_id (conn));
+	msg ("Registering connection: %d (%p)", vortex_connection_get_id (conn), conn);
 	axl_hash_insert_full (ctx->conn_mgr_hash, 
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,
@@ -231,6 +231,7 @@ bool turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	VortexConnection       * conn;
 	int                      conn_id;
 	TurbulenceBroadCastMsg * broadcast;
+	TurbulenceConnMgrState * state;
 
 	v_return_val_if_fail (message, false);
 	v_return_val_if_fail (message_size >= 0, false);
@@ -253,7 +254,8 @@ bool turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 		
 		/* get data */
 		conn_id = PTR_TO_INT (axl_hash_cursor_get_key (cursor));
-		conn    = axl_hash_cursor_get_value (cursor);
+		state   = axl_hash_cursor_get_value (cursor);
+		conn    = state->conn;
 
 		msg ("Check for broadcast on connection id=%d", conn_id);
 
@@ -267,8 +269,11 @@ bool turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 			continue;
 		} /* end if */
 
+		msg ("Doing broadcasting on connection id=%d (%p)", conn_id, conn);
+
 		/* search for channels running the profile provided */
-		vortex_connection_foreach_channel (conn, _turbulence_conn_mgr_broadcast_msg_foreach, broadcast);
+		if (! vortex_connection_foreach_channel (conn, _turbulence_conn_mgr_broadcast_msg_foreach, broadcast))
+			error ("failed to broacast message over connection id=%d", vortex_connection_get_id (conn));
 
 		/* next cursor */
 		axl_hash_cursor_next (cursor);
