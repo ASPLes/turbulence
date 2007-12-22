@@ -6,6 +6,6 @@ includedir=@includedir@
 Name: Turbulence support library
 Description: Libturbulence support library
 Version: @TURBULENCE_VERSION@ 
-Requires: vortex
+Requires: vortex-1.1
 Libs: -L${libdir} -Wl,-export-dynamic -ldl @PCRE_LIBS@
 Cflags: -I${includedir}/turbulence
