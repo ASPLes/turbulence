@@ -153,7 +153,7 @@ bool tbc_mod_gen_compile ()
 
 	/* configure lookup domain for tbc-mod-gen settings */
 	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("tbc-mod-gen"), 
-						   vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
+						   vortex_support_build_filename (turbulence_datadir (), "turbulence", NULL));
 	/* now find the file */
 	file = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tbc-mod-gen", "tbc-mod-gen.dtd");
 

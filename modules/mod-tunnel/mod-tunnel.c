@@ -150,7 +150,7 @@ static bool tunnel_init (TurbulenceCtx * _ctx)
 
 	/* configure lookup domain for mod tunnel settings */
 	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("tunnel"), 
-						   vortex_support_build_filename (SYSCONFDIR, "turbulence", "tunnel", NULL));
+						   vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "tunnel", NULL));
 
 	/* load module settings */
 	config       = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tunnel", "tunnel.conf");

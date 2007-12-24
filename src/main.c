@@ -104,8 +104,8 @@ bool main_init_exarg (int argc, char ** argv)
 		printf ("VERSION:         %s\n", VERSION);
 		printf ("VORTEX_VERSION:  %s\n", VORTEX_VERSION);
 		printf ("AXL_VERSION:     %s\n", AXL_VERSION);
-		printf ("SYSCONFDIR:      %s\n", SYSCONFDIR);
-		printf ("TBC_DATADIR:     %s\n", TBC_DATADIR);
+		printf ("SYSCONFDIR:      %s\n", turbulence_sysconfdir ());
+		printf ("TBC_DATADIR:     %s\n", turbulence_datadir ());
 		printf ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
 
 		/* terminates exarg */

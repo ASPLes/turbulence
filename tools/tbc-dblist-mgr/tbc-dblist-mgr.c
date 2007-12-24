@@ -60,6 +60,7 @@ int main (int argc, char ** argv)
 	axlError         * err;
 	ExArgument       * arg;
 	TurbulenceCtx    * ctx;
+	VortexCtx        * vortex_ctx;
 
 	/* install headers for help */
 	exarg_add_usage_header  (HELP_HEADER);
@@ -96,7 +97,11 @@ int main (int argc, char ** argv)
 	exarg_parse (argc, argv);
 
 	/* init turbulence context */
-	ctx = turbulence_ctx_new ();
+	ctx        = turbulence_ctx_new ();
+	vortex_ctx = vortex_ctx_new ();
+	
+	/* bind vortex ctx */
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
 
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, true);
@@ -126,6 +131,11 @@ int main (int argc, char ** argv)
 	/* get the argument */
 	arg = exarg_get_params ();
 
+	/* update the search path to make the default installation to
+	 * work at the default location. */
+	vortex_support_init (vortex_ctx);
+	vortex_support_add_domain_search_path (vortex_ctx, "turbulence-data", turbulence_datadir ());
+	
 	/* init the turbulence db list */
 	if (! turbulence_db_list_init (ctx)) {
 		error ("failed to init the turbulence db list module, unable to perform operation");
@@ -189,6 +199,7 @@ int main (int argc, char ** argv)
 
 	/* free context */
 	turbulence_ctx_free (ctx);
+	vortex_ctx_free (vortex_ctx);
 
 	return 0;
 }
