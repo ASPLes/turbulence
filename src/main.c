@@ -101,9 +101,11 @@ bool main_init_exarg (int argc, char ** argv)
 
 	/* check for conf-location option */
 	if (exarg_is_defined ("conf-location")) {
-		printf ("VERSION:     %s\n", VERSION);
-		printf ("SYSCONFDIR:  %s\n", SYSCONFDIR);
-		printf ("TBC_DATADIR: %s\n", TBC_DATADIR);
+		printf ("VERSION:         %s\n", VERSION);
+		printf ("VORTEX_VERSION:  %s\n", VORTEX_VERSION);
+		printf ("AXL_VERSION:     %s\n", AXL_VERSION);
+		printf ("SYSCONFDIR:      %s\n", SYSCONFDIR);
+		printf ("TBC_DATADIR:     %s\n", TBC_DATADIR);
 		printf ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
 
 		/* terminates exarg */
