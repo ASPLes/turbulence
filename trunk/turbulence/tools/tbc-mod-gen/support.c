@@ -53,9 +53,9 @@ void   support_move_file (TurbulenceCtx * ctx, char * from, char * to)
 	 * this is not necesary because move (rename) already
 	 * overwrite destination file. On windows platform is not
 	 * posible to rename a file with a file on the destination. */
-	if (file_test (to, FILE_TEST_IS_REGULAR) && (unlink (to) != 0)) {
+	if (vortex_support_file_test (to, FILE_IS_REGULAR) && (unlink (to) != 0)) {
 		error ("unable to remove destination file: %s to be overwrited by: %s at rename operation",
-				       FALSE, to, from);
+		       FALSE, to, from);
 		return;
 	}
 #endif
