@@ -178,7 +178,7 @@ int main (int argc, char ** argv)
 	vortex_log2_enable (vortex_ctx, exarg_is_defined ("vortex-debug2"));
 	if (exarg_is_defined ("vortex-debug-color")) {
 		vortex_log_enable       (vortex_ctx, true);
-		vortex_color_log_enable (vortex_ctx, exarg_is_defined ("vortex-debug-color"));
+		vortex_color_log_enable (vortex_ctx, true);
 	} /* end if */
 
 	/* check console color debug */
@@ -218,6 +218,8 @@ int main (int argc, char ** argv)
 		turbulence_ctx_free (ctx);
 		return -1;
 	} /* end if */
+	
+	msg ("initial turbulence initialization ok, reading configuration files..");
 
 	/* free config */
 	axl_free (config);

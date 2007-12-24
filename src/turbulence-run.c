@@ -216,7 +216,10 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	char             * features   = NULL;
 	char             * dtd_file;
 	char             * string_aux;
+#if defined(AXL_OS_UNIX)
+	/* required by the vortex_conf_set hard/soft socket limit. */
 	int                int_aux;
+#endif
 	axlDtd           * dtd;
 	axlError         * error;
 	bool               at_least_one_listener = false;
@@ -230,7 +233,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 
 #if defined(AXL_OS_UNIX)
 	/* NOTE: currently, vortex_conf_set do not allows to configure
-	 * the hard connection limit on windows platform. Once done,
+	 * the hard/soft connection limit on windows platform. Once done,
 	 * this section must be public (remove
 	 * defined(AXL_OS_UNIX)). */
 
@@ -243,7 +246,6 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 		return false;
 	} /* end if */
 	msg ("configured max connections hard limit to: %s", string_aux);
-#endif
 
 	/* set soft limit */
 	string_aux = (char*) ATTR_VALUE (node, "soft-limit");
@@ -254,6 +256,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 		return false;
 	} /* end if */
 	msg ("configured max connections soft limit to: %s", string_aux);
+#endif 
 
 	/* check log configuration */
 	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");

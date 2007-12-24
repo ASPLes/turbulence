@@ -28,7 +28,7 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
+ *         C/ Dr. Michavila NÂº 14
  *         Coslada 28820 Madrid
  *         Spain
  *
@@ -84,40 +84,18 @@ bool turbulence_init (TurbulenceCtx * ctx,
 	/* get current process id */
 	ctx->pid = getpid ();
 
-	/* init the log module */
-	turbulence_log_init (ctx);
-
 	/* init turbulence internals */
-	ctx->pid = -1;
 	vortex_mutex_create (&ctx->exit_mutex);
-
-	/* db list */
-	if (! turbulence_db_list_init (ctx)) {
-		error ("failed to init the turbulence console");
-		return false;
-	} /* end if */
-
-	/* init turbulence-module.c */
-	turbulence_module_init (ctx);
 
 	/* if a null value is received for the vortex context, create
 	 * a new empty one */
-	if (vortex_ctx == NULL)
+	if (vortex_ctx == NULL) {
+		msg2 ("creating a new vortex context because a null value was received..");
 		vortex_ctx = vortex_ctx_new ();
-
-	/*** init the vortex library ***/
-	if (! vortex_init_ctx (vortex_ctx)) {
-		error ("unable to start vortex library, terminating turbulence execution..");
-		return false;
 	} /* end if */
 
 	/* configure the vortex context created */
 	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
-
-	msg ("turbulence ctx: %p, vortex ctx: %p", ctx, vortex_ctx);
-
-	/*** not required to initialize axl library, already done by vortex ***/
-	msg ("turbulence internal init");
 
 	/* configure lookup domain for turbulence data */
 	vortex_support_add_domain_search_path_ref (vortex_ctx, axl_strdup ("turbulence-data"), 
@@ -128,6 +106,27 @@ bool turbulence_init (TurbulenceCtx * ctx,
 	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", TBC_DATADIR);
 #endif
 	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", ".");
+
+	/*** init the vortex library ***/
+	if (! vortex_init_ctx (vortex_ctx)) {
+		error ("unable to start vortex library, terminating turbulence execution..");
+		return false;
+	} /* end if */
+
+	/*** not required to initialize axl library, already done by vortex ***/
+	msg ("turbulence internal init ctx: %p, vortex ctx: %p", ctx, vortex_ctx);
+
+	/* init the log module */
+	turbulence_log_init (ctx);
+
+	/* db list */
+	if (! turbulence_db_list_init (ctx)) {
+		error ("failed to init the turbulence db-list module");
+		return false;
+	} /* end if */
+
+	/* init turbulence-module.c */
+	turbulence_module_init (ctx);
 
 	/* load current turbulence configuration */
 	if (! turbulence_config_load (ctx, config)) {
@@ -147,7 +146,6 @@ bool turbulence_init (TurbulenceCtx * ctx,
 	return true;
 } /* end if */
 
-#if defined(AXL_OS_UNIX)
 /** 
  * @internal Function that performs a reload operation for the current
  * turbulence instance.
@@ -179,7 +177,6 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 
 	return;
 } 
-#endif /* defined(AXL_OS_UNIX) */
 
 /** 
  * @brief Performs all operations required to cleanup turbulence
@@ -889,7 +886,6 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 	/* do not return anything from this point */
 	return result;
 #else
-	msg ("TERMIOS NOT ENABLED, RETURNING NULL");
 	return NULL;
 #endif
 }
