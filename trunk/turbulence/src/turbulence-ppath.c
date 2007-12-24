@@ -686,6 +686,8 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	if (def == NULL) {
 		/* no profile path def was found, rejecting
 		 * connection */
+		error ("no profile path def match, rejecting connection: id=%d, src=%s", 
+		       vortex_connection_get_id (connection), src);
 		return false;
 	} /* end if */
 

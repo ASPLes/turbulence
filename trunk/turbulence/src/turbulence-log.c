@@ -52,7 +52,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	/* check log reporting */
 	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");
 	if (! HAS_ATTR_VALUE (node, "enabled", "yes")) {
-		msg ("log reporting disabled");
+		msg ("log reporting to file disabled");
 		return;
 	}
 

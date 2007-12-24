@@ -890,7 +890,7 @@ bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 	/* init global variables */
 	vortex_mutex_create (&ctx->db_list_mutex);
 	ctx->db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close_internal);
-	msg ("Init context list: %p on context: %p..", ctx->db_list_opened, ctx);
+	msg2 ("Init context list: %p on context: %p..", ctx->db_list_opened, ctx);
 
 	/* init dtd to validate data */
 	if (ctx->db_list_dtd == NULL) {
