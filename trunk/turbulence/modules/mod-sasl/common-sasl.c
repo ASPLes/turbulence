@@ -259,7 +259,7 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 	if (alt_location == NULL) {
 		/* configure lookup domain for mod sasl settings */
 		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"), 
-							   vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", NULL));
+							   vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "sasl", NULL));
 		
 		/* find and load the file */
 		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
@@ -276,7 +276,7 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 	/* check if the path provided is valid */
 	if (result->sasl_conf_path == NULL) {
 		/* failed to load backend */
-		path = vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", "sasl.conf", NULL);
+		path = vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "sasl", "sasl.conf", NULL);
 		error ("Unable to find sasl.conf file. A usual location for this file is %s. Check your installation.", path);
 		axl_free (path);
 		       
@@ -373,7 +373,7 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	/* check if the path provided is valid */
 	if (db->db_path == NULL) {
 		/* failed to load backend */
-		path = vortex_support_build_filename (SYSCONFDIR, "turbulence", "sasl", NULL);
+		path = vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "sasl", NULL);
 		error ("Unable to find %s file. A usual location for this file is %s. Check your installation.", 
 		       ATTR_VALUE (node, "location"), path);
 		axl_free (path);

@@ -31,6 +31,7 @@ LIBS = -Wall -g \
 # build vortex with log support
 INCS = -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex-1.1/src" -I"../../libexarg/src" 
 
+# datadir and sysconfdir
 datadir    = "../data"
 sysconfdir = "../etc"
 

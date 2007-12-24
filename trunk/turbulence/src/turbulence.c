@@ -890,6 +890,45 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 #endif
 }
 
+/**
+ * @brief Allows to get the SYSCONFDIR path provided at compilation
+ * time. This is configured when the libturbulence.{dll,so} is built,
+ * ensuring all pieces uses the same SYSCONFDIR value. See also \ref
+ * turbulence_datadir.
+ *
+ * The SYSCONFDIR points to the base root directory where all
+ * configuration is found. Under unix system it is usually:
+ * <b>/etc</b>. On windows system it is usually configured to:
+ * <b>../etc</b>. Starting from that directory is found the rest of
+ * configurations:
+ * 
+ *  - etc/turbulence/turbulence.conf
+ *  - etc/turbulence/sasl/sasl.conf
+ */
+const char    * turbulence_sysconfdir     (void)
+{
+	/* return current configuration */
+	return SYSCONFDIR;
+}
+
+/**
+ * @brief Allows to get the TBC_DATADIR path provided at compilation
+ * time. This is configured when the libturbulence.{dll,so} is built,
+ * ensuring all pieces uses the same SYSCONFDIR value. See also \ref
+ * turbulence_sysconfdir
+ *
+ * The TBC_DATADIR points to the base root directory where data files
+ * are located (mostly dtd files). Under unix system it is usually:
+ * <b>/usr/share/turbulence</b>. On windows system it is usually configured to:
+ * <b>../data</b>. Starting from that directory is found the rest of
+ * configurations:
+ */
+const char    * turbulence_datadir        (void)
+{
+	/* return current configuration */
+	return TBC_DATADIR;
+}
+
 /* @} */
 
 /**

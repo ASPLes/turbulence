@@ -198,6 +198,11 @@ typedef enum {
 
 char *   turbulence_io_get (char * prompt, TurbulenceIoFlags flags);
 
+/* enviroment configuration */
+const char    * turbulence_sysconfdir     (void);
+
+const char    * turbulence_datadir        (void);
+
 
 #endif
 
