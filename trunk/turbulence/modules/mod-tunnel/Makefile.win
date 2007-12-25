@@ -1,0 +1,37 @@
+# -*- makefile -*- mode 
+# Makefile for windows (mingw)
+
+# object files
+OBJ  =  mod-tunnel.o
+
+DLL  = mod-tunnel.dll
+
+# libraries 
+LIBS = -Wall -g \
+	-L"../../../libaxl/src/" -L"../../../libvortex-1.1/src/" -L"../../../libexarg/src" \
+	-L"../../src" -lturbulence \
+	-lvortex-1.1 -laxl -lexarg -lws2_32 $(OPENSSL_LIBS) $(GSASL_LIBS) $(PCRE_LIBS) $(search_lib_path) 
+
+# build vortex with log support
+INCS = -Wall -g -I"." -I"../../../libaxl/src" -I"../../../libvortex-1.1/src" -I"../../../libexarg/src" -I"../../src"
+
+CFLAGS = $(INCS) -DVERSION=\""$(TURBULENCE_VERSION)"\" -DVORTEX_VERSION=\""$(VORTEX_VERSION)"\" -DAXL_VERSION=\""$(AXL_VERSION)"\" \
+	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall -g $(OPENSSL_FLAGS) $(GSASL_FLAGS) $(PCRE_FLAGS) \
+	-DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__ 
+RM = rm -f
+
+.PHONY: all clean
+
+all: $(DLL) 
+
+clean: 
+	${RM} $(OBJ) $(DLL)
+
+$(DLL): $(OBJ)
+# add the following line to create an import library. At this point this step
+# is not requiered because gcc automatically get an import library from the dll.
+# -Wl,--out-implib,libvortex.lib
+	$(CC) -mconsole -shared  --export-all-symbols $(OBJ) -o $(DLL) $(LIBS)
+
+%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS)
