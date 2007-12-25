@@ -32,9 +32,11 @@ all: $(DLL) remote-admins.xml
 
 remote-admins.xml:
 	echo "<?xml version='1.0' standalone='yes' ?>" > remote-admins.xml
-	echo "<item value'aspl' />" >> remote-admins.xml
+	echo "<turbulence-db-list>" >> remote-admins.xml
+	echo "  <item value='aspl' />" >> remote-admins.xml
+	echo "</turbulence-db-list>" >> remote-admins.xml
 clean: 
-	${RM} $(OBJ) $(DLL)
+	${RM} $(OBJ) $(DLL) remote-admins.xml
 
 $(DLL): $(OBJ)
 # add the following line to create an import library. At this point this step
