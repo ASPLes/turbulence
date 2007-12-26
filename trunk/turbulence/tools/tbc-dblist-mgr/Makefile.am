@@ -1,7 +1,7 @@
 INCLUDES = -DCOMPILATION_DATE=`date +%s` -I ../../src \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
-	   -DDATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
+	   $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -ansi
 
 bin_PROGRAMS           = tbc-dblist-mgr

@@ -11,7 +11,6 @@ EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
-	   -DDATADIR=\""$(datadir)"\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
 lib_LTLIBRARIES   = mod-sasl.la
