@@ -2,7 +2,6 @@ EXTRA_DIST = mod-tunnel.xml tunnel.conf resolver.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
-	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
 lib_LTLIBRARIES      = mod-tunnel.la
@@ -14,7 +13,7 @@ libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
 moddir   = $(sysconfdir)/turbulence/mods-available
-mod_DATA = mod-tunnel.xml
+mod_DATA = mod-tunnel.xml mod-tunnel.win32.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/tunnel
