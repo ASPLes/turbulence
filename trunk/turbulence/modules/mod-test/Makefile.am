@@ -2,7 +2,6 @@ EXTRA_DIST = mod-test.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
-	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
 
 lib_LTLIBRARIES      = mod-test.la
@@ -14,4 +13,4 @@ libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
 modconfdir   = $(sysconfdir)/turbulence/mods-available
-modconf_DATA = mod-test.xml
+modconf_DATA = mod-test.xml mod-test.win32.xml

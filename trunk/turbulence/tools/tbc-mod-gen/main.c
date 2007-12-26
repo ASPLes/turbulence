@@ -302,8 +302,6 @@ bool tbc_mod_gen_compile ()
 	push_indent ();
 	
 	write ("-DVERSION=\\\"$(VERSION)\\\" \\\n");
-	write ("-DSYSCONFDIR=\\\"\"$(sysconfdir)\"\\\" \\\n");
-	write ("-DDATADIR=\\\"\"$(datadir)\"\\\" \\\n");
 	write ("$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)\n\n");
 	pop_indent ();
 	
