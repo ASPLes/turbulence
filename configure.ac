@@ -73,6 +73,15 @@ AC_SUBST(VORTEX_LIBS)
 VORTEX_VERSION=`pkg-config --modversion vortex-1.1`
 AC_SUBST(VORTEX_VERSION)
 
+dnl external dependencies (vortex-tunnel
+PKG_CHECK_MODULES(VORTEX_TUNNEL, vortex-tunnel-1.1 >= 1.1.0) 
+
+dnl general libries subsitution
+AC_SUBST(VORTEX_TUNNEL_CFLAGS)
+AC_SUBST(VORTEX_TUNNEL_LIBS)
+VORTEX_TUNNEL_VERSION=`pkg-config --modversion vortex-tunnel-1.1`
+AC_SUBST(VORTEX_TUNNEL_VERSION)
+
 dnl external dependencies
 PKG_CHECK_MODULES(EXARG, exarg) 
 

@@ -2,11 +2,11 @@ EXTRA_DIST = mod-tunnel.xml tunnel.conf resolver.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
-	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
+	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_TUNNEL_CFLAGS)
 
 lib_LTLIBRARIES      = mod-tunnel.la
 mod_tunnel_la_SOURCES  = mod-tunnel.c mod-tunnel.h
-mod_tunnel_la_LDFLAGS  = -module -ldl
+mod_tunnel_la_LDFLAGS  = -module -ldl $(VORTEX_TUNNEL_LIBS)
 
 # reconfigure module installation directory
 libdir = $(prefix)/lib/turbulence/modules

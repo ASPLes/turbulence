@@ -38,6 +38,10 @@
 #ifndef __MOD_TUNNEL_H__
 #define __MOD_TUNNEL_H__
 
+/* include base library */
 #include <turbulence.h>
+
+/* include tunnel implementation */
+#include <vortex_tunnel.h>
 
 #endif /* __MOD_TUNNEL_H__ */
