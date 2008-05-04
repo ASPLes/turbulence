@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2007 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2008 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,17 +28,26 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
- *         Coslada 28820 Madrid
+ *         C/ Antonio Suarez NÂº10, Edificio Alius A, Despacho 102
+ *         Alcala de Henares, 28802 (MADRID)
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://www.turbulence.ws
+ *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #include <turbulence.h>
 
 /* local include */
 #include <turbulence-ctx-private.h>
+
+/**
+ * \defgroup turbulence_ctx Turbulence Context: API provided to handle Turbulence contexts
+ */
+
+/**
+ * \addtogroup turbulence_ctx
+ * @{
+ */
 
 /** 
  * @brief Allows to create a new turbulence context (an object used by
@@ -62,7 +71,11 @@ TurbulenceCtx * turbulence_ctx_new ()
 	TurbulenceCtx * ctx;
 
 	/* create the context */
-	ctx      = axl_new (TurbulenceCtx, 1);
+	ctx        = axl_new (TurbulenceCtx, 1);
+
+	/* create hash */
+	ctx->data  = axl_hash_new (axl_hash_string, axl_hash_equal_string);
+	vortex_mutex_create (&ctx->data_mutex);
 
 	/* return context created */
 	return ctx;
@@ -104,6 +117,114 @@ VortexCtx     * turbulence_ctx_get_vortex_ctx (TurbulenceCtx * ctx)
 }
 
 /** 
+ * @brief Allows to configure user defined data indexed by the
+ * provided key, associated to the \ref TurbulenceCtx.
+ * 
+ * @param ctx The \ref TurbulenceCtx to configure with the provided data.
+ *
+ * @param key The index string key under which the data will be
+ * retreived later using \ref turbulence_ctx_get_data. The function do
+ * not support storing NULL keys.
+ *
+ * @param data The user defined pointer to data to be stored. If NULL
+ * is provided the function will understand it as a removal request,
+ * calling to delete previously stored data indexed by the same key.
+ */
+void            turbulence_ctx_set_data       (TurbulenceCtx * ctx,
+					       const char    * key,
+					       axlPointer      data)
+{
+	v_return_if_fail (ctx);
+	v_return_if_fail (key);
+
+	/* acquire the mutex */
+	vortex_mutex_lock (&ctx->data_mutex);
+
+	/* perform a simple insert */
+	axl_hash_insert (ctx->data, (axlPointer) key, data);
+
+	/* release the mutex */
+	vortex_mutex_unlock (&ctx->data_mutex);
+
+	return;
+}
+
+/** 
+ * @brief Allows to configure user defined data indexed by the
+ * provided key, associated to the \ref TurbulenceCtx, with optionals
+ * destroy handlers.
+ *
+ * This function is quite similar to \ref turbulence_ctx_set_data but
+ * it also provides support to configure a set of handlers to be
+ * called to terminate data associated once finished \ref
+ * TurbulenceCtx.
+ * 
+ * @param ctx The \ref TurbulenceCtx to configure with the provided data.
+ *
+ * @param key The index string key under which the data will be
+ * retreived later using \ref turbulence_ctx_get_data. The function do
+ * not support storing NULL keys.
+ *
+ * @param data The user defined pointer to data to be stored. If NULL
+ * is provided the function will understand it as a removal request,
+ * calling to delete previously stored data indexed by the same key.
+ *
+ * @param key_destroy Optional handler to destroy key stored.
+ *
+ * @param data_destroy Optional handler to destroy value stored.
+ */
+void            turbulence_ctx_set_data_full  (TurbulenceCtx * ctx,
+					       const char    * key,
+					       axlPointer      data,
+					       axlDestroyFunc  key_destroy,
+					       axlDestroyFunc  data_destroy)
+{
+	v_return_if_fail (ctx);
+	v_return_if_fail (key);
+
+	/* acquire the mutex */
+	vortex_mutex_lock (&ctx->data_mutex);
+
+	/* perform a simple insert */
+	axl_hash_insert_full (ctx->data, (axlPointer) key, key_destroy, data, data_destroy);
+
+	/* release the mutex */
+	vortex_mutex_unlock (&ctx->data_mutex);
+
+	return;
+}
+
+/** 
+ * @brief Allows to retrieve data stored by \ref
+ * turbulence_ctx_set_data and \ref turbulence_ctx_set_data_full.
+ * 
+ * @param ctx The \ref TurbulenceCtx where the retrieve operation will
+ * be performed.
+ *
+ * @param key The key that index the data to be returned.
+ * 
+ * @return A reference to the data or NULL if nothing was found. The
+ * function also returns NULL if a NULL ctx is received.
+ */
+axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
+					       const char    * key)
+{
+	axlPointer data;
+	v_return_val_if_fail (ctx, NULL);
+
+	/* acquire the mutex */
+	vortex_mutex_lock (&ctx->data_mutex);
+
+	/* perform a simple insert */
+	data = axl_hash_get (ctx->data, (axlPointer) key);
+
+	/* release the mutex */
+	vortex_mutex_unlock (&ctx->data_mutex);
+
+	return data;
+}
+
+/** 
  * @brief Deallocates the turbulence context provided.
  * 
  * @param ctx The context reference to terminate.
@@ -114,10 +235,15 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	if (ctx == NULL)
 		return;
 
+	/* terminate hash */
+	axl_hash_free (ctx->data);
+	ctx->data = NULL;
+	vortex_mutex_destroy (&ctx->data_mutex);
+
 	/* release the node itself */
 	axl_free (ctx);
 
 	return;
 }
 
-
+/* @} */

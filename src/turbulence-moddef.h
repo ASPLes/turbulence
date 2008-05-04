@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2007 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2008 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,12 +28,12 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
- *         Coslada 28820 Madrid
+ *         C/ Antonio Suarez NÂº10, Edificio Alius A, Despacho 102
+ *         Alcala de Henares, 28802 (MADRID)
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://www.turbulence.ws
+ *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #ifndef __TURBULENCE_MODDEF_H__
 #define __TURBULENCE_MODDEF_H__
@@ -79,7 +79,7 @@ typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
  * @brief Public definition for the main entry point for all modules
  * developed for turbulence.
  * 
- * See <a class="el" href="http://www.turbulence.ws/extending.html">how to create Turbulence modules</a>.
+ * See <a class="el" href="http://www.aspl.es/turbulence/extending.html">how to create Turbulence modules</a>.
  */
 typedef struct _TurbulenceModDef {
 	/**
@@ -119,7 +119,7 @@ typedef struct _TurbulenceModDef {
  * This macro must be called inside the module init, before any
  * operation is done. 
  * 
- * @param ctx The context received by the module at the init functio.
+ * @param _ctx The context received by the module at the init functio.
  */
 #define TBC_MOD_PREPARE(_ctx) do{ctx = _ctx;}while(0)
 

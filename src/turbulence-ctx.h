@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2007 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2008 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,18 +28,26 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
- *         Coslada 28820 Madrid
+ *         C/ Antonio Suarez NÂº10, Edificio Alius A, Despacho 102
+ *         Alcala de Henares, 28802 (MADRID)
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://www.turbulence.ws
+ *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #ifndef __TURBULENCE_CTX_H__
 #define __TURBULENCE_CTX_H__
 
 #include <turbulence.h>
 
+/**
+ * \addtogroup turbulence_ctx
+ * @{
+ */
+
+/** 
+ * @brief Turbulence execution context.
+ */
 typedef struct _TurbulenceCtx TurbulenceCtx;
 
 TurbulenceCtx * turbulence_ctx_new            ();
@@ -49,6 +57,21 @@ void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx,
 
 VortexCtx     * turbulence_ctx_get_vortex_ctx (TurbulenceCtx * ctx);
 
+void            turbulence_ctx_set_data       (TurbulenceCtx * ctx,
+					       const char    * key,
+					       axlPointer      data);
+
+void            turbulence_ctx_set_data_full  (TurbulenceCtx * ctx,
+					       const char    * key,
+					       axlPointer      data,
+					       axlDestroyFunc  key_destroy,
+					       axlDestroyFunc  value_destroy);
+
+axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
+					       const char    * key);
+
 void            turbulence_ctx_free           (TurbulenceCtx * ctx);
+
+/* @} */
 
 #endif

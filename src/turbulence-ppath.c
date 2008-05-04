@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2007 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2008 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,12 +28,12 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
- *         Coslada 28820 Madrid
+ *         C/ Antonio Suarez NÂº10, Edificio Alius A, Despacho 102
+ *         Alcala de Henares, 28802 (MADRID)
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://www.turbulence.ws
+ *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #include <turbulence-ppath.h>
 
@@ -584,15 +584,16 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
  * handled and sequenced by the client according to the state of the
  * connection (profiles already accepted, etc).
  */
-bool __turbulence_ppath_mask (VortexConnection * connection, 
-			      int                channel_num,
-			      const char       * uri,
-			      const char       * profile_content,
-			      const char       * serverName,
+bool __turbulence_ppath_mask (VortexConnection  * connection, 
+			      int                 channel_num,
+			      const char        * uri,
+			      const char        * profile_content,
+			      const char        * serverName,
+			      char             ** error_msg,
 			      axlPointer         user_data)
 {
 	/* get a reference to the turbulence profile path state */
-	TurbulencePPathState  * state = user_data;
+	TurbulencePPathState  * state  = user_data;
 	TurbulenceCtx         * ctx    = state->ctx;
 
 	/* check if the profile provided is found in the <allow> or
@@ -627,12 +628,22 @@ bool __turbulence_ppath_mask (VortexConnection * connection,
 
 	/* drop an error message if a definitive channel request was
 	 * received */
-	if (channel_num > 0) 
+	if (channel_num > 0) {
 		error ("profile: %s not accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
 		       uri, state->path_selected->path_name, 
 		       vortex_connection_get_id (connection), 
 		       vortex_connection_get_host (connection),
 		       vortex_connection_get_port (connection));
+		if (error_msg) {
+			(*error_msg) = axl_strdup_printf (
+				"PROFILE PATH configuration denies creating the channel with the profile requested: %s not accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
+				uri, state->path_selected->path_name, 
+				vortex_connection_get_id (connection), 
+				vortex_connection_get_host (connection),
+				vortex_connection_get_port (connection));
+		} /* end if */
+	} /* end if */
+	
 
 	/* filter any other option */
 	return true;
