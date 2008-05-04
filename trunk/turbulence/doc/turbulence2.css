@@ -1,0 +1,30 @@
+.content { 
+  width: 800px;
+  position: absolute; left: 50%; top: 3%; z-index: 1;
+  margin-left: -400px;
+}
+
+h1 { 
+  padding-bottom: 40px;
+}
+
+pre.fragment { 
+  color: white;
+  background: #2e3436;
+  border: 1px solid #acacac;
+  font-size: 11px;
+}
+
+pre.fragment .stringliteral { 
+  color: #c17d11;
+}
+
+pre.fragment .comment { 
+  color: #ef2929;
+}
+
+pre.fragment .code { 
+   background: #2e3436;
+   color: #729fcf;
+   text-decoration: underline;
+}

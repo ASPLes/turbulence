@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2007 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2008 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,12 +28,12 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
- *         Coslada 28820 Madrid
+ *         C/ Antonio Suarez Nº10, Edificio Alius A, Despacho 102
+ *         Alcala de Henares, 28802 (MADRID)
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://www.turbulence.ws
+ *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #if defined(ENABLE_TERMIOS)
 # include <termios.h>
@@ -62,10 +62,10 @@ int fsync (int fd);
  */
 
 /** 
- * @internal Starts turbulence execution, initializing all libraries
+ * @brief Starts turbulence execution, initializing all libraries
  * required by the server application.
  *
- * A call to turbulence_exit is required before exit.
+ * A call to \ref turbulence_exit is required before exit.
  */
 bool turbulence_init (TurbulenceCtx * ctx, 
 		      VortexCtx     * vortex_ctx,
@@ -686,7 +686,7 @@ bool     turbulence_create_dir  (const char * path)
 #if defined(AXL_OS_WIN32)
 	return (_mkdir (path) == 0);
 #else
-	return (mkdir (path, 770) == 0);
+	return (mkdir (path, 0770) == 0);
 #endif
 }
 
@@ -940,7 +940,10 @@ const char    * turbulence_datadir        (void)
  * modules built on top of it. This API complements the <a class="el"
  * href="">Vortex API</a> adding features that are missing in Vortex
  * (due to its library nature). This documentation is only useful to
- * anyone that is interested in building a Turbulence module.
+ * anyone that is interested in building a Turbulence module or to
+ * extend Turbulence itself.
+ *
+ * In the case you are looking for Turbulence configuration manual check: http://www.aspl.es/turbulence/doc.html
  *
  * <h2>Vortex API </h2>
  *
@@ -954,6 +957,7 @@ const char    * turbulence_datadir        (void)
  *  - \ref turbulence_db_list
  *  - \ref turbulence_conn_mgr
  *  - \ref turbulence_handlers
+ *  - \ref turbulence_ctx
  */
 
 

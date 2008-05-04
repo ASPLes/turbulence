@@ -11,6 +11,8 @@ body {
   font-family: free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
   background: #fff url("images/bg.gif"); 
   color: #2e3436;  
+  margin-bottom: 20px;
+  padding-bottom: 20px;
 }
 
 .content { 
@@ -22,6 +24,7 @@ body {
   margin-left: -310px;
   padding: 20px;
   padding-bottom: 0px;
+  margin-bottom: 20px;
   color: #2e3436;  
 }
 

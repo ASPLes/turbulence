@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2007 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2008 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,12 +28,12 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Dr. Michavila Nº 14
- *         Coslada 28820 Madrid
+ *         C/ Antonio Suarez Nº10, Edificio Alius A, Despacho 102
+ *         Alcala de Henares, 28802 (MADRID)
  *         Spain
  *
  *      Email address:
- *         info@aspl.es - http://www.turbulence.ws
+ *         info@aspl.es - http://www.aspl.es/turbulence
  */
 
 #include <turbulence.h>
@@ -199,6 +199,8 @@ bool _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
  * broadcasted. To do so, pass the function (filter_conn) that
  * configures which connections receives the notification and which
  * not.
+ * 
+ * @param ctx Turbulence context where the operation will take place.
  * 
  * @param message The message that is being broadcasted.
  *
