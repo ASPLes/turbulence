@@ -7,4 +7,4 @@ Name: Turbulence mod-sasl remote admin IDL
 Description: Location of the IDL file to produce the client stub
 Version: @TURBULENCE_VERSION@ 
 Libs: xml-rpc-gen --out-stub-dir . --only-client
-Cflags: @datadir@/mod-sasl/radmin/sasl-radmin.idl
+Cflags: @datarootdir@/mod-sasl/radmin/sasl-radmin.idl

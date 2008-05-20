@@ -42,7 +42,6 @@ AC_SUBST(TURBULENCE_VERSION)
 
 AC_CONFIG_AUX_DIR(.)
 dnl allow including long file names 
-AM_INIT_AUTOMAKE([1.9 tar-ustar])
 AM_INIT_AUTOMAKE(turbulence, $TURBULENCE_VERSION)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
