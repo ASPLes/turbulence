@@ -10,11 +10,11 @@ EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
-	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
+	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_XML_RPC_CFLAGS)
 
 lib_LTLIBRARIES   = mod-sasl.la
 mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h $(sasl_radmin_files)
-mod_sasl_la_LDFLAGS  = -module -ldl
+mod_sasl_la_LDFLAGS  = -module -ldl $(VORTEX_XML_RPC_LIBS)
 
 # reconfigure module installation directory
 oldlibdir = $(libdir)
@@ -38,11 +38,11 @@ tbc_sasl_conf_LDADD   = common-sasl.o
 endif
 
 update-radmin: 
-	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
+	xml-rpc-gen-1.1 sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
 
 # additional files produced by xml-rpc-gen 
 sasl-radmin.idl: 
-	xml-rpc-gen sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
+	xml-rpc-gen-1.1 sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
 
 pkgconfigdir = $(prefix)/lib/pkgconfig
 pkgconfig_DATA = sasl-radmin.pc

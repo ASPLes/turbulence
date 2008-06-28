@@ -42,4 +42,7 @@
 
 #include <common-sasl.h>
 
+/* include additiona support for XML-RPC */
+#include <vortex_xml_rpc.h>
+
 #endif /* __MOD_TUNNEL_H__ */

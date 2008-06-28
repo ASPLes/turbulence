@@ -55,7 +55,7 @@ AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.4.12) 
+PKG_CHECK_MODULES(AXL, axl >= 0.5.3) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
@@ -72,7 +72,7 @@ AC_SUBST(VORTEX_LIBS)
 VORTEX_VERSION=`pkg-config --modversion vortex-1.1`
 AC_SUBST(VORTEX_VERSION)
 
-dnl external dependencies (vortex-tunnel
+dnl external dependencies: vortex-tunnel
 PKG_CHECK_MODULES(VORTEX_TUNNEL, vortex-tunnel-1.1 >= 1.1.0) 
 
 dnl general libries subsitution
@@ -80,6 +80,15 @@ AC_SUBST(VORTEX_TUNNEL_CFLAGS)
 AC_SUBST(VORTEX_TUNNEL_LIBS)
 VORTEX_TUNNEL_VERSION=`pkg-config --modversion vortex-tunnel-1.1`
 AC_SUBST(VORTEX_TUNNEL_VERSION)
+
+dnl external dependencies: vortex-xml-rpc
+PKG_CHECK_MODULES(VORTEX_XML_RPC, vortex-xml-rpc-1.1 >= 1.1.0) 
+
+dnl general libries subsitution
+AC_SUBST(VORTEX_XML_RPC_CFLAGS)
+AC_SUBST(VORTEX_XML_RPC_LIBS)
+VORTEX_XML_RPC_VERSION=`pkg-config --modversion vortex-xml-rpc-1.1`
+AC_SUBST(VORTEX_XML_RPC_VERSION)
 
 dnl external dependencies
 PKG_CHECK_MODULES(EXARG, exarg) 

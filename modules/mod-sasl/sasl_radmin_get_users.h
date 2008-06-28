@@ -12,7 +12,10 @@
 #ifndef __SERVER_SASL_RADMIN_GET_USERS_XML_RPC_H__
 #define __SERVER_SASL_RADMIN_GET_USERS_XML_RPC_H__
 
+/* include base library */
 #include <vortex.h>
+/* include xml-rpc library */
+#include <vortex_xml_rpc.h>
 #include <sasl_radmin_types.h>
 
 SaslUserArray * get_users_0 (char ** fault_error, int * fault_code, VortexChannel * channel);

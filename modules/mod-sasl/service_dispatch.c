@@ -13,6 +13,8 @@
 #include <sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h>
 
 
+/* include xml-rpc library */
+#include <vortex_xml_rpc.h>
 XmlRpcMethodResponse *  service_dispatch (VortexChannel * channel, XmlRpcMethodCall * method_call, axlPointer user_data)
 {
 

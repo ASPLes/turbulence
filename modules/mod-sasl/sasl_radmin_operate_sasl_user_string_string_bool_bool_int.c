@@ -9,9 +9,13 @@
  * Axl Library homepage:              http://xml.aspl.es
  * Advanced Software Production Line: http://www.aspl.es
  */
+/* include base library */
 #include <vortex.h>
+/* include xml-rpc library */
+#include <vortex_xml_rpc.h>
 #include <sasl_radmin_types.h>
 
+/* code included from: operate-sasl-user.c */
 /* local includes */
 #include <sasl_radmin_types.h>
 #include <common-sasl.h>

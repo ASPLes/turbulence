@@ -12,7 +12,10 @@
 #ifndef __SERVER_SASL_RADMIN_OPERATE_SASL_USER_XML_RPC_H__
 #define __SERVER_SASL_RADMIN_OPERATE_SASL_USER_XML_RPC_H__
 
+/* include base library */
 #include <vortex.h>
+/* include xml-rpc library */
+#include <vortex_xml_rpc.h>
 #include <sasl_radmin_types.h>
 
 int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, bool remote_admin, bool disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel);
