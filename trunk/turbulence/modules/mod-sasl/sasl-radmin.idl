@@ -154,7 +154,7 @@ xml-rpc interface sasl-radmin {
 		/* get the serverName from the current channel */
 		const       char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 		/* get the context */
-		TurbulenceCtx    * ctx        = sasl_backend ? sasl_backend->ctx : NULL;
+		TurbulenceCtx    * ctx        = common_sasl_get_context (sasl_backend);
 
 		switch (operation) {
 		case 1:

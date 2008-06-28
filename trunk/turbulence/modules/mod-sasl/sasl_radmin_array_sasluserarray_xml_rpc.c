@@ -129,7 +129,9 @@ void sasl_radmin_sasluserarray_free (SaslUserArray * ref)
 
 SaslUser * sasl_radmin_sasluserarray_get (SaslUserArray * ref, int index)
 {
+	/* check received reference */
 	v_return_val_if_fail (ref, NULL);
+
 	/* check index access */
 	v_return_val_if_fail (index >= 0 &&  index < ref->count,  NULL);
 
