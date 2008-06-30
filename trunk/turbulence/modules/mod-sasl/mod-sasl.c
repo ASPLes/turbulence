@@ -98,8 +98,8 @@ static bool sasl_init (TurbulenceCtx * _ctx)
 	msg ("turbulence SASL init");
 
 	/* check for SASL support */
-	if (!vortex_sasl_is_enabled ()) {
-		error ("Unable to start SASL support, vortex library found doesn't have SASL support activated");
+	if (!vortex_sasl_init (TBC_VORTEX_CTX(_ctx))) {
+		error ("Unable to start SASL support, init function failed");
 		return false;
 	} /* end if */
 
