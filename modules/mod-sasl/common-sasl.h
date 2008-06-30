@@ -41,6 +41,9 @@
 /* turbulence files */
 #include <turbulence.h>
 
+/* include sasl support */
+#include <vortex_sasl.h>
+
 /* xml-rpc types */
 #include <sasl_radmin_types.h>
 
