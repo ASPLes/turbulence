@@ -93,6 +93,13 @@ AC_SUBST(VORTEX_SASL_LIBS)
 VORTEX_XML_RPC_VERSION=`pkg-config --modversion vortex-sasl-1.1`
 AC_SUBST(VORTEX_SASL_VERSION)
 
+dnl external dependencies: vortex-sasl
+PKG_CHECK_MODULES(VORTEX_TLS, vortex-tls-1.1 >= 1.1.0) 
+AC_SUBST(VORTEX_TLS_CFLAGS)
+AC_SUBST(VORTEX_TLS_LIBS)
+VORTEX_XML_RPC_VERSION=`pkg-config --modversion vortex-tls-1.1`
+AC_SUBST(VORTEX_TLS_VERSION)
+
 
 dnl external dependencies
 PKG_CHECK_MODULES(EXARG, exarg) 

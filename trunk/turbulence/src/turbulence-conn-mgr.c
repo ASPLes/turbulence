@@ -106,7 +106,11 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
  *
  * @param user_data User user defined data.
  */
-void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
+int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
+				VortexConnection        * conn, 
+				VortexConnection       ** new_conn,
+				VortexConnectionStage     conn_state,
+				axlPointer                user_data)
 {
 	/* get turbulence context */
 	TurbulenceConnMgrState * state;
@@ -135,7 +139,9 @@ void turbulence_conn_mgr_notify (VortexConnection * conn, axlPointer user_data)
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
-	return;
+	/* signal no error was found and the rest of handler can be
+	 * executed */
+	return 1;
 }
 
 /** 
@@ -153,7 +159,9 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx)
 		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 
 		/* configure notification handlers */
-		vortex_connection_notify_new_connections (vortex_ctx, turbulence_conn_mgr_notify, ctx);
+		vortex_connection_set_connection_actions (vortex_ctx,
+							  CONNECTION_STAGE_POST_CREATED,
+							  turbulence_conn_mgr_notify, ctx);
 		
 	} /* end if */
 
