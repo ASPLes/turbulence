@@ -7,7 +7,7 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 bin_PROGRAMS = test_01 
 
 test_01_SOURCES = test_01.c
-test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_XML_RPC_LIBS) $(EXARG_LIBS)
+test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_XML_RPC_LIBS) $(EXARG_LIBS) $(VORTEX_TLS_LIBS)
 
 leak-check:
 	libtool --mode=execute valgrind --leak-check=yes ./test_01

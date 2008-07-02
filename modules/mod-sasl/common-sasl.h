@@ -44,6 +44,9 @@
 /* include sasl support */
 #include <vortex_sasl.h>
 
+/* include tls support */
+#include <vortex_tls.h>
+
 /* xml-rpc types */
 #include <sasl_radmin_types.h>
 
