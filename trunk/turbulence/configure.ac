@@ -204,6 +204,11 @@ echo "--       Turbulence Settings            --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
+if test "$pcre_found" = "no" ; then
+	echo "NOTE: building turbulence without pcre support will"
+	echo "      disable powerful features on profile path."
+	echo "      Pcre is really recomended!!!"
+fi
 echo "   Build tbc-sasl-conf:            [$termios_found]"
 echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
 echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"

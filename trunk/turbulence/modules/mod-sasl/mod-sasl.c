@@ -159,6 +159,7 @@ static void sasl_close (TurbulenceCtx * ctx)
 {
 	msg ("turbulence SASL close");
 	common_sasl_free (sasl_backend);
+	
 
 	/* close mutex */
 	vortex_mutex_destroy (&sasl_xml_db_mutex);
