@@ -6,7 +6,7 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
 	sasl_radmin_types.h
 
-EXTRA_DIST = mod-sasl.xml sasl.conf auth-db.xml
+EXTRA_DIST = mod-sasl.xml 
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -26,7 +26,7 @@ mod_DATA = mod-sasl.xml mod-sasl.win32.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/sasl
-modconf_DATA = sasl.example.conf auth-db.example.xml
+modconf_DATA = sasl.example.conf auth-db.example.xml remote-admins.example.xml
 
 # tool to admin sasl db 
 if ENABLE_TERMIOS
