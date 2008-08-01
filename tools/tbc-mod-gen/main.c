@@ -41,6 +41,9 @@
 /* local includes */
 #include <support.h>
 
+/* include local dtd */
+#include <tbc-mod-gen.dtd.h>
+
 #define HELP_HEADER "tbc-mod-gen: module generator for Turbulence BEEP server \n\
 Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
 
@@ -145,29 +148,16 @@ bool tbc_mod_gen_compile ()
 	axlError * error;
 	axlNode  * node;
 	axlNode  * moddef;
-	char     * file;
 	char     * mod_name;
 	char     * tolower;
 	char     * toupper;
 	char     * description;
 
-	/* configure lookup domain for tbc-mod-gen settings */
-	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("tbc-mod-gen"), 
-						   vortex_support_build_filename (turbulence_datadir (), "turbulence", NULL));
-	/* now find the file */
-	file = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tbc-mod-gen", "tbc-mod-gen.dtd");
-
-	if (file == NULL) {
-		error ("Installation problem, unable to find dtd definition file: tbc-mod-gen.dtd");
-		return false;
-	}
-
 	/* parse DTD document */
-	dtd = axl_dtd_parse_from_file (file, &error);
-	axl_free (file);
+	dtd = axl_dtd_parse (TBC_MOD_GEN_DTD, -1, &error);
 	if (dtd == NULL) {
 		/* report error and dealloc resources */
-		error ("Failed to parse DTD file: %s, error found: %s", axl_error_get (error));
+		error ("Failed to parse DTD, error found: %s", axl_error_get (error));
 		axl_error_free (error);
 
 		return false;

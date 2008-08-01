@@ -1,4 +1,4 @@
-EXTRA_DIST = tbc-mod-gen.dtd
+EXTRA_DIST = tbc-mod-gen.dtd tbc-mod-gen.dtd.h
 
 INCLUDES = -DCOMPILATION_DATE=`date +%s` -I ../../src \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" -DAXL_VERSION=\"$(AXL_VERSION)\" \
@@ -14,5 +14,6 @@ tbcmodgendir   = $(datadir)/turbulence
 tbcmodgen_DATA = tbc-mod-gen.dtd
 
 
-
+tbc-mod-gen.dtd.h: tbc-mod-gen.dtd
+	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
 
