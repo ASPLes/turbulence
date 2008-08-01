@@ -40,32 +40,10 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-#if defined (ENABLE_PCRE_SUPPORT)
-#include <pcre.h>
-typedef struct _TurbuleceExpression {
-	pcre * expr;
-	bool   negative;
-}TurbulenceExpression;
-
-#endif
-
 typedef enum {
 	PROFILE_ALLOW, 
 	PROFILE_IF
 } TurbulencePPathItemType;
-
-/** 
- * @internal The following is a definition that allows representing an
- * expression either as an string (char) or a perl regular expression
- * (pcre), according to the compilation status.
- */
-typedef 
-#if defined(ENABLE_PCRE_SUPPORT)
-TurbulenceExpression
-#else
-char
-#endif
-expr;
 
 typedef struct _TurbulencePPathItem TurbulencePPathItem;
 
@@ -75,7 +53,7 @@ struct _TurbulencePPathItem {
 	
 	/* support for the profile to be matched by this profile item
 	 * path */
-	expr * profile;
+	TurbulenceExpr * profile;
 
 	/* optional expression to match a mark that must have a
 	 * connection holding the profile */
@@ -102,12 +80,12 @@ typedef struct _TurbulencePPathDef {
 	/* the server name pattern to be used to match the profile
 	 * path. If turbulence wasn't built with pcre support, it will
 	 * compiled as an string. */
-	expr * serverName;
+	TurbulenceExpr * serverName;
 
 	/* source filter pattern. Again, if the library doesn't
 	 * support regular expression, the source is taken as an
 	 * string */
-	expr * src;
+	TurbulenceExpr * src;
 
 	/* a reference to the list of profile path supported */
 	TurbulencePPathItem ** ppath_item;
@@ -130,254 +108,6 @@ struct _TurbulencePPath {
 	
 };
 
-/** 
- * @internal Function used to check if the string provided have
- * content that must be revised to help its clarity.
- */
-bool      __turbulence_ppath_has_escapable_chars        (const char * expression,
-							 int          expression_size,
-							 int        * added_size)
-{
-	int      iterator = 0;
-	bool     result   = false;
-
-	/* reset additional size value */
-	*added_size = 0;
-
-	/* calculate the content size */
-	expression_size = strlen (expression);
-
-	/* iterate over all content defined */
-	while (iterator < expression_size) {
-
-		/* check for .* */
-		if (expression [iterator] == '*' && expression [iterator - 1] != '.' ) {
-			result = true;
-			(*added_size) += 1;
-		}
-
-		/* check for \/ */
-		if (expression [iterator] == '/' && expression [iterator - 1] != '\\' ) {
-			result = true;
-			(*added_size) += 1;
-		}
-
-		/* update the iterator */
-		iterator++;
-	} /* end if */
-
-	/* return results */
-	return result;
-} /* end __turbulence_ppath_has_escapable_chars */
-
-/** 
- * @internal Support function which used information provided by
- * previous function to expand the string providing a perl regular
- * expression compatible if used / and *.
- */
-char * __turbulence_ppath_copy_and_escape (const char * expression, 
-					   int          expression_size, 
-					   int          additional_size)
-{
-	int    iterator  = 0;
-	int    iterator2 = 0;
-	char * result;
-	axl_return_val_if_fail (expression, false);
-
-	/* allocate the memory to be returned */
-	result = axl_new (char, expression_size + additional_size + 1);
-
-	/* iterate over all expression defined */
-	while (iterator2 < expression_size) {
-		if (iterator2 > 0) {
-			/* check for .* */
-			if (expression [iterator2] == '*' && expression [iterator2 - 1] != '.') {
-				memcpy (result + iterator, ".*", 2);
-				iterator += 2;
-				iterator2++;
-				continue;
-			}
-			
-			/* check for .* */
-			if (expression [iterator2] == '/' && expression [iterator2 - 1] != '\\') {
-				memcpy (result + iterator, "\\/", 2);
-				iterator += 2;
-				iterator2++;
-				continue;
-			}
-		} /* end if */
-
-		/* copy value received because it is not an escape
-		 * sequence */
-		memcpy (result + iterator, expression + iterator2, 1);
-
-		/* update the iterator */
-		iterator++;
-		iterator2++;
-	} /* end while */
-
-	/* return results */
-	return result;
-} /* end __turbulence_ppath_copy_and_escape */
-
-/* check if the expression is negative */
-const char * __turbulence_ppath_check_negative_expr (const char * expression, bool * negative)
-{
-	int iterator;
-	int length;
-
-	/* do not oper if null is received */
-	if (expression == NULL)
-		return expression;
-
-	/* check if the negative expression is found */
-	iterator = 0;
-	length   = strlen (expression);
-
-	/* skip white spaces */
-	while (iterator < length) {
-		if (expression [iterator] == ' ')
-			iterator++;
-		else
-			break;
-	} /* end while */
-
-	/* check negative expression */
-	if (expression [iterator] == '!' || 
-	    (((iterator + 2) < length) && expression[iterator] == 'n' && expression[iterator + 1] == 'o' && expression[iterator + 2] == 't')) {
-		/* negative expression found, return the updated
-		 * reference */
-		*negative = true;
-		if (expression[iterator] == 'n')
-			return (expression  + iterator + 4);
-		else
-			return (expression  + iterator + 2);
-	} /* end if */
-
-	/* return the expression as is */
-	return expression;
-}
-
-/**
- * @internal Support function to parse the expression provided or to
- * just copy the string if turbulence wasn't built without pcre
- * support.
- */
-axlPointer __turbulence_ppath_compile_expr (TurbulenceCtx * ctx, const char * expression, const char * error_msg)
-{
-#if defined(ENABLE_PCRE_SUPPORT)
-	TurbulenceExpression * expr;
-	const char           * error;
-	int                    erroroffset;
-	bool                   dealloc = false;
-	int                    additional_size;
-
-	/* create the turbulence expression node */
-	expr = axl_new (TurbulenceExpression, 1);
-
-	/* check if the expression is negative */
-	msg ("checking negative expression: %s", expression);
-	expression = __turbulence_ppath_check_negative_expr (expression, &expr->negative);
-	if (expr->negative) {
-		msg ("  found, updated expression to: not %s", expression);
-	}
-	
-	/* do some regular expression support to avoid making it
-	 * painful */
-	if (__turbulence_ppath_has_escapable_chars (expression, strlen (expression), &additional_size)) {
-		/* expand all * and / values which are not preceded as
-		 * .* or \/ */
-		msg ("NOTE: expanding expression: %s..", expression);
-		expression = __turbulence_ppath_copy_and_escape (expression, strlen (expression), additional_size);
-		msg ("      to: %s..", expression);
-		dealloc    = true;
-	} /* end if */
-	
-	/* compile expression */
-	expr->expr = pcre_compile (
-		/* the pattern to compile */
-		expression, 
-		/* no flags */
-		0,
-		/* provide a reference to the error reporting */
-		&error, &erroroffset, NULL);
-
-	if (expr->expr == NULL) {
-		/* failed to parse server name matching */
-		error ("%s: %s, error: %s, at: %d",
-		       error_msg, expression, error, erroroffset);
-
-		/* free expr */
-		axl_free (expr);
-
-		/* check and dealloc */
-		if (dealloc)
-			axl_free ((char*) expression);
-		return NULL;
-	} /* end if */
-
-	/* check and dealloc */
-	if (dealloc)
-		axl_free ((char *) expression);
-
-	/* return expression */
-	return expr;
-#else
-	/* just copy the expression */
-	return axl_strdup (expression);
-#endif
-
-} /* end __turbulence_ppath_compile_expr */
-
-/** 
- * @internal Implementation that free the received expression
- * according to the compilation process.
- */
-void __turbulence_ppath_free_expr (axlPointer _expr)
-{
-
-#if defined (ENABLE_PCRE_SUPPORT)
-	TurbulenceExpression * expr = _expr;
-#endif
-	if (_expr == NULL)
-		return;
-#if defined(ENABLE_PCRE_SUPPORT)
-	pcre_free (expr->expr);
-	axl_free (expr);
-#else
-	axl_free (_expr);
-#endif
-	return;
-}
-
-/** 
- * @internal Function that allows perform matching against the
- * expression, using the subject received. According to the
- * compilation process, this operation will be performed against the
- * pcre library or a simple string match.
- */
-bool __turbulence_ppath_match_expr (axlPointer _expr, const char * subject)
-{
-#if defined (ENABLE_PCRE_SUPPORT)
-	TurbulenceExpression * expr = _expr;
-#endif
-
-	/* return false if either values received are null */
-	if (subject == NULL || _expr == NULL)
-		return false;
-
-#if defined(ENABLE_PCRE_SUPPORT)
-	/* check against the pcre expression */
-	if (expr->negative) {
-		return ! (pcre_exec (expr->expr, NULL, subject, strlen (subject), 0, 0, NULL, 0) >= 0);
-	} else {
-		return pcre_exec (expr->expr, NULL, subject, strlen (subject), 0, 0, NULL, 0) >= 0;
-	}
-#else
-	return axl_cmp (_expr, subject);
-#endif
-}
-
 TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode * node)
 {
 	axlNode             * child;
@@ -385,7 +115,7 @@ TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode 
 	TurbulencePPathItem * result = axl_new (TurbulencePPathItem, 1);
 
 	/* get the profile expression */
-	result->profile = __turbulence_ppath_compile_expr (
+	result->profile = turbulence_expr_compile (
 		/* turbulence context */
 		ctx, 
 		/* the expression */
@@ -467,7 +197,7 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		item = ppath_items[iterator];
 
 		/* check the profile uri */
-		if (! __turbulence_ppath_match_expr (item->profile, uri)) {
+		if (! turbulence_expr_match (item->profile, uri)) {
 			/* profile doesn't match, go to the next */
 			iterator++;
 			continue;
@@ -501,7 +231,7 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 
 			/* check the serverName value provided against
 			 * the configuration */
-			if (! __turbulence_ppath_match_expr (state->path_selected->serverName, serverName ? serverName : "")) {
+			if (! turbulence_expr_match (state->path_selected->serverName, serverName ? serverName : "")) {
 				error ("serverName='%s' doesn't match profile path conf", serverName ? serverName : "");
 				/* filter the channel creation because
 				 * the serverName provided doesn't
@@ -537,7 +267,7 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 				
 				/* try to match the profile expression against
 				   a concrete profile value */
-				if ( __turbulence_ppath_match_expr (item->profile, uri2)) {
+				if ( turbulence_expr_match (item->profile, uri2)) {
 
 					/* found, now check if the profile is running on the
 					 * conection */
@@ -680,7 +410,7 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 		msg ("checking profile path def: %s", def->path_name ? def->path_name : "(no path name defined)");
 
 		/* try to match the src expression against the connection value */
-		if (__turbulence_ppath_match_expr (def->src, src)) {
+		if (turbulence_expr_match (def->src, src)) {
 			/* match found */
 			msg ("profile path found, setting default state: %s, connection id=%d, src=%s", 
 			     def->path_name ? def->path_name : "(no path name defined)",
@@ -767,15 +497,15 @@ bool turbulence_ppath_init (TurbulenceCtx * ctx)
 
 		/* catch server name match */
 		if (HAS_ATTR (pdef, "server-name")) {
-			definition->serverName = __turbulence_ppath_compile_expr (ctx, 
-										  ATTR_VALUE (pdef, "server-name"),
-										  "Failed to parse \"server-name\" expression at profile def");
+			definition->serverName = turbulence_expr_compile (ctx, 
+									  ATTR_VALUE (pdef, "server-name"),
+									  "Failed to parse \"server-name\" expression at profile def");
 		} /* end if HAS_ATTR (pdef, "server-name")) */
 
 		if (HAS_ATTR (pdef, "src")) {
-			definition->src = __turbulence_ppath_compile_expr (ctx,
-									   ATTR_VALUE (pdef, "src"),
-									   "Failed to parse \"src\" expression at profile def");
+			definition->src = turbulence_expr_compile (ctx,
+								   ATTR_VALUE (pdef, "src"),
+								   "Failed to parse \"src\" expression at profile def");
 		} /* end if (HAS_ATTR (pdef, "src")) */
 
 		/* now, we have to parse all childs. Rules from the
@@ -815,7 +545,7 @@ void __turbulence_ppath_free_item (TurbulencePPathItem * item)
 	int iterator;
 
 	/* free profile expression */
-	__turbulence_ppath_free_expr (item->profile);
+	turbulence_expr_free (item->profile);
 
 	/* free connmark and pre-connmark */
 	axl_free (item->connmark);
@@ -860,8 +590,8 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 
 			/* free profile path name definition */
 			axl_free (def->path_name);
-			__turbulence_ppath_free_expr (def->serverName);
-			__turbulence_ppath_free_expr (def->src);
+			turbulence_expr_free (def->serverName);
+			turbulence_expr_free (def->src);
 
 			iterator2 = 0;
 			while (def->ppath_item[iterator2] != NULL) {

@@ -37,22 +37,53 @@
  */
 
 #include <turbulence.h>
+#include <turbulence-ctx-private.h>
+
+/* include inline dtd */
+#include <mod-turbulence.dtd.h>
 
 /** 
- * @internal By default clean start is disabled.
+ * \defgroup turbulence_run Turbulence runtime: runtime checkings 
  */
-static bool turbulence_clean_start = false;
 
-#define CLEAN_START() do{error ("Clean start activated, stopping turbulence due to a startup failure found"); turbulence_exit (ctx, true, true);exit (-1);}while (0);
+/** 
+ * \addtogroup turbulence_run
+ * @{
+ */
+
+/** 
+ * @brief Allows to check if <b>/turbulence/global-settings/clean-start</b>
+ * is activated, causing the Turbulence server to refuse to start in
+ * the case something is not properly configured.
+ *
+ * @param ctx The Turbulence context.
+ */
+void turbulence_run_check_clean_start (TurbulenceCtx * ctx)
+{
+	if (ctx == NULL)
+		return;
+
+	if (ctx->clean_start) {
+		error ("Clean start activated, stopping turbulence due to a startup failure found"); 
+		turbulence_exit (ctx, true, true);
+		exit (-1);
+	}
+	return;
+}
 
 /** 
  * @brief Tries to load all modules found at the directory already
  * located. In fact the function searches for xml files that points to
  * modules to be loaded.
  * 
+ * @param ctx Turbulence context.
+ *
+ * @param path The path that was used to open the dirHandle.
+ *
  * @param dirHandle The directory that will be inspected for modules.
+ *
  */
-void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * path, DIR * dirHandle, axlDtd * dtd)
+void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * path, DIR * dirHandle)
 {
 	struct dirent    * entry;
 	char             * fullpath = NULL;
@@ -98,7 +129,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		}
 		
 		/* now validate the file found */
-		if (! axl_dtd_validate (doc, dtd, &error)) {
+		if (! axl_dtd_validate (doc, ctx->module_dtd, &error)) {
 			wrn ("file %s does is not a valid turbulence module pointer: %s", fullpath,
 			     axl_error_get (error));
 			goto next;
@@ -119,7 +150,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		/* check init */
 		if (! init (ctx)) {
 			wrn ("init module: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
-			CLEAN_START();
+			CLEAN_START(ctx);
 		} else {
 			msg ("init ok, registering module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 		}
@@ -145,12 +176,12 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 }
 
 /** 
- * @brief Loads all paths from the configuration, calling to load all
+ * @internal Loads all paths from the configuration, calling to load all
  * modules inside those paths.
  * 
  * @param doc The turbulence run time configuration.
  */
-void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc, axlDtd * dtd)
+void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
 {
 	axlNode     * directory;
 	const char  * path;
@@ -175,13 +206,13 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc, axlDtd * dt
 				goto next;
 			} /* end if */
 		} else {
-			wrn ("skiping mod directory: %s (no exists or not directory)", path);
+			wrn ("skiping mod directory: %s (not a directory or do not exists)", path);
 			goto next;
 		}
 
 		/* directory found, now search for modules activated */
 		msg ("found mod directory: %s", path);
-		turbulence_run_load_modules_from_path (ctx, path, dirHandle, dtd);
+		turbulence_run_load_modules_from_path (ctx, path, dirHandle);
 		
 		/* close the directory handle */
 		closedir (dirHandle);
@@ -193,7 +224,7 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc, axlDtd * dt
 }
 
 /** 
- * @brief Takes current configuration, and starts all settings
+ * @internal Takes current configuration, and starts all settings
  * required to run the server.
  * 
  * Later, all modules will be loaded adding profile configuration.
@@ -214,19 +245,21 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 
 	/* mod turbulence dtd */
 	char             * features   = NULL;
-	char             * dtd_file;
 	char             * string_aux;
 #if defined(AXL_OS_UNIX)
 	/* required by the vortex_conf_set hard/soft socket limit. */
 	int                int_aux;
 #endif
-	axlDtd           * dtd;
 	axlError         * error;
 	bool               at_least_one_listener = false;
 
+	/* check ctx received */
+	if (ctx == NULL) 
+		return false;
+
 	/* check clean start */
 	node                   = axl_doc_get (doc, "/turbulence/global-settings/clean-start");
-	turbulence_clean_start = (HAS_ATTR_VALUE (node, "value", "yes"));
+	ctx->clean_start       = (HAS_ATTR_VALUE (node, "value", "yes"));
 
 	/* configure max connection settings here */
 	node       = axl_doc_get (doc, "/turbulence/global-settings/connections/max-connections");
@@ -271,18 +304,9 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 		/* turbulence_tls_enable (); */
 	} /* end if */
 
-	/* find turbulence module dtd validation */
-	dtd_file = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-data", "mod-turbulence.dtd");
-	if (dtd_file == NULL) {
-		/* free document */
-		error ("unable to find mod turbulence DTD definition (mod-turbulence.dtd), check your turbulence installation.");
-		return false;
-	} /* end if */
- 
 	/* found dtd file */
-	msg ("found dtd file at: %s", dtd_file);
-	dtd = axl_dtd_parse_from_file (dtd_file, &error);
-	if (dtd == NULL) {
+	ctx->module_dtd = axl_dtd_parse (MOD_TURBULENCE_DTD, -1, &error);
+	if (ctx->module_dtd == NULL) {
 		error ("unable to load mod-turbulence.dtd file: %s", axl_error_get (error));
 		axl_error_free (error);
 		return false;
@@ -319,13 +343,8 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	} /* end if */
 
 	/* now load all modules found */
-	turbulence_run_load_modules (ctx, doc, dtd);
+	turbulence_run_load_modules (ctx, doc);
 	
-	/* free dtds */
-	axl_free (dtd_file);
-	axl_dtd_free (dtd);
-	
-
 	/* now check for profiles already activated */
 	if (vortex_profiles_registered (vortex_ctx) == 0) {
 		error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
@@ -366,7 +385,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 				     axl_node_get_content (port, NULL));
 
 				/* check clean start */ 
-				CLEAN_START ();
+				CLEAN_START (ctx);
 
 				goto next;
 			} /* end if */
@@ -399,11 +418,17 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 }
 
 /** 
- * @brief Allows to cleanup the module.
+ * @internal Allows to cleanup the module.
  */
 void turbulence_run_cleanup (TurbulenceCtx * ctx)
 {
+	/* cleanup module dtd */
+	axl_dtd_free (ctx->module_dtd);
+	ctx->module_dtd = NULL;
 	return;
 }
 
 
+/** 
+ * @}
+ */

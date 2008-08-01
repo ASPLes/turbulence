@@ -35,32 +35,34 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
-#ifndef __TURBULENCE_MODULE_H__
-#define __TURBULENCE_MODULE_H__
+#ifndef __TURBULENCE_EXPR_H__
+#define __TURBULENCE_EXPR_H__
 
 #include <turbulence.h>
 
-typedef struct _TurbulenceModule TurbulenceModule;
+/** 
+ * \addtogroup turbulence_expr
+ * @{
+ */
 
-void               turbulence_module_init        (TurbulenceCtx * ctx);
+/** 
+ * @brief Regular expression type definition provided by the \ref
+ * turbulence_expr module. This type is used to represent an regular
+ * expression that can be used to match strings.
+ */ 
+typedef struct _TurbulenceExpr TurbulenceExpr;
 
-TurbulenceModule * turbulence_module_open        (TurbulenceCtx * ctx, 
-						  const char    * module);
+TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx, 
+					  const char    * expression, 
+					  const char    * error_msg);
 
-ModInitFunc        turbulence_module_get_init    (TurbulenceModule * module);
+bool             turbulence_expr_match   (TurbulenceExpr * expr, 
+					  const char     * subject);
 
-ModCloseFunc       turbulence_module_get_close   (TurbulenceModule * module);
+void             turbulence_expr_free    (TurbulenceExpr * expr);
 
-void               turbulence_module_register    (TurbulenceModule * module);
+#endif /* __TURBULENCE_EXPR_H__ */
 
-void               turbulence_module_unregister  (TurbulenceModule * module);
-
-void               turbulence_module_free        (TurbulenceModule  * module);
-
-void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx);
-
-void               turbulence_module_notify_close (TurbulenceCtx * ctx);
-
-void               turbulence_module_cleanup      (TurbulenceCtx * ctx);
-
-#endif
+/** 
+ * @}
+ */

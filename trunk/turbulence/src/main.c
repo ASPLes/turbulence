@@ -78,7 +78,7 @@ bool main_init_exarg (int argc, char ** argv)
 			   "Makes logs produced to console to inclue more information about the place it was launched.");
 
 	exarg_install_arg ("color-debug", "c", EXARG_NONE,
-			   "Makes console log to be colorified.");
+			   "Makes console log to be colorified. Calling to this option makes --debug to be activated.");
 
 	/* install exarg options */
 	exarg_install_arg ("config", "f", EXARG_STRING, 
@@ -183,6 +183,11 @@ int main (int argc, char ** argv)
 
 	/* check console color debug */
 	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
+
+	/* enable --debug option if it is found to be defined
+	 * --color-debug */
+	if (exarg_is_defined ("color-debug"))
+		turbulence_log_enable (ctx, true);
 
 	/* init the vortex support module to allow finding the
 	 * configuration file */

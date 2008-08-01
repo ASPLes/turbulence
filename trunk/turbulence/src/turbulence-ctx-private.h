@@ -91,6 +91,12 @@ struct _TurbulenceCtx {
 	/* turbulence stored data */
 	axlHash            * data;
 	VortexMutex          data_mutex;
+
+	/* turbulence run  module */
+	bool                 clean_start;
+	/* DTd used by the turbulence-run module to validate module
+	 * pointers */
+	axlDtd             * module_dtd;
 };
 
 #endif
