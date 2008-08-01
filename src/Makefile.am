@@ -1,4 +1,8 @@
-EXTRA_DIST = libturbulence.def
+EXTRA_DIST = libturbulence.def \
+	exarg.h exarg.c \
+	mod-turbulence.dtd.h \
+	turbulence-config.dtd.h \
+	turbulence-db-list.dtd.h
 
 # profile a flag to enable the source to code to react agaisnt the
 # pcre inclusion.
@@ -28,6 +32,7 @@ turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) libturbulence.la
 lib_LTLIBRARIES          = libturbulence.la
 
 libturbulenceinclude_HEADERS    = \
+	turbulence-expr.h \
 	turbulence-moddef.h \
 	turbulence.h \
 	turbulence-ctx.h \
@@ -40,9 +45,10 @@ libturbulenceinclude_HEADERS    = \
 	turbulence-config.h \
 	turbulence-db-list.h \
 	turbulence-conn-mgr.h \
-	turbulence-signal.h
+	turbulence-signal.h 
 
 libturbulence_la_SOURCES = \
+	exarg.c \
 	turbulence.c \
 	turbulence-ctx.c \
 	turbulence-config.c \
@@ -52,7 +58,9 @@ libturbulence_la_SOURCES = \
 	turbulence-ppath.c \
 	turbulence-db-list.c \
 	turbulence-conn-mgr.c \
-	turbulence-signal.c
+	turbulence-signal.c \
+	turbulence-expr.c
+
 
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'
@@ -64,3 +72,21 @@ libturbulence.def: update-def
 update-def:
 	echo "EXPORTS" > libturbulence.def
 	cat .libs/libturbulence.exp | grep -v __turbulence >> libturbulence.def
+
+update-dtds: mod-turbulence.dtd.h turbulence-config.dtd.h turbulence-db-list.dtd.h
+
+mod-turbulence.dtd.h: ../data/mod-turbulence.dtd
+	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
+turbulence-config.dtd.h: ../data/turbulence-config.dtd
+	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
+turbulence-db-list.dtd.h: ../data/turbulence-db-list.dtd
+	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
+
+
+
+# copy exarg dependency to not force people to download a library with
+# two files
+exarg.h exarg.c: 
+	test -e exarg.h || cp ../../libexarg/src/exarg.h .
+	test -e exarg.c || cp ../../libexarg/src/exarg.c .
+

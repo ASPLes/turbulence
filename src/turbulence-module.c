@@ -230,19 +230,8 @@ void               turbulence_module_unregister  (TurbulenceModule * module)
  */
 void               turbulence_module_free (TurbulenceModule * module)
 {
-	TurbulenceCtx    * ctx;
-
 	/* check values received */
 	v_return_if_fail (module);
-
-	/* get a reference to the context */
-	ctx = module->ctx;
-
-	/* call to close the module */
-	if (module->def != NULL && module->def->close != NULL) {
-		msg ("closing module: %s", module->def->mod_name);
-		module->def->close (ctx);
-	}
 
 	axl_free (module->path);
 	/* call to unload the module */
@@ -279,6 +268,36 @@ void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx)
 		if (module->def->reconf != NULL) {
 			/* call to reconfigured */
 			module->def->reconf (ctx);
+		}
+
+		/* next iterator */
+		iterator++;
+
+	} /* end if */
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+
+	return;
+}
+
+/** 
+ * @brief Send a module close notification to all modules registered
+ * without unloading module code.
+ */
+void               turbulence_module_notify_close (TurbulenceCtx * ctx)
+{
+	/* get turbulence context */
+	TurbulenceModule * module;
+
+	int iterator = 0;
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+	while (iterator < axl_list_length (ctx->registered_modules)) {
+		/* get the module */
+		module = axl_list_get_nth (ctx->registered_modules, iterator);
+
+		/* notify if defined reconf function */
+		if (module->def != NULL && module->def->close != NULL) {
+			msg ("closing module: %s", module->def->mod_name);
+			module->def->close (ctx);
 		}
 
 		/* next iterator */

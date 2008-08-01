@@ -40,7 +40,10 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-/**
+/* include local dtd */
+#include <turbulence-db-list.dtd.h>
+
+/** 
  * \defgroup turbulence_db_list Turbulence Db List: common abstract interface to store list of items (flushed to the storage device).
  */
 
@@ -882,9 +885,7 @@ int               turbulence_db_list_count          (TurbulenceDbList * list)
 bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	char             * file;
 	axlError         * err;
-	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* check reference */
 	v_return_val_if_fail (ctx, false);
@@ -896,33 +897,13 @@ bool               turbulence_db_list_init (TurbulenceCtx * ctx)
 
 	/* init dtd to validate data */
 	if (ctx->db_list_dtd == NULL) {
-		file             = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-data", "db-list.dtd");
-		ctx->db_list_dtd = axl_dtd_parse_from_file (file, &err);
+		ctx->db_list_dtd = axl_dtd_parse (TURBULENCE_DB_LIST_DTD, -1, &err);
 
 		/* db list */
 		if (ctx->db_list_dtd == NULL) {
-			msg2 ("failed to open DTD: %s, error was: %s", file, axl_error_get (err));
+			msg2 ("failed to open DTD to validate db-list, error was: %s", axl_error_get (err));
 			axl_error_free (err);
 		} /* end if */
-		axl_free (file);
-
-		/* if not found, try to open it directly */
-		if (ctx->db_list_dtd == NULL) {
-			file             = vortex_support_build_filename (TBC_DATADIR, "turbulence", "db-list.dtd", NULL);
-			ctx->db_list_dtd = axl_dtd_parse_from_file (file, &err);
-
-			/* check the file */
-			if (ctx->db_list_dtd == NULL) {
-				msg2 ("failed to open DTD: %s, error was: %s", file, axl_error_get (err));
-				axl_error_free (err);
-			} /* end if */
-			axl_free (file);
-		} /* end if */
-
-		if (ctx->db_list_dtd == NULL) {
-			msg ("failed to open DTD file to validate db-list content");
-			return false;
-		}
 
 	} /* end if */
 

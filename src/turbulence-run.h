@@ -40,8 +40,26 @@
 
 #include <turbulence.h>
 
+/** 
+ * \addtogroup turbulence_run
+ * @{
+ */
+
 bool turbulence_run_config    (TurbulenceCtx * ctx);
 
 void turbulence_run_cleanup   (TurbulenceCtx * ctx);
+
+/** 
+ * @brief Simple macro that is used to stop Turbulence startup by
+ * calling to \ref turbulence_run_check_clean_start in the cases where
+ * the main file or module configuration is not properly setup.
+ */
+#define CLEAN_START(ctx) turbulence_run_check_clean_start(ctx)
+
+void turbulence_run_check_clean_start (TurbulenceCtx * ctx);
+
+/** 
+ * @}
+ */
 
 #endif

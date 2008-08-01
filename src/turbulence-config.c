@@ -40,7 +40,10 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-/**
+/* include local DTD */
+#include <turbulence-config.dtd.h>
+
+/** 
  * \defgroup turbulence_config Turbulence Config: files to access to run-time Turbulence Config
  */
 
@@ -63,8 +66,7 @@ bool turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 {
 	axlError   * error;
 	axlDtd     * dtd_file;
-	char       * dtd;
-	VortexCtx  * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
+
 
 	/* check null value */
 	if (config == NULL) {
@@ -89,36 +91,24 @@ bool turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 	/* drop a message */
 	msg ("file %s loaded, ok", config);
 
-	/* now validates the turbulence file */
-	dtd = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-data", "config.dtd");
-	if (dtd == NULL) {
-		/* free document */
-		axl_doc_free (ctx->config);
-		error ("unable to find turbulence config DTD definition (config.dtd), check your turbulence installation.");
-		return false;
-	} /* end if */
- 
 	/* found dtd file */
-	msg ("found dtd file at: %s", dtd);
-	dtd_file = axl_dtd_parse_from_file (dtd, &error);
+	dtd_file = axl_dtd_parse (TURBULENCE_CONFIG_DTD, -1, &error);
 	if (dtd_file == NULL) {
 		axl_doc_free (ctx->config);
-		error ("unable to load DTD file %s, error: %s", dtd, axl_error_get (error));
+		error ("unable to load DTD to validate turbulence configuration, error: %s", axl_error_get (error));
 		axl_error_free (error);
-		axl_free (dtd);
 		return false;
 	} /* end if */
 
 	if (! axl_dtd_validate (ctx->config, dtd_file, &error)) {
-		error ("unable to validate server configuration (%s), something is wrong: %s", 
-		       dtd, axl_error_get (error));
+		error ("unable to validate server configuration, something is wrong: %s", 
+		       axl_error_get (error));
 
 		/* free and set a null reference */
 		axl_doc_free (ctx->config);
 		ctx->config = NULL;
 
 		axl_error_free (error);
-		axl_free (dtd);
 		return false;
 	} /* end if */
 
@@ -126,7 +116,6 @@ bool turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 	
 	/* free resources */
 	axl_dtd_free (dtd_file);
-	axl_free (dtd);
 
 	return true;
 }

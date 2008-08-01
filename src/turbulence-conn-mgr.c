@@ -46,11 +46,11 @@ typedef struct _TurbulenceConnMgrState {
 	TurbulenceCtx    * ctx;
 } TurbulenceConnMgrState;
 
-/**
+/** 
  * \defgroup turbulence_conn_mgr Turbulence Connection Manager: a module that controls all connections created under the turbulence execution
  */
 
-/**
+/** 
  * \addtogroup turbulence_conn_mgr
  * @{
  */

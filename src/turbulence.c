@@ -52,11 +52,11 @@
 int fsync (int fd);
 #endif
 
-/**
+/** 
  * \defgroup turbulence Turbulence: general facilities, initialization, etc
  */
 
-/**
+/** 
  * \addtogroup turbulence
  * @{
  */
@@ -199,21 +199,15 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* unref all connections (before calling to terminate vortex) */
 	turbulence_conn_mgr_cleanup (ctx);
 
-	/* terminate vortex */
-	msg ("terminating vortex library..");
-
 	/* get the vortex context assocaited */
 	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
-
-	/* terminate the vortex ejecution context */
-	vortex_exit_ctx (vortex_ctx, free_vortex_ctx);
 
 	/* terminate profile path */
 	turbulence_ppath_cleanup (ctx);
 
-	/* clean up modules before terminating vortex */
-	/* terminate turbulence module */
-	turbulence_module_cleanup (ctx);
+	/* close modules before terminating vortex so they still can
+	 * use the Vortex API to terminate its function. */
+	turbulence_module_notify_close (ctx);
 
 	/* terminate turbulence db list module at this point to avoid
 	 * modules referring to db-list to lost references */
@@ -221,6 +215,17 @@ void turbulence_exit (TurbulenceCtx * ctx,
 
 	/* do not release the context (this is done by the caller) */
 	turbulence_log_cleanup (ctx);
+
+	/* terminate vortex */
+	msg ("now, terminate vortex library after turbulence cleanup..");
+	vortex_exit_ctx (vortex_ctx, free_vortex_ctx);
+
+	/* now modules and vortex library is stopped, terminate
+	 * modules unloading them */
+	turbulence_module_cleanup (ctx);
+
+	/* terminate run module */
+	turbulence_run_cleanup (ctx);
 
 	/* free mutex */
 	vortex_mutex_destroy (&ctx->exit_mutex);
@@ -931,7 +936,7 @@ const char    * turbulence_datadir        (void)
 
 /* @} */
 
-/**
+/** 
  * \mainpage 
  *
  * \section intro Turbulence API Documentation
@@ -958,6 +963,8 @@ const char    * turbulence_datadir        (void)
  *  - \ref turbulence_conn_mgr
  *  - \ref turbulence_handlers
  *  - \ref turbulence_ctx
+ *  - \ref turbulence_run
+ *  - \ref turbulence_expr
  */
 
 
