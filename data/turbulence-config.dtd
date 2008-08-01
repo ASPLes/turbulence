@@ -82,10 +82,3 @@
           profile      CDATA #REQUIRED 
 	  max-per-conn CDATA #IMPLIED
           preconnmark  CDATA #IMPLIED >
-          
-
-
-
-
-
-
