@@ -100,16 +100,6 @@ AC_SUBST(VORTEX_TLS_LIBS)
 VORTEX_XML_RPC_VERSION=`pkg-config --modversion vortex-tls-1.1`
 AC_SUBST(VORTEX_TLS_VERSION)
 
-
-dnl external dependencies
-PKG_CHECK_MODULES(EXARG, exarg) 
-
-dnl general libries subsitution
-AC_SUBST(EXARG_CFLAGS)
-AC_SUBST(EXARG_LIBS)
-EXARG_VERSION=`pkg-config --modversion exarg`
-AC_SUBST(EXARG_VERSION)
-
 dnl define a m4 macro to check for perl regular expresion support
 AC_DEFUN([CHECK_LIB_PCRE],[dnl
 AC_MSG_CHECKING([lib pcre])
@@ -142,7 +132,7 @@ else
         m4_ifval($1,$1)
      else
         AC_MSG_CHECKING([lib pcre])
-        AC_MSG_RESULT([no, (WARNING: building turbulence without pcre!!)])
+	AC_MSG_ERROR([Cannot build turbulence without PCRE. This is mandatory (libpcre3-dev)])
         m4_ifval($2,$2)
      fi
   fi

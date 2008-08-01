@@ -531,13 +531,13 @@ bool test_03 ()
 	axl_error_free (err);
 
 	/* now check passwords */
-	if (! common_sasl_auth_user (sasl_backend, acceptedUser, NULL, "test", serverName, &mutex)) {
+	if (! common_sasl_auth_user (sasl_backend, NULL, acceptedUser, NULL, "test", serverName, &mutex)) {
 		printf ("Expected to find proper validation for aspl user\n");
 		return false;
 	}
 
 	/* now check passwords */
-	if (common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", serverName, &mutex)) {
+	if (common_sasl_auth_user (sasl_backend, NULL, "aspl2", NULL, "test", serverName, &mutex)) {
 		printf ("Expected to a failure while validating aspl2 user\n");
 		return false;
 	}
@@ -666,7 +666,7 @@ bool test_03 ()
 	} /* end if */
 
 	/* auth the new user */
-	if (! common_sasl_auth_user (sasl_backend, "aspl2", NULL, "test", serverName, &mutex)) {
+	if (! common_sasl_auth_user (sasl_backend, NULL, "aspl2", NULL, "test", serverName, &mutex)) {
 		printf ("Expected to find proper validation for aspl user\n");
 		return false;
 	}
