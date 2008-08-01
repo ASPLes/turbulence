@@ -105,6 +105,35 @@ SaslUserArray * sasl_radmin_sasluserarray_new  (int count)
 	return array;
 }
 
+SaslUserArray * sasl_radmin_sasluserarray_copy (SaslUserArray * ref)
+{
+	SaslUserArray * array;
+	int         iterator = 0;
+
+	if (ref == NULL)
+		return NULL;
+
+	/* create the reference */
+	array        = axl_new (SaslUserArray, 1);
+	array->count = ref->count;
+	if (array->count == 0)
+		return array;
+
+	/* allocate enough space */
+	array->array = axl_new (SaslUser *, array->count);
+	while (iterator < ref->count) {
+
+		/* copy position */
+		array->array[iterator] = sasl_radmin_sasluser_copy (ref->array[iterator]);
+
+		/* update the iterator */
+		iterator++;
+	}
+
+	/* return array created */
+	return array;
+}
+
 void sasl_radmin_sasluserarray_free (SaslUserArray * ref)
 {
 	int iterator = 0;

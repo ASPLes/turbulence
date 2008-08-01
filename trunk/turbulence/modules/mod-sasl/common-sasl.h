@@ -63,6 +63,7 @@ bool            common_sasl_load_config    (TurbulenceCtx    * ctx,
 					    VortexMutex      * mutex);
 
 bool            common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,
+					    VortexConnection * conn,
 					    const char       * auth_id,
 					    const char       * authorization_id,
 					    const char       * password,

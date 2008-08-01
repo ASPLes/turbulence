@@ -53,6 +53,7 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 
 	/* call to authenticate */
 	if (common_sasl_auth_user (sasl_backend, 
+				   connection,
 				   auth_id, 
 				   authorization_id, 
 				   password,
@@ -100,6 +101,8 @@ static bool sasl_init (TurbulenceCtx * _ctx)
 	/* check for SASL support */
 	if (!vortex_sasl_init (TBC_VORTEX_CTX(_ctx))) {
 		error ("Unable to start SASL support, init function failed");
+		/* call to check clean start */
+		CLEAN_START(ctx);
 		return false;
 	} /* end if */
 
@@ -107,8 +110,12 @@ static bool sasl_init (TurbulenceCtx * _ctx)
 	vortex_mutex_create (&sasl_xml_db_mutex);
 
 	/* load configuration file */
-	if (! sasl_load_config (ctx))
+	if (! sasl_load_config (ctx)) {
+		/* call to check clean start */
+		CLEAN_START(ctx);
+
 		return false;
+	}
 
 	/* check for sasl methods to be activated */
 	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_xml_db_mutex)) {
