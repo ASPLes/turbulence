@@ -26,6 +26,7 @@ SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, bool de
 
 /* memory (de)allocation functions */
 SaslUserArray * sasl_radmin_sasluserarray_new  (int count);
+SaslUserArray * sasl_radmin_sasluserarray_copy (SaslUserArray * ref);
 void sasl_radmin_sasluserarray_free (SaslUserArray * ref);
 
 /* manipulation functions */

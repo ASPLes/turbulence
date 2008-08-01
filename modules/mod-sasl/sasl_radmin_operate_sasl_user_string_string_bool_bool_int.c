@@ -39,6 +39,11 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 			msg ("Received accepted request to create user: %s, remote_admin=%d, disabled=%d",
 			     auth_id, remote_admin, disabled);
 
+			/* before continue, check if the user already exists */
+			if (common_sasl_user_exists (sasl_backend, auth_id, serverName, NULL, &sasl_xml_db_mutex)) {
+				REPLY_FAULT ("Unable to create user, auth_id is already in use (user already exists!", -1, false);
+			}
+
 			/* add create a new sasl user */
 			if (! common_sasl_user_add (sasl_backend, 
 						    /* sasl user */

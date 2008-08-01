@@ -37,6 +37,9 @@
  */
 #include <common-sasl.h>
 
+/* include dtd definition */
+#include <common.sasl.dtd.h>
+
 #define LOCK   vortex_mutex_lock(mutex)
 #define UNLOCK vortex_mutex_unlock(mutex)
 
@@ -151,10 +154,21 @@ struct _SaslAuthBackend {
 	 */
 	char             * sasl_conf_path;
 
-	/**
+	/** 
 	 * @brief Reference to the turbulence context.
 	 */ 
 	TurbulenceCtx    * ctx;
+
+	/** 
+	 * @brief Max allowed tries before applying action.
+	 */
+	int                max_allowed_tries;
+	const char       * max_allowed_tries_action;
+
+	/** 
+	 * @brief Disabled accounts action.
+	 */ 
+	const char       * accounts_disabled_action;
 };
 
 /** 
@@ -218,6 +232,47 @@ void common_sasl_free (SaslAuthBackend * backend)
 }
 
 /** 
+ * @internal Function that implements the load of the
+ * max-allowed-tries configuration.
+ */
+bool common_sasl_get_max_allowed_tries (TurbulenceCtx * ctx, SaslAuthBackend * sasl_backend)
+{
+	axlNode *node;
+
+	/* get node reference */
+	node  = axl_doc_get (sasl_backend->sasl_xml_conf, "/mod-sasl/login-options/max-allowed-tries");
+
+	/* now load and check values */
+	sasl_backend->max_allowed_tries = (int) vortex_support_strtod (ATTR_VALUE (node, "value"), NULL);
+	if (sasl_backend->max_allowed_tries < 0) {
+		/* failed to load some database */
+		common_sasl_free (sasl_backend);
+		error ("max-allowed-tries, found negative value while expecting 0..n range");
+		return false;
+	}
+	sasl_backend->max_allowed_tries_action = ATTR_VALUE (node, "action");
+
+	return true;
+}
+
+/** 
+ * @internal Function that implements the load of the
+ * accounts-disabled configuration.
+ */
+bool common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * sasl_backend)
+{
+	axlNode *node;
+
+	/* get node reference */
+	node  = axl_doc_get (sasl_backend->sasl_xml_conf, "/mod-sasl/login-options/accounts-disabled");
+
+	/* now load and check values */
+	sasl_backend->accounts_disabled_action = ATTR_VALUE (node, "action");
+
+	return true;
+}
+
+/** 
  * @brief Public mod-sasl APi that allows to load sasl backend from
  * the default file or the one located using alt_location. The
  * function return on success a reference to the sasl backend loaded,
@@ -240,6 +295,7 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 	axlError        * err;
 	SaslAuthBackend * result;
 	char            * path;
+	axlDtd          * dtd;
 
 	/* do not oper if a null context is received */
 	v_return_val_if_fail (ctx, false);
@@ -279,8 +335,7 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 		path = vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "sasl", "sasl.conf", NULL);
 		error ("Unable to find sasl.conf file. A usual location for this file is %s. Check your installation.", path);
 		axl_free (path);
-		       
-		return false;
+                return false;
 	}
 
 	/* load the document */
@@ -294,9 +349,35 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 		error ("failed to init the SASL profile, unable to find configuration file, error: %s",
 		       axl_error_get (err));
 		axl_error_free (err);
-		return false;
+                return false;
 	} /* end if */
 
+	/* now validate content found */
+        dtd = axl_dtd_parse (COMMON_SASL_DTD, -1, &err);
+        if (dtd == NULL) {
+		error ("failed to load sasl.dtd to check sasl configuration, error: %s",
+		       axl_error_get (err));
+		axl_error_free (err);
+
+                return false;
+	}
+
+	/* perform DTD validation */
+        if (! axl_dtd_validate (result->sasl_xml_conf, dtd, &err)) {
+		/* free dtd reference */
+		axl_dtd_free (dtd);
+
+		/* release sasl_backend */
+		common_sasl_free (result);
+
+		error ("failed to validate SASL module configuration, error: %s",
+		       axl_error_get (err));
+		axl_error_free (err);
+                return false;
+        } /* end if */
+
+	/* free dtd reference */
+	axl_dtd_free (dtd);
 	/* now load all users dbs */
 	node                = axl_doc_get (result->sasl_xml_conf, "/mod-sasl/auth-db");
 	while (node != NULL) {
@@ -307,6 +388,8 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 			if (! common_sasl_load_auth_db_xml (result, node, mutex)) {
 				/* failed to load some database */
 				common_sasl_free (result);
+
+				error ("SASL: failed to load some databases configured");
 				return false;
 			} /* end if */
 			
@@ -320,6 +403,12 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 
 	} /* end while */
 
+	/* get options */
+	if (! common_sasl_get_max_allowed_tries (ctx, result))
+		return false;
+	if (! common_sasl_get_accounts_disabled (ctx, result))
+		return false;
+
 	/* set the backend loaded to the caller */
 	if (sasl_backend)
 		*sasl_backend = result;
@@ -327,7 +416,8 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 		/* weird case where the programmer didn't provide a
 		 * reference to the resulting object */
 		common_sasl_free (result);
-		return false;
+                return false;
+
 	} /* end if */
 	
 	/* after returning, check if the have already loaded one
@@ -335,7 +425,7 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
 	if (result->default_db == NULL && axl_hash_items (result->dbs) == 0) {
 		error ("No usable auth-db database found, unable to start SASL backend");
 		common_sasl_free (result);
-		return false;
+                return false;
 	}
 
 	return true;
@@ -488,10 +578,11 @@ bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
  * @param authorization_id The authorization to use.
  * @param password The password to be used.
  * 
- * @return true if the authentication was successful, otherwise false
- * is returned.
+ * @return 1 if the account was autenticated. 0 if login or password
+ * were not found or they are incorrect. -1 in the case the account is
+ * disabled.
  */
-bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
+int common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 			      SaslAuthDb      * db, 
 			      const char      * auth_id, 
 			      const char      * authorization_id, 
@@ -517,7 +608,7 @@ bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 			 * disabled */
 			if (HAS_ATTR_VALUE (node, "disabled", "yes")) {
 				error ("trying to auth an account disabled: %s", auth_id);
-				return false;
+				return -1;
 			}
 			
 			/* user id found, check password */
@@ -526,7 +617,7 @@ bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 			/* return if both passwords
 			 * are equal */
 			if (axl_cmp (password, db_password)) {
-				return true;
+				return 1;
 			} /* end if */
 			
 		} /* end if */
@@ -535,7 +626,75 @@ bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 		node = axl_node_get_next (node);
 	} /* end if */
 
-	return false;
+	return 0;
+}
+
+/** 
+ * @internal Function that implements the accounts-disabled option
+ * from sasl.conf file.
+ */
+void common_sasl_apply_accounts_disabled (TurbulenceCtx    * ctx, 
+					  SaslAuthBackend  * sasl_backend, 
+					  VortexConnection * conn)
+{
+	/* do not operate if no channel is found. */
+	if (conn == NULL)
+		return;
+
+	/* check for drop option */
+	if (axl_cmp (sasl_backend->accounts_disabled_action, "drop")) {
+		wrn ("dropping connection id=%d due to disabled sasl module account policy", 
+		     vortex_connection_get_id (conn));
+		vortex_connection_shutdown (conn);
+	} else if (axl_cmp (sasl_backend->accounts_disabled_action, "none")) {
+		msg ("found disabled account, doing nothing according to sasl module policy");
+	} 
+
+	/* nothing more for now */
+	return;
+}
+
+/** 
+ * @internal Macro to define the key used to access and store maximum
+ * allowded SASL login failure tries.
+ */
+#define COMMON_SASL_MAX_ALLOWED_TRIES "co:sa:ma:al:tr"
+
+/** 
+ * @internal Function that apply the action defined for max-allowed-tries if the limit is reached. 
+ */
+void common_sasl_apply_max_allowed_tries (TurbulenceCtx    * ctx, 
+					  SaslAuthBackend  * sasl_backend, 
+					  VortexConnection * conn)
+{
+	int tries;
+
+	/* do not operate if no channel is found */
+	if (conn == NULL)
+		return;
+
+	/* check if this is disabled */
+	if (axl_cmp (sasl_backend->max_allowed_tries_action, "none")) 
+		return;
+	
+	/* get tries */
+	tries = PTR_TO_INT (vortex_connection_get_data (conn, COMMON_SASL_MAX_ALLOWED_TRIES));
+	tries++;
+	vortex_connection_set_data (conn, COMMON_SASL_MAX_ALLOWED_TRIES, INT_TO_PTR(tries));
+	
+	/* check if maximum tries has been reached */
+	if (tries < sasl_backend->max_allowed_tries) 
+		return;
+
+	/* apply actions */
+	if (axl_cmp (sasl_backend->max_allowed_tries_action, "drop")) {
+		wrn ("dropping connection id=%d due to disabled max allowed tries (%d) account policy", 
+		     vortex_connection_get_id (conn), tries);
+		vortex_connection_shutdown (conn);
+		return;
+	} /* end if */
+		
+	return;
 }
 
 /** 
@@ -556,6 +715,9 @@ bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
  * @param sasl_backend The sasl backend where the auth operation will
  * be performed.
  *
+ * @param channel The channel where the sasl auth operation is taking
+ * place.
+ *
  * @param auth_id The auth id that is being required to authenticate
  * (the user login).
  *
@@ -573,6 +735,7 @@ bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
  * returned.
  */
 bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
+				   VortexConnection * conn,
 				   const char       * auth_id,
 				   const char       * authorization_id,
 				   const char       * password,
@@ -583,7 +746,7 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	TurbulenceCtx * ctx     = NULL;
 	SaslAuthDb    * db      = NULL;
 	bool            release = false;
-	bool            result  = false;
+	int             result  = 0;
 
 	/* no backend, no authentication */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL) {
@@ -659,12 +822,21 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 
+	/* check if the account is disabled to apply
+	 * <mod-sasl/login-options/accounts-disabled> configuration */
+	if (result == -1) 
+		common_sasl_apply_accounts_disabled (ctx, sasl_backend, conn);
+
+	/* check if the login process failed */
+	if (result == 0) 
+		common_sasl_apply_max_allowed_tries (ctx, sasl_backend, conn);
+
 	/* check to release memory allocated */
 	if (release)
 		axl_free ((char*) password);
 
 	/* return auth operation */
-	return result;
+	return result == 1;
 }
 
 /** 
@@ -947,6 +1119,10 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL ||
 	    password     == NULL)
+		return false;
+
+	/* before continue, check if the user already exists */
+	if (common_sasl_user_exists (sasl_backend, auth_id, serverName, NULL, mutex))
 		return false;
 
 	/* lock the mutex */

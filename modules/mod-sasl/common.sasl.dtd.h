@@ -1,0 +1,42 @@
+/**
+ * C inline representation for DTD common.sasl.dtd, created by axl-knife
+ */
+#ifndef __COMMON_SASL_DTD_H__
+#define __COMMON_SASL_DTD_H__
+#define COMMON_SASL_DTD "\n\
+<!-- <mod-sasl> -->                                               \
+<!ELEMENT mod-sasl (auth-db+, method-allowed, login-options)>     \
+                                                                  \
+<!-- <auth-db> -->                                                \
+<!ELEMENT auth-db EMPTY>                                          \
+<!ATTLIST auth-db                                                 \
+   type            CDATA   #REQUIRED                              \
+   location        CDATA   #REQUIRED                              \
+   format          CDATA   #REQUIRED                              \
+   remote          CDATA   #REQUIRED                              \
+   remote-admins   CDATA   #REQUIRED>                             \
+                                                                  \
+<!-- <method-allowed> -->                                         \
+<!ELEMENT method-allowed (method)+>                               \
+                                                                  \
+<!-- <method> -->                                                 \
+<!ELEMENT method EMPTY>                                           \
+<!ATTLIST method                                                  \
+   value          (plain)  #REQUIRED>                             \
+                                                                  \
+<!-- <login-options> -->                                          \
+<!ELEMENT login-options (max-allowed-tries, accounts-disabled)>   \
+                                                                  \
+<!-- <max-allowed-tries> -->                                      \
+<!ELEMENT max-allowed-tries EMPTY>                                \
+<!ATTLIST max-allowed-tries                                       \
+   value          CDATA        #REQUIRED                          \
+   action         (none|drop)  #REQUIRED>                         \
+                                                                  \
+<!-- <accounts-disabled> -->                                      \
+<!ELEMENT accounts-disabled EMPTY>                                \
+<!ATTLIST accounts-disabled                                       \
+   action         (none|drop)  #REQUIRED>                         \
+                                                                  \
+\n"
+#endif
