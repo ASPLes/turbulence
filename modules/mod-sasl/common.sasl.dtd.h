@@ -10,6 +10,7 @@
 <!-- <auth-db> -->                                                \
 <!ELEMENT auth-db EMPTY>                                          \
 <!ATTLIST auth-db                                                 \
+   serverName      CDATA   #IMPLIED                               \
    type            CDATA   #REQUIRED                              \
    location        CDATA   #REQUIRED                              \
    format          CDATA   #REQUIRED                              \
