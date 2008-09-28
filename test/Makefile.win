@@ -9,12 +9,22 @@ program = test_01.exe
 
 # libraries 
 LIBS = -Wall -g \
-	-L"../../libaxl/src/" -L"../../libvortex-1.1/src/" -L"../../libexarg/src" \
+	-L"../../libaxl/src/" \
+	-L"../../libvortex-1.1/src" \
+	-L"../../libvortex-1.1/sasl" \
+	-L"../../libvortex-1.1/tls" \
+	-L"../../libvortex-1.1/xml-rpc" \
 	-L"../src" -lturbulence \
-	-lvortex-1.1 -laxl -lexarg -lws2_32 $(OPENSSL_LIBS) $(GSASL_LIBS) $(PCRE_LIBS) $(search_lib_path) 
+	-lvortex-1.1 -lvortex-sasl-1.1 -lvortex-tls-1.1 -lvortex-xml-rpc-1.1 \
+	-laxl -lws2_32 $(OPENSSL_LIBS) $(GSASL_LIBS) $(PCRE_LIBS) $(search_lib_path) 
 
 # build vortex with log support
-INCS =  -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex-1.1/src" -I"../../libexarg/src" -I"../src" \
+INCS =  -Wall -g -I"." -I"../../libaxl/src" \
+	-I"../../libvortex-1.1/src" \
+	-I"../../libvortex-1.1/sasl" \
+	-I"../../libvortex-1.1/tls" \
+	-I"../../libvortex-1.1/xml-rpc" \
+	-I"../src" \
 	-I"../modules/mod-sasl" 
 
 CFLAGS = $(INCS) -DVERSION=\""$(TURBULENCE_VERSION)"\" -DVORTEX_VERSION=\""$(VORTEX_VERSION)"\" -DAXL_VERSION=\""$(AXL_VERSION)"\" \
@@ -34,10 +44,12 @@ $(program): $(obj)
 
 links:
 	cp ../../libvortex-1.1/src/libvortex-1.1.dll .
+	cp ../../libvortex-1.1/sasl/libvortex-sasl-1.1.dll .
+	cp ../../libvortex-1.1/tls/libvortex-tls-1.1.dll .
 	cp ../../libvortex-1.1/data/*.dtd .
 	cp ../../libaxl/src/libaxl.dll .
-	cp ../../libexarg/src/libexarg.dll .
 	cp ../src/libturbulence.dll .
+	cp $(GSASL_LIBS) .
 	cp $(OPENSSL_LIBS) .
 	cp $(PCRE_FILES) .
 

@@ -11,7 +11,9 @@ OBJ  = turbulence.o \
 	turbulence-db-list.o \
 	turbulence-conn-mgr.o \
 	turbulence-signal.o \
-	turbulence-ctx.o
+	turbulence-ctx.o \
+	turbulence-expr.o \
+	exarg.o
 
 DLL        = $(turbulence_dll).dll
 IMPORT_DLL = $(DLL).a
@@ -19,11 +21,11 @@ STATIC_LIB = $(turbulence_dll).a
 
 # libraries 
 LIBS = -Wall -g \
-	-L"../../libaxl/src/" -L"../../libvortex-1.1/src/" -L"../../libexarg/src" \
-	-lvortex-1.1 -laxl -lexarg -lws2_32 $(OPENSSL_LIBS) $(GSASL_LIBS) $(PCRE_LIBS) $(search_lib_path) 
+	-L"../../libaxl/src/" -L"../../libvortex-1.1/src/" \
+	-lvortex-1.1 -laxl -lws2_32 $(OPENSSL_LIBS) $(GSASL_LIBS) $(PCRE_LIBS) $(search_lib_path) 
 
 # build vortex with log support
-INCS = -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex-1.1/src" -I"../../libexarg/src" 
+INCS = -Wall -g -I"." -I"../../libaxl/src" -I"../../libvortex-1.1/src" 
 
 # datadir and sysconfdir
 datadir    = "../data"
