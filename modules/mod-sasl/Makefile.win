@@ -37,15 +37,19 @@ RM = rm -f
 
 .PHONY: all clean
 
-all: $(DLL) remote-admins.xml
+config_files = remote-admins.xml sasl.conf auth-db.xml
 
-remote-admins.xml:
-	echo "<?xml version='1.0' standalone='yes' ?>" > remote-admins.xml
-	echo "<turbulence-db-list>" >> remote-admins.xml
-	echo "  <item value='aspl' />" >> remote-admins.xml
-	echo "</turbulence-db-list>" >> remote-admins.xml
+all: $(DLL) $(config_files)
+
+remote-admins.xml: remote-admins.example.xml
+	cp $< $@
+sasl.conf: sasl.example.conf
+	cp $< $@
+auth-db.xml: auth-db.example.xml
+	cp $< $@
+
 clean: 
-	${RM} $(OBJ) $(DLL) remote-admins.xml
+	${RM} $(OBJ) $(DLL) $(config_files)
 
 $(DLL): $(OBJ)
 # add the following line to create an import library. At this point this step
