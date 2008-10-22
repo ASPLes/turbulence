@@ -232,7 +232,7 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
  * @return false if the function is not able to properly start
  * turbulence or the configuration will produce bad results.
  */
-bool turbulence_run_config    (TurbulenceCtx * ctx)
+int  turbulence_run_config    (TurbulenceCtx * ctx)
 {
 	/* get the document configuration */
 	axlDoc           * doc        = turbulence_config_get (ctx);
@@ -251,7 +251,7 @@ bool turbulence_run_config    (TurbulenceCtx * ctx)
 	int                int_aux;
 #endif
 	axlError         * error;
-	bool               at_least_one_listener = false;
+	int                at_least_one_listener = false;
 
 	/* check ctx received */
 	if (ctx == NULL) 

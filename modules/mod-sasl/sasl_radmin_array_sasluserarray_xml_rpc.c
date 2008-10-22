@@ -16,7 +16,7 @@ struct __SaslUserArray {
 	int count;
 };
 
-XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, bool dealloc)
+XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, int  dealloc)
 {
 	/* array and method value */
 	XmlRpcArray * _result;
@@ -58,7 +58,7 @@ XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, bool
 	return _result;
 }
 
-SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, bool dealloc)
+SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, int  dealloc)
 {
 	SaslUserArray * _result;
 	SaslUser * _value;

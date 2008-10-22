@@ -54,7 +54,7 @@ TurbulenceCtx * ctx = NULL;
  * must return true to signal that the module was properly initialized
  * Otherwise, false must be returned.
  */
-static bool test_init (TurbulenceCtx * _ctx)
+static int  test_init (TurbulenceCtx * _ctx)
 {
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);

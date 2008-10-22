@@ -47,7 +47,7 @@ TurbulenceCtx * ctx = NULL;
 /* vortex context */
 VortexCtx     * vortex_ctx = NULL;
 
-bool test_01_remove_all (const char * item_stored, axlPointer user_data)
+int  test_01_remove_all (const char * item_stored, axlPointer user_data)
 {
 	/* just remove dude! */
 	return true;
@@ -60,7 +60,7 @@ bool test_01_remove_all (const char * item_stored, axlPointer user_data)
  * @return true if the dblist implementation is ok, otherwise false is
  * returned.
  */
-bool test_01 ()
+int  test_01 ()
 {
 	TurbulenceDbList * dblist;
 	axlError         * err;
@@ -302,7 +302,7 @@ bool test_01 ()
  * 
  * @return true if they succeed, othewise false is returned.
  */
-bool test_02 ()
+int  test_02 ()
 {
 	char * value;
 
@@ -487,7 +487,7 @@ bool test_02 ()
  * 
  * @return true if it is workin, false if some error is found.
  */
-bool test_03 ()
+int  test_03 ()
 {
 	/* local reference */
 	SaslAuthBackend * sasl_backend;
@@ -757,11 +757,11 @@ bool test_03 ()
  * @return true if module support is working, otherwise, false is
  * returned.
  */
-bool test_04 ()
+int  test_04 ()
 {
 	TurbulenceModule * module = NULL;
 	const char       * path;
-	bool               registered = false;
+	int                registered = false;
 
  test_04_load_again:
 	/* load the module, checking the appropiate match */

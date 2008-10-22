@@ -59,7 +59,7 @@ TurbulenceCtx * ctx;
  * @internal Init for all exarg functions provided by the turbulence
  * command line.
  */
-bool main_init_exarg (int argc, char ** argv)
+int  main_init_exarg (int argc, char ** argv)
 {
 	/* install headers for help */
 	exarg_add_usage_header  (HELP_HEADER);

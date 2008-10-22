@@ -57,14 +57,14 @@ void    support_push_indent     ();
 
 void    support_pop_indent      ();
 
-bool    support_are_equal           (char * file1 , 
+int     support_are_equal           (char * file1 , 
 				     char * file2);
 
 void    support_move_file           (TurbulenceCtx * ctx,
 				     char          * from, 
 				     char          * to);
 
-bool    support_dump_file           (TurbulenceCtx * ctx,
+int     support_dump_file           (TurbulenceCtx * ctx,
 				     axlDoc        * doc, 
 				     int             tabular, 
 				     const char    * format_path, ...);

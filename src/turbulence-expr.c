@@ -50,19 +50,19 @@
 
 struct _TurbulenceExpr {
 	pcre * expr;
-	bool   negative;
+	int    negative;
 };
 
 /** 
  * @internal Function used to check if the string provided have
  * content that must be revised to help its clarity.
  */
-bool      turbulence_expr_has_escapable_chars        (const char * expression,
+int       turbulence_expr_has_escapable_chars        (const char * expression,
 						      int          expression_size,
 						      int        * added_size)
 {
 	int      iterator = 0;
-	bool     result   = false;
+	int      result   = false;
 
 	/* reset additional size value */
 	*added_size = 0;
@@ -157,7 +157,7 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 } /* end __turbulence_ppath_copy_and_escape */
 
 /* check if the expression is negative */
-const char * turbulence_expr_check_negative_expr (const char * expression, bool * negative)
+const char * turbulence_expr_check_negative_expr (const char * expression, int  * negative)
 {
 	int iterator;
 	int length;
@@ -222,7 +222,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 	TurbulenceExpr * expr;
 	const char     * error;
 	int              erroroffset;
-	bool             dealloc = false;
+	int              dealloc = false;
 	int              additional_size;
 
 	/* create the turbulence expression node */
@@ -291,7 +291,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
  * @return The function return true in the case the expression (expr)
  * match the string provided (subject).
  */
-bool turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
+int  turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
 {
 	/* return false if either values received are null */
 	if (subject == NULL || expr == NULL)

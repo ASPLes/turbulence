@@ -75,7 +75,7 @@ void   support_move_file (TurbulenceCtx * ctx, char * from, char * to)
  * 
  * @return true if both files are equal (false if not).
  */
-bool support_are_equal (char * file1 , char * file2)
+int  support_are_equal (char * file1 , char * file2)
 {
 	int fd1;
 	int fd2;
@@ -394,10 +394,10 @@ void    support_pop_indent      ()
  * 
  * @return true if the document was dumped, false if not.
  */
-bool support_dump_file (TurbulenceCtx * ctx, axlDoc * doc, int tabular, const char * format_path, ...)
+int  support_dump_file (TurbulenceCtx * ctx, axlDoc * doc, int tabular, const char * format_path, ...)
 {
 	va_list   args;
-	bool      result = false;
+	int       result = false;
 	char    * path;
 	char    * reply = NULL;
 	axlDoc  * doc2;
@@ -500,7 +500,7 @@ char  * support_clean_name          (const char * name)
  * Internal implementation that support support_to_lower and
  * support_to_upper.
  */
-char * __support_common_name (const char * name, bool to_upper)
+char * __support_common_name (const char * name, int  to_upper)
 {
 	char * result;
 	int    iterator;

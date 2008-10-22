@@ -64,7 +64,7 @@
  * 
  * @return true to filter the connection, otherwise return false.
  */
-typedef bool (*TurbulenceConnMgrFilter) (VortexConnection * conn, axlPointer user_data);
+typedef int  (*TurbulenceConnMgrFilter) (VortexConnection * conn, axlPointer user_data);
 
 /** 
  * @brief A function which is called to know if an item must be
@@ -79,7 +79,7 @@ typedef bool (*TurbulenceConnMgrFilter) (VortexConnection * conn, axlPointer use
  * @return true if the item must be removed, otherwise false must be
  * returned.
  */
-typedef bool (*TurbulenceDbListRemoveFunc) (const char * item_stored, axlPointer user_data);
+typedef int  (*TurbulenceDbListRemoveFunc) (const char * item_stored, axlPointer user_data);
 
 #endif
 

@@ -18,7 +18,7 @@
 #include <vortex_xml_rpc.h>
 #include <sasl_radmin_types.h>
 
-int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, bool remote_admin, bool disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel);
+int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, int remote_admin, int disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel);
 
 XmlRpcMethodResponse * __operate_sasl_user_5_string_string_bool_bool_int (XmlRpcMethodCall * method_call, VortexChannel * channel);
 

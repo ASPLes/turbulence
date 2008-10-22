@@ -11,7 +11,7 @@
 #include <sasl_radmin_types.h>
 
 /* (un)marshaller support functions  */
-XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, bool dealloc)
+XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, int  dealloc)
 {
 	XmlRpcStruct       * _result;
 	XmlRpcStructMember * _member;
@@ -38,7 +38,7 @@ XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, bool dealloc)
 	return _result;
 }
 
-SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, bool dealloc)
+SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, int  dealloc)
 {
 	SaslUser * _result;
 
@@ -65,7 +65,7 @@ SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, bool dealloc)
 }
 
 /* memory (de)allocation functions */
-SaslUser * sasl_radmin_sasluser_new (const char * auth_id, bool disabled)
+SaslUser * sasl_radmin_sasluser_new (const char * auth_id, int  disabled)
 {
 	SaslUser * _result = axl_new (SaslUser, 1);
 

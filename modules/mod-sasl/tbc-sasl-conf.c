@@ -59,9 +59,10 @@ void tbc_sasl_add_user ()
 {
 	const char  * serverName   = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	const char  * new_user_id  = exarg_get_string ("add-user");
-	const char       * password     = NULL;
-	const char       * password2    = NULL;
-	bool               dealloc     = false;
+	const char  * password     = NULL;
+	const char  * password2    = NULL;
+	int           dealloc      = false;
+
 	/* check if the user already exists */
 	if (common_sasl_user_exists (sasl_backend,
 				     new_user_id, 

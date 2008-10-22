@@ -82,7 +82,7 @@ const char * get_out_dir ()
 	return out_dir;
 }
 
-bool tbc_mod_gen_template_create ()
+int  tbc_mod_gen_template_create ()
 {
 	const char * outdir = NULL;
 	axlDoc     * doc;
@@ -141,7 +141,7 @@ bool tbc_mod_gen_template_create ()
 	return true;
 }
 
-bool tbc_mod_gen_compile ()
+int  tbc_mod_gen_compile ()
 {
 	axlDtd   * dtd;
 	axlDoc   * doc;
@@ -224,7 +224,7 @@ bool tbc_mod_gen_compile ()
 
 	/* init handler */
 	write ("/* %s init handler */\n", mod_name);
-	write ("static bool %s_init (TurbulenceCtx * _ctx) {\n", tolower);
+	write ("static int  %s_init (TurbulenceCtx * _ctx) {\n", tolower);
 
 	push_indent ();
 	write ("/* configure the module */\n");

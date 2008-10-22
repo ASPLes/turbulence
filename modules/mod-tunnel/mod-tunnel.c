@@ -41,7 +41,7 @@ axlDoc          * mod_tunnel_resolver = NULL;
 axlDoc          * tunnel_conf         = NULL;
 TurbulenceCtx   * ctx              = NULL;
 
-bool find_and_replace (const char * conf, axlNode * node)
+int  find_and_replace (const char * conf, axlNode * node)
 {
 	axlNode    * db;
 	const char * value = ATTR_VALUE (node, conf);
@@ -131,7 +131,7 @@ VortexTunnelSettings * tunnel_resolver (const char * profile_content,
  * return true to signal that the module was initialized
  * ok. Otherwise, false must be returned.
  */
-static bool tunnel_init (TurbulenceCtx * _ctx)
+static int  tunnel_init (TurbulenceCtx * _ctx)
 {
 	axlNode  * node;
 	axlError * error;

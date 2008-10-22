@@ -56,7 +56,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 					  const char    * expression, 
 					  const char    * error_msg);
 
-bool             turbulence_expr_match   (TurbulenceExpr * expr, 
+int              turbulence_expr_match   (TurbulenceExpr * expr, 
 					  const char     * subject);
 
 void             turbulence_expr_free    (TurbulenceExpr * expr);

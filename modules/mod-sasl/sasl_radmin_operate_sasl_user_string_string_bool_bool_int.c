@@ -25,7 +25,7 @@ extern SaslAuthBackend * sasl_backend;
 extern VortexMutex       sasl_xml_db_mutex;
 
 
-int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, bool remote_admin, bool disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
+int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, int remote_admin, int disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
 {
 	
 		/* get the serverName from the current channel */

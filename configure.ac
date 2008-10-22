@@ -55,7 +55,7 @@ AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.5.3) 
+PKG_CHECK_MODULES(AXL, axl >= 0.5.4) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
