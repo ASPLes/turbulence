@@ -69,23 +69,23 @@
  * @{
  */
 
-bool turbulence_log_enabled      (TurbulenceCtx * ctx);
+int  turbulence_log_enabled      (TurbulenceCtx * ctx);
 
 void turbulence_log_enable       (TurbulenceCtx * ctx, 
-				  bool value);
+				  int  value);
 
-bool turbulence_log2_enabled     (TurbulenceCtx * ctx);
+int  turbulence_log2_enabled     (TurbulenceCtx * ctx);
 
 void turbulence_log2_enable      (TurbulenceCtx * ctx,
-				  bool value);
+				  int  value);
 
-bool turbulence_log3_enabled     (TurbulenceCtx * ctx);
+int  turbulence_log3_enabled     (TurbulenceCtx * ctx);
 
 void turbulence_log3_enable      (TurbulenceCtx * ctx,
-				  bool value);
+				  int  value);
 
 void turbulence_color_log_enable (TurbulenceCtx * ctx,
-				  bool            value);
+				  int             value);
 
 /** 
  * Drop an error msg to the console stderr.
@@ -170,24 +170,24 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
 #define access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
-bool     turbulence_init (TurbulenceCtx * ctx, 
+int      turbulence_init (TurbulenceCtx * ctx, 
 			  VortexCtx     * vortex_ctx,
 			  const char    * config);
 
 void     turbulence_exit                (TurbulenceCtx * ctx,
-					 bool            free_ctx,
-					 bool            free_vortex_ctx);
+					 int             free_ctx,
+					 int             free_vortex_ctx);
 
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value);
 
-bool     turbulence_file_test_v         (const char * format, 
+int      turbulence_file_test_v         (const char * format, 
 					 VortexFileTest test, ...);
 
-bool     turbulence_create_dir          (const char * path);
+int      turbulence_create_dir          (const char * path);
 
 long int turbulence_last_modification   (const char * file);
 
-bool     turbulence_file_is_fullpath (const char * file);
+int      turbulence_file_is_fullpath    (const char * file);
 
 char   * turbulence_base_dir            (const char * path);
 

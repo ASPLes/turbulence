@@ -42,7 +42,7 @@
 
 typedef struct _TurbulencePPath TurbulencePPath;
 
-bool turbulence_ppath_init (TurbulenceCtx * ctx);
+int  turbulence_ppath_init (TurbulenceCtx * ctx);
 
 void turbulence_ppath_cleanup (TurbulenceCtx * ctx);
 

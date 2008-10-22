@@ -43,7 +43,7 @@ char            * sasl_xml_db_path = NULL;
 VortexMutex       sasl_xml_db_mutex;
 TurbulenceCtx   * ctx              = NULL;
 
-bool     mod_sasl_plain_validation  (VortexConnection * connection,
+int      mod_sasl_plain_validation  (VortexConnection * connection,
 				     const char       * auth_id,
 				     const char       * authorization_id,
 				     const char       * password)
@@ -70,7 +70,7 @@ bool     mod_sasl_plain_validation  (VortexConnection * connection,
 /** 
  * @brief Loads current sasl configuration and user databases.
  */
-bool sasl_load_config (TurbulenceCtx * ctx)
+int  sasl_load_config (TurbulenceCtx * ctx)
 {
 	/* load and check sasl conf */
 	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, &sasl_xml_db_mutex)) {
@@ -89,9 +89,9 @@ bool sasl_load_config (TurbulenceCtx * ctx)
  * return true to signal that the module was initialized
  * ok. Otherwise, false must be returned.
  */
-static bool sasl_init (TurbulenceCtx * _ctx)
+static int  sasl_init (TurbulenceCtx * _ctx)
 {
-	bool at_least_one_method = false;
+	int  at_least_one_method = false;
 
 	/* prepare mod-sasl module */
 	TBC_MOD_PREPARE (_ctx);

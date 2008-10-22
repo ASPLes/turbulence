@@ -45,7 +45,7 @@
  * @{
  */
 
-bool turbulence_run_config    (TurbulenceCtx * ctx);
+int  turbulence_run_config    (TurbulenceCtx * ctx);
 
 void turbulence_run_cleanup   (TurbulenceCtx * ctx);
 

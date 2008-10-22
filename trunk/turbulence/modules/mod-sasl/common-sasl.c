@@ -79,7 +79,7 @@ struct _SaslAuthDb {
 	 * @internal If the remote administration protocol can be
 	 * used.
 	 */
-	bool                remote_admin;
+	int                 remote_admin;
 	/** 
 	 * @internal Allowed users to use the remote protocol. 
 	 */
@@ -235,7 +235,7 @@ void common_sasl_free (SaslAuthBackend * backend)
  * @internal Function that implements the load of the
  * max-allowed-tries configuration.
  */
-bool common_sasl_get_max_allowed_tries (TurbulenceCtx * ctx, SaslAuthBackend * sasl_backend)
+int  common_sasl_get_max_allowed_tries (TurbulenceCtx * ctx, SaslAuthBackend * sasl_backend)
 {
 	axlNode *node;
 
@@ -259,7 +259,7 @@ bool common_sasl_get_max_allowed_tries (TurbulenceCtx * ctx, SaslAuthBackend * s
  * @internal Function that implements the load of the
  * accounts-disabled configuration.
  */
-bool common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * sasl_backend)
+int  common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * sasl_backend)
 {
 	axlNode *node;
 
@@ -286,7 +286,7 @@ bool common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * s
  * @param mutex Optional mutex variable used to lock the
  * implementation to avoid race conditions between threads.
  */
-bool common_sasl_load_config (TurbulenceCtx    * ctx,
+int  common_sasl_load_config (TurbulenceCtx    * ctx,
 			      SaslAuthBackend ** sasl_backend,
 			      const char       * alt_location,
 			      VortexMutex      * mutex)
@@ -443,7 +443,7 @@ bool common_sasl_load_config (TurbulenceCtx    * ctx,
  * @return true if the auth-db was properly loaded, otherwise false is
  * returned.
  */
-bool common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
+int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				   axlNode         * node,
 				   VortexMutex     * mutex)
 {
@@ -734,7 +734,7 @@ void common_sasl_apply_max_allowed_tries (TurbulenceCtx    * ctx,
  * @return true if the user was authenticated, otherwise false is
  * returned.
  */
-bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
+int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 				   VortexConnection * conn,
 				   const char       * auth_id,
 				   const char       * authorization_id,
@@ -745,7 +745,7 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	/* get a reference to the turbulence context */
 	TurbulenceCtx * ctx     = NULL;
 	SaslAuthDb    * db      = NULL;
-	bool            release = false;
+	int             release = false;
 	int             result  = 0;
 
 	/* no backend, no authentication */
@@ -854,7 +854,7 @@ bool common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
  * 
  * @return true if the SASL method requested is supported.
  */
-bool common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
+int  common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 				   const char       * sasl_method,
 				   VortexMutex      * mutex)
 {
@@ -912,7 +912,7 @@ bool common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
  * @return true if the user already exists, otherwise false is
  * returned.
  */
-bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
+int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 				   const char        * auth_id,
 				   const char        * serverName,
 				   axlError         ** err,
@@ -1007,12 +1007,12 @@ bool common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
  * @return true if the user already exists, otherwise false is
  * returned.
  */
-bool      common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
+int       common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
 					 const char        * serverName,
 					 axlError         ** err,
 					 VortexMutex       * mutex)
 {
-	bool result;
+	int  result;
 
 
 	/* return if minimum parameters aren't found. */
@@ -1046,7 +1046,7 @@ bool      common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
 char * _common_sasl_encode_password (TurbulenceCtx      * ctx, 
 				     SaslStorageFormat    format, 
 				     const char         * password, 
-				     bool               * release)
+				     int                * release)
 {
 	char * enc_password = NULL;
 
@@ -1102,7 +1102,7 @@ char * _common_sasl_encode_password (TurbulenceCtx      * ctx,
  * 
  * @return true if the user was added, otherwise false is returned.
  */
-bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend, 
+int  common_sasl_user_add         (SaslAuthBackend  * sasl_backend, 
 				   const char       * auth_id, 
 				   const char       * password, 
 				   const char       * serverName, 
@@ -1111,9 +1111,9 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	axlNode    * node;
 	axlNode    * newNode;
 	char       * enc_password;
-	bool         release;
+	int          release;
 	SaslAuthDb * db;
-	bool         result = false;
+	int          result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
@@ -1208,7 +1208,7 @@ bool common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
  * @return true if the operation was performed, otherwise false is
  * returned.
  */
-bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
+int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 					    const char      * auth_id,
 					    const char      * new_password,
 					    const char      * serverName,
@@ -1220,8 +1220,8 @@ bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 	const char    * user_id;
 	SaslAuthDb    * db;
 	char          * enc_password;
-	bool            release = false;
-	bool            result;
+	int             release = false;
+	int             result;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend      == NULL ||
@@ -1326,7 +1326,7 @@ bool      common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
  * false if it fails. The operation will also fails if the user
  * doesn't exists.
  */
-bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
+int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
 					       const char       * auth_id, 
 					       const char       * new_auth_id,
 					       const char       * serverName, 
@@ -1337,7 +1337,7 @@ bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 	axlNode       * node;
 	SaslAuthDb    * db;
 	axlDoc        * auth_db;
-	bool            result = true;
+	int             result = true;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL)
@@ -1428,17 +1428,17 @@ bool      common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
  * 
  * @return true if the user was disable, otherwise false is returned.
  */
-bool common_sasl_user_disable     (SaslAuthBackend  * sasl_backend, 
+int  common_sasl_user_disable     (SaslAuthBackend  * sasl_backend, 
 				   const char       * auth_id, 
 				   const char       * serverName, 
-				   bool               disable,
+				   int                disable,
 				   VortexMutex      * mutex)
 {
 	axlNode    * node;
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
 	const char * user_id;
-	bool         result = false;
+	int          result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
@@ -1613,7 +1613,7 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
  * @return true if the user is disabled, otherwise false is returned,
  * meaning the user can login.
  */
-bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
+int       common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 					const char       * auth_id, 
 					const char       * serverName,
 					VortexMutex      * mutex)
@@ -1621,7 +1621,7 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	axlNode    * node;
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
-	bool         result = true;
+	int          result = true;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL)
@@ -1696,10 +1696,10 @@ bool      common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
  * @return true if the operation was completed, otherwise false is
  * returned.
  */
-bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
+int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
 					    const char       * auth_id, 
 					    const char       * serverName,
-					    bool               enable,
+					    int                enable,
 					    VortexMutex      * mutex)
 {
 	TurbulenceCtx  * ctx = NULL;
@@ -1707,7 +1707,7 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb     * db;
 	axlDoc         * auth_db;
 	const char     * user_id;
-	bool             result = false;
+	int              result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend      == NULL ||
@@ -1804,7 +1804,7 @@ bool      common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
  * @return true if the provided user (auth_id) has remote
  * administration activated on the provided serverName auth database.
  */
-bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
+int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 					       const char       * auth_id, 
 					       const char       * serverName,
 					       VortexMutex      * mutex)
@@ -1814,7 +1814,7 @@ bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb       * db;
 	axlDoc           * auth_db;
 	const char       * user_id;
-	bool               result = false;
+	int                result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend      == NULL ||
@@ -1897,7 +1897,7 @@ bool      common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
  * 
  * @return true if the user is removed, otherwise false is returned.
  */
-bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
+int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 				      const char       * auth_id, 
 				      const char       * serverName, 
 				      VortexMutex      * mutex)
@@ -1906,7 +1906,7 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
 	const char * user_id;
-	bool         result = false;
+	int          result = false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
@@ -1972,7 +1972,7 @@ bool      common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
  * 
  * @return true if the db was properly loaded.
  */
-bool common_sasl_load_users_db (TurbulenceCtx  * ctx, 
+int  common_sasl_load_users_db (TurbulenceCtx  * ctx, 
 				SaslAuthDb     * db, 
 				VortexMutex    * mutex)
 {
@@ -2032,7 +2032,7 @@ bool common_sasl_load_users_db (TurbulenceCtx  * ctx,
  * @return The function returns true if there are at least one remote
  * administration activated.
  */
-bool      common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
+int       common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
 					     VortexMutex     * mutex)
 {
 	axlHashCursor * cursor;
@@ -2101,7 +2101,7 @@ bool      common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
  * 
  * @return true to accept the request, otherwise false is returned.
  */
-bool      common_sasl_validate_resource (VortexConnection * conn,
+int       common_sasl_validate_resource (VortexConnection * conn,
 					 int                channel_num,
 					 const char       * serverName,
 					 const char       * resource_path,

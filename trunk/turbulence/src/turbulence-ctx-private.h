@@ -46,17 +46,17 @@ struct _TurbulenceCtx {
 
 	/* Controls if messages must be send to the console log.
 	 */
-	bool                 console_enabled;
-	bool                 console_debug;
-	bool                 console_debug2;
-	bool                 console_debug3;
-	bool                 console_color_debug;
+	int                  console_enabled;
+	int                  console_debug;
+	int                  console_debug2;
+	int                  console_debug3;
+	int                  console_color_debug;
 
 	/* Turbulence current pid (process identifier) */
 	int                  pid;
 	
 	/* some variables used to terminate turbulence. */
-	bool                 is_existing;
+	int                  is_existing;
 	VortexMutex          exit_mutex;
 	
 	/* Mutex to protect the list of db list opened. */
@@ -93,7 +93,7 @@ struct _TurbulenceCtx {
 	VortexMutex          data_mutex;
 
 	/* turbulence run  module */
-	bool                 clean_start;
+	int                  clean_start;
 	/* DTd used by the turbulence-run module to validate module
 	 * pointers */
 	axlDtd             * module_dtd;

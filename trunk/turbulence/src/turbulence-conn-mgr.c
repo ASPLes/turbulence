@@ -175,7 +175,7 @@ typedef struct _TurbulenceBroadCastMsg {
 	TurbulenceCtx   * ctx;
 } TurbulenceBroadCastMsg;
 
-bool _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data, axlPointer user_data)
+int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data, axlPointer user_data)
 {
 	VortexChannel          * channel   = data;
 	TurbulenceBroadCastMsg * broadcast = user_data;
@@ -228,7 +228,7 @@ bool _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
  * connections. The function could return false but it has no support
  * to notify which was the connection(s) or channel(s) that failed.
  */
-bool turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
+int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 					const void               * message,
 					int                        message_size,
 					const char               * profile,

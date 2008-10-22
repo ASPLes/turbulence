@@ -175,7 +175,7 @@ TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode 
 
 #define TURBULENCE_PPATH_STATE "tu::pp:st"
 
-bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
+int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 				    TurbulencePPathItem ** ppath_items, 
 				    TurbulencePPathState * state, 
 				    const char           * uri, 
@@ -314,7 +314,7 @@ bool __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
  * handled and sequenced by the client according to the state of the
  * connection (profiles already accepted, etc).
  */
-bool __turbulence_ppath_mask (VortexConnection  * connection, 
+int  __turbulence_ppath_mask (VortexConnection  * connection, 
 			      int                 channel_num,
 			      const char        * uri,
 			      const char        * profile_content,
@@ -388,7 +388,7 @@ bool __turbulence_ppath_mask (VortexConnection  * connection,
  * In the case a profile path definition is not found, the handler
  * just denies the connection.
  */
-bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
+int  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
 {
 	/* get turbulence context */
 	TurbulencePPathState * state;
@@ -454,7 +454,7 @@ bool __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
  * support according to the current configuration.
  * 
  */
-bool turbulence_ppath_init (TurbulenceCtx * ctx)
+int  turbulence_ppath_init (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	axlNode            * node; 

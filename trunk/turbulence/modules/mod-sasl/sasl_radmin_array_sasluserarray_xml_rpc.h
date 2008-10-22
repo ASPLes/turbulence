@@ -21,8 +21,8 @@
 BEGIN_C_DECLS
 
 /* (un)marshaller support functions  */
-XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, bool dealloc);
-SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, bool dealloc);
+XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, int  dealloc);
+SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, int  dealloc);
 
 /* memory (de)allocation functions */
 SaslUserArray * sasl_radmin_sasluserarray_new  (int count);

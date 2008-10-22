@@ -57,7 +57,7 @@
  * 
  * @return true if the module is usable or false if not.
  */
-typedef bool (*ModInitFunc)  (TurbulenceCtx * ctx);
+typedef int  (*ModInitFunc)  (TurbulenceCtx * ctx);
 
 /** 
  * @brief Public definition for the close function that must implement

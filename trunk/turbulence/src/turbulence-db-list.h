@@ -57,43 +57,43 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 					      const char      * token, 
 					      ...);
 
-bool               turbulence_db_list_exists (TurbulenceDbList * list,
+int                turbulence_db_list_exists (TurbulenceDbList * list,
 					      const char       * value);
 
-bool               turbulence_db_list_add    (TurbulenceDbList * list,
+int                turbulence_db_list_add    (TurbulenceDbList * list,
 					      const char       * value);
 
-bool               turbulence_db_list_remove (TurbulenceDbList * list,
+int                turbulence_db_list_remove (TurbulenceDbList * list,
 					      const char       * value);
 
-bool               turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
+int                turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
 						      TurbulenceDbListRemoveFunc   func,
 						      axlPointer                   user_data);
 
-bool               turbulence_db_list_edit   (TurbulenceDbList * list,
+int                turbulence_db_list_edit   (TurbulenceDbList * list,
 					      const char       * oldValue,
 					      const char       * newValue);
 
 axlList          * turbulence_db_list_get            (TurbulenceDbList * list);
 
-bool               turbulence_db_list_close          (TurbulenceDbList * list);
+int                turbulence_db_list_close          (TurbulenceDbList * list);
 
-bool   	           turbulence_db_list_close_internal (TurbulenceDbList * list);
+int    	           turbulence_db_list_close_internal (TurbulenceDbList * list);
 
-bool               turbulence_db_list_reload         (TurbulenceDbList * list);
+int                turbulence_db_list_reload         (TurbulenceDbList * list);
 
-bool               turbulence_db_list_flush          (TurbulenceDbList * list);
+int                turbulence_db_list_flush          (TurbulenceDbList * list);
 
 int                turbulence_db_list_count          (TurbulenceDbList * list);
 
 
 /* internal services, used by turbulence engine, never by user
  * application code */
-bool               turbulence_db_list_init           (TurbulenceCtx * ctx);
+int                turbulence_db_list_init           (TurbulenceCtx * ctx);
 
 void               turbulence_db_list_cleanup        (TurbulenceCtx * ctx);
 
-bool               turbulence_db_list_reload_module  ();
+int                turbulence_db_list_reload_module  ();
 
 int                turbulence_db_list_equal (axlPointer a, axlPointer b);
 

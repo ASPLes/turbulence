@@ -67,7 +67,7 @@ int fsync (int fd);
  *
  * A call to \ref turbulence_exit is required before exit.
  */
-bool turbulence_init (TurbulenceCtx * ctx, 
+int  turbulence_init (TurbulenceCtx * ctx, 
 		      VortexCtx     * vortex_ctx,
 		      const char    * config)
 {
@@ -155,7 +155,7 @@ bool turbulence_init (TurbulenceCtx * ctx,
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 {
 	/* get turbulence context */
-	bool            already_notified = false;
+	int             already_notified = false;
 	
 	msg ("caught HUP signal, reloading configuration");
 	/* reconfigure signal received, notify turbulence modules the
@@ -183,8 +183,8 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
  * runtime execution (calling to all module cleanups).
  */
 void turbulence_exit (TurbulenceCtx * ctx, 
-		      bool            free_ctx,
-		      bool            free_vortex_ctx)
+		      int             free_ctx,
+		      int             free_vortex_ctx)
 {
 	VortexCtx * vortex_ctx;
 
@@ -298,7 +298,7 @@ void turbulence_error (TurbulenceCtx * ctx, const char * file, int line, const c
  * 
  * @return true if activated, otherwise false is returned.
  */
-bool turbulence_log_enabled (TurbulenceCtx * ctx)
+int  turbulence_log_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	v_return_val_if_fail (ctx, false);
@@ -314,7 +314,7 @@ bool turbulence_log_enabled (TurbulenceCtx * ctx)
  * value to configure to enable/disable console log.
  */
 void turbulence_log_enable       (TurbulenceCtx * ctx, 
-				  bool value)
+				  int  value)
 {
 	v_return_if_fail (ctx);
 
@@ -336,7 +336,7 @@ void turbulence_log_enable       (TurbulenceCtx * ctx,
  * 
  * @return true if activated, otherwise false is returned.
  */
-bool turbulence_log2_enabled (TurbulenceCtx * ctx)
+int  turbulence_log2_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	v_return_val_if_fail (ctx, false);
@@ -353,7 +353,7 @@ bool turbulence_log2_enabled (TurbulenceCtx * ctx)
  * @param value The value to configure.
  */
 void turbulence_log2_enable      (TurbulenceCtx * ctx,
-				  bool value)
+				  int  value)
 {
 	v_return_if_fail (ctx);
 
@@ -376,7 +376,7 @@ void turbulence_log2_enable      (TurbulenceCtx * ctx,
  * 
  * @return true if activated, otherwise false is returned.
  */
-bool turbulence_log3_enabled (TurbulenceCtx * ctx)
+int  turbulence_log3_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	v_return_val_if_fail (ctx, false);
@@ -393,7 +393,7 @@ bool turbulence_log3_enabled (TurbulenceCtx * ctx)
  * @param value The value to configure.
  */
 void turbulence_log3_enable      (TurbulenceCtx * ctx,
-				  bool value)
+				  int  value)
 {
 	v_return_if_fail (ctx);
 
@@ -421,7 +421,7 @@ void turbulence_log3_enable      (TurbulenceCtx * ctx,
  * effect on system where ansi values are not available.
  */
 void turbulence_color_log_enable (TurbulenceCtx * ctx,
-				  bool            value)
+				  int             value)
 {
 	v_return_if_fail (ctx);
 
@@ -649,11 +649,11 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
  * 
  * @return true if all test returns true. Otherwise false is returned.
  */
-bool turbulence_file_test_v (const char * format, VortexFileTest test, ...)
+int  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 {
 	va_list   args;
 	char    * path;
-	bool      result;
+	int       result;
 
 	/* open arguments */
 	va_start (args, test);
@@ -681,7 +681,7 @@ bool turbulence_file_test_v (const char * format, VortexFileTest test, ...)
  * @return true if the directory was created, otherwise false is
  * returned.
  */
-bool     turbulence_create_dir  (const char * path)
+int      turbulence_create_dir  (const char * path)
 {
 	/* check the reference */
 	if (path == NULL)
@@ -728,7 +728,7 @@ long int turbulence_last_modification (const char * file)
  * @return true if the file is a full path, otherwise false is
  * returned.
  */
-bool     turbulence_file_is_fullpath (const char * file)
+int      turbulence_file_is_fullpath (const char * file)
 {
 	/* check the value received */
 	if (file == NULL)
