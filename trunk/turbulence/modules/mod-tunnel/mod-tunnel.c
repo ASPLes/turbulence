@@ -142,12 +142,6 @@ static int  tunnel_init (TurbulenceCtx * _ctx)
 	
 	msg ("turbulence TUNNEL init");
 
-	/* check if vortex library supports the tunnel profile */
-	if (! vortex_tunnel_is_enabled ()) {
-		error ("found vortex library without TUNNEL support (compile one with it included!)");
-		return false;
-	} /* end if */
-
 	/* configure lookup domain for mod tunnel settings */
 	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("tunnel"), 
 						   vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "tunnel", NULL));
