@@ -166,6 +166,34 @@ AC_ARG_ENABLE(enable-tbc-dblist-mgr, [  --enable-tbc-dblist-mgr       Enable bui
 	      enable_tbc_dblist_mgr=yes)
 AM_CONDITIONAL(ENABLE_TBC_DBLIST_MGR, test "x$enable_tbc_dblist_mgr" = "xyes")
 
+# support to check some dependencies for exarg library embeded into
+# turbulence core code
+AC_TRY_LINK([#include <stdio.h>], 
+[
+  char * result = NULL;
+  vasprintf (&result, "This is a test: %d", 10);
+], [have_vasprintf=yes],[have_vasprintf=no])
+
+dnl support for vasprintf
+case $have_vasprintf in
+yes)
+	EXARG_FLAGS="-DHAVE_VASPRINTF $EXARG_FLAGS"
+	echo "vasprintf support found"
+     ;;
+esac
+
+dnl check for windows platform
+case $host in
+*-*-mingw*)
+	EXARG_FLAGS="-DOS_WIN32 $EXARG_FLAGS"
+	echo "windows platform found"
+	;;	
+*)
+	echo "platform found: $host"
+    ;;
+esac
+AC_SUBST(EXARG_FLAGS)
+
 
 AC_OUTPUT([
 Makefile
