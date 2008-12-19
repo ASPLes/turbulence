@@ -74,11 +74,11 @@ int  turbulence_init (TurbulenceCtx * ctx,
 	/* no initialization done if null reference received */
 	if (ctx == NULL) {
 		fprintf (stderr, "Received a null turbulence context, failed to init the turbulence");
-		return false;
+		return axl_false;
 	} /* end if */
 	if (config == NULL) {
 		fprintf (stderr, "Received a null reference to the turbulence configuration, failed to init the turbulence");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* get current process id */
@@ -110,7 +110,7 @@ int  turbulence_init (TurbulenceCtx * ctx,
 	/*** init the vortex library ***/
 	if (! vortex_init_ctx (vortex_ctx)) {
 		error ("unable to start vortex library, terminating turbulence execution..");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/*** not required to initialize axl library, already done by vortex ***/
@@ -122,7 +122,7 @@ int  turbulence_init (TurbulenceCtx * ctx,
 	/* db list */
 	if (! turbulence_db_list_init (ctx)) {
 		error ("failed to init the turbulence db-list module");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* init turbulence-module.c */
@@ -131,19 +131,19 @@ int  turbulence_init (TurbulenceCtx * ctx,
 	/* load current turbulence configuration */
 	if (! turbulence_config_load (ctx, config)) {
 		/* unable to load configuration */
-		return false;
+		return axl_false;
 	}
 
 	/* init profile path module */
 	if (! turbulence_ppath_init (ctx)) {
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* init connection manager */
 	turbulence_conn_mgr_init (ctx);
 
 	/* init ok */
-	return true;
+	return axl_true;
 } /* end if */
 
 /** 
@@ -155,7 +155,7 @@ int  turbulence_init (TurbulenceCtx * ctx,
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 {
 	/* get turbulence context */
-	int             already_notified = false;
+	int             already_notified = axl_false;
 	
 	msg ("caught HUP signal, reloading configuration");
 	/* reconfigure signal received, notify turbulence modules the
@@ -165,7 +165,7 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 		vortex_mutex_unlock (&ctx->exit_mutex);
 		return;
 	}
-	already_notified = true;
+	already_notified = axl_true;
 
 	/* reload turbulence here, before modules
 	 * reloading */
@@ -296,12 +296,12 @@ void turbulence_error (TurbulenceCtx * ctx, const char * file, int line, const c
 /** 
  * @brief Allows to check if the debug is activated (\ref msg type).
  * 
- * @return true if activated, otherwise false is returned.
+ * @return axl_true if activated, otherwise axl_false is returned.
  */
 int  turbulence_log_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	v_return_val_if_fail (ctx, false);
+	v_return_val_if_fail (ctx, axl_false);
 
 	return ctx->console_debug;
 }
@@ -334,12 +334,12 @@ void turbulence_log_enable       (TurbulenceCtx * ctx,
  * @brief Allows to check if the second level debug is activated (\ref
  * msg2 type).
  * 
- * @return true if activated, otherwise false is returned.
+ * @return axl_true if activated, otherwise axl_false is returned.
  */
 int  turbulence_log2_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	v_return_val_if_fail (ctx, false);
+	v_return_val_if_fail (ctx, axl_false);
 	
 	return ctx->console_debug2;
 }
@@ -365,7 +365,7 @@ void turbulence_log2_enable      (TurbulenceCtx * ctx,
 
 	/* makes implicit activations */
 	if (ctx->console_debug2)
-		ctx->console_debug = true;
+		ctx->console_debug = axl_true;
 
 	return;
 }
@@ -374,12 +374,12 @@ void turbulence_log2_enable      (TurbulenceCtx * ctx,
  * @brief Allows to check if the third level debug is activated (\ref
  * msg2 with additional information).
  * 
- * @return true if activated, otherwise false is returned.
+ * @return axl_true if activated, otherwise axl_false is returned.
  */
 int  turbulence_log3_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	v_return_val_if_fail (ctx, false);
+	v_return_val_if_fail (ctx, axl_false);
 
 	return ctx->console_debug3;
 }
@@ -405,7 +405,7 @@ void turbulence_log3_enable      (TurbulenceCtx * ctx,
 
 	/* makes implicit activations */
 	if (ctx->console_debug3)
-		ctx->console_debug2 = true;
+		ctx->console_debug2 = axl_true;
 
 	return;
 }
@@ -647,7 +647,7 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
  * @param format The path to be checked.
  * @param test The test to be performed. 
  * 
- * @return true if all test returns true. Otherwise false is returned.
+ * @return axl_true if all test returns axl_true. Otherwise axl_false is returned.
  */
 int  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 {
@@ -678,20 +678,42 @@ int  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
  * 
  * @param path The directory to create.
  * 
- * @return true if the directory was created, otherwise false is
+ * @return axl_true if the directory was created, otherwise axl_false is
  * returned.
  */
 int      turbulence_create_dir  (const char * path)
 {
 	/* check the reference */
 	if (path == NULL)
-		return false;
+		return axl_false;
 	
 	/* create the directory */
 #if defined(AXL_OS_WIN32)
 	return (_mkdir (path) == 0);
 #else
 	return (mkdir (path, 0770) == 0);
+#endif
+}
+
+/**
+ * @brief Allows to remove the selected file pointed by the path
+ * provided.
+ *
+ * @param path The path to the file to be removed.
+ *
+ * @return axl_true if the file was removed, otherwise axl_false is
+ * returned.
+ */ 
+axl_bool turbulence_unlink              (const char * path)
+{
+	if (path == NULL)
+		return axl_false;
+
+	/* remove the file */
+#if defined(AXL_OS_WIN32)
+	return (_unlink (path) == 0);
+#else
+	return (unlink (path) == 0);
 #endif
 }
 
@@ -725,23 +747,23 @@ long int turbulence_last_modification (const char * file)
  * 
  * @param file The file to check if it is a full path file name.
  * 
- * @return true if the file is a full path, otherwise false is
+ * @return axl_true if the file is a full path, otherwise axl_false is
  * returned.
  */
 int      turbulence_file_is_fullpath (const char * file)
 {
 	/* check the value received */
 	if (file == NULL)
-		return false;
+		return axl_false;
 #if defined(AXL_OS_UNIX)
 	if (file != NULL && (strlen (file) >= 1) && file[0] == '/')
-		return true;
+		return axl_true;
 #elif defined(AXL_OS_WIN32)
 	if (file != NULL && (strlen (file) >= 3) && file[1] == ':' && (file[2] == '/' || file[2] == '\\'))
-		return true;
+		return axl_true;
 #endif	
 	/* the file is not a full path */
-	return false;
+	return axl_false;
 }
 
 

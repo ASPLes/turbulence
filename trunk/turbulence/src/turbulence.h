@@ -185,6 +185,8 @@ int      turbulence_file_test_v         (const char * format,
 
 int      turbulence_create_dir          (const char * path);
 
+axl_bool turbulence_unlink              (const char * path);
+
 long int turbulence_last_modification   (const char * file);
 
 int      turbulence_file_is_fullpath    (const char * file);
