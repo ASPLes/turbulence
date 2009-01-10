@@ -79,7 +79,7 @@ struct _SaslAuthDb {
 	 * @internal If the remote administration protocol can be
 	 * used.
 	 */
-	int                 remote_admin;
+	axl_bool            remote_admin;
 	/** 
 	 * @internal Allowed users to use the remote protocol. 
 	 */
@@ -248,11 +248,11 @@ int  common_sasl_get_max_allowed_tries (TurbulenceCtx * ctx, SaslAuthBackend * s
 		/* failed to load some database */
 		common_sasl_free (sasl_backend);
 		error ("max-allowed-tries, found negative value while expecting 0..n range");
-		return false;
+		return axl_false;
 	}
 	sasl_backend->max_allowed_tries_action = ATTR_VALUE (node, "action");
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -269,7 +269,7 @@ int  common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * s
 	/* now load and check values */
 	sasl_backend->accounts_disabled_action = ATTR_VALUE (node, "action");
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -298,7 +298,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 	axlDtd          * dtd;
 
 	/* do not oper if a null context is received */
-	v_return_val_if_fail (ctx, false);
+	v_return_val_if_fail (ctx, axl_false);
 
 	/* nullify before doing anyting */
 	if (sasl_backend)
@@ -335,7 +335,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 		path = vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "sasl", "sasl.conf", NULL);
 		error ("Unable to find sasl.conf file. A usual location for this file is %s. Check your installation.", path);
 		axl_free (path);
-                return false;
+                return axl_false;
 	}
 
 	/* load the document */
@@ -349,7 +349,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 		error ("failed to init the SASL profile, unable to find configuration file, error: %s",
 		       axl_error_get (err));
 		axl_error_free (err);
-                return false;
+                return axl_false;
 	} /* end if */
 
 	/* now validate content found */
@@ -359,7 +359,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 		       axl_error_get (err));
 		axl_error_free (err);
 
-                return false;
+                return axl_false;
 	}
 
 	/* perform DTD validation */
@@ -373,11 +373,12 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 		error ("failed to validate SASL module configuration, error: %s",
 		       axl_error_get (err));
 		axl_error_free (err);
-                return false;
+                return axl_false;
         } /* end if */
 
 	/* free dtd reference */
 	axl_dtd_free (dtd);
+
 	/* now load all users dbs */
 	node                = axl_doc_get (result->sasl_xml_conf, "/mod-sasl/auth-db");
 	while (node != NULL) {
@@ -390,7 +391,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 				common_sasl_free (result);
 
 				error ("SASL: failed to load some databases configured");
-				return false;
+				return axl_false;
 			} /* end if */
 			
 		} else {
@@ -405,9 +406,9 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 
 	/* get options */
 	if (! common_sasl_get_max_allowed_tries (ctx, result))
-		return false;
+		return axl_false;
 	if (! common_sasl_get_accounts_disabled (ctx, result))
-		return false;
+		return axl_false;
 
 	/* set the backend loaded to the caller */
 	if (sasl_backend)
@@ -416,7 +417,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 		/* weird case where the programmer didn't provide a
 		 * reference to the resulting object */
 		common_sasl_free (result);
-                return false;
+                return axl_false;
 
 	} /* end if */
 	
@@ -425,10 +426,10 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 	if (result->default_db == NULL && axl_hash_items (result->dbs) == 0) {
 		error ("No usable auth-db database found, unable to start SASL backend");
 		common_sasl_free (result);
-                return false;
+                return axl_false;
 	}
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -440,7 +441,7 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
  * @param node The reference to the <auth-db> node found in the
  * sasl.conf file.
  * 
- * @return true if the auth-db was properly loaded, otherwise false is
+ * @return axl_true if the auth-db was properly loaded, otherwise axl_false is
  * returned.
  */
 int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
@@ -471,7 +472,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		/* free node created */
 		axl_free (db);
 		       
-		return false;
+		return axl_false;
 	}
 
 
@@ -489,6 +490,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 
 		/* configure the rest of parameters */
 		db->remote_admin = HAS_ATTR_VALUE (node, "remote", "yes");
+		msg2 ("sasl remote admin status: %d", db->remote_admin);
 		if (HAS_ATTR_VALUE (node, "format", "sha-1"))
 			db->format = SASL_STORAGE_FORMAT_SHA1;
 		else if (HAS_ATTR_VALUE (node, "format", "md5"))
@@ -502,8 +504,6 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		
 		/* check remote admins */
 		if (HAS_ATTR (node, "remote-admins") && strlen (ATTR_VALUE (node, "remote-admins")) > 0) {
-			/* flag as activated */
-			db->remote_admin = true;
 			
 			/* load the turbulence db list */
 			msg2 ("found remote admins, loading dblist: '%s'", ATTR_VALUE (node, "remote-admins"));
@@ -529,7 +529,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				axl_error_free (err);
 				
 				/* flag as activated */
-				db->remote_admin = false;
+				db->remote_admin = axl_false;
 			} /* end if */
 		}
 		
@@ -540,7 +540,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			if (axl_hash_exists (sasl_backend->dbs, (axlPointer) ATTR_VALUE (node, "serverName"))) {
 				error ("found a serverName database associated to the current database (serverName configured twice!)");
 				common_sasl_db_free (db);
-				return false;
+				return axl_false;
 			}
 			
 			/* fine, add to the database loaded hash */
@@ -558,7 +558,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			if (sasl_backend->default_db != NULL) {
 				error ("it was found several default users databases (serverName empty or not found)");
 				common_sasl_db_free (db);
-				return false;
+				return axl_false;
 			} /* end if */
 			
 			/* configure as the default one */
@@ -566,7 +566,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		} /* end if */
 	} /* end if (type == xml) */
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -731,7 +731,7 @@ void common_sasl_apply_max_allowed_tries (TurbulenceCtx    * ctx,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user was authenticated, otherwise false is
+ * @return axl_true if the user was authenticated, otherwise axl_false is
  * returned.
  */
 int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
@@ -745,13 +745,13 @@ int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	/* get a reference to the turbulence context */
 	TurbulenceCtx * ctx     = NULL;
 	SaslAuthDb    * db      = NULL;
-	int             release = false;
+	int             release = axl_false;
 	int             result  = 0;
 
 	/* no backend, no authentication */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL) {
 		error ("no sasl backend was provided, unable to perform SASL authentication.");
-		return false;
+		return axl_false;
 	}
 
 	/* get a reference to the context */
@@ -776,7 +776,7 @@ int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		UNLOCK;
 
 		error ("no sasl <auth-db> was found for the provided serverName or no default <auth-db> was found, unable to perform SASL authentication.");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* now we have the database, check the user and password */
@@ -785,16 +785,16 @@ int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	case SASL_STORAGE_FORMAT_MD5:
 		/* redifine values */
 		password = vortex_tls_get_digest (VORTEX_MD5, password);
-		release  = true;
+		release  = axl_true;
 		break;
 	case SASL_STORAGE_FORMAT_SHA1:
 		/* redifine values */
 		password = vortex_tls_get_digest (VORTEX_SHA1, password);
-		release  = true;
+		release  = axl_true;
 		break;
 	case SASL_STORAGE_FORMAT_PLAIN:
 		/* plain do not require additional format */
-		release  = false;
+		release  = axl_false;
 		break;
 	default:
 
@@ -804,7 +804,7 @@ int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		/* error, unable to find the proper keying material
 		 * encoding configuration */
 		error ("unable to find the proper format for keying material (inside sasl.conf)");
-		return false;
+		return axl_false;
 	} /* end switch */
 
 	/* now, according to the database backend, call to the proper
@@ -852,7 +852,7 @@ int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the SASL method requested is supported.
+ * @return axl_true if the SASL method requested is supported.
  */
 int  common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 				   const char       * sasl_method,
@@ -862,7 +862,7 @@ int  common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 
 	/* check receiving data */
 	if (sasl_backend == NULL || sasl_method == NULL)
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -876,7 +876,7 @@ int  common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 			UNLOCK;
 
 			/* accept plain profile */
-			return true;
+			return axl_true;
 		} /* end if */
 		
 		/* get the next node */
@@ -887,7 +887,7 @@ int  common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 
-	return false;
+	return axl_false;
 }
 
 /** 
@@ -909,7 +909,7 @@ int  common_sasl_method_allowed   (SaslAuthBackend  * sasl_backend,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user already exists, otherwise false is
+ * @return axl_true if the user already exists, otherwise axl_false is
  * returned.
  */
 int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
@@ -926,7 +926,7 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL) {
 		axl_error_new (-1, "SASL backend or auth id are null, unable to operate", NULL, err);
-		return false;
+		return axl_false;
 	}
 
 	/* lock the mutex */
@@ -945,7 +945,7 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 		UNLOCK;
 
 		axl_error_new (-1, "Failed to find associated auth db, the user is not valid or the serverName configuration is not present.", NULL, err);
-		return false;
+		return axl_false;
 	}
 
 	/* according to the database backend, do */
@@ -962,7 +962,7 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 				/* unlock the mutex */
 				UNLOCK;
 
-				return true;
+				return axl_true;
 			} /* end if */
 			
 			/* get next node */
@@ -974,7 +974,7 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 		UNLOCK;
 
 		axl_error_new (-1, "Failed to find the user, but found the associated backend.", NULL, err);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	axl_error_new (-1, "Failed to find the user.", NULL, err);
@@ -982,12 +982,12 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 
-	return false;
+	return axl_false;
 }
 
 /** 
  * @brief Allows to check if the serverName provided recognized
- * explicitly by the sasl backend. If the function returns true that
+ * explicitly by the sasl backend. If the function returns axl_true that
  * means there is a auth-db configuration activated for the provided
  * serverName. 
  * 
@@ -1004,7 +1004,7 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user already exists, otherwise false is
+ * @return axl_true if the user already exists, otherwise axl_false is
  * returned.
  */
 int       common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
@@ -1019,7 +1019,7 @@ int       common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
 	if (sasl_backend == NULL ||
 	    serverName   == NULL) {
 		axl_error_new (-1, "SASL backend or serverName are null, unable to operate", NULL, err);
-		return false;
+		return axl_false;
 	}
 
 	/* lock the mutex */
@@ -1055,24 +1055,24 @@ char * _common_sasl_encode_password (TurbulenceCtx      * ctx,
 	case SASL_STORAGE_FORMAT_MD5:
 		/* redifine values */
 		enc_password = vortex_tls_get_digest (VORTEX_MD5, password);
-		*release     = true;
+		*release     = axl_true;
 		break;
 	case SASL_STORAGE_FORMAT_SHA1:
 		/* redifine values */
 		enc_password = vortex_tls_get_digest (VORTEX_SHA1, password);
-		*release     = true;
+		*release     = axl_true;
 		break;
 	case SASL_STORAGE_FORMAT_PLAIN:
 		/* plain do not require additional format */
 		enc_password = (char*) password;
-		*release     = false;
+		*release     = axl_false;
 		break;
 	default:
 		/* option not supported */
 		/* error, unable to find the proper keying material
 		 * encoding configuration */
 		error ("unable to find the proper format for keying material (inside sasl.conf)");
-		*release = false;
+		*release = axl_false;
 		break;
 	} /* end switch */
 
@@ -1100,7 +1100,7 @@ char * _common_sasl_encode_password (TurbulenceCtx      * ctx,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user was added, otherwise false is returned.
+ * @return axl_true if the user was added, otherwise axl_false is returned.
  */
 int  common_sasl_user_add         (SaslAuthBackend  * sasl_backend, 
 				   const char       * auth_id, 
@@ -1113,17 +1113,17 @@ int  common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	char       * enc_password;
 	int          release;
 	SaslAuthDb * db;
-	int          result = false;
+	int          result = axl_false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL ||
 	    password     == NULL)
-		return false;
+		return axl_false;
 
 	/* before continue, check if the user already exists */
 	if (common_sasl_user_exists (sasl_backend, auth_id, serverName, NULL, mutex))
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -1139,7 +1139,7 @@ int  common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 	if (db == NULL) {
 		/* unlock the mutex */
 		UNLOCK;
-		return false;
+		return axl_false;
 	}
 
 	/* encode the password received according to the encoding
@@ -1150,7 +1150,7 @@ int  common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
 		UNLOCK;
 		
 		/* failed to encode */
-		return false;
+		return axl_false;
 	} /* end switch */
 
 	/* according to the database backend, do */
@@ -1205,7 +1205,7 @@ int  common_sasl_user_add         (SaslAuthBackend  * sasl_backend,
  *
  * @param mutex Optional mutex to lock the backend implementation.
  * 
- * @return true if the operation was performed, otherwise false is
+ * @return axl_true if the operation was performed, otherwise axl_false is
  * returned.
  */
 int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
@@ -1220,14 +1220,14 @@ int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 	const char    * user_id;
 	SaslAuthDb    * db;
 	char          * enc_password;
-	int             release = false;
+	int             release = axl_false;
 	int             result;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend      == NULL ||
 	    auth_id           == NULL ||
 	    sasl_backend->ctx == NULL) {
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* get a reference to the context */
@@ -1248,7 +1248,7 @@ int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 		/* unlock the mutex */
 		UNLOCK;
 		
-		return false;
+		return axl_false;
 	}
 
 	/* according to the database backend, do */
@@ -1273,7 +1273,7 @@ int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 					/* unlock the mutex */
 					UNLOCK;
 
-					return false;
+					return axl_false;
 				}
 
 				/* release if signaled */
@@ -1297,13 +1297,13 @@ int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
 		/* unlock the mutex */
 		UNLOCK;
 		
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* unlock the mutex */
 	UNLOCK;
 
-	return false;
+	return axl_false;
 }
 
 /** 
@@ -1322,8 +1322,8 @@ int       common_sasl_user_password_change (SaslAuthBackend * sasl_backend,
  * @param mutex Optional mutex used to lock the backend while
  * operating.
  * 
- * @return true if the edit operation was properly done, otherwise
- * false if it fails. The operation will also fails if the user
+ * @return axl_true if the edit operation was properly done, otherwise
+ * axl_false if it fails. The operation will also fails if the user
  * doesn't exists.
  */
 int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend, 
@@ -1337,18 +1337,18 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 	axlNode       * node;
 	SaslAuthDb    * db;
 	axlDoc        * auth_db;
-	int             result = true;
+	int             result = axl_true;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL)
-		return false;
+		return axl_false;
 
 	/* get a reference to the context */
 	ctx = sasl_backend->ctx;
 
 	/* change if both user ids are equal */
 	if (axl_cmp (auth_id, new_auth_id))
-		return true;
+		return axl_true;
 
 	/* lock the mutex */
 	LOCK;
@@ -1365,7 +1365,7 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 	if (db == NULL) {
 		/* unlock the mutex */
 		UNLOCK;
-		return true; 
+		return axl_true; 
 	}
 
 	/* according to the database backend, do */
@@ -1391,7 +1391,7 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 				/* unlock the mutex */
 				UNLOCK;
 				
-				return true;
+				return axl_true;
 			} /* end if */
 
 			/* get next node */
@@ -1404,7 +1404,7 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 		
-	/* return true, the user is disabled mainly because it
+	/* return axl_true, the user is disabled mainly because it
 	 * doesn't exists */
 	return result;
 }
@@ -1421,12 +1421,12 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
  *
  * @param serverName The serverName to use to select the proper user database.
  *
- * @param disable true to disable the user, false to enable.
+ * @param disable axl_true to disable the user, axl_false to enable.
  *
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user was disable, otherwise false is returned.
+ * @return axl_true if the user was disable, otherwise axl_false is returned.
  */
 int  common_sasl_user_disable     (SaslAuthBackend  * sasl_backend, 
 				   const char       * auth_id, 
@@ -1438,12 +1438,12 @@ int  common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
 	const char * user_id;
-	int          result = false;
+	int          result = axl_false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL)
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -1460,7 +1460,7 @@ int  common_sasl_user_disable     (SaslAuthBackend  * sasl_backend,
 
 		/* unlock the mutex */
 		UNLOCK;
-		return false;
+		return axl_false;
 	}
 
 	/* according to the database backend, do */
@@ -1542,7 +1542,7 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL)
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -1610,7 +1610,7 @@ axlList * common_sasl_get_users      (SaslAuthBackend  * sasl_backend,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user is disabled, otherwise false is returned,
+ * @return axl_true if the user is disabled, otherwise axl_false is returned,
  * meaning the user can login.
  */
 int       common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
@@ -1621,11 +1621,11 @@ int       common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	axlNode    * node;
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
-	int          result = true;
+	int          result = axl_true;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL)
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -1642,7 +1642,7 @@ int       common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	if (db == NULL) {
 		/* unlock the mutex */
 		UNLOCK;
-		return true; 
+		return axl_true; 
 	}
 
 	/* according to the database backend, do */
@@ -1671,7 +1671,7 @@ int       common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 		
-	/* return true, the user is disabled mainly because it
+	/* return axl_true, the user is disabled mainly because it
 	 * doesn't exists */
 	return result;
 }
@@ -1693,7 +1693,7 @@ int       common_sasl_user_is_disabled (SaslAuthBackend  * sasl_backend,
  *
  * @param mutex Optional mutex.
  * 
- * @return true if the operation was completed, otherwise false is
+ * @return axl_true if the operation was completed, otherwise axl_false is
  * returned.
  */
 int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend, 
@@ -1707,13 +1707,13 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb     * db;
 	axlDoc         * auth_db;
 	const char     * user_id;
-	int              result = false;
+	int              result = axl_false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend      == NULL ||
 	    auth_id           == NULL  ||
 	    sasl_backend->ctx == NULL)
-		return false;
+		return axl_false;
 
 	/* get a reference to the context */
 	ctx = sasl_backend->ctx;
@@ -1733,7 +1733,7 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 
 		/* unlock the mutex */
 		UNLOCK;
-		return false;
+		return axl_false;
 	}
 
 	/* now activate the database remote administration, but first
@@ -1760,7 +1760,7 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 						/* unlock the mutex */
 						UNLOCK;
 						
-						return true;
+						return axl_true;
 					}
 					
 					/* it doesn't exists, activate it */
@@ -1773,7 +1773,7 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 				/* unlock the mutex */
 				UNLOCK;
 				
-				return true;
+				return axl_true;
 			} /* end if */
 		
 			/* get next node */
@@ -1801,7 +1801,7 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
  *
  * @param mutex Optional mutex.
  * 
- * @return true if the provided user (auth_id) has remote
+ * @return axl_true if the provided user (auth_id) has remote
  * administration activated on the provided serverName auth database.
  */
 int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
@@ -1814,13 +1814,13 @@ int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb       * db;
 	axlDoc           * auth_db;
 	const char       * user_id;
-	int                result = false;
+	int                result = axl_false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend      == NULL ||
 	    auth_id           == NULL ||
 	    sasl_backend->ctx == NULL)
-		return false;
+		return axl_false;
 
 	/* get a reference to the context */
 	ctx = sasl_backend->ctx;
@@ -1840,7 +1840,7 @@ int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 
 		/* unlock the mutex */
 		UNLOCK;
-		return false;
+		return axl_false;
 	}
 	
 	/* now activate the database remote administration, but first
@@ -1877,7 +1877,7 @@ int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 
-	return false;
+	return axl_false;
 }
 
 /** 
@@ -1895,7 +1895,7 @@ int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
  * @param mutex An optional mutex used by the library to lock the
  * database while operating.
  * 
- * @return true if the user is removed, otherwise false is returned.
+ * @return axl_true if the user is removed, otherwise axl_false is returned.
  */
 int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 				      const char       * auth_id, 
@@ -1906,12 +1906,12 @@ int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 	SaslAuthDb * db;
 	axlDoc     * auth_db;
 	const char * user_id;
-	int          result = false;
+	int          result = axl_false;
 
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL ||
 	    auth_id      == NULL)
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -1928,7 +1928,7 @@ int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 		/* unlock the mutex */
 		UNLOCK;
 
-		return false;
+		return axl_false;
 	}
 
 	/* according to the database backend, do */
@@ -1946,7 +1946,7 @@ int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 			if (axl_cmp (auth_id, user_id)) {
 
 				/* remove the node */
-				axl_node_remove (node, true);
+				axl_node_remove (node, axl_true);
 				
 				/* dump the db */
 				result = axl_doc_dump_pretty_to_file (auth_db, db->db_path, 3);
@@ -1970,7 +1970,7 @@ int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 /** 
  * @internal Loads the xml users database into memory.
  * 
- * @return true if the db was properly loaded.
+ * @return axl_true if the db was properly loaded.
  */
 int  common_sasl_load_users_db (TurbulenceCtx  * ctx, 
 				SaslAuthDb     * db, 
@@ -1980,7 +1980,7 @@ int  common_sasl_load_users_db (TurbulenceCtx  * ctx,
 	
 	/* check received parameter */
 	if (db == NULL)
-		return false;
+		return axl_false;
 
 	/* lock the mutex */
 	LOCK;
@@ -1994,7 +1994,7 @@ int  common_sasl_load_users_db (TurbulenceCtx  * ctx,
 		/* unlock the mutex */
 		UNLOCK;
 
-		return true;
+		return axl_true;
 	} /* end if */
 
 
@@ -2009,7 +2009,7 @@ int  common_sasl_load_users_db (TurbulenceCtx  * ctx,
 		error ("failed to init the SASL profile, unable to auth db, error: %s",
 		       axl_error_get (error));
 		axl_error_free (error);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* get current db time */
@@ -2018,7 +2018,7 @@ int  common_sasl_load_users_db (TurbulenceCtx  * ctx,
 	/* unlock the mutex */
 	UNLOCK;
 
-	return true;
+	return axl_true;
 }
 
 
@@ -2029,7 +2029,7 @@ int  common_sasl_load_users_db (TurbulenceCtx  * ctx,
  * @param sasl_backend 
  * @param mutex 
  * 
- * @return The function returns true if there are at least one remote
+ * @return The function returns axl_true if there are at least one remote
  * administration activated.
  */
 int       common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
@@ -2047,7 +2047,7 @@ int       common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
 		/* unlock the mutex */
 		UNLOCK;
 
-		return true;
+		return axl_true;
 	}
 
 	/* check for the rest of auth dbs */
@@ -2064,7 +2064,7 @@ int       common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
 			/* unlock the mutex */
 			UNLOCK;
 
-			return true;
+			return axl_true;
 		} /* end if */
 
 		/* next item to explore */
@@ -2077,7 +2077,7 @@ int       common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
 	/* unlock the mutex */
 	UNLOCK;
 
-	return false;
+	return axl_false;
 }
 
 /** 
@@ -2099,7 +2099,7 @@ int       common_sasl_activate_remote_admin (SaslAuthBackend * sasl_backend,
  * @param user_data On this parameter is received the sasl_backend
  * being used.
  * 
- * @return true to accept the request, otherwise false is returned.
+ * @return axl_true to accept the request, otherwise axl_false is returned.
  */
 int       common_sasl_validate_resource (VortexConnection * conn,
 					 int                channel_num,
@@ -2114,7 +2114,7 @@ int       common_sasl_validate_resource (VortexConnection * conn,
 
 	/* do not validate if a null reference is received */
 	if (sasl_backend == NULL)
-		return false;
+		return axl_false;
 
 	/* get a reference to the context */
 	ctx = sasl_backend->ctx;
@@ -2124,14 +2124,14 @@ int       common_sasl_validate_resource (VortexConnection * conn,
 	if (! axl_cmp (resource_path, "sasl-radmin")) {
 		/* undefined resource, we are not handling such
 		 * resource */
-		return false;
+		return axl_false;
 	}
 	
 	/* check the user id */
 	auth_id = AUTH_ID_FROM_CONN (conn);
 	if (auth_id == NULL) {
 		error ("Requested validation for remote SASL administration but no SASL credential was found");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* now check the database */
@@ -2149,20 +2149,20 @@ int       common_sasl_validate_resource (VortexConnection * conn,
 	if (db == NULL) {
 		error ("Unable to find associated database for the serverName='%s'",
 		       serverName ? serverName : "none");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	if (! db->remote_admin) {
-		error ("Requested to manage a SASL db associated to serverName='%s' which is not configured to do so",
+		error ("Remote SASL admin is disabled on database associated to serverName='%s'",
 		       serverName ? serverName : "none");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_db_list_exists (db->allowed_admins, auth_id)) {
 		error ("Requested to manage a SASL db associated to serverName='%s' with auth_id='%s' not allowed",
 		       serverName ? serverName : "none",
 		       auth_id ? auth_id : "none");
-		return false;
+		return axl_false;
 	}
 
 	/* now check remote admin support (the following code relay on
@@ -2172,9 +2172,9 @@ int       common_sasl_validate_resource (VortexConnection * conn,
 	if (db != NULL && db->remote_admin && turbulence_db_list_exists (db->allowed_admins, auth_id)) {
 		msg ("accepted xml-rpc SASL remote administration for %s domain",
 		     serverName ? serverName : "default");
-		return true;
+		return axl_true;
 	}
 
-	/* return false */
-	return false;
+	/* return axl_false */
+	return axl_false;
 }

@@ -1,4 +1,4 @@
-EXTRA_DIST = mod-tunnel.xml tunnel.conf resolver.xml
+EXTRA_DIST = mod-tunnel.xml tunnel.conf resolver.xml mod-tunnel.win32.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -13,7 +13,7 @@ libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
 moddir   = $(sysconfdir)/turbulence/mods-available
-mod_DATA = mod-tunnel.xml mod-tunnel.win32.xml
+mod_DATA = mod-tunnel.xml 
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/tunnel

@@ -6,7 +6,7 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
 	sasl_radmin_types.h
 
-EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h
+EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h  mod-sasl.win32.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -22,7 +22,7 @@ libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
 moddir   = $(sysconfdir)/turbulence/mods-available
-mod_DATA = mod-sasl.xml mod-sasl.win32.xml
+mod_DATA = mod-sasl.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/sasl

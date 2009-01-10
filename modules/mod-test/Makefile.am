@@ -1,4 +1,4 @@
-EXTRA_DIST = mod-test.xml 
+EXTRA_DIST = mod-test.xml  mod-test.win32.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -13,4 +13,4 @@ libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
 modconfdir   = $(sysconfdir)/turbulence/mods-available
-modconf_DATA = mod-test.xml mod-test.win32.xml
+modconf_DATA = mod-test.xml
