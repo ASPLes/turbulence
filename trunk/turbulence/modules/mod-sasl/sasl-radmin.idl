@@ -254,6 +254,8 @@ xml-rpc interface sasl-radmin {
 			/* update remote admin flag */
 			return common_sasl_enable_remote_admin (sasl_backend, auth_id, serverName, true, &sasl_xml_db_mutex);
 		case 6:
+			msg ("received request to check if remote admin is enabled for auth_id=%s and serverName=%s",
+			     auth_id, serverName ? serverName : "");
 			/* check if the provided user is
 			 * administrator */
 			return common_sasl_is_remote_admin_enabled (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);

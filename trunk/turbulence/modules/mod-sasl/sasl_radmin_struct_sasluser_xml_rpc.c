@@ -11,7 +11,7 @@
 #include <sasl_radmin_types.h>
 
 /* (un)marshaller support functions  */
-XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, int  dealloc)
+XmlRpcStruct * sasl_radmin_sasluser_marshall (VortexCtx * _ctx_, SaslUser * ref, axl_bool  dealloc)
 {
 	XmlRpcStruct       * _result;
 	XmlRpcStructMember * _member;
@@ -23,11 +23,11 @@ XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, int  dealloc)
 	_result = vortex_xml_rpc_struct_new (2);
 
 	/* auth_id member */
-	_member = vortex_xml_rpc_struct_member_new ("auth_id", method_value_new (XML_RPC_STRING_VALUE, ref->auth_id ? ref->auth_id : ""));
+	_member = vortex_xml_rpc_struct_member_new ("auth_id", method_value_new (_ctx_, XML_RPC_STRING_VALUE, ref->auth_id ? ref->auth_id : ""));
 	vortex_xml_rpc_struct_add_member (_result, _member);
 
 	/* disabled member */
-	_member = vortex_xml_rpc_struct_member_new ("disabled", method_value_new (XML_RPC_BOOLEAN_VALUE, INT_TO_PTR (ref->disabled)));
+	_member = vortex_xml_rpc_struct_member_new ("disabled", method_value_new (_ctx_, XML_RPC_BOOLEAN_VALUE, INT_TO_PTR (ref->disabled)));
 	vortex_xml_rpc_struct_add_member (_result, _member);
 
 	/* dealloc data source */
@@ -38,7 +38,7 @@ XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, int  dealloc)
 	return _result;
 }
 
-SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, int  dealloc)
+SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, axl_bool  dealloc)
 {
 	SaslUser * _result;
 
@@ -65,7 +65,7 @@ SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, int  dealloc)
 }
 
 /* memory (de)allocation functions */
-SaslUser * sasl_radmin_sasluser_new (const char * auth_id, int  disabled)
+SaslUser * sasl_radmin_sasluser_new (const char * auth_id, axl_bool  disabled)
 {
 	SaslUser * _result = axl_new (SaslUser, 1);
 

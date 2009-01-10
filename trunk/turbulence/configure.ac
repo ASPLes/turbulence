@@ -209,6 +209,7 @@ modules/mod-tunnel/mod-tunnel.xml
 modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
 modules/mod-sasl/sasl-radmin.pc
+modules/mod-bosh-cm/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile

@@ -21,18 +21,18 @@
 /* user definition declared at: sasl_radmin_types.h */
 struct __SaslUser {
 	char * auth_id;
-	int  disabled;
+	axl_bool  disabled;
 };
 
 /* support for c++ declarations */
 BEGIN_C_DECLS
 
 /* (un)marshaller support functions  */
-XmlRpcStruct * sasl_radmin_sasluser_marshall (SaslUser * ref, int  dealloc);
-SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, int  dealloc);
+XmlRpcStruct * sasl_radmin_sasluser_marshall (VortexCtx * _ctx_, SaslUser * ref, axl_bool  dealloc);
+SaslUser * sasl_radmin_sasluser_unmarshall (XmlRpcStruct * ref, axl_bool  dealloc);
 
 /* memory (de)allocation functions */
-SaslUser * sasl_radmin_sasluser_new (const char * auth_id, int  disabled);
+SaslUser * sasl_radmin_sasluser_new (const char * auth_id, axl_bool  disabled);
 
 SaslUser * sasl_radmin_sasluser_copy (SaslUser * ref);
 

@@ -16,7 +16,7 @@ struct __SaslUserArray {
 	int count;
 };
 
-XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, int  dealloc)
+XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (VortexCtx * _ctx_, SaslUserArray * ref, axl_bool  dealloc)
 {
 	/* array and method value */
 	XmlRpcArray * _result;
@@ -40,8 +40,8 @@ XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, int 
 		_value = ref->array[iterator];
 
 		/* translate the value */
-		_struct = sasl_radmin_sasluser_marshall (_value, false);
-		_array_value = method_value_new (XML_RPC_STRUCT_VALUE, _struct);
+		_struct = sasl_radmin_sasluser_marshall (_ctx_, _value, axl_false);
+		_array_value = method_value_new (_ctx_, XML_RPC_STRUCT_VALUE, _struct);
 
 		/* add the value to the array */
 		vortex_xml_rpc_array_add (_result, _array_value);
@@ -58,7 +58,7 @@ XmlRpcArray    * sasl_radmin_sasluserarray_marshall   (SaslUserArray * ref, int 
 	return _result;
 }
 
-SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, int  dealloc)
+SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, axl_bool  dealloc)
 {
 	SaslUserArray * _result;
 	SaslUser * _value;
@@ -78,7 +78,7 @@ SaslUserArray * sasl_radmin_sasluserarray_unmarshall (XmlRpcArray * ref, int  de
 
 		/* translate the value */
 		_rpc_value = method_value_get_as_struct (_array_value);
-		_value     = sasl_radmin_sasluser_unmarshall (_rpc_value, false);
+		_value     = sasl_radmin_sasluser_unmarshall (_rpc_value, axl_false);
 		
 		/* set the value */
 		_result->array[iterator] = _value;

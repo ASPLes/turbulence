@@ -131,6 +131,8 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 			/* update remote admin flag */
 			return common_sasl_enable_remote_admin (sasl_backend, auth_id, serverName, true, &sasl_xml_db_mutex);
 		case 6:
+			msg ("received request to check if remote admin is enabled for auth_id=%s and serverName=%s",
+			     auth_id, serverName ? serverName : "");
 			/* check if the provided user is
 			 * administrator */
 			return common_sasl_is_remote_admin_enabled (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
@@ -160,9 +162,10 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 XmlRpcMethodResponse * __operate_sasl_user_5_string_string_bool_bool_int (XmlRpcMethodCall * method_call, VortexChannel * channel)
 {
 	/* error support variables */
-	char * fault_error = NULL;
-	int    fault_code  = -1;
-	int    result = false;
+	VortexCtx * ctx         = METHOD_CALL_CTX(method_call);
+	char      * fault_error = NULL;
+	int         fault_code  = -1;
+	int    result = axl_false;
 
 	/* call to the user implementation */
 	result = operate_sasl_user_5_string_string_bool_bool_int (method_call_get_param_value_as_string (method_call, 0), method_call_get_param_value_as_string (method_call, 1), method_call_get_param_value_as_int (method_call, 2), method_call_get_param_value_as_int (method_call, 3), method_call_get_param_value_as_int (method_call, 4),  &fault_error, &fault_code, channel);
@@ -174,5 +177,5 @@ XmlRpcMethodResponse * __operate_sasl_user_5_string_string_bool_bool_int (XmlRpc
 	}
 
 	/* return reply generated */
-	return CREATE_OK_REPLY (XML_RPC_BOOLEAN_VALUE, INT_TO_PTR (result));
+	return CREATE_OK_REPLY (ctx, XML_RPC_BOOLEAN_VALUE, INT_TO_PTR (result));
 }
