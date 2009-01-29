@@ -151,7 +151,7 @@ ul.images img {
 }
 
 .logo { 
-  position: absolute; left: 520px; top: 20px; z-index: 1;
+  position: absolute; left: 500px; top: 10px; z-index: 1;
 }
 
 .alt-logo img { 
