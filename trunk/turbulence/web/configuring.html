@@ -40,7 +40,7 @@
 <h2> <a name="how_is_configured">How turbulence is configured (configuration file location)</a></h2>
   
 <p>Turbulence is configured through XML 1.0 files. The intention is
-provide an easy, yet extensible way to configure turbulence, allowing
+provide an easy and extensible way to configure turbulence, allowing
  third parties to build tools to update/reconfigure it. It is
 also provided a DTD to ensure that configuration file created is
 properly constructed at a minimum syntax level.</p>
@@ -51,9 +51,13 @@ properly constructed at a minimum syntax level.</p>
  
  <pre>
 
-   >> turbulence --conf-location --debug
-   I: turbulence internal init
-   I: Default configuration file: /etc/turbulence/turbulence.conf
+   >> turbulence --conf-location
+   VERSION:         0.3.2.b3708.g3749
+   VORTEX_VERSION:  1.1.0.b3749.g3749
+   AXL_VERSION:     0.5.6.b3738.g3749
+   SYSCONFDIR:      /etc
+   TBC_DATADIR:     /usr/share
+   Default configuration file: /etc/turbulence/turbulence.conf
  </pre>
  
  <p>Alternatively you can provide your own configuration file by using

@@ -1848,8 +1848,48 @@ void       exarg_define           (char * arg_name,
 			/* string value */
 			node->string_value = value;
 			break;
-		}
+		} /* end switch */
 	} /* end if */
+
+	/* nothing to do over here */
+	return;
+}
+
+/**
+ * @brief Allows to undef the value associated and the definition
+ * itself of the option provided (arg_name).
+ *
+ * @param arg_name The argument to undef.
+ */
+void         exarg_undef            (char * arg_name)
+{
+	ExArgNodeOption * node;
+
+	/* perform some environment checks */
+	if (arg_name == NULL)
+		return;
+
+	node = exarg_lookup_node (arg_name);
+	if (node == NULL) 
+		return;
+
+	/* undef the value */
+	node->is_defined = 0;
+
+	/* check argument value */
+	switch (node->type) {
+	case EXARG_NONE:
+		/* nothing to set */
+		break;
+	case EXARG_INT:
+		/* integer value */
+		node->int_value = 0;
+		break;
+	case EXARG_STRING:
+			/* string value */
+		node->string_value = NULL;
+		break;
+	} /* end switch */
 
 	/* nothing to do over here */
 	return;

@@ -67,7 +67,7 @@ mod-sasl is activated you must configure it. This is done by updating
 
 <pre>
 
-   &lt;<span class="node">mod-sasl</span>>
+  &lt;<span class="node">mod-sasl</span>>
       <span class="comment">&lt;!--  db users:
 
          type: allows to configure the kind of format that is expected
@@ -77,7 +77,7 @@ mod-sasl is activated you must configure it. This is done by updating
             database. It can use relative paths, starting from the
             location of the current file.
 
-         serverName: essential configuration item. Attention
+         serverName: essential configuration item. Atention
             required. This attribute allows to configure the SASL
             database to be used according to the serverName. This
             serverName is a fundamental attribute configured at the
@@ -88,11 +88,14 @@ mod-sasl is activated you must configure it. This is done by updating
             notable, remote administration).  It is only allowed one
             default SASL database, that is, an <auth-db> configuration
             without serverName.
+             
+            From an administrative perspective, serverName is used to
+            provide virtual hosting configuration.
         
          format: allows to configure the format used to store and
-            retrieve keys stored. By default, if nothing is configured
+            retreive keys stored. By default, if nothing is configured
             md5 is used.  Allowed values are: plain, md5 and sha-1 (in
-            security order).  It is recommended to either use md5 or
+            security order).  It is recomended to either use md5 or
             sha-1.
 
          remote: allows to configure the remote module configuration
@@ -110,10 +113,31 @@ mod-sasl is activated you must configure it. This is done by updating
                format=<span class="attrvalue">"md5"</span> 
                location=<span class="attrvalue">"auth-db.xml"</span> 
                type=<span class="attrvalue">"xml"</span> />
-      <span class="comment">&lt;!--  allowed sasl profiles  --></span>
+      <span class="comment">&lt;!--  allowed sasl profiles: at this moment we only support
+      plain. Patches?  --></span>
       &lt;<span class="node">method-allowed</span>>
          &lt;<span class="node">method</span> value=<span class="attrvalue">"plain"</span> />
       &lt;/<span class="node">method-allowed</span>>
+      <span class="comment">&lt;!--  general sasl options applied to all SASL profiles  --></span>
+      &lt;<span class="node">login-options</span>>
+         <span class="comment">&lt;!--  number of allowed SASL login failures allowed before
+      applying the action. This is useful to avoid brute force
+      attacks. To disable login failure limit use action="none". 
+      Accepted values for "action":
+       - none : nothing is done if the limit is reached. 
+       - drop : will drop the connection inmediately.
+       --></span>
+         &lt;<span class="node">max-allowed-tries</span> action=<span class="attrvalue">"drop"</span> value=<span class="attrvalue">"3"</span> />
+         <span class="comment">&lt;!--  action to take for users with accounts disabled. In the
+      case a BEEP session tries to login with a SASL account disabled,
+      then the action configured will applied. To disable remove the
+      node or place "none".
+      Accepted values for "action":
+       - none : nothing is done if a failure on a disabled account is found.
+       - drop : will drop the connection inmediately.
+       --></span>
+         &lt;<span class="node">accounts-disabled</span> action=<span class="attrvalue">"drop"</span> />
+      &lt;/<span class="node">login-options</span>>
    &lt;/<span class="node">mod-sasl</span>>
 
 </pre>

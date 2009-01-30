@@ -140,7 +140,9 @@ void         exarg_set_obligatory   (char * arg_name);
 void         exarg_accept_free_args (int accept);
 
 void         exarg_define           (char * arg_name,
-				   char * value);
+				     char * value);
+
+void         exarg_undef            (char * arg_name);
 
 int          exarg_is_defined       (char     * arg_name);
 
