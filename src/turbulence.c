@@ -974,7 +974,7 @@ const char    * turbulence_datadir        (void)
  *
  * <h2>Vortex API </h2>
  *
- *  - <a class="el" href="http://fact.aspl.es/files/af-arch/vortex/html/index.html">Vortex Library Documentation Center</a>
+ *  - <a class="el" href="http://fact.aspl.es/files/af-arch/vortex-1.1/html/index.html">Vortex Library 1.1 Documentation Center</a>
  *
  * <h2>Turbulence API</h2>
  *
