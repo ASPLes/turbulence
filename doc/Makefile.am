@@ -35,4 +35,5 @@ build_doc:
 	cp ../web/images/url.png html/images/
 	cp ../web/images/valid-html401.png html/images/
 	cp body_back.gif html/
-	cp aspl-alt-compat-logo.png html/
+	cp ../web/images/aspl-alt-compat-logo.png html/
+	cp aspl-logo-header.png html/
