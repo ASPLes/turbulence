@@ -17,15 +17,19 @@ body {
 
 .content { 
   background: white;
-  border: 1px solid #888a85;
+  border: 1px solid #3786ea;
+  border-top: 0px;
+  border-bottom: 0px;
   /* first width, then position, then margin-left */
-  width: 620px;
-  position: absolute; left: 50%; top: 3%; z-index: 1;
-  margin-left: -310px;
-  padding: 20px;
-  padding-bottom: 0px;
-  margin-bottom: 20px;
+  width: 900px;
+  position: absolute; left: 50%; top: 0; z-index: 1;
+  margin-left: -450px;
   color: #2e3436;  
+  background: #fff url("images/content-bg.png") repeat-x; 
+}
+
+.header-content { 
+  padding: 20px;
 }
 
 .content-note { 
@@ -73,26 +77,17 @@ a img {
 }
 
 p, li { 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 h1 { 
    font-weight: lighter;
-   height: 30px;
-   font-size: 20px;
+   font-size: 30px;
    color: black;
-   font-family: impact, free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
+   font-family: TrebuchetMS, Arial, free-sans, sans-serif, sans;
    background: white;
-}
-
-h1 span { 
-  border-right: 2px solid #ef2929;
-  padding-right: 10px;
-  font-family: impact, free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
-  font-weight: normal;
-  font-size: 32px;
-  color: black;
-  background: white;
+   border-left: 5px solid #ef2929;
+   padding-left: 3px;
 }
 
 h2 { 
@@ -111,13 +106,29 @@ pre {
 .main-content-left { 
   width: 65%;
   float: left;                     
-  padding-right: 15px;
+  padding: 15px;
+  padding-top: 0px;
   border-right: 1px dotted #3465a4;
+
+}
+
+.main-content-left-80 { 
+  width: 75%;
+  float: left;                     
+  padding: 15px;
+  padding-top: 0px;
+  border-right: 1px dotted #3465a4;
+
 }
 
 .main-content-right { 
-  position: absolute; left: 450px; top: 130px; z-index: 1;
-  width: 30%;
+  padding: 0px;
+  padding-right: 7px;
+  margin: 0px;
+  width: 30%; 
+  float: right;
+  text-align: justify;
+
 }
 
 ul.news { 
@@ -151,7 +162,7 @@ ul.images img {
 }
 
 .logo { 
-  position: absolute; left: 500px; top: 10px; z-index: 1;
+  position: absolute; right: 10px; top: 20px; z-index: 1;
 }
 
 .alt-logo img { 
@@ -188,21 +199,6 @@ ul.images img {
 
 .footer-content { 
   text-align: center;
-}
-
-.menu { 
-  font-family: impact, free-sans, sans-serif, sans, TrebuchetMS, Arial, Helvetica;
-}
-
-ul.menu { 
-  list-style: none;
-  padding: 0px;
-  margin: 0px;
-}
-
-.menu a { 
-  font-weight: normal;
-  font-size: 15px;
 }
 
 .center { 
@@ -269,4 +265,43 @@ span.header {
 
 ol li.explain { 
    padding-bottom: 7px;
+}
+
+.top-menu { 
+  background: #fff url("images/menu-rule.png") repeat-x;  
+  height: 40px;
+  width: 100%;
+  color: white;
+}
+
+.menu { 
+  font-family: TrebuchetMS, Arial, free-sans, sans-serif, sans;
+}
+
+ul.menu { 
+  list-style: none;
+  padding: 0px;
+  margin: 0px;
+  padding-top: 10px;
+  text-align: center;
+}
+
+ul.menu li { 
+  display: inline;
+  padding-right: 25px;
+}
+
+.menu a { 
+  font-weight: bold;
+  font-size: 15px;
+  color: white;
+  background: none;
+}
+
+.menu a:hover { 
+  font-weight: bold;
+  font-size: 15px;
+  color: white;
+  background: none;
+  text-decoration: underline;
 }
