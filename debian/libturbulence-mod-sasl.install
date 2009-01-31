@@ -1,4 +1,5 @@
 etc/turbulence/mods-available/mod-sasl.xml
+etc/turbulence/sasl
 usr/lib/turbulence/modules/mod-sasl.a
 usr/lib/turbulence/modules/mod-sasl.so.0.0.0
 usr/lib/turbulence/modules/mod-sasl.la

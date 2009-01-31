@@ -99,6 +99,11 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("detach", NULL, EXARG_NONE,
 			   "Makes turbulence to detach from console, starting in background.");
 
+#if !defined(AXL_OS_WIN32)
+	exarg_install_arg ("pidfile", NULL, EXARG_STRING,
+			   "Allows to configure the file where turbulence will place its process identifier on startup");
+#endif
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -231,6 +236,17 @@ void turbulence_detach_process (void)
 	return;
 }
 
+#if !defined(AXL_OS_WIN32)
+/**
+ * @internal Places current process identifier into the file provided
+ * by the user.
+ */
+void turbulence_place_pidfile (void)
+{
+       
+}
+#endif
+
 int main (int argc, char ** argv)
 {
 	char          * config;
@@ -308,6 +324,13 @@ int main (int argc, char ** argv)
 		turbulence_detach_process ();
 		/* caller do not follow */
 	}
+
+#if !defined(AXL_OS_WIN32)
+	/* check here if the user has asked to place the pidfile */
+	if (exarg_is_defined ("pidfile")) {
+	        turbulence_place_pidfile ();
+	}
+#endif
 
 	/* init libraries */
 	if (! turbulence_init (ctx, vortex_ctx, config)) {
