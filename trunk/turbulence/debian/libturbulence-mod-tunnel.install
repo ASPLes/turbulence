@@ -1,4 +1,5 @@
 etc/turbulence/mods-available/mod-tunnel.xml
+etc/turbulence/tunnel
 usr/lib/turbulence/modules/mod-tunnel.a
 usr/lib/turbulence/modules/mod-tunnel.so.0.0.0
 usr/lib/turbulence/modules/mod-tunnel.la
