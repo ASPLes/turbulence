@@ -96,6 +96,9 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("conf-location", NULL, EXARG_NONE,
 			   "Allows to get the location of the turbulence configuration file that will be used by default");
 
+	exarg_install_arg ("detach", NULL, EXARG_NONE,
+			   "Makes turbulence to detach from console, starting in background.");
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -139,6 +142,92 @@ void main_reconf_signal_received (int value)
 	/* notify */
 	turbulence_reload_config (ctx, value);
 	
+	return;
+}
+
+/**
+ * @internal Implementation to detach turbulence from console.
+ */
+void turbulence_detach_process (void)
+{
+#if defined(AXL_OS_UNIX)
+	pid_t   pid;
+	/* fork */
+	pid = fork ();
+	switch (pid) {
+	case -1:
+		error ("unable to detach process, failed to executing child process");
+		exit (-1);
+	case 0:
+		/* running inside the child process */
+		msg ("running child created in detached mode");
+		return;
+	default:
+		/* child process created (parent code) */
+		break;
+	} /* end switch */
+#elif defined(AXL_OS_WIN32)
+	char                * command;
+	char                * command2;
+	DWORD                 result;
+	int                   pid;
+	STARTUPINFO           si;
+	PROCESS_INFORMATION   pi;
+	TCHAR szPath[MAX_PATH];
+
+	/* get current file name location */
+	if( !GetModuleFileName( NULL, szPath, MAX_PATH )) {
+		error ("Cannot install service (%d)", GetLastError ());
+		return;
+	}
+	/* build file name with full path */
+	command = axl_strdup_printf ("%s --ghost %s", szPath, exarg_get_string ("ghost"));
+
+	/* clear memory from variables */
+	ZeroMemory( &pi, sizeof(PROCESS_INFORMATION));
+
+	/* configure std err and std out */
+	ZeroMemory( &si, sizeof(STARTUPINFO) );
+	si.cb = sizeof(STARTUPINFO); 
+
+	/* check to extend command with log file if defined */
+	if (exarg_is_defined ("log-file")) {
+		command2 = command;
+		command  = axl_strdup_printf ("%s --log-file %s", command2, exarg_get_string ("log-file"));
+		axl_free (command2);
+	} /* end if */
+
+	msg ("starting child ghost process with: %s (error: %d)", command, GetLastError ());
+	result = CreateProcess (
+		NULL,    /* No module name (use command line) */
+		(LPTSTR) command, /* Command line */
+		NULL,    /* Process handle not inheritable */
+		NULL,    /* Thread handle not inheritable */
+		false,    /* Set handle inheritance to TRUE (important)  */
+		0,       /* No creation flags */
+		NULL,    /* Use parent's environment block */
+		NULL,    /* Use parent's starting directory  */
+		&si,     /* Pointer to STARTUPINFO structure */
+		&pi);    /* Pointer to PROCESS_INFORMATION structure */
+	
+	if (result == 0) {
+		/* drop an error message */
+		error ("Failed to execute child ghost: result=%d, GetLastError () = %d",
+		       result, GetLastError ());
+		/* notify function failure */
+		ss_tool_win32_last_error ("CreateProcess");
+	} else {
+		msg ("Session detach operation completed (CreateProcess success) result is %d\n", result);
+	}
+#else
+	/* drop an error message */
+	error ("Unable to perform detach process operation, operation not supported at (%s) %s:%d.",
+	       __AXL_PRETTY_FUNCTION__, __AXL_LINE__, __AXL_FILE__);
+#endif
+
+	/* terminate current process */
+	msg ("finishing parent process (created child: %d, parent: %d)..", pid, getpid ());
+	exit (0);
 	return;
 }
 
@@ -214,6 +303,12 @@ int main (int argc, char ** argv)
 	else 
 		msg ("using configuration file: %s", config);
 
+	/* check detach operation */
+	if (exarg_is_defined ("detach")) {
+		turbulence_detach_process ();
+		/* caller do not follow */
+	}
+
 	/* init libraries */
 	if (! turbulence_init (ctx, vortex_ctx, config)) {
 		/* free config */
@@ -234,6 +329,9 @@ int main (int argc, char ** argv)
 	msg ("about to startup configuration found..");
 	if (! turbulence_run_config (ctx))
 		return false;
+
+	/* drop a log */
+	msg ("Turbulence STARTED OK");
 
 	/* look main thread until finished */
 	vortex_listener_wait (vortex_ctx);
