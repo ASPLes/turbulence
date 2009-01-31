@@ -1,0 +1,6 @@
+turbulence (0.3.2-etch1) stable; urgency=low
+
+  * First official debian package.
+
+ -- Francis Brosnan Blázquez <francis@aspl.es>  Fri, 30 Jan 2009 17:59:37 +0100
+

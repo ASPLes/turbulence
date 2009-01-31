@@ -1,0 +1,65 @@
+Source: turbulence
+Priority: extra
+Maintainer: Francis Brosnan <francis@aspl.es>
+Build-Depends: debhelper (>= 5), autotools-dev, pkg-config, 
+  libaxl-dev (>= 0.5.3)), libreadline5-dev, libssl-dev,
+  libgsasl7-dev, libvortex-1.1-dev (>= 1.1.0)
+Standards-Version: 3.7.2
+Section: libs
+
+Package: libturbulence
+Section: libs
+Architecture: any
+Depends: libc6, libaxl1 (>= 0.5.6), libvortex-1.1 (>= 1.1.0)
+Description: BEEP application server built on top of Vortex Library
+  Turbulence is an extensible and configurable general purpose 
+  BEEP application server built on top of Vortex Library. 
+  It provides out of the box support for profile administration,
+  SASL users, system logging and more.
+
+Package: libturbulence-dev
+Section: libs
+Architecture: any
+Depends: libc6, libaxl1-dev (>= 0.5.6), libvortex-1.1-dev (>= 1.1.0)
+Description: BEEP application server built on top of Vortex Library
+  Development headers required to create turbulence modules or
+  tools.
+
+Package: turbulence-server
+Section: libs
+Architecture: any
+Depends: libturbulence (>= ${Source-Version})
+Description: BEEP application server built on top of Vortex Library
+  Turbulence is an extensible and configurable general purpose 
+  BEEP application server built on top of Vortex Library. 
+  It provides out of the box support for profile administration,
+  SASL users, system logging and more.
+
+Package: libturbulence-mod-tunnel
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-tunnel-1.1 (>= 1.1.0)
+Description: TUNNEL profile implementation for Turbulence
+  Configurable TUNNEL profile for Turbulence: an appliation level
+  gateway for any BEEP profile.
+
+Package: libturbulence-mod-sasl
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-sasl-1.1 (>= 1.1.0)
+Description: SASL profile implementation for Turbulence
+  Server side SASL module for Turbulence. BEEP authentication.
+
+Package: turbulence-utils
+Section: libs
+Architecture: any
+Depends: libturbulence (>= ${Source-Version})
+Description: Tubulence utils
+  Utils to manage turbulence features.
+
+
+
+
+
