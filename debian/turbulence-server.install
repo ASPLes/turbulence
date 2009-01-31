@@ -1,0 +1,5 @@
+usr/bin/turbulence
+usr/bin/turbulence-config
+etc/turbulence/mods-available
+etc/turbulence/turbulence.example.conf
+
