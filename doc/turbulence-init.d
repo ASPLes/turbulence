@@ -1,28 +1,11 @@
 #! /bin/sh
-### BEGIN INIT INFO
-# Provides:          skeleton
-# Required-Start:    $local_fs $remote_fs
-# Required-Stop:     $local_fs $remote_fs
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Example initscript
-# Description:       This file should be used to construct scripts to be
-#                    placed in /etc/init.d.
-### END INIT INFO
 
-# Author: Foo Bar <foobar@baz.org>
-#
-# Please remove the "Author" lines above and replace them
-# with your own name if you copy and modify this script.
-
-# Do NOT "set -e"
-
-# PATH should only include /usr/* if it runs after the mountnfs.sh script
+# default configuration
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="BEEP application server"
 NAME=turbulence
 DAEMON=/usr/bin/$NAME
-DAEMON_ARGS=" --detach"
+DAEMON_ARGS=" --detach "
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
@@ -53,9 +36,6 @@ do_start()
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \
 		$DAEMON_ARGS \
 		|| return 2
-	# Add code here, if necessary, that waits for the process to be ready
-	# to handle requests from services started subsequently which depend
-	# on this one.  As a last resort, sleep for some time.
 }
 
 #
@@ -63,6 +43,13 @@ do_start()
 #
 do_stop()
 {
+	# check pid file exists
+	if [ ! -r /var/run/$NAME.pid ]; then 
+		echo " already stoped"
+		return 1;
+	fi
+	echo  " stopped"
+
 	# Return
 	#   0 if daemon has been stopped
 	#   1 if daemon was already stopped
@@ -114,15 +101,15 @@ case "$1" in
 		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
 	esac
 	;;
-  #reload|force-reload)
+  reload)
 	#
 	# If do_reload() is not implemented then leave this commented out
 	# and leave 'force-reload' as an alias for 'restart'.
 	#
-	#log_daemon_msg "Reloading $DESC" "$NAME"
-	#do_reload
-	#log_end_msg $?
-	#;;
+	log_daemon_msg "Reloading $DESC" "$NAME"
+	do_reload
+	log_end_msg $?
+	;;
   restart|force-reload)
 	#
 	# If the "reload" option is implemented then remove the
@@ -145,9 +132,12 @@ case "$1" in
 		;;
 	esac
 	;;
+  status)
+  	echo "Not implemented yet"
+  	;;
   *)
 	#echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
-	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|reload|status|restart|force-reload}" >&2
 	exit 3
 	;;
 esac
