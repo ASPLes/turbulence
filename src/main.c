@@ -343,9 +343,10 @@ int main (int argc, char ** argv)
 	} /* end if */
 
 	/* load main turb */
-	if (config == NULL)
-		error ("Unable to find turbulence.conf file at the default location: %s/turbulence/turbulence.conf", SYSCONFDIR);
-	else 
+	if (config == NULL) {
+		abort_error ("Unable to find turbulence.conf file at the default location: %s/turbulence/turbulence.conf", SYSCONFDIR);
+		return -1;
+	} else 
 		msg ("using configuration file: %s", config);
 
 	/* check detach operation */
@@ -376,7 +377,7 @@ int main (int argc, char ** argv)
 	 * function */
 	msg ("about to startup configuration found..");
 	if (! turbulence_run_config (ctx))
-		return axl_false;
+		return -1;
 
 	/* drop a log */
 	msg ("Turbulence STARTED OK");

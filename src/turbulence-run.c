@@ -347,7 +347,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	
 	/* now check for profiles already activated */
 	if (vortex_profiles_registered (vortex_ctx) == 0) {
-		error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
+		abort_error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
 		return axl_false;
 	} /* end if */
 	

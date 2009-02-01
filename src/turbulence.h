@@ -97,8 +97,21 @@ void turbulence_color_log_enable (TurbulenceCtx * ctx,
  * 
  * @param m The error message to output.
  */
-#define error(m,...) do{turbulence_error (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_error (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
+#define error(m,...) do{turbulence_error (ctx, axl_false, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+void  turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * file, int line, const char * format, ...);
+
+/** 
+ * Drop an error msg to the console stderr without taking into
+ * consideration debug configuration.
+ *
+ * To drop an error message use:
+ * \code
+ *   abort_error ("unable to open file: %s", file);
+ * \endcode
+ * 
+ * @param m The error message to output.
+ */
+#define abort_error(m,...) do{turbulence_error (ctx, axl_true, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 
 /** 
  * Drop a msg to the console stdout.
