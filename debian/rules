@@ -62,6 +62,9 @@ install: build
 
 # install documentation
 #	cd doc/; $(MAKE) DESTDIR=$(CURDIR)/debian/tmp install-doc; cd ..
+	test -d $(CURDIR)/debian/tmp/etc || mkdir $(CURDIR)/debian/tmp/etc
+	test -d $(CURDIR)/debian/tmp/etc/init.d || mkdir $(CURDIR)/debian/tmp/etc/init.d
+	cp doc/turbulence-init.d $(CURDIR)/debian/tmp/etc/init.d/turbulence
 
 
 # Build architecture-independent files here.

@@ -1,4 +1,6 @@
 usr/bin/turbulence
 usr/bin/turbulence-config
 etc/turbulence/turbulence.example.conf
+etc/init.d/turbulence
+
 
