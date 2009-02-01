@@ -59,7 +59,7 @@
  * @param config The configuration file to load by the provided
  * turbulence context.
  * 
- * @return true if the configuration file looks ok and it is
+ * @return axl_true if the configuration file looks ok and it is
  * syncatically correct.
  */
 int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
@@ -71,7 +71,7 @@ int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 	/* check null value */
 	if (config == NULL) {
 		error ("config file not defined, terminating turbulence");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* load the file */
@@ -84,7 +84,7 @@ int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 		axl_error_free (error);
 
 		/* call to finish turbulence */
-		return false;
+		return axl_false;
 
 	} /* end if */
 	
@@ -97,7 +97,7 @@ int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 		axl_doc_free (ctx->config);
 		error ("unable to load DTD to validate turbulence configuration, error: %s", axl_error_get (error));
 		axl_error_free (error);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	if (! axl_dtd_validate (ctx->config, dtd_file, &error)) {
@@ -109,7 +109,7 @@ int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 		ctx->config = NULL;
 
 		axl_error_free (error);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	msg ("server configuration is valid..");
@@ -117,7 +117,7 @@ int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 	/* free resources */
 	axl_dtd_free (dtd_file);
 
-	return true;
+	return axl_true;
 }
 
 /** 

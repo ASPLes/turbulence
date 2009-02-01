@@ -65,7 +65,7 @@ void turbulence_run_check_clean_start (TurbulenceCtx * ctx)
 
 	if (ctx->clean_start) {
 		error ("Clean start activated, stopping turbulence due to a startup failure found"); 
-		turbulence_exit (ctx, true, true);
+		turbulence_exit (ctx, axl_true, axl_true);
 		exit (-1);
 	}
 	return;
@@ -229,7 +229,7 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
  * 
  * Later, all modules will be loaded adding profile configuration.
  *
- * @return false if the function is not able to properly start
+ * @return axl_false if the function is not able to properly start
  * turbulence or the configuration will produce bad results.
  */
 int  turbulence_run_config    (TurbulenceCtx * ctx)
@@ -251,11 +251,11 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	int                int_aux;
 #endif
 	axlError         * error;
-	int                at_least_one_listener = false;
+	int                at_least_one_listener = axl_false;
 
 	/* check ctx received */
 	if (ctx == NULL) 
-		return false;
+		return axl_false;
 
 	/* check clean start */
 	node                   = axl_doc_get (doc, "/turbulence/global-settings/clean-start");
@@ -276,7 +276,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	if (! vortex_conf_set (vortex_ctx, VORTEX_HARD_SOCK_LIMIT, int_aux, NULL)) {
 		error ("failed to set hard limit to=%s (int value=%d), terminating turbulence..",
 		       string_aux, int_aux);
-		return false;
+		return axl_false;
 	} /* end if */
 	msg ("configured max connections hard limit to: %s", string_aux);
 
@@ -286,7 +286,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	if (! vortex_conf_set (vortex_ctx, VORTEX_SOFT_SOCK_LIMIT, int_aux, NULL)) {
 		error ("failed to set soft limit to=%s (int value=%d), terminating turbulence..",
 		       string_aux, int_aux);
-		return false;
+		return axl_false;
 	} /* end if */
 	msg ("configured max connections soft limit to: %s", string_aux);
 #endif 
@@ -309,7 +309,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	if (ctx->module_dtd == NULL) {
 		error ("unable to load mod-turbulence.dtd file: %s", axl_error_get (error));
 		axl_error_free (error);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* check features here */
@@ -348,7 +348,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	/* now check for profiles already activated */
 	if (vortex_profiles_registered (vortex_ctx) == 0) {
 		error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
-		return false;
+		return axl_false;
 	} /* end if */
 	
 	/* get the first listener configuration */
@@ -374,7 +374,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 				NULL, NULL);
 			
 			/* check the listener started */
-			if (! vortex_connection_is_ok (con_listener, false)) {
+			if (! vortex_connection_is_ok (con_listener, axl_false)) {
 				/* unable to start the server configuration */
 				error ("unable to start listener at %s:%s...", 
 				     
@@ -396,7 +396,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 
 			/* flag that at least one listener was
 			 * created */
-			at_least_one_listener = true;
+			at_least_one_listener = axl_true;
 		next:
 			/* get the next port */
 			port = axl_node_get_next_called (port, "port");
@@ -410,11 +410,11 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 
 	if (! at_least_one_listener) {
 		error ("Unable to start turbulence, no listener configuration was started, either due to configuration error or to startup problems. Terminating..");
-		return false;
+		return axl_false;
 	}
 
 	/* turbulence started properly */
-	return true;
+	return axl_true;
 }
 
 /** 

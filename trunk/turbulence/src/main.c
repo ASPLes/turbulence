@@ -114,11 +114,11 @@ int  main_init_exarg (int argc, char ** argv)
 		/* terminates exarg */
 		exarg_end ();
 
-		return false;
+		return axl_false;
 	}	
 
 	/* exarg properly configured */
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -311,8 +311,8 @@ int main (int argc, char ** argv)
 	vortex_log_enable  (vortex_ctx, exarg_is_defined ("vortex-debug"));
 	vortex_log2_enable (vortex_ctx, exarg_is_defined ("vortex-debug2"));
 	if (exarg_is_defined ("vortex-debug-color")) {
-		vortex_log_enable       (vortex_ctx, true);
-		vortex_color_log_enable (vortex_ctx, true);
+		vortex_log_enable       (vortex_ctx, axl_true);
+		vortex_color_log_enable (vortex_ctx, axl_true);
 	} /* end if */
 
 	/* check console color debug */
@@ -321,7 +321,7 @@ int main (int argc, char ** argv)
 	/* enable --debug option if it is found to be defined
 	 * --color-debug */
 	if (exarg_is_defined ("color-debug"))
-		turbulence_log_enable (ctx, true);
+		turbulence_log_enable (ctx, axl_true);
 
 	/* init the vortex support module to allow finding the
 	 * configuration file */
@@ -376,7 +376,7 @@ int main (int argc, char ** argv)
 	 * function */
 	msg ("about to startup configuration found..");
 	if (! turbulence_run_config (ctx))
-		return false;
+		return axl_false;
 
 	/* drop a log */
 	msg ("Turbulence STARTED OK");
@@ -385,7 +385,7 @@ int main (int argc, char ** argv)
 	vortex_listener_wait (vortex_ctx);
 	
 	/* terminate turbulence execution */
-	turbulence_exit (ctx, false, false);
+	turbulence_exit (ctx, axl_false, axl_false);
 
 	/* terminate exarg */
 	msg ("terminating exarg library..");
