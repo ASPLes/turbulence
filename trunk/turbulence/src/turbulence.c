@@ -73,11 +73,11 @@ int  turbulence_init (TurbulenceCtx * ctx,
 {
 	/* no initialization done if null reference received */
 	if (ctx == NULL) {
-		fprintf (stderr, "Received a null turbulence context, failed to init the turbulence");
+	        abort_error ("Received a null turbulence context, failed to init the turbulence");
 		return axl_false;
 	} /* end if */
 	if (config == NULL) {
-		fprintf (stderr, "Received a null reference to the turbulence configuration, failed to init the turbulence");
+		abort_error ("Received a null reference to the turbulence configuration, failed to init the turbulence");
 		return axl_false;
 	} /* end if */
 
@@ -109,7 +109,7 @@ int  turbulence_init (TurbulenceCtx * ctx,
 
 	/*** init the vortex library ***/
 	if (! vortex_init_ctx (vortex_ctx)) {
-		error ("unable to start vortex library, terminating turbulence execution..");
+		abort_error ("unable to start vortex library, terminating turbulence execution..");
 		return axl_false;
 	} /* end if */
 
@@ -121,7 +121,7 @@ int  turbulence_init (TurbulenceCtx * ctx,
 
 	/* db list */
 	if (! turbulence_db_list_init (ctx)) {
-		error ("failed to init the turbulence db-list module");
+		abort_error ("failed to init the turbulence db-list module");
 		return axl_false;
 	} /* end if */
 
@@ -241,26 +241,30 @@ void turbulence_exit (TurbulenceCtx * ctx,
  * @internal Simple macro to check if the console output is activated
  * or not.
  */
-#define CONSOLE if (ctx->console_enabled) fprintf
+#define CONSOLE if (ctx->console_enabled || ignore_debug) fprintf
 
 /** 
  * @internal Simple macro to check if the console output is activated
  * or not.
  */
-#define CONSOLEV if (ctx->console_enabled) vfprintf
+#define CONSOLEV if (ctx->console_enabled || ignore_debug) vfprintf
 
 
 
 /** 
  * @internal function that actually handles the console error.
+ *
+ * @param ignore_debug Allows to configure if the debug configuration
+ * must be ignored (bypassed) and drop the log. This can be used to
+ * perform logging for important messages.
  */
-void turbulence_error (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...)
+void turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * file, int line, const char * format, ...)
 {
 	/* get turbulence context */
 	va_list            args;
 	
 	/* check extended console log */
-	if (ctx->console_debug3) {
+	if (ctx->console_debug3 || ignore_debug) {
 #if defined(AXL_OS_UNIX)	
 		if (ctx->console_color_debug) {
 			CONSOLE (stderr, "(proc:%d) [\e[1;31merr\e[0m] (%s:%d) ", ctx->pid, file, line);
@@ -438,6 +442,7 @@ void turbulence_msg (TurbulenceCtx * ctx, const char * file, int line, const cha
 {
 	/* get turbulence context */
 	va_list            args;
+	axl_bool           ignore_debug = axl_false;
 
 	/* check extended console log */
 	if (ctx->console_debug3) {
@@ -480,6 +485,7 @@ void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, con
 {
 	/* get turbulence context */
 	va_list            args;
+	axl_bool           ignore_debug = axl_false;
 
 	/* check extended console log */
 	if (ctx->console_debug3) {
@@ -522,6 +528,7 @@ void turbulence_msg2 (TurbulenceCtx * ctx, const char * file, int line, const ch
 {
 	/* get turbulence context */
 	va_list            args;
+	axl_bool           ignore_debug = axl_false;
 
 	/* check second level debug */
 	if (! ctx->console_debug2)
@@ -567,6 +574,7 @@ void turbulence_wrn (TurbulenceCtx * ctx, const char * file, int line, const cha
 {
 	/* get turbulence context */
 	va_list            args;
+	axl_bool           ignore_debug = axl_false;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
@@ -608,6 +616,7 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
 {
 	/* get turbulence context */
 	va_list            args;
+	axl_bool           ignore_debug = axl_false;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
