@@ -62,7 +62,7 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 						      int        * added_size)
 {
 	int      iterator = 0;
-	int      result   = false;
+	int      result   = axl_false;
 
 	/* reset additional size value */
 	*added_size = 0;
@@ -74,7 +74,7 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 	 * should be expanded into '.*' */
 	if (expression_size == 1 && expression [0] == '*') {
 		*added_size = 1;
-		return true;
+		return axl_true;
 	} /* end if */
 
 	/* iterate over all content defined */
@@ -82,13 +82,13 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 
 		/* check for .* */
 		if (expression [iterator] == '*' && expression [iterator - 1] != '.' ) {
-			result = true;
+			result = axl_true;
 			(*added_size) += 1;
 		}
 
 		/* check for \/ */
 		if (expression [iterator] == '/' && expression [iterator - 1] != '\\' ) {
-			result = true;
+			result = axl_true;
 			(*added_size) += 1;
 		}
 
@@ -112,7 +112,7 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 	int    iterator  = 0;
 	int    iterator2 = 0;
 	char * result;
-	axl_return_val_if_fail (expression, false);
+	axl_return_val_if_fail (expression, axl_false);
 
 	/* allocate the memory to be returned */
 	result = axl_new (char, expression_size + additional_size + 1);
@@ -183,7 +183,7 @@ const char * turbulence_expr_check_negative_expr (const char * expression, int  
 	    (((iterator + 2) < length) && expression[iterator] == 'n' && expression[iterator + 1] == 'o' && expression[iterator + 2] == 't')) {
 		/* negative expression found, return the updated
 		 * reference */
-		*negative = true;
+		*negative = axl_true;
 		if (expression[iterator] == 'n')
 			return (expression  + iterator + 4);
 		else
@@ -222,7 +222,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 	TurbulenceExpr * expr;
 	const char     * error;
 	int              erroroffset;
-	int              dealloc = false;
+	int              dealloc = axl_false;
 	int              additional_size;
 
 	/* create the turbulence expression node */
@@ -243,7 +243,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 		msg ("NOTE: expanding expression: '%s'..", expression);
 		expression = turbulence_expr_copy_and_escape (expression, strlen (expression), additional_size);
 		msg ("      to: '%s'..", expression);
-		dealloc    = true;
+		dealloc    = axl_true;
 	} /* end if */
 	
 	/* compile expression */
@@ -288,14 +288,14 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
  *
  * @param subject The string that is going to be matched.
  *
- * @return The function return true in the case the expression (expr)
+ * @return The function return axl_true in the case the expression (expr)
  * match the string provided (subject).
  */
 int  turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
 {
-	/* return false if either values received are null */
+	/* return axl_false if either values received are null */
 	if (subject == NULL || expr == NULL)
-		return false;
+		return axl_false;
 
 	/* check against the pcre expression */
 	if (expr->negative) {

@@ -236,12 +236,12 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 				/* filter the channel creation because
 				 * the serverName provided doesn't
 				 * match */
-				return true;
+				return axl_true;
 			} /* end if */
 		} /* end if */
 
 		/* profile properly matched, including the serverName */
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* now check for second level profile path configurations,
@@ -288,7 +288,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 										     item->ppath_item, 
 										     state, uri, serverName, channel_num, connection, profile_content)) {
 							/* profile allowed, do not filter */
-							return false;
+							return axl_false;
 						} /* end if */
 
 					} /* end if */
@@ -306,7 +306,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		iterator++;
 	} /* end if */
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -353,7 +353,7 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
 		}
 		
 		/* profile allowed, do not filter */
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* drop an error message if a definitive channel request was
@@ -376,7 +376,7 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
 	
 
 	/* filter any other option */
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -429,7 +429,7 @@ int  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 		 * connection */
 		error ("no profile path def match, rejecting connection: id=%d, src=%s", 
 		       vortex_connection_get_id (connection), src);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* create and store */
@@ -446,7 +446,7 @@ int  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	 * and profiles are accepted */
 	vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask, state);
 	
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -465,13 +465,13 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 	VortexCtx          * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* check turbulence context received */
-	v_return_val_if_fail (ctx, false);
+	v_return_val_if_fail (ctx, axl_false);
 	
 	/* parse all profile path configurations */
 	pdef = axl_doc_get (turbulence_config_get (ctx), "/turbulence/profile-path-configuration/path-def");
 	if (pdef == NULL) {
 		error ("No profile path configuration was found, you must set at least one profile path.");
-		return false;
+		return axl_false;
 	} /* end if */
 	
 	/* get the parent node */
@@ -537,7 +537,7 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 	msg ("profile path definition ok..");
 
 	/* return ok code */
-	return true;
+	return axl_true;
 }
 
 void __turbulence_ppath_free_item (TurbulencePPathItem * item)

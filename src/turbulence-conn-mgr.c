@@ -183,14 +183,14 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
 
 	/* check the channel profile */
 	if (! axl_cmp (vortex_channel_get_profile (channel), broadcast->profile)) 
-		return false;
+		return axl_false;
 
 	/* channel found send the message */
 	msg ("sending notification on channel running profile: %s", broadcast->profile);
 	vortex_channel_send_msg (channel, broadcast->message, broadcast->message_size, NULL);
 
-	/* always return true to make the process to continue */
-	return false;
+	/* always return axl_true to make the process to continue */
+	return axl_false;
 }
 
 /** 
@@ -219,13 +219,13 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
  * message is sent.
  *
  * @param filter_conn Connection filtering function. If it returns
- * true, the connection is filter.
+ * axl_true, the connection is filter.
  *
  * @param filter_data User defined data provided to the filter
  * function.
  * 
- * @return true if the broadcast message was sent to all
- * connections. The function could return false but it has no support
+ * @return axl_true if the broadcast message was sent to all
+ * connections. The function could return axl_false but it has no support
  * to notify which was the connection(s) or channel(s) that failed.
  */
 int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
@@ -243,9 +243,9 @@ int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	TurbulenceBroadCastMsg * broadcast;
 	TurbulenceConnMgrState * state;
 
-	v_return_val_if_fail (message, false);
-	v_return_val_if_fail (message_size >= 0, false);
-	v_return_val_if_fail (profile, false);
+	v_return_val_if_fail (message, axl_false);
+	v_return_val_if_fail (message_size >= 0, axl_false);
+	v_return_val_if_fail (profile, axl_false);
 
 	/* lock and send */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
@@ -296,7 +296,7 @@ int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	axl_hash_cursor_free (cursor);
 	axl_free (broadcast);
 
-	return true;
+	return axl_true;
 }
 
 /** 
