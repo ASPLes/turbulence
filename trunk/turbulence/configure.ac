@@ -146,7 +146,7 @@ CHECK_LIB_PCRE([pcre_found="yes"],[pcre_found="no"])
 AM_CONDITIONAL(ENABLE_PCRE_SUPPORT, test ".$pcre_found" = ".yes")
 
 dnl check for doxygen documentation
-AC_ARG_ENABLE(turbulence-doc, [  --enable-turbulence-doc       Enable building Turbulence documentation (doxygen required) [default=yes]], 
+AC_ARG_ENABLE(turbulence-doc, [  --enable-turbulence-doc    Enable building Turbulence documentation (doxygen required) [default=yes]], 
 	      enable_turbulence_doc="$enableval", 
 	      enable_turbulence_doc=yes)
 if test x$enable_turbulence_doc = xyes ; then
@@ -161,10 +161,18 @@ AC_ARG_ENABLE(enable-tbc-mod-gen, [  --enable-tbc-mod-gen       Enable building 
 AM_CONDITIONAL(ENABLE_TBC_MOD_GEN, test "x$enable_tbc_mod_gen" = "xyes")
 
 dnl check to build tbc-dblist-mgr tool
-AC_ARG_ENABLE(enable-tbc-dblist-mgr, [  --enable-tbc-dblist-mgr       Enable building tbc-dblist-mgr [default=yes]], 
+AC_ARG_ENABLE(enable-tbc-dblist-mgr, [  --enable-tbc-dblist-mgr    Enable building tbc-dblist-mgr [default=yes]], 
 	      enable_tbc_dblist_mgr="$enableval", 
 	      enable_tbc_dblist_mgr=yes)
 AM_CONDITIONAL(ENABLE_TBC_DBLIST_MGR, test "x$enable_tbc_dblist_mgr" = "xyes")
+
+dnl check for statusdir
+AC_ARG_ENABLE(status-dir, [  --status-dir=DIR          Allows to configure the status directory. 
+                                This directory is used to place pid file and status info. 
+                                Default: /var/run],
+              statusdir="$enableval",
+	      statusdir="/var/run")
+AC_SUBST(statusdir)
 
 # support to check some dependencies for exarg library embeded into
 # turbulence core code
@@ -221,6 +229,7 @@ echo "------------------------------------------"
 echo "--       Turbulence Settings            --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
+echo "   Status directory:               [$statusdir]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
 if test "$pcre_found" = "no" ; then
 	echo "NOTE: building turbulence without pcre support will"

@@ -99,11 +99,6 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("detach", NULL, EXARG_NONE,
 			   "Makes turbulence to detach from console, starting in background.");
 
-#if !defined(AXL_OS_WIN32)
-	exarg_install_arg ("pidfile", NULL, EXARG_STRING,
-			   "Allows to configure the file where turbulence will place its process identifier on startup");
-#endif
-
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -146,6 +141,11 @@ void main_reconf_signal_received (int value)
 {
 	/* notify */
 	turbulence_reload_config (ctx, value);
+
+#if defined(AXL_OS_UNIX)
+	/* reinstall signal */
+	signal (SIGHUP,  main_reconf_signal_received);
+#endif
 	
 	return;
 }
@@ -236,16 +236,45 @@ void turbulence_detach_process (void)
 	return;
 }
 
-#if !defined(AXL_OS_WIN32)
 /**
  * @internal Places current process identifier into the file provided
  * by the user.
  */
 void turbulence_place_pidfile (void)
 {
-       
+	FILE * pid_file = NULL;
+	int    pid      = getpid ();
+	char   buffer[20];
+	int    size;
+
+	/* open pid file or create it to place the pid file */
+	pid_file = fopen (PIDFILE, "w");
+	if (pid_file == NULL) {
+		error ("Unable to open pid file at: %s", PIDFILE);
+		return;
+	} /* end if */
+	
+	/* stringfy pid */
+	size = axl_stream_printf_buffer (buffer, 20, NULL, "%d", pid);
+	msg ("signaling PID %d at %s", pid, PIDFILE);
+	fwrite (buffer, size, 1, pid_file);
+
+	fclose (pid_file);
+	return;
 }
-#endif
+
+
+/**
+ * @internal Removes pid file to avoid poiting to another process with
+ * the same pid after stoping turbulence.
+ */ 
+void turbulence_remove_pidfile (void)
+{
+	/* remove pid file */
+	turbulence_unlink (PIDFILE);
+
+	return;
+}
 
 int main (int argc, char ** argv)
 {
@@ -325,12 +354,8 @@ int main (int argc, char ** argv)
 		/* caller do not follow */
 	}
 
-#if !defined(AXL_OS_WIN32)
 	/* check here if the user has asked to place the pidfile */
-	if (exarg_is_defined ("pidfile")) {
-	        turbulence_place_pidfile ();
-	}
-#endif
+	turbulence_place_pidfile ();
 
 	/* init libraries */
 	if (! turbulence_init (ctx, vortex_ctx, config)) {
@@ -369,6 +394,9 @@ int main (int argc, char ** argv)
 	/* free context (the very last operation) */
 	turbulence_ctx_free (ctx);
 	vortex_ctx_free (vortex_ctx);
+
+	/* remote pid state file */
+	turbulence_remove_pidfile ();
 
 	return 0;
 }
