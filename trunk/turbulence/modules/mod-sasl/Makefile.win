@@ -10,7 +10,8 @@ OBJ  =  mod-sasl.o \
 	sasl_radmin_array_sasluserarray_xml_rpc.o \
 	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.o 
 
-DLL  = mod-sasl.dll
+DLL   = mod-sasl.dll
+TOOLS = tbc-sasl-conf
 
 # libraries 
 LIBS = -Wall -g \
@@ -39,7 +40,7 @@ RM = rm -f
 
 config_files = remote-admins.xml sasl.conf auth-db.xml
 
-all: $(DLL) $(config_files)
+all: $(DLL) $(TOOLS) $(config_files)
 
 remote-admins.xml: remote-admins.example.xml
 	cp $< $@
@@ -56,6 +57,9 @@ $(DLL): $(OBJ)
 # is not requiered because gcc automatically get an import library from the dll.
 # -Wl,--out-implib,libvortex.lib
 	$(CC) -mconsole -shared  --export-all-symbols $(OBJ) -o $(DLL) $(LIBS)
+
+tbc-sasl-conf: common-sasl.o tbc-sasl-conf.o
+	$(CC) -mconsole -shared  --export-all-symbols $< -o $@ $(LIBS)
 
 %.o: %.c
 	$(CC) -c $< -o $@ $(CFLAGS)
