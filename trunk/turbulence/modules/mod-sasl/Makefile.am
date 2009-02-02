@@ -6,7 +6,9 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
 	sasl_radmin_types.h
 
-EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h  mod-sasl.win32.xml
+EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h \
+             mod-sasl.win32.xml $(sasl_radmin_files) sasl.example.conf \
+	     auth-db.example.xml remote-admins.example.xml
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \

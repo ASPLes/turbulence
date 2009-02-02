@@ -170,8 +170,7 @@ ul.images img {
 }
 
 .alt-logo { 
-  float: right;
-  margin-top: -40px;
+  position: absolute; right: 20px; top: 20px; z-index: 1;
 }
 
 .footer-notice { 
