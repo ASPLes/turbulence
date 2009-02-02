@@ -35,14 +35,16 @@ dnl      Email address:
 dnl         info@aspl.es - http://fact.aspl.es
 dnl
 
-AC_INIT(src/main.c)
+AC_INIT(turbulence,0.3.2.b3769.g3769)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
 
 AC_CONFIG_AUX_DIR(.)
 dnl allow including long file names 
-AM_INIT_AUTOMAKE(turbulence, $TURBULENCE_VERSION)
+dnl AM_INIT_AUTOMAKE(turbulence, $TURBULENCE_VERSION)
+AM_INIT_AUTOMAKE([no-define tar-ustar])
+
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Turbulence:  BEEP application server
-# Copyright (C) 2007 Advanced Software Production Line, S.L.
+# Copyright (C) 2009 Advanced Software Production Line, S.L.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public License
@@ -29,12 +29,12 @@
 #         
 #     Postal address:
 #        Advanced Software Production Line, S.L.
-#        C/ Dr. Michavila N� 14
-#        Coslada 28820 Madrid
+#        C/ Antonio Suarez Nº10 Edificio Alius A, Despacho 102
+#        Alcalá de Henares 28802
 #        Spain
 #
 #     Email address:
-#        info@aspl.es - http://fact.aspl.es
+#        info@aspl.es - http://www.aspl.es/turbulence
 #
 
 PACKAGE="Turbulence:  BEEP application server"
@@ -56,12 +56,18 @@ PACKAGE="Turbulence:  BEEP application server"
 echo "Generating configuration files for $PACKAGE, please wait...." 
 echo; 
 
+# place version into configure.ac file due to limitations of AC_INIT
+version=`cat VERSION`
+pkg="turbulence"
+sed -i "s/AC_INIT(.*,.*)/AC_INIT($pkg,$version)/" configure.ac
+
 touch NEWS README AUTHORS ChangeLog 
 libtoolize --force;
 aclocal $ACLOCAL_FLAGS; 
 autoheader --warnings=error;
 automake --add-missing --Werror;
 autoconf --force --warnings=error;
+
 
 
 ./configure $@ --enable-maintainer-mode --enable-compile-warnings
