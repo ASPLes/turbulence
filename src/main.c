@@ -219,8 +219,6 @@ void turbulence_detach_process (void)
 		/* drop an error message */
 		error ("Failed to execute child ghost: result=%d, GetLastError () = %d",
 		       result, GetLastError ());
-		/* notify function failure */
-		ss_tool_win32_last_error ("CreateProcess");
 	} else {
 		msg ("Session detach operation completed (CreateProcess success) result is %d\n", result);
 	}
