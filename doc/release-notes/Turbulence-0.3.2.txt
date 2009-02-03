@@ -1,0 +1,352 @@
+                     -= Turbulence 0.3.2 =-
+                      "Vicarious release"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce the
+  Turbulence 0.3.2 "Vicarious" release: an open source BEEP
+  application server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules and allows to
+  implement server side profiles that are used and combined later with
+  other profiles through run time configuration.
+
+  Turbulence is written to make easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://www.sf.net/projects/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+  General update to make turbulence to use Vortex Library 1.1
+  API. First release with support to run Turbulence on Windows.
+
+  Several bugs and minor changes to make Turbulence more usable.
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.3.0
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Added initial changes to make turbulence to be compilable on
+  windows. More work required.
+
+* [fix] Making the base library to add an special search path if
+  windows platform is detected. Updated main entry point to show
+  parameters configured if provided --conf-location (SYSCONFDIR,
+  TBC_DATADIR, VERSION).
+
+* [fix] mod-sasl: Updated installation process and file names to not
+  overwrite existing sasl configuration installed on the
+  system. Making configuration files and auth backend to be installed
+  as examples.
+
+* [fix] Initial changes to fully compile the turbulence project, and
+  properly run regression test on windows. Nice!
+
+* [new] Adding module xml pointers for win32.
+
+* [fix] Updated source code to better support windows platform.
+  
+* [fix] Updated default turbulence.example.conf to fix an error and to
+  include the default directory used on windows.
+
+* [fix] Updated turbulence main module to hold all its global
+  information into a single configurable structure. Removing library
+  state.
+
+* [fix] Removed changes previously done..
+
+* [fix] Flagging all variables as static.
+
+* [fix] More updates to the turbulence engine to make its private data
+  to be controlled by a context object.
+
+* [fix] More changes to make the turbulence engine store store its
+  state into a single object.
+
+* [fix] More changes to change turbulence to a context model.
+
+* [fix] More changes to make turbulence fully context based. Several
+  API updated to make the server to use a particular context created.
+
+* [fix] More changes and API to make turbulence engine to be
+  state-less, entirely driven by TurbulenceCtx.
+
+* [fix] Updated turbulence db-list API to store the context that
+  created the list (internally) to later use it.
+
+* [fix] Updated turbulence module API to store the context that
+  created the module to later use it.
+
+* [fix] Making turbulence regression test to properly compile
+  and execute. 
+
+* [fix] Making mod-test to use the new interface to receive a
+  configure the turbulence and vortex context.
+
+* [fix] More fixing to the tool to support the new context based
+  model.  Include some code to produce the module pointer for the
+  windows platform.
+
+* [fix] More updates to make turbulence to work with the new context
+  based model, integrating all changes done. Still not fully working..
+
+* [fix] Fixed not properly handling while opening db-list twice.
+
+* [fix] making vortex_init_ctx to not configure the context
+  (vortex_ctx_ctx).
+
+* [fix] Restored -ansi flag.
+
+* [fix] Fixed xml-rpc-gen which wasn't initializing vortex support
+  cleanup API. Fixed some calls to axl_stream_get_until_ref
+
+* [fix] General update to make the turbulence to use the new 1.1 API
+  provided by Vortex.
+
+* [fix] Fixed bug inside turbulence connection manager which was
+  causing to segfault on broadcast.
+
+* [fix] Updated pkg-config file to require vortex-1.1 rather than
+  vortex.
+
+* [fix] General update to the initialization code. Updated some
+  startup path to better fit to windows.
+
+* [new] Unified turbulence datadir and sysconfdir location through two
+  functions configured at compilation time. API added:
+
+   - turbulence_sysconfdir
+   - turbulence_datadir
+
+* [fix] Updated all turbulence code (modules and libraries) using the
+  SYSCONFDIR and TBC_DATADIR variable, replacing them with new
+  functions added.
+
+* [fix] Fixed tbc-dblist-mgr to properly configure the default search
+  path. Bug exposed by the windows platform.
+
+* [fix] Commiting missing Makefile.win files...
+
+* [fix] mod-sasl: fixing wrong remote-admins.xml base file creation
+  inside Makefile.win.
+
+* [fix] Updated Makefile.am files to remove the reference to DATADIR,
+  making all the code to use the turbulence_datadir () function.
+
+* [fix] More updates to the Makefile.am files to remove references to
+  -DSYSCONFDIR no longer valid. Updated modules to include into the
+  distribution all *.win32.xml files (module pointers).
+
+* [fix] Updating source code due to change notification inside vortex.
+  Updated Makefile.am process to get a reference to new
+  vortex-tunnel-1.1 location.
+
+* [fix] Several updates to conform changes on Vortex 1.1 API.
+
+* [fix] Updated documentation adding missing modules (turbulence ctx).
+
+* [fix] Moved all project files to utf-8 encoding.
+
+* [new] Added support to TurbulenceCtx type to store arbitrary user
+  defined data. API added:
+
+   - turbulence_ctx_set_data
+   - turbulence_ctx_set_data_full
+   - turbulence_ctx_get_data
+
+* [fix] Fixed turbulence_create_dir which wasn't using a proper mode
+  value while calling to mkdir.
+
+* [fix] Fixed profile path implementation to take advantage of the
+  change introduced (vortex-profile-mask-func-01).
+
+* [fix] Making turbulence to use the new component
+  libvortex-xml-rpc-1.1.  Updated mod-sasl code to use new XML-RPC
+  module.
+
+* [fix] General update to the turbulence mod-sasl code to use the new
+  sasl independent component.
+
+* [fix] General update to make turbulence to conform the new API
+  provided by vortex-1.1.
+
+* [fix] Fixed autoconf installation to include sasl example files.
+  Updated autoconfigure notification about missing libpcre to warn the
+  user with the features that will be disabled.
+
+* [fix] Renamed config.dtd and db-list.dtd into turbulence-config.dtd
+  and turbulence-db-list.dtd to support being included in-line.
+
+* [new] mod-sasl: updated mod-sasl to support dropping connections
+  that have an attempt to log with an account disabled
+  (accounts-disabled). Added support to limit number of tries for SASL
+  logins until the connection is dropped (max-allowed-tries).
+
+* [new] mod-sasl: Updated sasl-radmin.idl definition to check if a user exists 
+  before creating the account. Updated common-sasl module to also check
+  this.
+
+* [new] mod-sasl: Making mod-sasl to also support clean-start feature.
+
+* [new] mod-sasl: Making mod-sasl to include the DTD inlined
+  (common-sasl.dtd) to avoid placing code to locate this (and to
+  bundle with binaries).
+
+* [new] tbc-mod-gen: Making the tool to include the DTD inside the
+  code.
+
+* [fix] Disabled libexarg dependency, now included at compilation
+  time. This will save people from including a library with two
+  files. Updated Makefiles to allow updating them.
+
+* [new] Updated turbulence-db-list module to inline DTD used to
+  validate lists loaded. Now the code do not require an external DTD
+  to work.
+
+* [new] Moved clean-start attribute into the context (TurbulenceCtx)
+  to avoiding making several context to use the same value.
+
+* [new] General update into the profile path module to move the
+  regular expression support into a new module allowing not only the
+  ppath module to use it but modules extending turbulence. API added:
+
+   - TurbulenceExpr (type)
+   - turbulence_expr_compile
+   - turbulence_expr_match
+   - turbulence_expr_free
+
+* [new] Making turbulence-config to load its DTD from an inline
+  definition created and maintained by axl-knife.
+
+* [fix] Fixed turbulence finalization to avoid stopping the API after
+  module unload and similar situations (handlers accessing to memory
+  regions not available).
+
+* [new] Making turbulence module loading to also validate xml module
+  pointers with a in-line DTD. Moved into the public API, directory
+  module loading function. API added:
+
+   - turbulence_run_load_modules_from_path
+
+* [new] Moved clean-start checking into the public API to allow
+  turbulence modules to also implement clean start. API added:
+
+   - CLEAN_START (macro, simple access)
+   - turbulence_run_check_clean_start (implementation).
+
+* [fix] Making turbulence server to activate debug, with terminal
+  colors if --color-debug is found (no longer requiring to also
+  provide --debug).
+
+* [fix] Updated configure process to make no longer required to have
+  libexarg installed. Making libpcre to be a required dependency
+  rather optional like until now. Several fixings into the regression
+  test.
+
+* [fix] mod-sasl: committing change into dtd to allow defining
+  serverName domain to which applies the sasl auth backend.
+
+* [fix] Committing changes to compile on windows and run regression
+  test.
+
+* [fix] Updates to conform axl-bool-removal-01 change notification.
+
+* [fix] Making turbulence to force using new axl and vortex versions.
+  Updated mod-tunnel to avoid using vortex_tunnel_is_enabled. Function
+  no longer available.
+
+* [new] Added portable unlink function. API added:
+
+  - turbulence_unlink
+
+* [fix] mod-sasl: making remote administration to be disabled if
+  remote is configured to "no", even having a DB configured.
+
+* [fix] mod-sasl: updating sasl-radmin xml-rpc files due to updates on
+  vortex.
+
+* [fix] Removing BOSH references...
+
+* [new] Added initial support for debian packages.
+
+* [new] Added support to start in background (--detach option).
+
+* [fix] More debian package fixings.
+
+* [new] Added initial support for --pidfile which allows to configure
+  a file where the effective process identifier will be placed.
+
+* [fix] Fixed configuration example to be usable without modification.
+
+* [new] Adding turbulence init.d file
+
+* [fix] Fixed SIGHUP handling for server reconfiguration. The signal
+  wasn't armed after handling the signal.
+
+* [new] Making turbulence to create a pidfile used by init scripts to
+  better support service stop/start.
+
+* [new] Added initial working init.d script for turbulence.
+
+* [fix] Initial finished support for debian packages for turbulence.
+
+* [fix] Minor changes to remove false/true references replaced by
+  axl_false/axl_true.
+
+* [new] Added new macro to drop startup errors to console without
+  taking into consideration debug configuration (so the user always
+  get this information).  Used this macro to flag all critical startup
+  errors. API added:
+
+   - abort_error
+
+* [fix] General changes to make turbulence to compile and run
+  on microsoft windows. Updated installer to include latest 
+  pieces from vortex and axl. Included missing compilation of
+  tbc-sasl-conf tool.
+
+About Us
+~~~~~~~~
+
+  ASPL (Advanced Software Production Line) is a Spanish company that
+  provides services and support to introduce open source products into
+  organizations.
+
+  It has more than 8 years of experience and its main development line
+  is to provide software development and support to install GNU/Linux
+  enterprise servers.
+
+  Contact us, English or Spanish, to get commercial support and/or
+  BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+3th feb 2009, Madrid (Spain)
+  
+
