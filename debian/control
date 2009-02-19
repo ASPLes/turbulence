@@ -20,7 +20,7 @@ Description: BEEP application server built on top of Vortex Library
 Package: libturbulence-dev
 Section: libs
 Architecture: any
-Depends: libc6, libaxl1-dev (>= 0.5.6), libvortex-1.1-dev (>= 1.1.0)
+Depends: libc6, libaxl-dev (>= 0.5.6), libvortex-1.1-dev (>= 1.1.0)
 Description: BEEP application server built on top of Vortex Library
   Development headers required to create turbulence modules or
   tools.
