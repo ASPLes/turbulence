@@ -261,6 +261,20 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	node                   = axl_doc_get (doc, "/turbulence/global-settings/clean-start");
 	ctx->clean_start       = (HAS_ATTR_VALUE (node, "value", "yes"));
 
+	/* check log configuration */
+	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");
+	if (HAS_ATTR_VALUE (node, "enabled", "yes")) {
+		/* init the log module */
+		turbulence_log_init (ctx);
+		
+		/** NOTE: do not move log reporting initialization
+		 * from here even knowing some logs (at the very
+		 * begin) will not be registered. This is because this
+		 * is the very earlier place where log can be
+		 * initializad: configuration file was red and clean
+		 * start configuration is also read. */
+	} /* end if */
+
 	/* configure max connection settings here */
 	node       = axl_doc_get (doc, "/turbulence/global-settings/connections/max-connections");
 
@@ -290,13 +304,6 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	} /* end if */
 	msg ("configured max connections soft limit to: %s", string_aux);
 #endif 
-
-	/* check log configuration */
-	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");
-	if (HAS_ATTR_VALUE (node, "enabled", "yes")) {
-		/* implement log reporting */
-		
-	} /* end if */
 
 	node = axl_doc_get (doc, "/turbulence/global-settings/tls-support");
 	if (HAS_ATTR_VALUE (node, "enabled", "yes")) {
