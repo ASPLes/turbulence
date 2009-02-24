@@ -116,9 +116,6 @@ int  turbulence_init (TurbulenceCtx * ctx,
 	/*** not required to initialize axl library, already done by vortex ***/
 	msg ("turbulence internal init ctx: %p, vortex ctx: %p", ctx, vortex_ctx);
 
-	/* init the log module */
-	turbulence_log_init (ctx);
-
 	/* db list */
 	if (! turbulence_db_list_init (ctx)) {
 		abort_error ("failed to init the turbulence db-list module");

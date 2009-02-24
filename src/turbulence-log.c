@@ -51,6 +51,20 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 
 	/* check log reporting */
 	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");
+	if (node == NULL) {
+		abort_error ("Unable to find log configuration <turbulence/global-settings/log-reporting>");
+		CLEAN_START(ctx);
+		return;
+	} /* end if */
+
+	/* check enabled attribute */
+	if (! HAS_ATTR (node, "enabled")) {
+		abort_error ("Missing attribute 'enabled' located at <turbulence/global-settings/log-reporting>. Unable to determine if log is enabled");
+		CLEAN_START(ctx);
+		return;
+	}
+
+	/* check if log reporting is enabled or not */
 	if (! HAS_ATTR_VALUE (node, "enabled", "yes")) {
 		msg ("log reporting to file disabled");
 		return;
@@ -60,7 +74,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_child_called (node, "general-log");
 	ctx->general_log = fopen (ATTR_VALUE (node, "file"), "a");
 	if (ctx->general_log == NULL) {
-		error ("unable to open general log: %s", ATTR_VALUE (node, "file"));
+		abort_error ("unable to open general log: %s", ATTR_VALUE (node, "file"));
+		CLEAN_START (ctx);
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
 	} /* end if */
@@ -70,7 +85,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_child_called (node, "error-log");
 	ctx->error_log = fopen (ATTR_VALUE (node, "file"), "a");
 	if (ctx->error_log == NULL) {
-		error ("unable to open error log: %s", ATTR_VALUE (node, "file"));
+		abort_error ("unable to open error log: %s", ATTR_VALUE (node, "file"));
+		CLEAN_START (ctx);
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
 	} /* end if */
@@ -80,7 +96,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_child_called (node, "access-log");
 	ctx->access_log  = fopen (ATTR_VALUE (node, "file"), "a");
 	if (ctx->access_log == NULL) {
-		error ("unable to open access log: %s", ATTR_VALUE (node, "file"));
+		abort_error ("unable to open access log: %s", ATTR_VALUE (node, "file"));
+		CLEAN_START (ctx);
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
 	} /* end if */
@@ -89,7 +106,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_child_called (node, "vortex-log");
 	ctx->vortex_log  = fopen (ATTR_VALUE (node, "file"), "a");
 	if (ctx->vortex_log == NULL) {
-		error ("unable to open vortex log: %s", ATTR_VALUE (node, "file"));
+		abort_error ("unable to open vortex log: %s", ATTR_VALUE (node, "file"));
+		CLEAN_START (ctx);
 	} else {
 		msg ("opened log: %s", ATTR_VALUE (node, "file"));
 	} /* end if */
