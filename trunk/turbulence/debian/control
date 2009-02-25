@@ -48,7 +48,7 @@ Package: libturbulence-mod-sasl
 Section: libs
 Architecture: any
 Depends: turbulence-server (>= ${Source-Version}), 
-  libvortex-sasl-1.1 (>= 1.1.0)
+  libvortex-sasl-1.1 (>= 1.1.0), libvortex-xml-rpc-1.1 (>= 1.1.0)
 Description: SASL profile implementation for Turbulence
   Server side SASL module for Turbulence. BEEP authentication.
 
