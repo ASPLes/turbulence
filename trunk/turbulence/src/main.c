@@ -99,6 +99,9 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("detach", NULL, EXARG_NONE,
 			   "Makes turbulence to detach from console, starting in background.");
 
+	exarg_install_arg ("disable-sigint", NULL, EXARG_NONE,
+			   "Allows to disable SIGINT handling done by Turbulence. This option is only useful for debugging purposes..");
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -288,10 +291,11 @@ int main (int argc, char ** argv)
 	vortex_ctx = vortex_ctx_new ();
 
 	/*** configure signal handling ***/
-	signal (SIGINT,  main_terminate_signal_received);
+	if (! exarg_is_defined ("disable-sigint"))
+		signal (SIGINT,  main_terminate_signal_received); 
 	signal (SIGSEGV, main_terminate_signal_received);
 	signal (SIGABRT, main_terminate_signal_received);
-	signal (SIGTERM, main_terminate_signal_received);
+	signal (SIGTERM, main_terminate_signal_received); 
 #if defined(AXL_OS_UNIX)
 	signal (SIGKILL, main_terminate_signal_received);
 	signal (SIGQUIT, main_terminate_signal_received);
