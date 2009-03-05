@@ -14,7 +14,7 @@
 
 <rfc ipr="none" docName="draft-brosnan-beep-limit-close">
 <front>
-<title>Limiting BEEP session close phase</title>
+<title>Limiting BEEP close and reply time </title>
 
 <author initials='F.B.B.' surname='Brosnan Blázquez' fullname='Francis Brosnan Blázquez'>
 <organization >Advanced Software Production Line, S.L.</organization>
@@ -36,11 +36,10 @@
 
 <abstract>
 
-<t>This document describes a feature extension to BEEP protocol to
-allow peers to control how session close phase is implemented,
-ensuring a BEEP peer wanting to close a channel or a complete session
-to do so without requiring to close underlying transport.
-</t>
+<t>This document describes two features for the BEEP protocol to allow
+peers to negotiate and control reply time limit for a channel and to
+enable a BEEP peer to not require all replies to be received to
+proceed with channel or session close.</t>
 
 </abstract>
 
@@ -350,15 +349,21 @@ interval.</t>
 
 <t>A kind of attack easy to setup is to always deny all channel (or
 session) close requests received, making impossible to close a BEEP
-session in a mixed trusted/untrusted environment. </t>
+session. </t>
 
 <t>The easy countermeasure is to close the transport in the case a
 BEEP peer insist in deny closing a session for some tries. </t>
 
 <t>However this is not enough because without "reply-limit" feature, a
-BEEP peer is allowed to not reply to a close request received.</t>
+BEEP peer is allowed to not reply to a close request received. That
+is, a bad BEEP peer simply have to not reply to a close request to
+avoid closing its connection.</t>
 
-<t>That is "reply-limit".
+<t>By using "reply-limit" feature, a BEEP is sure to receive a reply
+within period negotiated, allowing to take a decision either because a
+protocol violation due to time exceeded or because too much negative
+replies received.</t>
+
 
 </section>
 
