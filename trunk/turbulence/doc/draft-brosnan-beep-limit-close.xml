@@ -73,7 +73,7 @@ a reply limit and a no reply check during the BEEP session.</t>
 <t>The list of blocking points that may be used to lock a BEEP session are:</t>
 
 <list style="numbers">
-<t>BLOCK1: To not reply to a channel start request. Though this may not be a
+<t>To not reply to a channel start request. Though this may not be a
 big deal in request/response escenarios where a listener is the only
 party that may block a channel start request, this problem becomes
 more apparent when BEEP is used in a full peer to peer environment
@@ -83,7 +83,7 @@ started.
 Additionally, not replying to a start request causes all subsequent
 start or close request to be not hanbled until previous reply is sent.</t>
 
-<t>BLOCK2: To not reply to messages received (MSG). In BEEP, any
+<t>To not reply to messages received (MSG). In BEEP, any
 message received (MSG) must be replied (RPY, ERR, ANS..NUL). Not
 replying causes the remote BEEP peer to "understand" there are pending
 replies, making impossible to close a BEEP session until these replies
@@ -92,16 +92,15 @@ reply to every MSG received. It is only required at the close session
 because all replies (in both directions) must be update so the close
 process can continue.</t>
 
-<t>BLOCK3: To not reply to channel or session close request. Due to BEEP
+<t>To not reply to channel or session close request. Due to BEEP
 definition, any peer may reply at any time to a channel or session
 close request. That is, a BEEP peer have no time limit imposed to
 reply (with a negative or afirmative value) to such close request. </t>
 
 </list>
 
-<t>In the following sections are presented features proposed by this
-document and how they are used to solve problems presented. Each point
-is labeled to make references to them (BLOCK1, BLOCK2..)</t>
+<t>In the following sections are presented two features and how they
+are used to solve problems presented.</t>
 
 </section>
 
