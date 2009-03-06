@@ -50,7 +50,7 @@ proceed with channel or session close.</t>
 
 <t>Experience with BEEP development shows that its session close
 (described at RFC 3080, section 2.3.1.3) provides many interesting
-features not found in other protocols like:</t>
+features, not found in other protocols, like:</t>
 
 <list style="numbers">
 <t>Providing a way to ensure all content is flushed in both directions, for all channels, before closing the session.</t>
@@ -62,15 +62,16 @@ a DOS attack based on connecting and then blocking replies causing a
 BEEP listener to not be able to close a session unless it closes the
 transport layer (and even in that case, it is not a complete solution).</t>
 
-<t>This document identifies these points and provides two feature
-extensions that allows a BEEP peer to ask or advise it will implement
-a reply limit and a no reply check during the BEEP session.</t>
+<t>This document identifies these points and provides two features
+that allows a BEEP peer to ask or advise it will implement a reply
+limit and a no reply check during the BEEP session.</t>
 
 </section>
 
 <section title='Points were a BEEP session may be blocked'>
 
-<t>The list of blocking points that may be used to lock a BEEP session are:</t>
+<t>The list of blocking points that may be used to lock a BEEP session
+is:</t>
 
 <list style="numbers">
 <t>To not reply to a channel start request. Though this may not be a
@@ -81,21 +82,23 @@ where not only the listener but the initiator accepts channels to be
 started. 
 
 Additionally, not replying to a start request causes all subsequent
-start or close request to be not hanbled until previous reply is sent.</t>
+start or close request to be not handled until previous reply is
+sent.</t>
 
-<t>To not reply to messages received (MSG). In BEEP, any
-message received (MSG) must be replied (RPY, ERR, ANS..NUL). Not
-replying causes the remote BEEP peer to "understand" there are pending
-replies, making impossible to close a BEEP session until these replies
-are received. In general there are no restriction in BEEP to require a
+<t>To not reply to messages received (MSG). In BEEP, any message
+received (MSG) must be replied (RPY, ERR, ANS..NUL). Not replying
+causes the remote BEEP peer to "understand" there are pending replies,
+making impossible to close a BEEP session until these replies are
+received. In general there are no restriction in BEEP to require a
 reply to every MSG received. It is only required at the close session
-because all replies (in both directions) must be update so the close
+because all replies (in both directions) must be received so the close
 process can continue.</t>
 
 <t>To not reply to channel or session close request. Due to BEEP
 definition, any peer may reply at any time to a channel or session
 close request. That is, a BEEP peer have no time limit imposed to
-reply (with a negative or afirmative value) to such close request. </t>
+reply (with a negative or afirmative value) to such close
+request. </t>
 
 </list>
 
@@ -113,8 +116,8 @@ are used to solve problems presented.</t>
 can be delayed until a BEEP peer considers a protocol violation so he
 can close the session.</t>
 
-<t>close-no-reply: This feature controls if a BEEP peer will wait for
-pending replies. </t>
+<t>no-reply: This feature controls if a BEEP peer will wait for
+pending replies. The idea is to allows system administrators that </t>
 </list>
 
 <section anchor="greetings_exchange" title='Imposing limits to remote BEEP replies: "reply-limit"'>
