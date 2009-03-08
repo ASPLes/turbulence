@@ -12,7 +12,7 @@
 <?rfc tocappendix='yes'?>
 <?rfc tocindent='yes'?>
 
-<rfc ipr="none" docName="draft-brosnan-beep-limit-close">
+<rfc ipr="full3978" docName="draft-brosnan-beep-limit-close-01">
 <front>
 <title>Limiting BEEP close and reply time </title>
 
@@ -117,7 +117,12 @@ can be delayed until a BEEP peer considers a protocol violation so he
 can close the session.</t>
 
 <t>no-reply: This feature controls if a BEEP peer will wait for
-pending replies. The idea is to allows system administrators that </t>
+pending replies. This affects the close session phase, making it more
+lightweight (from the perspective of requirements to meet) and also
+improves BEEP protocol by allowing a better fit for one-way
+notifications (via MSG frame). As a side effect, it also reduces
+bandwidth consuption by removing those empty RPY usually
+required. </t>
 </list>
 
 <section anchor="greetings_exchange" title='Imposing limits to remote BEEP replies: "reply-limit"'>
@@ -129,6 +134,9 @@ protocol violation. </t>
 <t>This is specially useful for channel 0, the BEEP session management
 channel, to ensure BEEP peers are bounded to a time limit to reply to
 channel start and channel close requests.</t>
+
+<t>The idea is to allow system administrators that runs BEEP services
+to have control over such delay/timeout.</t>
 
 <t>To enable "reply-limit" feature a BEEP peer must acknoledge it on
 session greetings phase as follow: </t>
@@ -164,7 +172,7 @@ relevant information from previous example:</t>
   L: &lt;greeting features="reply-limit=10 no-reply">
 </artwork>
 
-<t>The example also shows to it is advised no-reply feature
+<t>The example also shows how it is advised no-reply feature
 support. This is later used to explain "no-reply" feature.</t>
 
 <t>Requesting "reply-limit" feature on greetings have two purposes:</t>
@@ -182,6 +190,15 @@ value in the case channel 0 must be configured.</t>
 <t>A BEEP peer asking for "reply-limit" support that receives a
 greetings reply without such feature MAY close the connection (and
 should log a diagnostic error). </t>
+
+<t>A BEEP listener peer asking for "reply-limit" must implicitly
+activate the timeout counter to close the session if no greetings
+reply is received within the limit reported. The intention is to also
+limit half opened BEEP sessions with "reply-limit" activated for
+channel 0.</t>
+
+<t>The same applies to tuning operations where a new greetings must be
+exchanged after transport negotiation (like TLS profile).</t>
 
 <section title='Disabling "reply-limit" on channel 0'>
 </section>
@@ -229,10 +246,10 @@ reporting such error: </t>
 
 <section title='Measures for "reply-limit" exceeded'>
 
-<t>In the case any opened channel with a "reply-limit" configured that
-has exceeded reply time limit will mean a protocol violation. The BEEP
-session will be terminated without generating a response and it is
-recommended that a diagnostic entry be logged.</t>
+<t>A opened channel with a "reply-limit" configured that has exceeded
+reply time limit will mean a protocol violation. The BEEP session will
+be terminated without generating a response and it is recommended that
+a diagnostic entry be logged.</t>
 
 <t>The same applies to channel 0, in the case "reply-limit" was
 activated. If a channel start or channel close request is issued but
@@ -240,7 +257,9 @@ no reply is received within the limit configured, will mean a protocol
 violation and the BEEP session must be closed without generating a
 response.</t>
 
-
+<t>Especial mention to half opened connections where even no greetings
+reply is received. In such case, the connection must be closed if
+reply time notified is exceeded.</t>
 
 </section>
 
@@ -251,7 +270,7 @@ response.</t>
 
 <t>Problem presented in this section comes from the fact that a set
 (or the last) MSG issued were not replied causing the channel or
-session close to wait for ever until such reply is received.</t>
+session close to wait forever until such reply is received.</t>
 
 <t>The problem may be resolved, in some situations, by adding a new
 BEEP frame type NFN, as proposed by David Kramer
@@ -280,7 +299,7 @@ is, replies to outstanding MSG and replies to received MSG frames.</t>
 must run profiles that perform server-to-client notifications. Because
 the listener issues a MSG frame to the client, it must be replied to
 close the session cleanly. This leaves great power to the client side
-to harm the server.</t>
+to harm the server by simply not replying.</t>
 
 <t>To enhance BEEP interaction by providing a way to perform one-way
 message notification, because no reply will be required to MSG frame
@@ -290,6 +309,11 @@ that is sent on a channel with "no-reply" activated.</t>
 <section title='How applies "no-reply" feature to channel 0'>
 
 <t>The "no-reply" feature can't be used for channel 0. </t>
+
+<t>"no-reply" feature is only available for application profiles. This
+feature should also be available for profiles already defined like TLS
+or SASL, allowing to implement a non-blocking close even in cases
+where there are pending replies.</t>
 
 </section>
 
@@ -306,6 +330,7 @@ feature, at the greetings phase (<xref target="greetings_exchange"
   I: <start number="1" no-reply="true">
   I:    <profile uri="urn:aspl.es:profiles:example"/>
   I: </start>
+  I: END
 ]]></artwork>
 
 <t>If the remote BEEP peer accepts the channel to be created,
@@ -328,17 +353,18 @@ must deny channel creation, replying: </t>
 
 <section title='How "no-reply" and "reply-limit" relate to each other?'>
 
-<t>"no-reply" is a BEEP feature that provides security functions (being able
-to close a channel without being blocked by pending replies) and application
-protocol functions (allowing to perform one way message notifications). </t>
+<t>"no-reply" is a BEEP feature that provides security functions (to
+allow closing a channel without being blocked by pending replies) and
+application protocol functions (to allow performing one way message
+notifications). </t>
 
 <t>This means that "no-reply" feature can be used in a trusted
 environment withtout having security in mind but only creating an
 application protocol that do not have to reply to each MSG received. </t>
 
-<t>In the other hand "reply-limit" have the only intention to limit in
-the time exchanges produced, especially over the channel 0, to limit
-malicious usage. </t>
+<t>In the other hand "reply-limit" have the only intention to restrict
+the time within exchanges take place, especially over the channel 0,
+so malicious usage can be limited. </t>
 
 <t>"reply-limit" makes it possible to take the decision to close a
 session if the remote BEEP do not reply within the negotiated
@@ -347,7 +373,7 @@ interval.</t>
 
 </section>
 
-<section title='Does "reply-limit" protected against permanent negative close?'>
+<section title='Does "reply-limit" protect against permanent negative close?'>
 
 <t>A kind of attack easy to setup is to always deny all channel (or
 session) close requests received, making impossible to close a BEEP
@@ -356,16 +382,15 @@ session. </t>
 <t>The easy countermeasure is to close the transport in the case a
 BEEP peer insist in deny closing a session for some tries. </t>
 
-<t>However this is not enough because without "reply-limit" feature, a
-BEEP peer is allowed to not reply to a close request received. That
+<t>However this is not enough because, without "reply-limit" feature,
+a BEEP peer is allowed to not reply to a close request received. That
 is, a bad BEEP peer simply have to not reply to a close request to
-avoid closing its connection.</t>
+avoid its connection to get closed.</t>
 
 <t>By using "reply-limit" feature, a BEEP is sure to receive a reply
 within period negotiated, allowing to take a decision either because a
 protocol violation due to time exceeded or because too much negative
 replies received.</t>
-
 
 </section>
 
