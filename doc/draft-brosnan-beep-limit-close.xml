@@ -11,28 +11,27 @@
 <?rfc compact='yes'?>
 <?rfc editing='no'?>
 <?rfc header='BEEP close limit'?>
-<?rfc private='Limiting BEEP session close phase'?>
+<?rfc private='Limiting BEEP no reply attack'?>
 <?rfc subcompact='no'?>
 <?rfc toc='yes'?>
 <?rfc tocappendix='yes'?>
 <?rfc tocindent='yes'?>
 <?rfc iprnotified='yes'?>
+<?rfc symrefs='yes' ?>
 
 <rfc ipr="full3978" docName="draft-brosnan-beep-limit-close-01">
 <!-- document front -->
 <front>
-  <title>Limiting BEEP close and reply time </title>
+  <title>Limiting BEEP no reply attack</title>
 
   <author initials='F.B.B.' surname='Brosnan Blázquez' fullname='Francis Brosnan Blázquez'>
     <organization >Advanced Software Production Line, S.L.</organization>
-    
     <address>
       <postal>
 	<street>C/ Antonio Suarez Nº10, Edificio Alius A, Despacho 102</street>
 	<city>Alcalá de Henares</city> <region>Madrid</region> <code>28802</code>
 	<country>Madrid</country>
       </postal>
-      
       <phone>00 34 91 134 14 22</phone>
       <email>francis@aspl.es</email>
       <uri>http://www.aspl.es</uri>
@@ -46,7 +45,7 @@
     <t>This document describes two features for the BEEP <xref target="RFC3080" /> protocol to allow
     peers to negotiate and control reply time limit for a channel and to
     enable a BEEP peer to not require all replies to be received to
-    proceed with channel or session close.</t>
+    proceed with channel or session close with the intention to limit BEEP no reply attacks.</t>
     
   </abstract>
 </front>
@@ -64,7 +63,7 @@ target="RFC2119"/>.</t>
 <section title='Security motivation'>
 
 <t>Experience with BEEP development shows that its session close
-(described at RFC 3080, section 2.3.1.3) provides many interesting
+(described at <xref target="RFC3080" />, section 2.3.1.3) provides many interesting
 features, not found in other protocols, like:</t>
 
 <list style="numbers">
@@ -73,9 +72,10 @@ features, not found in other protocols, like:</t>
 </list>
 
 <t>However, these features may be used by malicious software to setup
-a DOS attack based on connecting and then blocking replies causing a
-BEEP listener to not be able to close a session unless it closes the
-transport layer (and even in that case, it is not a complete solution).</t>
+an attack based on connecting and then blocking replies causing a BEEP
+listener to not be able to close a session unless it closes the
+transport layer (and even in that case, it is not a complete
+solution). I call this BEEP no reply attack.</t>
 
 <t>This document identifies these points and provides two features
 that allows a BEEP peer to ask or advise it will implement a reply
@@ -86,7 +86,7 @@ limit and a no reply check during the BEEP session.</t>
 <section title='Points were a BEEP session may be blocked'>
 
 <t>The list of blocking points that may be used to lock a BEEP session
-is:</t>
+is, setting up a BEEP no reply attack:</t>
 
 <list style="numbers">
 <t>To not reply to a channel start request. Though this may not be a
@@ -118,7 +118,7 @@ request. </t>
 </list>
 
 <t>In the following sections are presented two features and how they
-are used to solve problems presented.</t>
+are used to solve BEEP no reply attack (BNRA).</t>
 
 </section>
 
