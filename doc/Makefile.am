@@ -18,10 +18,10 @@ help:
 	@echo
 
 
-draft-brosnan-beep-limit-close.txt: draft-brosnan-beep-limit-close.xml
-	xml2rfc draft-brosnan-beep-limit-close.xml
+#draft-brosnan-beep-limit-close.txt: draft-brosnan-beep-limit-close.xml
+#	xml2rfc draft-brosnan-beep-limit-close.xml
 
-initial_build_doc: draft-brosnan-beep-limit-close.txt
+initial_build_doc: 
 	@echo "checking documenation stamp..";
 	@test -e doc.stamp & make help
 	@test -e doc.stamp || make build_doc

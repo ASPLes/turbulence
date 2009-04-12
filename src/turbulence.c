@@ -282,6 +282,9 @@ void turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * 
 	/* report to the console */
 	CONSOLEV (stderr, format, args);
 
+	va_end (args);
+	va_start (args, format);
+
 	/* report to log */
 	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
 	
@@ -463,6 +466,9 @@ void turbulence_msg (TurbulenceCtx * ctx, const char * file, int line, const cha
 	/* report to console */
 	CONSOLEV (stdout, format, args);
 
+	va_end (args);
+	va_start (args, format);
+
 	/* report to log */
 	turbulence_log_report (ctx, LOG_REPORT_GENERAL, format, args, file, line);
 
@@ -505,6 +511,9 @@ void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, con
 	
 	/* report to console */
 	CONSOLEV (stdout, format, args);
+
+	va_end (args);
+	va_start (args, format);
 
 	/* report to log */
 	turbulence_log_report (ctx, LOG_REPORT_ACCESS, format, args, file, line);
@@ -552,6 +561,9 @@ void turbulence_msg2 (TurbulenceCtx * ctx, const char * file, int line, const ch
 	/* report to console */
 	CONSOLEV (stdout, format, args);
 
+	va_end (args);
+	va_start (args, format);
+
 	/* report to log */
 	turbulence_log_report (ctx, LOG_REPORT_GENERAL, format, args, file, line);
 
@@ -594,6 +606,9 @@ void turbulence_wrn (TurbulenceCtx * ctx, const char * file, int line, const cha
 
 	CONSOLEV (stdout, format, args);
 
+	va_end (args);
+	va_start (args, format);
+
 	/* report to log */
 	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
 
@@ -635,6 +650,9 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
 	va_start (args, format);
 
 	CONSOLEV (stdout, format, args);
+
+	va_end (args);
+	va_start (args, format);
 
 	/* report to log */
 	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
