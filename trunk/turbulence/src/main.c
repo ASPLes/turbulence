@@ -251,7 +251,7 @@ void turbulence_place_pidfile (void)
 	/* open pid file or create it to place the pid file */
 	pid_file = fopen (PIDFILE, "w");
 	if (pid_file == NULL) {
-		error ("Unable to open pid file at: %s", PIDFILE);
+		abort_error ("Unable to open pid file at: %s", PIDFILE);
 		return;
 	} /* end if */
 	
