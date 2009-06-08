@@ -101,8 +101,8 @@ int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 	} /* end if */
 
 	if (! axl_dtd_validate (ctx->config, dtd_file, &error)) {
-		error ("unable to validate server configuration, something is wrong: %s", 
-		       axl_error_get (error));
+		abort_error ("unable to validate server configuration, something is wrong: %s", 
+			     axl_error_get (error));
 
 		/* free and set a null reference */
 		axl_doc_free (ctx->config);
@@ -136,6 +136,67 @@ axlDoc * turbulence_config_get (TurbulenceCtx * ctx)
 	return ctx->config;
 }
 
+/**
+ * @brief Allows to check if an xml attribute is positive, that is,
+ * have 1, true or yes as value.
+ *
+ * @param ctx The turbulence context.
+ *
+ * @param node The node to check for positive attribute value.
+ *
+ * @param attr_name The node attribute name to check for positive
+ * value.
+ */
+axl_bool        turbulence_config_is_attr_positive (TurbulenceCtx * ctx,
+						    axlNode       * node,
+						    const char    * attr_name)
+{
+	if (ctx == NULL || node == NULL)
+		return axl_false;
+
+	/* check for yes, 1 or true */
+	if (HAS_ATTR_VALUE (node, attr_name, "yes"))
+		return axl_true;
+	if (HAS_ATTR_VALUE (node, attr_name, "1"))
+		return axl_true;
+	if (HAS_ATTR_VALUE (node, attr_name, "true"))
+		return axl_true;
+
+	/* none of them was found */
+	return axl_false;
+}
+
+/**
+ * @brief Allows to check if an xml attribute is positive, that is,
+ * have 1, true or yes as value.
+ *
+ * @param ctx The turbulence context.
+ *
+ * @param node The node to check for positive attribute value.
+ *
+ * @param attr_name The node attribute name to check for positive
+ * value.
+ */
+axl_bool        turbulence_config_is_attr_negative (TurbulenceCtx * ctx,
+						    axlNode       * node,
+						    const char    * attr_name)
+{
+	if (ctx == NULL || node == NULL)
+		return axl_false;
+
+	/* check for yes, 1 or true */
+	if (HAS_ATTR_VALUE (node, attr_name, "no"))
+		return axl_true;
+	if (HAS_ATTR_VALUE (node, attr_name, "0"))
+		return axl_true;
+	if (HAS_ATTR_VALUE (node, attr_name, "false"))
+		return axl_true;
+
+	/* none of them was found */
+	return axl_false;
+}
+
+
 /** 
  * @internal Cleanups the turbulence config module. This is called by
  * Turbulence itself on exit.
@@ -153,6 +214,5 @@ void turbulence_config_cleanup (TurbulenceCtx * ctx)
 
 	return;
 } 
-
 
 /* @} */
