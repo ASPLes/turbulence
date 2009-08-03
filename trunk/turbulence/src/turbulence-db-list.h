@@ -93,7 +93,7 @@ int                turbulence_db_list_init           (TurbulenceCtx * ctx);
 
 void               turbulence_db_list_cleanup        (TurbulenceCtx * ctx);
 
-int                turbulence_db_list_reload_module  ();
+int                turbulence_db_list_reload_module  (void);
 
 int                turbulence_db_list_equal (axlPointer a, axlPointer b);
 

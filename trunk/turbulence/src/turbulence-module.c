@@ -70,6 +70,22 @@ void               turbulence_module_init      (TurbulenceCtx * ctx)
 }
 
 /** 
+ * @brief Allows to get the module name.
+ *
+ * @param module The module to get the name from.
+ *
+ * @return module name or NULL if it fails.
+ */
+const char       * turbulence_module_name        (TurbulenceModule * module)
+{
+	axl_return_val_if_fail (module, NULL);
+	axl_return_val_if_fail (module->def, NULL);
+
+	/* return stored name */
+	return module->def->mod_name;
+}
+
+/** 
  * @brief Loads a turbulence module, from the provided path.
  * 
  * @param module The module path to load.
@@ -174,6 +190,46 @@ ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
 }
 
 /** 
+ * @brief Allows to check if there is another module already
+ * registered with the same name.
+ */
+axl_bool           turbulence_module_exists      (TurbulenceModule * module)
+{
+	TurbulenceCtx    * ctx;
+	int                iterator;
+	TurbulenceModule * mod_added;
+
+	/* check values received */
+	v_return_val_if_fail (module, axl_false);
+
+	/* get context reference */
+	ctx = module->ctx;
+
+	/* register the module */
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+
+	/* check first that the module is not already added */
+	iterator = 0;
+	while (iterator < axl_list_length (ctx->registered_modules)) {
+		/* get module in position */
+		mod_added = axl_list_get_nth (ctx->registered_modules, iterator);
+
+		/* check mod name */
+		if (axl_cmp (mod_added->def->mod_name, module->def->mod_name)) {
+			vortex_mutex_unlock (&ctx->registered_modules_mutex);
+			return axl_true;
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	} /* end while */
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+
+	/* no module with the same name was found */
+	return axl_false;
+}
+
+/** 
  * @brief Allows to register the module loaded to allow future access
  * to it.
  * 
@@ -181,7 +237,9 @@ ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
  */
 void               turbulence_module_register  (TurbulenceModule * module)
 {
-	TurbulenceCtx * ctx;
+	TurbulenceCtx    * ctx;
+	int                iterator;
+	TurbulenceModule * mod_added;
 
 	/* check values received */
 	v_return_if_fail (module);
@@ -191,6 +249,25 @@ void               turbulence_module_register  (TurbulenceModule * module)
 
 	/* register the module */
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
+
+	/* check first that the module is not already added */
+	iterator = 0;
+	while (iterator < axl_list_length (ctx->registered_modules)) {
+		/* get module in position */
+		mod_added = axl_list_get_nth (ctx->registered_modules, iterator);
+
+		/* check mod name */
+		if (axl_cmp (mod_added->def->mod_name, module->def->mod_name)) {
+			wrn ("skipping module found: %s, already found a module registered with the same name, at path: %s",
+			     module->def->mod_name, mod_added->path);
+			vortex_mutex_unlock (&ctx->registered_modules_mutex);
+			return;
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	} /* end while */
+
 	axl_list_add (ctx->registered_modules, module);
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 

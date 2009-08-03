@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://fact.aspl.es
 dnl
 
-AC_INIT(turbulence,0.3.2.b3769.g3769)
+AC_INIT(turbulence,0.3.2.b.g9996078)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
@@ -204,6 +204,33 @@ case $host in
 esac
 AC_SUBST(EXARG_FLAGS)
 
+# get python includes 
+PYTHON_INCLUDES=`python-config --includes 2>/dev/null`
+old_CPPFLAGS=$CPPFLAGS
+CPPFLAGS="-Wall -Werror $PYTHON_INCLUDES"
+echo "Python includes: $PYTHON_INCLUDES"
+AC_SUBST(PYTHON_INCLUDES)
+
+AC_TRY_COMPILE([#include <Python.h>],
+  [Py_InitModule3(NULL, NULL, NULL);],
+  python_devel_found=yes,
+  python_devel_found=no)
+AC_MSG_RESULT([Python development headers status: $python_devel_found])
+if test "x$python_devel_found" = "xno"; then
+   AC_MSG_WARN([Cannot find Python.h header or current python development environment do not compile symbols required. On debian try to install python-dev package.])
+fi
+AM_CONDITIONAL(ENABLE_MOD_PYTHON, test "x$python_devel_found" = "xyes")
+
+dnl get python flags and libs
+PYTHON_CFLAGS=`python-config --cflags 2>/dev/null`
+PYTHON_LIBS=`python-config --ldflags 2>/dev/null`
+AC_SUBST(PYTHON_CFLAGS)
+AC_SUBST(PYTHON_LIBS)
+
+dnl get py-vortex flags
+PKG_CHECK_MODULES(PY_VORTEX, py-vortex >= 0.3.8 py-vortex-sasl >= 0.3.8 py-vortex-tls >= 0.3.8) 
+AC_SUBST(PY_VORTEX_CFLAGS)
+AC_SUBST(PY_VORTEX_LIBS)
 
 AC_OUTPUT([
 Makefile
@@ -219,6 +246,7 @@ modules/mod-tunnel/mod-tunnel.xml
 modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
 modules/mod-sasl/sasl-radmin.pc
+modules/mod-python/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile
@@ -241,6 +269,7 @@ fi
 echo "   Build tbc-sasl-conf:            [$termios_found]"
 echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
 echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"
+echo "   Build mod-python:               [$python_devel_found]"
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"
 echo "--            Let it BEEP!              --"

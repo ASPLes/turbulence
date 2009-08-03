@@ -130,6 +130,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
      vfprintf (log, message, args);                                \
      fprintf  (log, "\n");                                         \
      fflush (log);                                                 \
+     return;                                                       \
   }                                                                \
 } while (0);
 
@@ -137,7 +138,9 @@ void turbulence_log_init (TurbulenceCtx * ctx)
  * @brief Reports a single line to the particular log, configured by
  * "type".
  * 
- * @param type The log to select for reporting.
+ * @param type The log to select for reporting. The function do not
+ * support reporting at the same call to several targets. You must
+ * call one time for each target to report.
  *
  * @param message The message to report.
  */

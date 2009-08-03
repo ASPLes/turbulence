@@ -110,9 +110,9 @@ typedef struct _ExArgument ExArgument;
 void         exarg_parse        (int         argc,
 			       char     ** argv);
 
-void         exarg_end          ();
+void         exarg_end          (void);
 
-void         exarg_disable_help ();
+void         exarg_disable_help (void);
 
 void         exarg_add_usage_header  (char * header);
 
@@ -154,13 +154,13 @@ char       * exarg_get_string_alloc (char * arg_name);
 
 int          exarg_get_int          (char * arg_name);
 
-ExArgument * exarg_get_params       ();
+ExArgument * exarg_get_params       (void);
 
 const char * exarg_param_get        (ExArgument * arg);
 
 ExArgument * exarg_param_next       (ExArgument * arg);
 
-int          exarg_get_params_num   ();
+int          exarg_get_params_num   (void);
 
 #endif
 

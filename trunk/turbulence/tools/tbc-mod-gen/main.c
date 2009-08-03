@@ -288,7 +288,7 @@ int  tbc_mod_gen_compile ()
 	write ("EXTRA_DIST = %s\n\n", exarg_get_string ("compile"));
 	
 	       
-	write ("INCLUDES = -Wall -g -ansi -I $(TURBULENCE_CFLAGS) -DCOMPILATION_DATE=`date +%%s` \\\n");
+	write ("INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%%s` \\\n");
 	push_indent ();
 	
 	write ("-DVERSION=\\\"$(VERSION)\\\" \\\n");
@@ -311,7 +311,7 @@ int  tbc_mod_gen_compile ()
 	write ("%s.xml %s.win32.xml:\n", mod_name, mod_name);
 	push_indent ();
 	write ("echo \"<mod-turbulence location=\\\"`turbulence-config --mod-dir`/%s.so\\\"/>\" > %s.xml\n", mod_name, mod_name);
-	write ("echo \"<mod-turbulence location=\\\"../modules/%s.dll\\\"/>\" > %s.win32.xml\n", mod_name);
+	write ("echo \"<mod-turbulence location=\\\"../modules/%s.dll\\\"/>\" > %s.win32.xml\n", mod_name, mod_name);
 	pop_indent ();
 
 	support_close_file (ctx);

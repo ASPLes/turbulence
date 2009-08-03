@@ -47,9 +47,13 @@ void               turbulence_module_init        (TurbulenceCtx * ctx);
 TurbulenceModule * turbulence_module_open        (TurbulenceCtx * ctx, 
 						  const char    * module);
 
+const char       * turbulence_module_name        (TurbulenceModule * module);
+
 ModInitFunc        turbulence_module_get_init    (TurbulenceModule * module);
 
 ModCloseFunc       turbulence_module_get_close   (TurbulenceModule * module);
+
+axl_bool           turbulence_module_exists      (TurbulenceModule * module);
 
 void               turbulence_module_register    (TurbulenceModule * module);
 
