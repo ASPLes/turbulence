@@ -144,6 +144,16 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 			goto next;
 		} /* end if */
 
+		/* check if module exists */
+		if (turbulence_module_exists (module)) {
+			wrn ("unable to load module: %s, another module is already loaded with the same name",
+			     turbulence_module_name (module));
+
+			/* close the module */
+			turbulence_module_free (module);
+			goto next;
+		}
+
 		/* init the module */
 		init = turbulence_module_get_init (module);
 		
@@ -151,17 +161,23 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		if (! init (ctx)) {
 			wrn ("init module: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 			CLEAN_START(ctx);
+
+			/* close the module */
+			turbulence_module_free (module);
+
+			goto next;
+
 		} else {
 			msg ("init ok, registering module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
 		}
-
-		/* free the document */
-		axl_doc_free (doc);
 
 		/* register the module to be loaded */
 		turbulence_module_register (module);
 
 	next:
+		/* free the document */
+		axl_doc_free (doc);
+		
 		/* free the error */
 		axl_error_free (error);
 
@@ -384,12 +400,10 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 			if (! vortex_connection_is_ok (con_listener, axl_false)) {
 				/* unable to start the server configuration */
 				error ("unable to start listener at %s:%s...", 
-				     
-				     /* server name */
-				     axl_node_get_content (name, NULL),
-				     
-				     /* server port */
-				     axl_node_get_content (port, NULL));
+				       /* server name */
+				       axl_node_get_content (name, NULL),
+				       /* server port */
+				       axl_node_get_content (port, NULL));
 
 				/* check clean start */ 
 				CLEAN_START (ctx);

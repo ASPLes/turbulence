@@ -19,7 +19,7 @@ INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__ $(EXARG_FLAG
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" \
 	   -DPIDFILE=\""$(statusdir)/turbulence.pid"\" \
 	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
-	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -ansi
+	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -Werror -Wstrict-prototypes  -ansi
 
 bin_PROGRAMS = turbulence
 

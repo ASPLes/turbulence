@@ -1007,7 +1007,7 @@ void __exarg_show_help_foreach (epointer key, epointer value, epointer user_data
 	return;
 }
 
-void   exarg_show_help () 
+void   exarg_show_help (void) 
 {
 	ExArgNodeOption * node;
 
@@ -1060,7 +1060,7 @@ void exarg_check_argument_value (char ** argv, int iterator)
 }
 
 
-void __exarg_parse_check_non_optional ()
+void __exarg_parse_check_non_optional (void)
 {
 	ExArgNodeOption * node = argument_options;
 
@@ -1080,7 +1080,7 @@ void __exarg_parse_check_non_optional ()
 	return;
 }
 
-void __exarg_parse_check_depends ()
+void __exarg_parse_check_depends (void)
 {
 	/* first argument */
 	ExArgNodeOption * node = argument_options;
