@@ -1,0 +1,3 @@
+#!/bin/sh
+
+tbc-mod-gen --compile mod-python-def.xml --out-dir .
