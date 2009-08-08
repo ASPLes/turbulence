@@ -503,7 +503,7 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		} /* end if */
 		
 		/* check remote admins */
-		if (HAS_ATTR (node, "remote-admins") && strlen (ATTR_VALUE (node, "remote-admins")) > 0) {
+		if (db->remote_admin && HAS_ATTR (node, "remote-admins") && strlen (ATTR_VALUE (node, "remote-admins")) > 0) {
 			
 			/* load the turbulence db list */
 			msg2 ("found remote admins, loading dblist: '%s'", ATTR_VALUE (node, "remote-admins"));
