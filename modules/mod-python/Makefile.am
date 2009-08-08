@@ -17,14 +17,14 @@ libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
 moddir   = $(sysconfdir)/turbulence/mods-available
-mod_DATA = mod_python.xml mod_python.win32.xml
+mod_DATA = mod-python.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/python
 modconf_DATA = python.example.conf
 
-mod_python.xml mod_python.win32.xml:
-	echo "<mod-turbulence location=\"$(prefix)/lib/turbulence/modules/mod_python.so\"/>" > mod_python.xml
-	echo "<mod-turbulence location=\"../modules/mod_python.dll\"/>" > mod_python.win32.xml
+mod-python.xml mod-python.win32.xml:
+	echo "<mod-turbulence location=\"$(prefix)/lib/turbulence/modules/mod_python.so\"/>" > mod-python.xml
+	echo "<mod-turbulence location=\"../modules/mod_python.dll\"/>" > mod-python.win32.xml
 
 
