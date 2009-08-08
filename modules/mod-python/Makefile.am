@@ -13,10 +13,10 @@ mod_python_la_SOURCES  = mod_python.c \
 mod_python_la_LDFLAGS  = -module -ldl $(PYTHON_LIBS) $(PY_VORTEX_LIBS)
 
 # reconfigure module installation directory
-libdir = `turbulence-config --mod-dir`
+libdir = $(prefix)/lib/turbulence/modules
 
 # configure site module installation
-moddir   = `turbulence-config --mod-xml`
+moddir   = $(sysconfdir)/turbulence/mods-available
 mod_DATA = mod_python.xml mod_python.win32.xml
 
 # configure site module configuration installation
@@ -24,7 +24,7 @@ modconfdir   = $(sysconfdir)/turbulence/python
 modconf_DATA = python.example.conf
 
 mod_python.xml mod_python.win32.xml:
-	echo "<mod-turbulence location=\"`turbulence-config --mod-dir`/mod_python.so\"/>" > mod_python.xml
+	echo "<mod-turbulence location=\"$(prefix)/lib/turbulence/modules/mod_python.so\"/>" > mod_python.xml
 	echo "<mod-turbulence location=\"../modules/mod_python.dll\"/>" > mod_python.win32.xml
 
 
