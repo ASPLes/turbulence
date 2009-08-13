@@ -316,14 +316,17 @@ void mod_python_exception (const char * exception_msg)
 
 /* mod_python init handler */
 static int  mod_python_init (TurbulenceCtx * _ctx) {
-	char     * config;
-	axlError * error = NULL;
+	char          * config;
+	axlError      * error = NULL;
 
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
 
 	/* initialize python */
 	Py_Initialize ();
+
+	/* call to initilize threading API and to acquire the lock */
+	PyEval_InitThreads();
 
 	/* call to init py-turbulence */
 	py_turbulence_init ();
@@ -352,6 +355,9 @@ static int  mod_python_init (TurbulenceCtx * _ctx) {
 	if (! mod_python_init_applications ())
 		return false;
 
+	/* let other threads to enter inside python engine: this must be the last call */
+	PyEval_ReleaseLock ();
+
 	msg ("mod-python started..");
 
 	return true;
@@ -360,9 +366,9 @@ static int  mod_python_init (TurbulenceCtx * _ctx) {
 
 void mod_python_close_module (axlNode * node, axlNode * location)
 {
-	PyObject * module = axl_node_annotate_get (node, "module", axl_false);
-	PyObject * close  = NULL;
-	PyObject * result = NULL;
+	PyObject           * module = axl_node_annotate_get (node, "module", axl_false);
+	PyObject           * close  = NULL;
+	PyObject           * result = NULL;
 
 	if (module == NULL) {
 		wrn ("module reference is null");
@@ -379,6 +385,7 @@ void mod_python_close_module (axlNode * node, axlNode * location)
 		py_vortex_handle_and_clear_exception (NULL);
 		wrn ("unable to find close handler ('%s') for module %s: did you define it?",
 		     ATTR_VALUE (location, "app-close"), ATTR_VALUE (node, "name"));
+
 		return;
 	}
 
@@ -394,14 +401,19 @@ void mod_python_close_module (axlNode * node, axlNode * location)
 	Py_XDECREF (result);
 	/* do not terminate module with Py_DECREF: this is already
 	 * done by mod_python_module_unref */
+
 	return;
 }
 
 
 /* mod_python close handler */
 static void mod_python_close (TurbulenceCtx * _ctx) {
-	axlNode * node;
-	axlNode * location;
+	axlNode           * node;
+	axlNode           * location;
+	PyGILState_STATE    state;
+
+	/* acquire the GIL */
+	state = PyGILState_Ensure();
 
 	/* call to notify close on all apps */
 	node = axl_doc_get (mod_python_conf, "/mod-python/application");
@@ -426,8 +438,12 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	axl_doc_free (mod_python_conf);
 	mod_python_conf = NULL;
 
+	/* finish python */
 	Py_Finalize ();
+
+	/* not required to release the GIL */
 	return;
+
 } /* end mod_python_close */
 
 /* mod_python reconf handler */
