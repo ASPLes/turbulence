@@ -82,6 +82,18 @@ TurbulenceCtx * turbulence_ctx_new ()
 }
 
 /** 
+ * @internal Allows to reinit internal state of the context process
+ * after a child process creation.
+ */
+void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
+{
+	/* re-init mutex */
+	vortex_mutex_create (&ctx->data_mutex);
+
+	return;
+}
+
+/** 
  * @brief Allows to configure the vortex context (VortexCtx)
  * associated to the provided \ref TurbulenceCtx.
  * 

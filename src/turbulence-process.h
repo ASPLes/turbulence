@@ -35,16 +35,13 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
-#ifndef __TURBULENCE_PPATH_H__
-#define __TURBULENCE_PPATH_H__
+#ifndef __TURBULENCE_PROCESS_H__
+#define __TURBULENCE_PROCESS_H__
 
 #include <turbulence.h>
 
-int  turbulence_ppath_init (TurbulenceCtx * ctx);
+void turbulence_process_create_child (TurbulenceCtx       * ctx, 
+				      VortexConnection    * conn,
+				      TurbulencePPathDef  * def);
 
-void turbulence_ppath_cleanup (TurbulenceCtx * ctx);
-
-void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx, 
-				      TurbulencePPathDef * ppath_def);
-
-#endif /* end __TURBULENCE_PPATH_H__ */
+#endif

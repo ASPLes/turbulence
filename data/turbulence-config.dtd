@@ -70,7 +70,11 @@
 <!ATTLIST path-def 
           path-name      CDATA #IMPLIED
           server-name    CDATA #IMPLIED
-	  src            CDATA #IMPLIED >
+	  src            CDATA #IMPLIED 
+	  run-as-user    CDATA #IMPLIED 
+	  run-as-group   CDATA #IMPLIED 
+	  separate       CDATA #IMPLIED 
+	  chroot         CDATA #IMPLIED >
 
 <!ATTLIST if-success 
           profile      CDATA #REQUIRED

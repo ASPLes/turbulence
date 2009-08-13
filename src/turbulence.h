@@ -49,6 +49,11 @@
 /* XML support */
 #include <axl.h>
 
+/* types */
+typedef struct _TurbulencePPath TurbulencePPath;
+
+typedef struct _TurbulencePPathDef TurbulencePPathDef;
+
 /* local includes */
 #include <turbulence-ctx.h>
 #include <turbulence-handlers.h>
@@ -62,7 +67,7 @@
 #include <turbulence-ppath.h>
 #include <turbulence-db-list.h>
 #include <turbulence-conn-mgr.h>
-
+#include <turbulence-process.h>
 
 /** 
  * \addtogroup turbulence
