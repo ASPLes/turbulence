@@ -214,10 +214,11 @@ axl_bool mod_python_init_app (PyObject * init_function)
  */
 axl_bool mod_python_init_applications (void)
 {
-	axlNode  * node;
-	axlNode  * location;
-	PyObject * module;
-	PyObject * function;
+	axlNode    * node;
+	axlNode    * location;
+	PyObject   * module;
+	PyObject   * function;
+	const char * start_file;
 
 	/* for each application */
 	node = axl_doc_get (mod_python_conf, "/mod-python/application");
@@ -230,7 +231,7 @@ axl_bool mod_python_init_applications (void)
 			/* log error and continue */
 			APPLICATION_LOAD_FAILED ("unable to find location configuration for python app name %s", ATTR_VALUE (node, "name"));
 		}
-		
+
 		/* drop a log */
 		msg ("importing code found at: %s%s%s", ATTR_VALUE (location, "src"), VORTEX_FILE_SEPARATOR, ATTR_VALUE (location, "start-file"));
 
@@ -240,19 +241,25 @@ axl_bool mod_python_init_applications (void)
 						 ATTR_VALUE (location, "src"), ATTR_VALUE (location, "name"));
 		} /* end if */
 
+		/* check import code do not end it .py or .pyc */
+		start_file = ATTR_VALUE (location, "start-file");
+		if (axl_cmp (start_file + strlen (start_file) - 3, ".py")) {
+			wrn ("Start file cannot be ended with .py. This will fail. Try to leave start file without extention");
+		}
+
 		/* now load python source */
-		module = PyImport_ImportModule (ATTR_VALUE (location, "start-file"));
+		module = PyImport_ImportModule (start_file);
 		
 		if (module == NULL) {
 			/* handle possible exception */
 			py_vortex_handle_and_clear_exception (NULL);
 
 			APPLICATION_LOAD_FAILED ("Failed to import module %s located at %s", 
-						 ATTR_VALUE (location, "start-file"), 
+						 start_file, 
 						 ATTR_VALUE (location, "src"));
 		} /* end if */
 
-		msg ("module %s load ok", ATTR_VALUE (location, "start-file"));
+		msg ("module %s load ok", start_file);
 
 		/* ok, now load the entry point, app-close and app-reload */
 		function = PyObject_GetAttrString (module, ATTR_VALUE (location, "app-init"));
@@ -260,7 +267,7 @@ axl_bool mod_python_init_applications (void)
 			py_vortex_handle_and_clear_exception (NULL);
 
 			APPLICATION_LOAD_FAILED ("Failed to load app-init %s function inside module %s", 
-						 ATTR_VALUE (location, "app-init"), ATTR_VALUE (location, "start-file"));
+						 ATTR_VALUE (location, "app-init"), start_file);
 		}
 		msg ("app-init %s (%p) entry point found", ATTR_VALUE (location, "app-init"), function);
 
@@ -270,11 +277,11 @@ axl_bool mod_python_init_applications (void)
 			/* remove path */
 			if (! mod_python_remove_first_path ()) {
 				APPLICATION_LOAD_FAILED ("Failed to start application %s:%s init function failed, but also found failure to remove path from sys.path",
-							 ATTR_VALUE (location, "start-file"), ATTR_VALUE (location, "app-init"));
+							 start_file, ATTR_VALUE (location, "app-init"));
 			} /* end if */
 
 			APPLICATION_LOAD_FAILED ("Failed to start application %s:%s, init function failed", 
-						 ATTR_VALUE (location, "start-file"), ATTR_VALUE (location, "app-init"));
+						 start_file, ATTR_VALUE (location, "app-init"));
 		} /* end if */
 
 		/* record the module into the application node
@@ -286,7 +293,7 @@ axl_bool mod_python_init_applications (void)
 		/* remove path */
 		if (! mod_python_remove_first_path ()) {
 			APPLICATION_LOAD_FAILED ("Failed to remove path from sys.path after python app initialization",
-						 ATTR_VALUE (location, "start-file"), ATTR_VALUE (location, "app-init"));
+						 start_file, ATTR_VALUE (location, "app-init"));
 		} /* end if */
 
 		/* get close method here */
