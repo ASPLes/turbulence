@@ -2,7 +2,7 @@ EXTRA_DIST = libturbulence.def \
 	exarg.h exarg.c \
 	mod-turbulence.dtd.h \
 	turbulence-config.dtd.h \
-	turbulence-db-list.dtd.h
+	turbulence-db-list.dtd.h 
 
 # profile a flag to enable the source to code to react agaisnt the
 # pcre inclusion.
@@ -46,7 +46,8 @@ libturbulenceinclude_HEADERS    = \
 	turbulence-config.h \
 	turbulence-db-list.h \
 	turbulence-conn-mgr.h \
-	turbulence-signal.h 
+	turbulence-signal.h \
+	turbulence-process.h
 
 libturbulence_la_SOURCES = \
 	exarg.c \
@@ -60,7 +61,8 @@ libturbulence_la_SOURCES = \
 	turbulence-db-list.c \
 	turbulence-conn-mgr.c \
 	turbulence-signal.c \
-	turbulence-expr.c
+	turbulence-expr.c \
+	turbulence-process.c
 
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'

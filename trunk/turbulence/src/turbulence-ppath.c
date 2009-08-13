@@ -40,6 +40,11 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
+#if defined(AXL_OS_UNIX)
+# include <pwd.h>
+# include <grp.h>
+#endif
+
 typedef enum {
 	PROFILE_ALLOW, 
 	PROFILE_IF
@@ -73,7 +78,7 @@ struct _TurbulencePPathItem {
 	
 };
 
-typedef struct _TurbulencePPathDef {
+struct _TurbulencePPathDef {
 	/* the name of the profile path group (optional value) */
 	char * path_name;
 
@@ -89,8 +94,23 @@ typedef struct _TurbulencePPathDef {
 
 	/* a reference to the list of profile path supported */
 	TurbulencePPathItem ** ppath_item;
-	
-} TurbulencePPathDef;
+
+#if defined(AXL_OS_UNIX)
+	/* user id to that must be used to run the process */
+	int  user_id;
+
+	/* group id that must be used to run the process */
+	int  group_id;
+#endif
+
+	/* allows to control if turbulence must run the connection
+	 * received in the context of a profile path in a separate
+	 * process */
+	axl_bool separate;
+
+	/* allows to change working directory to the provided value */
+	const char * chroot;	
+};
 
 typedef struct _TurbulencePPathState {
 	/* a reference to the profile path selected for the
@@ -338,12 +358,6 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
 		 * this case we can't say the channel have been
 		 * accepted */
 		if (channel_num > 0) {
-			msg ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
-			     uri, state->path_selected->path_name, 
-			     vortex_connection_get_id (connection), 
-			     vortex_connection_get_host (connection),
-			     vortex_connection_get_port (connection));
-			
 			/* report access */
 			access ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
 				uri, state->path_selected->path_name, 
@@ -359,11 +373,6 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
 	/* drop an error message if a definitive channel request was
 	 * received */
 	if (channel_num > 0) {
-		error ("profile: %s not accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
-		       uri, state->path_selected->path_name, 
-		       vortex_connection_get_id (connection), 
-		       vortex_connection_get_host (connection),
-		       vortex_connection_get_port (connection));
 		if (error_msg) {
 			(*error_msg) = axl_strdup_printf (
 				"PROFILE PATH configuration denies creating the channel with the profile requested: %s not accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
@@ -388,7 +397,7 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
  * In the case a profile path definition is not found, the handler
  * just denies the connection.
  */
-int  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
+axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
 {
 	/* get turbulence context */
 	TurbulencePPathState * state;
@@ -396,6 +405,7 @@ int  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	TurbulenceCtx        * ctx;
 	int                    iterator;
 	const char           * src;
+	
 
 	/* get the current context (TurbulenceCtx) */
 	ctx = data;
@@ -445,9 +455,87 @@ int  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPoi
 	/* now configure the profile path mask to handle how channels
 	 * and profiles are accepted */
 	vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask, state);
+
+	/* check for process separation and apply operation here */
+	if (def->separate) {
+		/* call to create process */
+		turbulence_process_create_child (ctx, connection, def);
+		
+		/* return false to avoid accepting the connection
+		 * inside the context of the parent process */
+		return axl_false;
+	} /* end if */
+	
 	
 	return axl_true;
 }
+
+axl_bool __turbulence_is_num (const char * value)
+{
+	int iterator = 0;
+	while (iterator < value[iterator]) {
+		/* check value on each position */
+		if (! isdigit (value[iterator]))
+			return axl_false;
+
+		/* next position */
+		iterator++;
+	}
+
+	/* is a number */
+	return axl_true;
+}
+
+/** 
+ * @internal Checks the user id value (or group id value if
+ * check_user_id == axl_false) to store to user the user_id/group_id
+ * that will be used for the process serving BEEP.
+ */
+void __turbulence_ppath_check_user (TurbulenceCtx      * ctx,
+				    TurbulencePPathDef * pdef, 
+				    const char         * value, 
+				    axl_bool             check_user_id) 
+{
+#if defined (AXL_OS_UNIX)
+	struct passwd * user_data;
+	struct group  * group_data;
+
+	if (check_user_id) {
+		msg ("checking user id: %s", value);
+		if (__turbulence_is_num (value)) 
+			user_data = getpwuid (atoi (value));
+		else 
+			user_data = getpwnam (value);
+
+		/* check user */
+		if (user_data == NULL) {
+			wrn ("Failed to find data associated to user (%s), it seems its missing", value);
+			CLEAN_START(ctx);
+		} /* end if */
+		
+		/* store user id */
+		pdef->user_id = (int) user_data->pw_uid;
+	} else {
+		/* check group */
+		msg ("checking group id: %s", value);
+		if (__turbulence_is_num (value)) 
+			group_data = getgrgid (atoi (value));
+		else 
+			group_data = getgrnam (value);
+
+		/* check user */
+		if (group_data == NULL) {
+			wrn ("Failed to find data associated to group (%s), it seems its missing", value);
+			CLEAN_START(ctx);
+		} /* end if */
+
+		/* store group */
+		pdef->group_id = (int) group_data->gr_gid;
+	} /* end if */
+#endif
+	return;
+}
+
 
 /** 
  * @internal Prepares the runtime execution to provide profile path
@@ -507,6 +595,31 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 								   ATTR_VALUE (pdef, "src"),
 								   "Failed to parse \"src\" expression at profile def");
 		} /* end if (HAS_ATTR (pdef, "src")) */
+
+#if defined(AXL_OS_UNIX)
+		/* set default user id and group id */
+		definition->user_id  = -1;
+		definition->group_id = -1;
+#endif
+		/* get run as user */
+		if (HAS_ATTR (pdef, "run-as-user")) {
+			/* check value: user-id */
+			__turbulence_ppath_check_user (ctx, definition, ATTR_VALUE (pdef, "run-as-user"), axl_true);
+
+			/* get run as group id: only check this value
+			 * in the case user-id is configured. It is
+			 * not allowed to only set group-id */
+			if (HAS_ATTR (pdef, "run-as-group")) {
+				/* check value: user-id */
+				__turbulence_ppath_check_user (ctx, definition, ATTR_VALUE (pdef, "run-as-group"), axl_false);
+			} /* end if */
+		} /* end if */
+
+		/* check for process separation */
+		definition->separate = HAS_ATTR_VALUE (pdef, "separate", "yes");
+
+		/* check for chroot value */
+		definition->chroot   = ATTR_VALUE (pdef, "chroot");
 
 		/* now, we have to parse all childs. Rules from the
 		 * same level are chosable at the same time. If the
@@ -616,5 +729,38 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 		axl_free (ctx->paths);
 		ctx->paths = NULL;
 	} /* end if */
+
+	return;
 }
 
+/** 
+ * @internal Change to the effective user id and group id configured
+ * in the profile path configuration (if any).
+ */
+void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx, 
+				      TurbulencePPathDef * ppath_def)
+{
+
+	/* check to change current group */
+	if (ppath_def->group_id != -1 && ppath_def->group_id > 0) {
+		if (setgid (ppath_def->group_id) != 0) {
+			error ("Failed to set executing group id: %d, error (%d:%s)", 
+			       ppath_def->group_id, errno, vortex_errno_get_last_error ());
+		} /* end if */
+	} /* end if */
+
+	/* check to change current user */
+	if (ppath_def->user_id != -1 && ppath_def->user_id > 0) {
+		if (setuid (ppath_def->user_id) != 0) {
+			error ("Failed to set executing user id: %d, error (%d:%s)", 
+			       ppath_def->user_id, errno, vortex_errno_get_last_error ());
+		} /* end if */
+	} /* end if */
+
+	/* update process executing ids */
+	ppath_def->user_id = getuid ();
+	ppath_def->group_id = getgid ();
+	msg ("running process as: %d:%d", ppath_def->user_id, ppath_def->group_id);
+
+	return;
+}

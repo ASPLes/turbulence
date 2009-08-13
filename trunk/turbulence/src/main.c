@@ -302,7 +302,6 @@ int main (int argc, char ** argv)
 	signal (SIGHUP,  main_reconf_signal_received);
 #endif
 
-
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, exarg_is_defined ("debug"));
 	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
