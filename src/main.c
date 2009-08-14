@@ -124,35 +124,6 @@ int  main_init_exarg (int argc, char ** argv)
 	return axl_true;
 }
 
-/** 
- * @brief Termination signal received, notify.
- * @param value The signal received.
- */
-void main_terminate_signal_received (int value)
-{
-	/* notify */
-	turbulence_signal_exit (ctx, value);
-
-	return;	
-}
-
-/**
- * @brief Reconf signal received, notify.
- * @param value The signal received.
- */
-void main_reconf_signal_received (int value)
-{
-	/* notify */
-	turbulence_reload_config (ctx, value);
-
-#if defined(AXL_OS_UNIX)
-	/* reinstall signal */
-	signal (SIGHUP,  main_reconf_signal_received);
-#endif
-	
-	return;
-}
-
 /**
  * @internal Implementation to detach turbulence from console.
  */
@@ -277,6 +248,11 @@ void turbulence_remove_pidfile (void)
 	return;
 }
 
+void main_signal_received (int _signal) {
+	/* default handling */
+	turbulence_signal_received (ctx, _signal);
+}
+
 int main (int argc, char ** argv)
 {
 	char          * config;
@@ -291,16 +267,15 @@ int main (int argc, char ** argv)
 	vortex_ctx = vortex_ctx_new ();
 
 	/*** configure signal handling ***/
-	if (! exarg_is_defined ("disable-sigint"))
-		signal (SIGINT,  main_terminate_signal_received); 
-	signal (SIGSEGV, main_terminate_signal_received);
-	signal (SIGABRT, main_terminate_signal_received);
-	signal (SIGTERM, main_terminate_signal_received); 
-#if defined(AXL_OS_UNIX)
-	signal (SIGKILL, main_terminate_signal_received);
-	signal (SIGQUIT, main_terminate_signal_received);
-	signal (SIGHUP,  main_reconf_signal_received);
-#endif
+	turbulence_signal_install (ctx, 
+				   /* signal sigint handling according to console options */
+				   ! exarg_is_defined ("disable-sigint"), 
+				   /* enable sighup handling */
+				   axl_true,
+				   /* enable sigchild */
+				   axl_true,
+				   /* signal received */
+				   main_signal_received);
 
 	/* configure context debug according to values received */
 	turbulence_log_enable  (ctx, exarg_is_defined ("debug"));

@@ -40,11 +40,11 @@
 /* include header */
 #include <turbulence.h>
 
-/**
+/** 
  * \defgroup turbulence_handlers Turbulence Handlers : Function handler definitions used by the API
  */
 
-/**
+/** 
  * \addtogroup turbulence_handlers
  * @{
  */
@@ -80,6 +80,17 @@ typedef int  (*TurbulenceConnMgrFilter) (VortexConnection * conn, axlPointer use
  * returned.
  */
 typedef int  (*TurbulenceDbListRemoveFunc) (const char * item_stored, axlPointer user_data);
+
+/** 
+ * @brief Handler definition used by process calling to \ref
+ * turbulence_signal_install which has visibility to access to the
+ * right \ref TurbulenceCtx object. This handler must call to \ref
+ * turbulence_signal_received in the case and call to
+ * turbulence_signal_reconf in the case of SIGHUP received.
+ *
+ * @param signal The signal that was received.
+ */
+typedef void (*TurbulenceSignalHandler) (int signal);
 
 #endif
 

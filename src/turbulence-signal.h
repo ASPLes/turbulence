@@ -40,7 +40,16 @@
 
 #include <turbulence.h>
 
-void turbulence_signal_exit (TurbulenceCtx * ctx, int value);
+void turbulence_signal_install (TurbulenceCtx           * ctx, 
+				axl_bool                  enable_sigint, 
+				axl_bool                  enable_sighup,
+				axl_bool                  enable_sigchild,
+				TurbulenceSignalHandler   signal_handler);
+
+void turbulence_signal_received (TurbulenceCtx * ctx, 
+				 int            _signal);
+
+void turbulence_signal_exit    (TurbulenceCtx * ctx, 
+				int            _signal);
 
 #endif /* __TURBULENCE_SIGNAL_H__ */
-
