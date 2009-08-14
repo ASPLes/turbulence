@@ -44,6 +44,9 @@ struct _TurbulenceCtx {
 	 */
 	VortexCtx          * vortex_ctx;
 
+	/* default signal handlers */
+	TurbulenceSignalHandler signal_handler;
+
 	/* Controls if messages must be send to the console log.
 	 */
 	int                  console_enabled;

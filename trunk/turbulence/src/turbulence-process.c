@@ -46,10 +46,21 @@ void turbulence_process_finished (VortexCtx * ctx, axlPointer user_data)
 }
 
 /** 
+ * @internal Reference to the context used by the child process inside
+ * turbulence_process_create_child.
+ */
+TurbulenceCtx * ctx       = NULL;
+
+void turbulence_process_signal_received (int _signal) {
+	/* default handling */
+	turbulence_signal_received (ctx, _signal);
+}
+
+/** 
  * @internal Allows to create a child process running listener connection
  * provided.
  */
-void turbulence_process_create_child (TurbulenceCtx       * ctx, 
+void turbulence_process_create_child (TurbulenceCtx       * _ctx, 
 				      VortexConnection    * conn, 
 				      TurbulencePPathDef  * def)
 {
@@ -69,9 +80,20 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	} /* end if */
 
 	/* do not log messages until turbulence_ctx_reinit finishes */
+	ctx = _ctx;
 	
 	/* reinit TurbulenceCtx */
 	turbulence_ctx_reinit (ctx);
+
+	/* reconfigure signals */
+	turbulence_signal_install (ctx, 
+				   /* disable sigint */
+				   axl_false, 
+				   /* signal sighup */
+				   axl_false,
+				   /* enable sigchild */
+				   axl_false,
+				   turbulence_process_signal_received);
 
 	msg ("Created child prcess: %d", getpid ());
 
@@ -106,6 +128,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* free context (the very last operation) */
 	turbulence_ctx_free (ctx);
 	vortex_ctx_free (vortex_ctx);
+	
+	/* finish process */
+	exit (0);
 	
 	return;
 }
