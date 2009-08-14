@@ -47,4 +47,7 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx);
 void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx, 
 				      TurbulencePPathDef * ppath_def);
 
+void turbulence_ppath_change_root    (TurbulenceCtx      * ctx, 
+				      TurbulencePPathDef * ppath_def);
+
 #endif /* end __TURBULENCE_PPATH_H__ */
