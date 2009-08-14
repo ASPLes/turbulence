@@ -137,6 +137,7 @@ int             common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 
 TurbulenceCtx * common_sasl_get_context    (SaslAuthBackend * backend);
 
+void            common_sasl_free_common    (SaslAuthBackend * backend, axl_bool dump_content);
 void            common_sasl_free           (SaslAuthBackend  * backend);
 
 

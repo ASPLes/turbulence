@@ -37,11 +37,39 @@
  */
 #include <turbulence-process.h>
 
+/* include private headers */
+#include <turbulence-ctx-private.h>
+
+/* include signal handler: SIGCHLD */
+#include <signal.h>
+
+/** 
+ * @internal Function used to init process module (for its internal
+ * handling).
+ *
+ * @param ctx The turbulence context where the initialization will
+ * take place.
+ */
+void turbulence_process_init         (TurbulenceCtx * ctx, axl_bool reinit)
+{
+	/* check for reinit operation */
+	if (reinit && ctx->child_process) {
+		axl_list_free (ctx->child_process);
+		ctx->child_process = NULL;
+	}
+
+	/* create the list of childs opened */
+	if (ctx->child_process == NULL)
+		ctx->child_process = axl_list_new (axl_list_equal_int, NULL);
+	/* init mutex */
+	vortex_mutex_create (&ctx->child_process_mutex);
+	return;
+}
+
 void turbulence_process_finished (VortexCtx * ctx, axlPointer user_data)
 {
-	VortexAsyncQueue * lock = (VortexAsyncQueue *) user_data;
-	/* found vortex reader finished, lock it */
-	vortex_async_queue_push (lock, INT_TO_PTR (axl_true));
+	/* unlock waiting child */
+	vortex_listener_unlock (ctx);
 	return;
 }
 
@@ -53,8 +81,21 @@ TurbulenceCtx * ctx       = NULL;
 
 void turbulence_process_signal_received (int _signal) {
 	/* default handling */
-	turbulence_signal_received (ctx, _signal);
+	int pid = turbulence_signal_received (ctx, _signal);
+	
+	if (_signal == SIGCHLD) {
+		msg ("child process finished, removing from child list: %d", pid);
+		/* remove pid from list */
+		vortex_mutex_lock (&ctx->child_process_mutex);
+		
+		axl_list_remove (ctx->child_process, INT_TO_PTR (pid));
+
+		vortex_mutex_unlock (&ctx->child_process_mutex);
+	} /* end if */
+
+	return;
 }
+
 
 /** 
  * @internal Allows to create a child process running listener connection
@@ -65,7 +106,6 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 				      TurbulencePPathDef  * def)
 {
 	int                   pid;
-	VortexAsyncQueue *    lock;
 	VortexCtx        *    vortex_ctx;
 
 	msg ("Creating child process to manage connection id=%d", vortex_connection_get_id (conn));
@@ -76,6 +116,13 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 		/* parent code, just return */
 		vortex_connection_set_close_socket (conn, axl_false);
 		vortex_connection_shutdown (conn); 
+
+		/* record child */
+		msg ("Created child process pid=%d", pid);
+		vortex_mutex_lock (&ctx->child_process_mutex);
+		axl_list_append (ctx->child_process, INT_TO_PTR (pid));
+		vortex_mutex_unlock (&ctx->child_process_mutex);
+
 		return;
 	} /* end if */
 
@@ -108,9 +155,11 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 	vortex_ctx_reinit (vortex_ctx);
 
+	/* call to unload modules after fork */
+	turbulence_module_unload_after_fork (ctx);
+
 	/* set finish handler  */
-	lock = vortex_async_queue_new ();
-	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, lock);
+	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, NULL);
 
 	/* restart vortex */
 	if (! vortex_init_ctx (vortex_ctx)) {
@@ -122,9 +171,8 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	vortex_listener_complete_register (conn, axl_true);
 	
 	msg ("child process created...wait for exit");
-	vortex_async_queue_pop (lock);
+	vortex_listener_wait (turbulence_ctx_get_vortex_ctx (ctx));
 	msg ("finishing process...");
-	vortex_async_queue_unref (lock);
 
 	/* terminate turbulence execution */
 	turbulence_exit (ctx, axl_false, axl_false);
@@ -139,4 +187,58 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	return;
 }
 
+#if defined(DEFINE_KILL_PROTO)
+int kill (int pid, int signal);
+#endif
 
+/** 
+ * @internal Function that allows to check and kill childs started by
+ * turbulence acording to user configuration.
+ *
+ * @param ctx The context where the child stop operation will take
+ * place.
+ */ 
+void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
+{
+	axlDoc  * doc;
+	axlNode * node;
+	int       pid;
+	int       iterator;
+
+	/* get user doc */
+	doc  = turbulence_config_get (ctx);
+	node = axl_doc_get (ctx->config, "/turbulence/global-settings/kill-childs-on-exit");
+	if (node == NULL) {
+		error ("Unable to find kill-childs-on-exit node, doing nothing..");
+		return;
+	}
+
+	/* check if we have to kill childs */
+	if (! HAS_ATTR_VALUE (node, "value", "yes")) {
+		error ("leaving childs running (kill-childs-on-exit not enabled)..");
+		return;
+	} /* end if */
+
+	/* send a kill operation to all childs */
+	vortex_mutex_lock (&ctx->child_process_mutex);
+	iterator = 0;
+	while (iterator < axl_list_length (ctx->child_process)) {
+		/* get pid */
+		pid = PTR_TO_INT (axl_list_get_nth (ctx->child_process, iterator));
+		msg ("killing child process: %d", pid);
+
+		/* send term signal */
+		if (kill (pid, SIGTERM) != 0)
+			error ("failed to kill child (%d) error was: %d:%s",
+			       pid, errno, vortex_errno_get_last_error ());
+		
+
+		/* next iterator */
+		iterator++;
+	} /* end while */
+	vortex_mutex_unlock (&ctx->child_process_mutex);
+
+	
+
+	return;
+}

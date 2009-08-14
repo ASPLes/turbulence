@@ -144,17 +144,38 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	return 1;
 }
 
+axl_bool turbulence_conn_mgr_int_foreach (axlPointer key, axlPointer data, axlPointer user_data) 
+{
+	TurbulenceConnMgrState * state = (TurbulenceConnMgrState *) data;
+
+	/* do not close transport */
+	vortex_connection_set_close_socket (state->conn, axl_false);
+
+	/* do not stop foreach process until the last item */
+	return axl_false;
+}
+
 /** 
  * @internal Module init.
  */
-void turbulence_conn_mgr_init (TurbulenceCtx * ctx)
+void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 {
 	VortexCtx  * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
+	/* init mutex */
+	vortex_mutex_create (&ctx->conn_mgr_mutex);
+
+	/* check for reinit operation */
+	if (reinit) {
+		msg ("reinit connection manager status..");
+		axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_int_foreach, ctx);
+		axl_hash_free (ctx->conn_mgr_hash);
+		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
+		return;
+	}
+
 	/* init connection list hash */
 	if (ctx->conn_mgr_hash == NULL) {
-		/* init mutex */
-		vortex_mutex_create (&ctx->conn_mgr_mutex);
 		
 		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 

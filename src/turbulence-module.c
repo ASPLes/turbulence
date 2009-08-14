@@ -149,6 +149,57 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 }
 
 /** 
+ * @brief Allows to close the provided module, unloading from memory
+ * and removing all registration references. The function do not
+ * perform any module space notification. The function makes use of
+ * the unload function implemented by modules (if defined).
+ *
+ * @param ctx The context where the module must be removed.
+ * @param module The module name to be unloaded.
+ */
+void               turbulence_module_unload       (TurbulenceCtx * ctx,
+						   const char    * module)
+{
+	int                iterator;
+	TurbulenceModule * mod_added;
+
+	/* check values received */
+	if (ctx == NULL || module == NULL)
+		return;
+
+	/* register the module */
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+
+	/* check first that the module is not already added */
+	iterator = 0;
+	while (iterator < axl_list_length (ctx->registered_modules)) {
+		/* get module in position */
+		mod_added = axl_list_get_nth (ctx->registered_modules, iterator);
+
+		/* check mod name */
+		if (axl_cmp (mod_added->def->mod_name, module)) {
+			/* call to unload module */
+			if (mod_added->def->unload != NULL)
+				mod_added->def->unload (ctx);
+
+			/* remove from registered modules */
+			axl_list_remove_at (ctx->registered_modules, iterator);
+
+			/* terminate it */
+			vortex_mutex_unlock (&ctx->registered_modules_mutex);
+			return;
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	} /* end while */
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+
+	/* no module with the same name was found */
+	return;
+}
+
+/** 
  * @brief Allows to get the init function for the module reference
  * provided.
  * 
@@ -382,6 +433,35 @@ void               turbulence_module_notify_close (TurbulenceCtx * ctx)
 
 	} /* end if */
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+
+	return;
+}
+
+/** 
+ * @internal Function used to find and unload all modules 
+ */
+void               turbulence_module_unload_after_fork (TurbulenceCtx * ctx)
+{
+	/* find all modules configured to load them after activating
+	 * vortex function */
+	axlNode * node;
+
+	node = axl_doc_get (ctx->config, "/turbulence/modules/unload-after-fork/module");
+	if (node == NULL) {
+		msg ("no module to disable after fork");
+		return;
+	} /* end if */
+
+	/* for each module defined, call to unload */
+	while (node != NULL) {
+
+		/* call to unload module name */
+		msg ("unloading module %s after fork", ATTR_VALUE (node, "name"));
+		turbulence_module_unload (ctx, ATTR_VALUE (node, "name"));
+		
+		/* get next node */
+		node = axl_node_get_next_called (node, "module");
+	}
 
 	return;
 }

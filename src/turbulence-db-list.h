@@ -57,45 +57,49 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 					      const char      * token, 
 					      ...);
 
-int                turbulence_db_list_exists (TurbulenceDbList * list,
+axl_bool           turbulence_db_list_exists (TurbulenceDbList * list,
 					      const char       * value);
 
-int                turbulence_db_list_add    (TurbulenceDbList * list,
+axl_bool           turbulence_db_list_add    (TurbulenceDbList * list,
 					      const char       * value);
 
-int                turbulence_db_list_remove (TurbulenceDbList * list,
+axl_bool           turbulence_db_list_remove (TurbulenceDbList * list,
 					      const char       * value);
 
-int                turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
+axl_bool           turbulence_db_list_remove_by_func (TurbulenceDbList           * list,
 						      TurbulenceDbListRemoveFunc   func,
 						      axlPointer                   user_data);
 
-int                turbulence_db_list_edit   (TurbulenceDbList * list,
+axl_bool           turbulence_db_list_edit   (TurbulenceDbList * list,
 					      const char       * oldValue,
 					      const char       * newValue);
 
 axlList          * turbulence_db_list_get            (TurbulenceDbList * list);
 
-int                turbulence_db_list_close          (TurbulenceDbList * list);
+axl_bool           turbulence_db_list_close          (TurbulenceDbList * list);
 
-int    	           turbulence_db_list_close_internal (TurbulenceDbList * list);
+axl_bool           turbulence_db_list_unload         (TurbulenceDbList * list);
 
-int                turbulence_db_list_reload         (TurbulenceDbList * list);
+axl_bool           turbulence_db_list_close_internal (TurbulenceDbList * list,
+						      axl_bool           dump_on_close);
 
-int                turbulence_db_list_flush          (TurbulenceDbList * list);
 
-int                turbulence_db_list_count          (TurbulenceDbList * list);
+axl_bool           turbulence_db_list_reload         (TurbulenceDbList * list);
+
+axl_bool           turbulence_db_list_flush          (TurbulenceDbList * list);
+
+axl_bool           turbulence_db_list_count          (TurbulenceDbList * list);
 
 
 /* internal services, used by turbulence engine, never by user
  * application code */
-int                turbulence_db_list_init           (TurbulenceCtx * ctx);
+axl_bool           turbulence_db_list_init           (TurbulenceCtx * ctx);
 
 void               turbulence_db_list_cleanup        (TurbulenceCtx * ctx);
 
-int                turbulence_db_list_reload_module  (void);
+axl_bool           turbulence_db_list_reload_module  (void);
 
-int                turbulence_db_list_equal (axlPointer a, axlPointer b);
+axl_bool           turbulence_db_list_equal (axlPointer a, axlPointer b);
 
 #endif
 

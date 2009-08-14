@@ -47,6 +47,9 @@ void               turbulence_module_init        (TurbulenceCtx * ctx);
 TurbulenceModule * turbulence_module_open        (TurbulenceCtx * ctx, 
 						  const char    * module);
 
+void               turbulence_module_unload      (TurbulenceCtx * ctx,
+						  const char    * module);
+
 const char       * turbulence_module_name        (TurbulenceModule * module);
 
 ModInitFunc        turbulence_module_get_init    (TurbulenceModule * module);
@@ -66,5 +69,7 @@ void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx);
 void               turbulence_module_notify_close (TurbulenceCtx * ctx);
 
 void               turbulence_module_cleanup      (TurbulenceCtx * ctx);
+
+void               turbulence_module_unload_after_fork (TurbulenceCtx * ctx);
 
 #endif

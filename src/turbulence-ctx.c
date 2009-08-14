@@ -83,12 +83,22 @@ TurbulenceCtx * turbulence_ctx_new ()
 
 /** 
  * @internal Allows to reinit internal state of the context process
- * after a child process creation.
+ * after a child process creation. It also closed or removes internal
+ * elements not required by child process.
  */
 void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
 {
 	/* re-init mutex */
+	vortex_mutex_create (&ctx->exit_mutex);
+	vortex_mutex_create (&ctx->db_list_mutex);
 	vortex_mutex_create (&ctx->data_mutex);
+	vortex_mutex_create (&ctx->registered_modules_mutex);
+
+	/* reinit conn manager: reinit = axl_true */
+	turbulence_conn_mgr_init (ctx, axl_true);
+	
+	/* clean child process list: reinit = axl_true */
+	turbulence_process_init (ctx, axl_true);
 
 	return;
 }
@@ -246,6 +256,10 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	/* do not perform any operation */
 	if (ctx == NULL)
 		return;
+
+	if (ctx->log_bridge_pass)
+		axl_free (ctx->log_bridge_pass);
+	ctx->log_bridge_pass = NULL;
 
 	/* terminate hash */
 	axl_hash_free (ctx->data);

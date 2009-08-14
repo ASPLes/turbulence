@@ -39,7 +39,7 @@
 #define __TURBULENCE_CONN_MGR_H__
 
 /* internal use API */
-void turbulence_conn_mgr_init (TurbulenceCtx * ctx);
+void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit);
 
 void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx);
 

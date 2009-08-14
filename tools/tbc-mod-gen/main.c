@@ -130,6 +130,12 @@ int  tbc_mod_gen_template_create ()
 	axl_node_set_child (node, nodeAux);
 	axl_node_set_cdata_content (nodeAux, "/* Place here all your optional reconf code if the HUP signal is received */", -1);
 
+	/* close node */
+	axl_node_set_comment (node, "unload method, called once the module is required to be unloaded from memory due to child process creation (or similar)", -1);
+	nodeAux = axl_node_create ("unload");
+	axl_node_set_child (node, nodeAux);
+	axl_node_set_cdata_content (nodeAux, "/* Place here the code required to dealloc resources used by your module because turbulence signaled the child process must not have access (using unload-after-fork option) */", -1);
+
 	/* dump the xml document */
 	support_dump_file (ctx, doc, 3, "%stemplate.xml", get_out_dir ());
 
@@ -258,6 +264,16 @@ int  tbc_mod_gen_compile ()
 	}
 	write ("} /* end %s_reconf */\n\n", tolower);
 
+	/* unload handler */
+	write ("/* %s unload handler */\n", mod_name);
+	write ("static void %s_unload (TurbulenceCtx * _ctx) {\n", tolower);
+	node = axl_doc_get (doc, "/mod-def/source-code/unload");
+	if (axl_node_get_content (node, NULL)) {
+		/* write the content defined */
+		write ("%s\n", axl_node_get_content (node, NULL));
+	}
+	write ("} /* end %s_unload */\n\n", tolower);
+
 	/* write handler description */
 	write ("/* Entry point definition for all handlers included in this module */\n");
 	write ("TurbulenceModDef module_def = {\n");
@@ -271,7 +287,7 @@ int  tbc_mod_gen_compile ()
 	write ("%s_init,\n", tolower);
 	write ("%s_close,\n", tolower);
 	write ("%s_reconf,\n", tolower);
-
+	write ("%s_unload\n", tolower);
 	pop_indent ();
 
 	write ("};\n\n");

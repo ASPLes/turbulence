@@ -93,6 +93,11 @@ struct _TurbulencePPathDef {
 	 * string */
 	TurbulenceExpr * src;
 
+	/* destination filter pattern. Again, if the library doesn't
+	 * support regular expression, the source is taken as an
+	 * string */
+	TurbulenceExpr * dst;
+
 	/* a reference to the list of profile path supported */
 	TurbulencePPathItem ** ppath_item;
 
@@ -411,8 +416,8 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 	/* get the current context (TurbulenceCtx) */
 	ctx = data;
 
-	/* try to find a profile path that could match with the
-	 * provided source */
+	/* try to find a profile path that match with the provided
+	 * source */
 	iterator = 0;
 	src      = vortex_connection_get_host (connection);
 	while (ctx->paths->items[iterator] != NULL) {
@@ -596,6 +601,12 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 								   ATTR_VALUE (pdef, "src"),
 								   "Failed to parse \"src\" expression at profile def");
 		} /* end if (HAS_ATTR (pdef, "src")) */
+
+		if (HAS_ATTR (pdef, "dst")) {
+			definition->dst = turbulence_expr_compile (ctx,
+								   ATTR_VALUE (pdef, "dst"),
+								   "Failed to parse \"src\" expression at profile def");
+		} /* end if (HAS_ATTR (pdef, "dst")) */
 
 #if defined(AXL_OS_UNIX)
 		/* set default user id and group id */

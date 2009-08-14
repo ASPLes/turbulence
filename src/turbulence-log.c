@@ -36,6 +36,7 @@
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #include <turbulence.h>
+#include <stdlib.h>
 
 /* local include */
 #include <turbulence-ctx-private.h>
@@ -72,8 +73,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 
 	/* open all logs */
 	node      = axl_node_get_child_called (node, "general-log");
-	ctx->general_log = fopen (ATTR_VALUE (node, "file"), "a");
-	if (ctx->general_log == NULL) {
+	ctx->general_log = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND);
+	if (ctx->general_log == -1) {
 		abort_error ("unable to open general log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
 	} else {
@@ -83,8 +84,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 
 	/* open error logs */
 	node      = axl_node_get_child_called (node, "error-log");
-	ctx->error_log = fopen (ATTR_VALUE (node, "file"), "a");
-	if (ctx->error_log == NULL) {
+	ctx->error_log = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND);
+	if (ctx->error_log == -1) {
 		abort_error ("unable to open error log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
 	} else {
@@ -94,8 +95,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 
 	/* open access log */
 	node      = axl_node_get_child_called (node, "access-log");
-	ctx->access_log  = fopen (ATTR_VALUE (node, "file"), "a");
-	if (ctx->access_log == NULL) {
+	ctx->access_log  = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND);
+	if (ctx->access_log == -1) {
 		abort_error ("unable to open access log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
 	} else {
@@ -104,8 +105,8 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_parent (node);
 
 	node      = axl_node_get_child_called (node, "vortex-log");
-	ctx->vortex_log  = fopen (ATTR_VALUE (node, "file"), "a");
-	if (ctx->vortex_log == NULL) {
+	ctx->vortex_log  = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND);
+	if (ctx->vortex_log == -1) {
 		abort_error ("unable to open vortex log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
 	} else {
@@ -116,23 +117,121 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	return;
 }
 
+
+/** 
+ * @internal Handler used to check channel creation against an
+ * internal password.
+ */
+axl_bool  turbulence_log_bridge_start (const char        * profile,
+				       int                 channel_num,
+				       VortexConnection  * connection,
+				       const char        * serverName,
+				       const char        * profile_content,
+				       char             ** profile_content_reply,
+				       VortexEncoding      encoding,
+				       axlPointer          user_data)
+{
+	TurbulenceCtx * ctx = (TurbulenceCtx *) user_data;
+
+	/* check pass provided by user */
+	if (axl_cmp (ctx->log_bridge_pass, profile_content)) {
+		msg ("log bridget accepted");
+		return axl_true;
+	}
+	error ("unable to accept log bridge channel, random pass do not match!");
+	return axl_false;
+}
+
+void turbulence_log_bridge_frame_received (VortexChannel    * channel,
+					   VortexConnection * conn,
+					   VortexFrame      * frame,
+					   axlPointer         user_data)
+{
+	TurbulenceCtx * ctx = (TurbulenceCtx *) user_data;
+
+	/* reply to frame received */
+	vortex_channel_send_rpy (channel, "", 0, vortex_frame_get_msgno (frame));
+	
+	/* received frame: write the corresponding message */
+	if (axl_memcmp ("general-log", vortex_frame_get_payload (frame), 11)) {
+		msg2 (vortex_frame_get_payload (frame) + 4);
+	} else if (axl_memcmp ("msg", vortex_frame_get_payload (frame), 3))
+		msg (vortex_frame_get_payload (frame) + 3);
+	else if (axl_memcmp ("error", vortex_frame_get_payload (frame), 4))
+		msg (vortex_frame_get_payload (frame) + 4);
+	else if (axl_memcmp ("wrn", vortex_frame_get_payload (frame), 3))
+		msg (vortex_frame_get_payload (frame) + 3);
+	return;
+}
+
+#if defined(DEFINE_RANDOM_PROTO)
+long int random (void);
+#endif
+
+/** 
+ * @internal Function used to init and register turbulence log
+ * bridging: the facility used to register logs from turbulence child
+ * process.
+ */
+void turbulence_log_bridge_init (TurbulenceCtx * ctx)
+{
+	/* init bridge random pass: FIXME: we should store the random
+	 * and recover it to avoid using always as seed 1 */
+	long int   rand_value            = random ();
+
+	/* set bridge pass */
+	ctx->log_bridge_pass  = axl_strdup_printf ("%ld", rand_value);
+
+	msg ("configured log bridge random password: %s", ctx->log_bridge_pass);
+
+	vortex_profiles_register (turbulence_ctx_get_vortex_ctx (ctx), 
+				  "urn:aspl.es:beep:profiles:turbulence-log-bridge",
+				  /* no start handler */
+				  NULL, NULL, 
+				  /* no close */
+				  NULL, NULL,
+				  /* frame received */
+				  turbulence_log_bridge_frame_received, ctx);
+
+	/* register extended start to get access to the piggy back */
+	vortex_profiles_register_extended_start (turbulence_ctx_get_vortex_ctx (ctx), 
+						 "urn:aspl.es:beep:profiles:turbulence-log-bridge",
+						 turbulence_log_bridge_start, ctx);
+	
+	return;
+}
+
 /** 
  * @internal macro that allows to report a message to the particular
  * log, appending date information.
  */
-#define REPORT(log, message, args, file, line) do{                 \
-  if (log) {                                                       \
-     time_val = time (NULL);                                       \
-     time_str = axl_strdup (ctime (&time_val));                    \
-     time_str [strlen (time_str) - 1] = 0;                         \
-     fprintf (log, "%s (%s:%d) ", time_str, file, line);           \
-     axl_free (time_str);                                          \
-     vfprintf (log, message, args);                                \
-     fprintf  (log, "\n");                                         \
-     fflush (log);                                                 \
-     return;                                                       \
-  }                                                                \
-} while (0);
+void REPORT (int log, const char * message, va_list args, const char * file, int line) 
+{
+	/* get turbulence context */
+	time_t             time_val;
+	char             * time_str;
+	char             * string;
+
+	/* create timestamp */
+	time_val = time (NULL);
+	time_str = axl_strdup (ctime (&time_val));
+	time_str [strlen (time_str) - 1] = 0;
+
+	/* write stamp */
+	string = axl_strdup_printf ("%s (%s:%d) ", time_str, file, line);
+	write (log, string, strlen (string));
+	axl_free (string);
+	axl_free (time_str);
+
+	/* create message */
+	string = axl_strdup_printfv (message, args);
+
+	/* write message */
+	write (log, string, strlen (string));
+	axl_free (string);
+	write  (log, "\n", 1);
+	return;
+} 
 
 /** 
  * @brief Reports a single line to the particular log, configured by
@@ -151,10 +250,6 @@ void turbulence_log_report (TurbulenceCtx   * ctx,
 			    const char      * file,
 			    int               line)
 {
-	/* get turbulence context */
-	time_t             time_val;
-	char             * time_str;
-
 	/* according to the type received report */
 	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) 
 		REPORT (ctx->general_log, message, args, file, line);
@@ -177,23 +272,23 @@ void turbulence_log_cleanup (TurbulenceCtx * ctx)
 {
 	/* close the general log */
 	if (ctx->general_log)
-		fclose (ctx->general_log);
-	ctx->general_log = NULL;
+		close (ctx->general_log);
+	ctx->general_log = -1;
 
 	/* close the error log */
 	if (ctx->error_log)
-		fclose (ctx->error_log);
-	ctx->error_log = NULL;
+		close (ctx->error_log);
+	ctx->error_log = -1;
 
 	/* close the access log */
 	if (ctx->access_log)
-		fclose (ctx->access_log);
-	ctx->access_log = NULL;
+		close (ctx->access_log);
+	ctx->access_log = -1;
 
 	/* close vortex log */
 	if (ctx->vortex_log)
-		fclose (ctx->vortex_log);
-	ctx->vortex_log = NULL;
+		close (ctx->vortex_log);
+	ctx->vortex_log = -1;
 
 	return;
 }

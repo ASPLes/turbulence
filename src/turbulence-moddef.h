@@ -75,41 +75,59 @@ typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
 typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
 
 
-/**
+/** 
  * @brief Public definition for the main entry point for all modules
  * developed for turbulence.
  * 
  * See <a class="el" href="http://www.aspl.es/turbulence/extending.html">how to create Turbulence modules</a>.
  */
 typedef struct _TurbulenceModDef {
-	/**
+	/** 
 	 * @brief The module name. This name is used by turbulence to
 	 * refer to the module.
 	 */
 	char         * mod_name;
 
-	/**
+	/** 
 	 * @brief The module long description.
 	 */
 	char         * mod_description;
 
-	/**
+	/** 
 	 * @brief A reference to the init function associated to the module.
 	 */
 	ModInitFunc    init;
 
-	/**
+	/** 
 	 * @brief A reference to the close function associated to the
 	 * module.
 	 */
 	ModCloseFunc   close;
 	
-	/**
+	/** 
 	 * @brief A reference to the reconf function that must be
 	 * implemented to get notifications about turbulence server
 	 * configuration changes.
 	 */
 	ModReconfFunc  reconf;
+
+	/** 
+	 * @brief A reference to the unload function that must
+	 * implement all unload code required in the case turbulence
+	 * function ask the module to stop its function for a
+	 * particular process (which means the module may be working
+	 * in another module). 
+	 * 
+	 * The difference between close and reload is that close can
+	 * consider alls its actions as definitive because turbulence
+	 * main process is stopping.
+	 *
+	 * However, unload function is only called in the context of
+	 * child process created by turbulence to isolate some
+	 * requests (modules and profiles) to be handled by a low
+	 * permissions user.
+	 */
+	ModCloseFunc  unload;
 } TurbulenceModDef;
 
 /** 

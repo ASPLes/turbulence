@@ -40,8 +40,13 @@
 
 #include <turbulence.h>
 
+void turbulence_process_init         (TurbulenceCtx * ctx, 
+				      axl_bool        reinit);
+
 void turbulence_process_create_child (TurbulenceCtx       * ctx, 
 				      VortexConnection    * conn,
 				      TurbulencePPathDef  * def);
+
+void turbulence_process_kill_childs  (TurbulenceCtx * ctx);
 
 #endif

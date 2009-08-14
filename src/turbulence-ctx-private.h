@@ -71,16 +71,17 @@ struct _TurbulenceCtx {
 	axlList            * db_list_opened;
 	axlDtd             * db_list_dtd;
 
-	/* turbulence ppath module */
+	/*** turbulence ppath module ***/
 	TurbulencePPath    * paths;
 
-	/* turbulence log module */
-	FILE               * general_log;
-	FILE               * error_log;
-	FILE               * vortex_log;
-	FILE               * access_log;
+	/*** turbulence log module ***/
+	int                  general_log;
+	int                  error_log;
+	int                  vortex_log;
+	int                  access_log;
+	char               * log_bridge_pass;
 
-	/* turbulence config module */
+	/*** turbulence config module ***/
 	axlDoc             * config;
 
 	/* turbulence loading modules module */
@@ -100,6 +101,10 @@ struct _TurbulenceCtx {
 	/* DTd used by the turbulence-run module to validate module
 	 * pointers */
 	axlDtd             * module_dtd;
+
+	/*** turbulence process module ***/
+	axlList            * child_process;
+	VortexMutex          child_process_mutex;
 };
 
 #endif
