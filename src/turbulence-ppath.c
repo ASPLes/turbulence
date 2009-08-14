@@ -44,6 +44,7 @@
 # include <pwd.h>
 # include <grp.h>
 #endif
+#include <unistd.h>
 
 typedef enum {
 	PROFILE_ALLOW, 
@@ -762,5 +763,29 @@ void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
 	ppath_def->group_id = getgid ();
 	msg ("running process as: %d:%d", ppath_def->user_id, ppath_def->group_id);
 
+	return;
+}
+
+#if defined(DEFINE_CHROOT_PROTO)
+int  chroot (const char * path);
+#endif
+
+/** 
+ * @internal Allows to change current process root dir.
+ */
+void turbulence_ppath_change_root    (TurbulenceCtx      * ctx, 
+				      TurbulencePPathDef * ppath_def)
+{
+	/* check for permission */
+	if (getuid () != 0) 
+		return;
+	/* check if chroot is defined */
+	if (ppath_def->chroot == NULL)
+		return;
+	if (chroot (ppath_def->chroot) != 0) 
+		error ("Failed to change root dir to %s, error found: %d:%s", 
+		       ppath_def->chroot,
+		       errno, vortex_errno_get_last_error ());
+	msg ("change root dir to: %s", ppath_def->chroot);
 	return;
 }

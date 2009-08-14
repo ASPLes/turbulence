@@ -97,6 +97,10 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 
 	msg ("Created child prcess: %d", getpid ());
 
+	/* check here to change root path, in the case it is defined
+	 * now we still have priviledges */
+	turbulence_ppath_change_root (ctx, def);
+
 	/* check here for setuid support */
 	turbulence_ppath_change_user_id (ctx, def);
 
