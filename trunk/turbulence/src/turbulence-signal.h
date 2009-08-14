@@ -46,8 +46,8 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 				axl_bool                  enable_sigchild,
 				TurbulenceSignalHandler   signal_handler);
 
-void turbulence_signal_received (TurbulenceCtx * ctx, 
-				 int            _signal);
+int turbulence_signal_received (TurbulenceCtx * ctx, 
+				int            _signal);
 
 void turbulence_signal_exit    (TurbulenceCtx * ctx, 
 				int            _signal);

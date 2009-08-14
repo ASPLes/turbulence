@@ -14,7 +14,8 @@
       tls-support,                                                                        \
       on-bad-signal,                                                                      \
       clean-start?,                                                                       \
-      connections)>                                                                       \
+      connections,                                                                        \
+                    kill-childs-on-exit?)>                                                \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
 <!ELEMENT port            (#PCDATA)>                                                      \
@@ -44,6 +45,9 @@
 <!ATTLIST clean-start   value  (yes|no) #REQUIRED>                                        \
 <!ATTLIST on-bad-signal action (yes|no) #REQUIRED>                                        \
                                                                                           \
+<!ELEMENT kill-childs-on-exit   EMPTY>                                                    \
+<!ATTLIST kill-childs-on-exit   value  (yes|no) #REQUIRED>                                \
+                                                                                          \
 <!ELEMENT connections       (max-connections)>                                            \
 <!ELEMENT max-connections   EMPTY>                                                        \
 <!ATTLIST max-connections   hard-limit CDATA #REQUIRED                                    \
@@ -51,10 +55,15 @@
                                                                                           \
                                                                                           \
 <!-- modules -->                                                                          \
-<!ELEMENT modules        (directory+)>                                                    \
+<!ELEMENT modules        (directory+, unload-after-fork)>                                 \
                                                                                           \
 <!ELEMENT directory       EMPTY>                                                          \
 <!ATTLIST directory src   CDATA #REQUIRED>                                                \
+                                                                                          \
+<!ELEMENT unload-after-fork (module*)>                                                    \
+<!ELEMENT module EMPTY>                                                                   \
+<!ATTLIST module                                                                          \
+   name   CDATA #REQUIRED>                                                                \
                                                                                           \
 <!-- features -->                                                                         \
 <!ELEMENT features       (request-x-client-close?)>                                       \
@@ -77,6 +86,7 @@
           path-name      CDATA #IMPLIED                                                   \
           server-name    CDATA #IMPLIED                                                   \
    src            CDATA #IMPLIED                                                          \
+   dst            CDATA #IMPLIED                                                          \
    run-as-user    CDATA #IMPLIED                                                          \
    run-as-group   CDATA #IMPLIED                                                          \
    separate       CDATA #IMPLIED                                                          \

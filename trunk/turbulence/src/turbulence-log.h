@@ -40,7 +40,11 @@
 
 #include <turbulence.h>
 
+#define TURBULENCE_LOG_BRIDGE_URI "urn:aspl.es:beep:profiles:turbulence-log-bridge"
+
 void turbulence_log_init (TurbulenceCtx * ctx);
+
+void turbulence_log_bridge_init (TurbulenceCtx * ctx);
 
 typedef enum {LOG_REPORT_GENERAL = 1, 
 	      LOG_REPORT_ACCESS  = 1 << 2, 

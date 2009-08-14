@@ -165,11 +165,37 @@ static int  sasl_init (TurbulenceCtx * _ctx)
 static void sasl_close (TurbulenceCtx * ctx)
 {
 	msg ("turbulence SASL close");
+	/* call to free all resources dumping back to disk current
+	 * state */
 	common_sasl_free (sasl_backend);
 	
+	/* close mutex */
+	vortex_mutex_destroy (&sasl_xml_db_mutex);
+
+	return;
+}
+
+/** 
+ * @brief This handler is called when the module is being unloaded
+ * because configuration have signaled the module must not be
+ * available at at child process. In many cases this function can be
+ * implemented by doing a call to current close handler. 
+ * 
+ * However, there are some cases that would be required to uninstall
+ * all memory and elements used keeping in mind the module may be
+ * still in by turbulence main process.
+ */
+static void sasl_unload (TurbulenceCtx * ctx)
+{
+	msg ("unloading SASL module..");
+
+	/* call to finish memory without dumping */
+	common_sasl_free_common (sasl_backend, axl_false);
 
 	/* close mutex */
 	vortex_mutex_destroy (&sasl_xml_db_mutex);
+
+	return;
 }
 
 /**
@@ -182,6 +208,7 @@ TurbulenceModDef module_def = {
 	sasl_init,
 	sasl_close,
 	/* no reconf function for now */
-	NULL
+	NULL,
+	sasl_unload
 };
 

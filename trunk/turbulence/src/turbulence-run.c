@@ -237,6 +237,8 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
 		directory = axl_node_get_next_called (directory, "directory");
 		
 	} /* end while */
+
+	return;
 }
 
 /** 
@@ -367,13 +369,17 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 
 	/* now load all modules found */
 	turbulence_run_load_modules (ctx, doc);
-	
+
 	/* now check for profiles already activated */
 	if (vortex_profiles_registered (vortex_ctx) == 0) {
 		abort_error ("unable to start turbulence server, no profile was registered into the vortex engine either by configuration or modules");
 		return axl_false;
 	} /* end if */
-	
+
+	/* after previous check, register turbulence-log-bridge
+	 * profile */
+	turbulence_log_bridge_init (ctx);
+				  
 	/* get the first listener configuration */
 	listener = axl_doc_get (doc, "/turbulence/global-settings/listener");
 	while (listener != NULL) {

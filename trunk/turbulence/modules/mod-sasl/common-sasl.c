@@ -104,6 +104,13 @@ struct _SaslAuthDb {
 	 * @brief Time record the last modification for the document.
 	 */
 	long int            db_time;
+
+	/** 
+	 * @brief Used to signal if the backend db implemenation must
+	 * flush its current memory state to disk or only relaease
+	 * memory.
+	 */
+	axl_bool            dump_on_close;
 	
 };
 
@@ -183,7 +190,11 @@ void common_sasl_db_free (SaslAuthDb * db)
 		return;
 
 	/* close allowed domains */
-	turbulence_db_list_close (db->allowed_admins);
+	if (db->dump_on_close) {
+		turbulence_db_list_close (db->allowed_admins);
+	} else {
+		turbulence_db_list_unload (db->allowed_admins);
+	}
 	axl_free (db->serverName);
 	axl_free (db->db_path);
 
@@ -214,19 +225,49 @@ TurbulenceCtx * common_sasl_get_context (SaslAuthBackend * backend)
 	return backend->ctx;
 }
 
-
-
-void common_sasl_free (SaslAuthBackend * backend)
+void common_sasl_free_common (SaslAuthBackend * backend, axl_bool dump_content)
 {
+	axlHashCursor * cursor;
+	SaslAuthDb    * db;
+
 	if (backend == NULL)
 		return;
+
+	/* not dump_content flag all backends to not dump */
+	cursor = axl_hash_cursor_new (backend->dbs);
+	while (axl_hash_cursor_has_item (cursor)) {
+		/* get the database */
+		db = axl_hash_cursor_get_value (cursor);
+
+		/* configure */
+		db->dump_on_close = dump_content;
+
+		/* next item to explore */
+		axl_hash_cursor_next (cursor);
+	} /* end while */
+	
+	/* free cursor */
+	axl_hash_cursor_free (cursor);
 
 	/* release the path */
 	axl_free            (backend->sasl_conf_path);
 	axl_doc_free        (backend->sasl_xml_conf);
 	axl_hash_free       (backend->dbs);
+
+	/* free default database */
+	backend->default_db->dump_on_close = dump_content;
 	common_sasl_db_free (backend->default_db);
+
+	/* free node itself */
 	axl_free            (backend);
+
+	return;
+}
+
+void common_sasl_free (SaslAuthBackend * backend)
+{
+	/* free and dump content back to disk */
+	common_sasl_free_common (backend, axl_true);
 
 	return;
 }
@@ -455,8 +496,9 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	char          * path;
 
 	/* create one db */
-	db           = axl_new (SaslAuthDb, 1);
-	db->type     = SASL_BACKEND_XML;
+	db               = axl_new (SaslAuthDb, 1);
+	db->dump_on_close = axl_true;
+	db->type          = SASL_BACKEND_XML;
 
 	/* find the file */
 	db->db_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "location"));

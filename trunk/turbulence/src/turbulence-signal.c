@@ -44,7 +44,7 @@
  * @internal Termination signal received, notify.
  * @param _signal The signal received.
  */
-void turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
+int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 {
 	int exit_status = 0;
 	int pid;
@@ -57,21 +57,26 @@ void turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 		/* reconfigure signal */
 		signal (SIGHUP, ctx->signal_handler);
 #endif
-		return;
+		return 0;
 	} else if (_signal == SIGCHLD) {
+		/* do not get finished pid to let kill child process
+		 * to get it */
 		pid = wait (&exit_status);
 		msg ("child process (%d) finished with status: %d",
 		     pid, exit_status);
 
-		/* reconfigure signal */
-		signal (SIGHUP, ctx->signal_handler);
-		return;
+		/* reconfigure signal again */
+		signal (SIGCHLD, ctx->signal_handler);
+		
+		/* return child pid to allow management */
+		return pid;
 	} /* end if */
 
 	/* notify */
+	msg ("received termination signal (%d)", _signal);
 	turbulence_signal_exit (ctx, _signal);
 
-	return;	
+	return 0;	
 }
 
 /** 

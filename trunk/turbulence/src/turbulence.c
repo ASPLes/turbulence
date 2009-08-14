@@ -125,6 +125,9 @@ int  turbulence_init (TurbulenceCtx * ctx,
 	/* init turbulence-module.c */
 	turbulence_module_init (ctx);
 
+	/* init turbulence-proces.c: reinit=axl_false */
+	turbulence_process_init (ctx, axl_false);
+
 	/* load current turbulence configuration */
 	if (! turbulence_config_load (ctx, config)) {
 		/* unable to load configuration */
@@ -136,8 +139,8 @@ int  turbulence_init (TurbulenceCtx * ctx,
 		return axl_false;
 	} /* end if */
 
-	/* init connection manager */
-	turbulence_conn_mgr_init (ctx);
+	/* init connection manager: reinit=axl_false */
+	turbulence_conn_mgr_init (ctx, axl_false);
 
 	/* init ok */
 	return axl_true;
@@ -189,6 +192,9 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	v_return_if_fail (ctx);
 
 	msg ("cleaning up..");
+
+	/* check to kill childs */
+	turbulence_process_kill_childs (ctx);
 
 	/* terminate all modules */
 	turbulence_config_cleanup (ctx);
