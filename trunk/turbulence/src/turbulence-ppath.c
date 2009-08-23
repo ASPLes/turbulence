@@ -457,6 +457,7 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 	 * source */
 	iterator = 0;
 	src      = vortex_connection_get_host (connection);
+	dst      = vortex_connection_get_local_addr (connection);
 	while (ctx->paths->items[iterator] != NULL) {
 		/* get the profile path def */
 		def = ctx->paths->items[iterator];
@@ -470,9 +471,10 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 
 		/* match found */
 		if (src_status && dst_status) {
-			msg ("profile path found, setting default state: %s, connection id=%d, src=%s", 
+			msg ("profile path found, setting default state: %s, connection id=%d, src=%s local_addr=%s", 
 			     def->path_name ? def->path_name : "(no path name defined)",
-			     vortex_connection_get_id (connection), src);
+			     vortex_connection_get_id (connection), src, dst);
+			break;
 		} /* end if */
 
 		/* next profile path definition */
