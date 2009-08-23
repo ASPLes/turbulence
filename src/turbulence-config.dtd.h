@@ -55,7 +55,7 @@
                                                                                           \
                                                                                           \
 <!-- modules -->                                                                          \
-<!ELEMENT modules        (directory+, unload-after-fork)>                                 \
+<!ELEMENT modules        (directory+, unload-after-fork?)>                                \
                                                                                           \
 <!ELEMENT directory       EMPTY>                                                          \
 <!ATTLIST directory src   CDATA #REQUIRED>                                                \
