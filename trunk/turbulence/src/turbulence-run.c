@@ -376,10 +376,9 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 		return axl_false;
 	} /* end if */
 
-	/* after previous check, register turbulence-log-bridge
-	 * profile */
-	turbulence_log_bridge_init (ctx);
-				  
+	/* start here log manager */
+	turbulence_log_manager_start (ctx);
+
 	/* get the first listener configuration */
 	listener = axl_doc_get (doc, "/turbulence/global-settings/listener");
 	while (listener != NULL) {

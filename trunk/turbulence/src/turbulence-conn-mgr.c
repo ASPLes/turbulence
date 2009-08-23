@@ -167,7 +167,6 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 
 	/* check for reinit operation */
 	if (reinit) {
-		msg ("reinit connection manager status..");
 		axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_int_foreach, ctx);
 		axl_hash_free (ctx->conn_mgr_hash);
 		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);

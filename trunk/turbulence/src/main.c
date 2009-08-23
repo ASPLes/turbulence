@@ -36,21 +36,11 @@
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
 
-/* libturbulence support */
-#include <turbulence.h>
-
-/* command line argument parsing support */
-#include <exarg.h>
-
 /* system includes */
 #include <signal.h>
 
-#define HELP_HEADER "Turbulence: BEEP application server\n\
-Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
-
-#define POST_HEADER "\n\
-If you have question, bugs to report, patches, you can reach us\n\
-at <vortex@lists.aspl.es>."
+/* include common definitions */
+#include <main-common.h>
 
 /* global instance created */
 TurbulenceCtx * ctx;
@@ -277,53 +267,11 @@ int main (int argc, char ** argv)
 				   /* signal received */
 				   main_signal_received);
 
-	/* configure context debug according to values received */
-	turbulence_log_enable  (ctx, exarg_is_defined ("debug"));
-	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
-	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
+	/* check and enable console debug options */
+	main_common_enable_debug_options (ctx, vortex_ctx);
 
-	/* enable vortex debug: do this at this place because
-	 * turbulece_init makes a call to vortex_init */
-	vortex_log_enable  (vortex_ctx, exarg_is_defined ("vortex-debug"));
-	vortex_log2_enable (vortex_ctx, exarg_is_defined ("vortex-debug2"));
-	if (exarg_is_defined ("vortex-debug-color")) {
-		vortex_log_enable       (vortex_ctx, axl_true);
-		vortex_color_log_enable (vortex_ctx, axl_true);
-	} /* end if */
-
-	/* check console color debug */
-	turbulence_color_log_enable (ctx, exarg_is_defined ("color-debug"));
-
-	/* enable --debug option if it is found to be defined
-	 * --color-debug */
-	if (exarg_is_defined ("color-debug"))
-		turbulence_log_enable (ctx, axl_true);
-
-	/* init the vortex support module to allow finding the
-	 * configuration file */
-	vortex_support_init (vortex_ctx);
-
-	/* configure lookup domain, and load configuration file */
-	vortex_support_add_domain_search_path_ref (vortex_ctx, axl_strdup ("turbulence-conf"), 
-						   vortex_support_build_filename (SYSCONFDIR, "turbulence", NULL));
-	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-conf", ".");
-
-	/* find the configuration file */
-	if (exarg_is_defined ("config")) {
-		/* get the configuration defined at the command line */
-		config = axl_strdup (exarg_get_string ("config"));
-	} else {
-		/* get the default configuration defined at
-		 * compilation time */
-		config = vortex_support_domain_find_data_file (vortex_ctx, "turbulence-conf", "turbulence.conf");
-	} /* end if */
-
-	/* load main turb */
-	if (config == NULL) {
-		abort_error ("Unable to find turbulence.conf file at the default location: %s/turbulence/turbulence.conf", SYSCONFDIR);
-		return -1;
-	} else 
-		msg ("using configuration file: %s", config);
+	/* check and get config location */
+	config = main_common_get_config_location (ctx, vortex_ctx);
 
 	/* check detach operation */
 	if (exarg_is_defined ("detach")) {
@@ -356,7 +304,7 @@ int main (int argc, char ** argv)
 		return -1;
 
 	/* drop a log */
-	msg ("Turbulence STARTED OK");
+	msg ("Turbulence STARTED OK (pid: %d)", getpid ());
 
 	/* look main thread until finished */
 	vortex_listener_wait (vortex_ctx);

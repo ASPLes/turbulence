@@ -40,11 +40,11 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-/**
+/** 
  * \defgroup turbulence_ctx Turbulence Context: API provided to handle Turbulence contexts
  */
 
-/**
+/** 
  * \addtogroup turbulence_ctx
  * @{
  */
@@ -76,6 +76,12 @@ TurbulenceCtx * turbulence_ctx_new ()
 	/* create hash */
 	ctx->data  = axl_hash_new (axl_hash_string, axl_hash_equal_string);
 	vortex_mutex_create (&ctx->data_mutex);
+
+	/* set log descriptors to something not usable */
+	ctx->general_log = -1;
+	ctx->error_log   = -1;
+	ctx->access_log  = -1;
+	ctx->vortex_log  = -1;
 
 	/* return context created */
 	return ctx;
@@ -256,10 +262,6 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	/* do not perform any operation */
 	if (ctx == NULL)
 		return;
-
-	if (ctx->log_bridge_pass)
-		axl_free (ctx->log_bridge_pass);
-	ctx->log_bridge_pass = NULL;
 
 	/* terminate hash */
 	axl_hash_free (ctx->data);

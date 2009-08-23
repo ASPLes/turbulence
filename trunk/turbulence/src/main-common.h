@@ -35,40 +35,22 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
-#ifndef __TURBULENCE_LOG_H__
-#define __TURBULENCE_LOG_H__
 
+/* libturbulence support */
 #include <turbulence.h>
 
-void      turbulence_log_init         (TurbulenceCtx * ctx);
+/* command line argument parsing support */
+#include <exarg.h>
 
-typedef enum {LOG_REPORT_GENERAL = 1, 
-	      LOG_REPORT_ACCESS  = 1 << 2, 
-	      LOG_REPORT_VORTEX  = 1 << 3,
-	      LOG_REPORT_ERROR   = 1 << 4
-} LogReportType;
+#define HELP_HEADER "Turbulence: BEEP application server\n\
+Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
 
-void      turbulence_log_report (TurbulenceCtx * ctx,
-				 LogReportType   type, 
-				 const char    * message,
-				 va_list         args,
-				 const char    * file,
-				 int             line);
+#define POST_HEADER "\n\
+If you have question, bugs to report, patches, you can reach us\n\
+at <vortex@lists.aspl.es>."
 
-void      turbulence_log_configure (TurbulenceCtx * ctx,
-				    LogReportType   type,
-				    int             descriptor);
+void   main_common_enable_debug_options (TurbulenceCtx * ctx, 
+					 VortexCtx     * vortex_ctx);
 
-void      turbulence_log_manager_start (TurbulenceCtx * ctx);
-
-void      turbulence_log_manager_register (TurbulenceCtx * ctx,
-					   LogReportType   type,
-					   int             descriptor);
-
-axl_bool  turbulence_log_is_enabled    (TurbulenceCtx * ctx);
-
-void      turbulence_log_cleanup       (TurbulenceCtx * ctx);
-
-void      turbulence_log_child_cleanup (TurbulenceCtx * ctx);
-
-#endif
+char * main_common_get_config_location (TurbulenceCtx * ctx, 
+					VortexCtx     * vortex_ctx);
