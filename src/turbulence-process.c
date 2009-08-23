@@ -108,6 +108,23 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	int                   pid;
 	VortexCtx        *    vortex_ctx;
 
+	/* pipes to communicate logs from child to parent */
+	int                   general_log[2] = {-1, -1};
+	int                   error_log[2]   = {-1, -1};
+	int                   access_log[2]  = {-1, -1};
+	int                   vortex_log[2]  = {-1, -1};
+
+	if (turbulence_log_is_enabled (ctx)) {
+		if (pipe (general_log) != 0)
+			error ("unable to create pipe to transport general log, this will cause these logs to be lost");
+		if (pipe (error_log) != 0)
+			error ("unable to create pipe to transport error log, this will cause these logs to be lost");
+		if (pipe (access_log) != 0)
+			error ("unable to create pipe to transport access log, this will cause these logs to be lost");
+		if (pipe (vortex_log) != 0)
+			error ("unable to create pipe to transport vortex log, this will cause these logs to be lost");
+	} /* end if */
+
 	msg ("Creating child process to manage connection id=%d", vortex_connection_get_id (conn));
 
 	/* call to fork */
@@ -116,6 +133,25 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 		/* parent code, just return */
 		vortex_connection_set_close_socket (conn, axl_false);
 		vortex_connection_shutdown (conn); 
+
+		/* register pipes to receive child logs */
+		if (turbulence_log_is_enabled (ctx)) {
+			/* support for general-log */
+			turbulence_log_manager_register (ctx, LOG_REPORT_GENERAL, general_log[0]); /* register read end */
+			vortex_close_socket (general_log[1]);                                      /* close write end */
+
+			/* support for error-log */
+			turbulence_log_manager_register (ctx, LOG_REPORT_ERROR, error_log[0]); /* register read end */
+			vortex_close_socket (error_log[1]);                                      /* close write end */
+
+			/* support for access-log */
+			turbulence_log_manager_register (ctx, LOG_REPORT_ACCESS, access_log[0]); /* register read end */
+			vortex_close_socket (access_log[1]);                                      /* close write end */
+
+			/* support for vortex-log */
+			turbulence_log_manager_register (ctx, LOG_REPORT_VORTEX, vortex_log[0]); /* register read end */
+			vortex_close_socket (vortex_log[1]);                                      /* close write end */
+		}
 
 		/* record child */
 		msg ("Created child process pid=%d", pid);
@@ -128,9 +164,31 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 
 	/* do not log messages until turbulence_ctx_reinit finishes */
 	ctx = _ctx;
-	
+
 	/* reinit TurbulenceCtx */
 	turbulence_ctx_reinit (ctx);
+
+	/* check if log is enabled to redirect content to parent */
+	if (turbulence_log_is_enabled (ctx)) {
+		/* configure new general log */
+		turbulence_log_configure (ctx, LOG_REPORT_GENERAL, general_log[1]); /* configure write end */
+		vortex_close_socket (general_log[0]);                               /* close read end */
+
+		/* configure new error log */
+		turbulence_log_configure (ctx, LOG_REPORT_ERROR, error_log[1]); /* configure write end */
+		vortex_close_socket (error_log[0]);                             /* close read end */
+
+		/* configure new access log */
+		turbulence_log_configure (ctx, LOG_REPORT_ACCESS, access_log[1]); /* configure write end */
+		vortex_close_socket (access_log[0]);                              /* close read end */
+
+		/* configure new vortex log */
+		turbulence_log_configure (ctx, LOG_REPORT_VORTEX, vortex_log[1]); /* configure write end */
+		vortex_close_socket (vortex_log[0]);                              /* close read end */
+	}
+
+	/* cleanup log stuff used by parent */
+	turbulence_log_child_cleanup (ctx);
 
 	/* reconfigure signals */
 	turbulence_signal_install (ctx, 
@@ -238,7 +296,16 @@ void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
 	} /* end while */
 	vortex_mutex_unlock (&ctx->child_process_mutex);
 
-	
-
 	return;
+}
+
+/** 
+ * @internal Function used to cleanup the process module.
+ */
+void turbulence_process_cleanup      (TurbulenceCtx * ctx)
+{
+	vortex_mutex_destroy (&ctx->child_process_mutex);
+	axl_list_free (ctx->child_process);
+	return;
+			      
 }

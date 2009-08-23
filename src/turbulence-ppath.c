@@ -394,6 +394,40 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
 	return axl_true;
 }
 
+axl_bool __turbulence_ppath_handle_connection_match_src (VortexConnection * connection, 
+							 TurbulenceExpr   * expr, 
+							 const char       * src)
+{
+	/* by default, it no expression is found, it means this match
+	 * pattern must not block the connection  */
+	if (expr == NULL)
+		return axl_true;
+
+	/* try to match the src expression against the connection value */
+	if (turbulence_expr_match (expr, src)) {
+		return axl_true;
+	} /* end if */
+	
+	return axl_false;
+}
+
+axl_bool __turbulence_ppath_handle_connection_match_dst (VortexConnection * connection, 
+							 TurbulenceExpr   * expr, 
+							 const char       * dst)
+{
+	/* by default, it no expression is found, it means this match
+	 * pattern must not block the connection  */
+	if (expr == NULL)
+		return axl_true;
+
+	/* try to match the src expression against the connection value */
+	if (turbulence_expr_match (expr, dst)) {
+		return axl_true;
+	} /* end if */
+	
+	return axl_false;
+}
+
 /** 
  * @internal Server init handler that allows to check the connectio
  * source and select the appropiate profile path to be used for the
@@ -411,6 +445,9 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 	TurbulenceCtx        * ctx;
 	int                    iterator;
 	const char           * src;
+	const char           * dst;
+	axl_bool               src_status;
+	axl_bool               dst_status;
 	
 
 	/* get the current context (TurbulenceCtx) */
@@ -425,15 +462,19 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 		def = ctx->paths->items[iterator];
 		msg ("checking profile path def: %s", def->path_name ? def->path_name : "(no path name defined)");
 
-		/* try to match the src expression against the connection value */
-		if (turbulence_expr_match (def->src, src)) {
-			/* match found */
+		/* get src status */
+		src_status = __turbulence_ppath_handle_connection_match_src (connection, def->src, src);
+
+		/* get dst status */
+		dst_status = __turbulence_ppath_handle_connection_match_src (connection, def->dst, dst);
+
+		/* match found */
+		if (src_status && dst_status) {
 			msg ("profile path found, setting default state: %s, connection id=%d, src=%s", 
 			     def->path_name ? def->path_name : "(no path name defined)",
 			     vortex_connection_get_id (connection), src);
-			break;
-		}
-		
+		} /* end if */
+
 		/* next profile path definition */
 		iterator++;
 		def = NULL;
@@ -717,6 +758,7 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 			axl_free (def->path_name);
 			turbulence_expr_free (def->serverName);
 			turbulence_expr_free (def->src);
+			turbulence_expr_free (def->dst);
 
 			iterator2 = 0;
 			while (def->ppath_item[iterator2] != NULL) {

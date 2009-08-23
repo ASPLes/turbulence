@@ -230,6 +230,9 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* terminate run module */
 	turbulence_run_cleanup (ctx);
 
+	/* cleanup process module */
+	turbulence_process_cleanup (ctx);
+
 	/* free mutex */
 	vortex_mutex_destroy (&ctx->exit_mutex);
 

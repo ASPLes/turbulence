@@ -49,4 +49,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 void turbulence_process_kill_childs  (TurbulenceCtx * ctx);
 
+void turbulence_process_cleanup      (TurbulenceCtx * ctx);
+
 #endif

@@ -79,7 +79,11 @@ struct _TurbulenceCtx {
 	int                  error_log;
 	int                  vortex_log;
 	int                  access_log;
-	char               * log_bridge_pass;
+	VortexThread         log_manager_thread;
+	axlList            * log_manager_list;
+	axlListCursor      * log_manager_cursor;
+	axlPointer           log_manager_fileset;
+	VortexAsyncQueue   * log_manager_queue;
 
 	/*** turbulence config module ***/
 	axlDoc             * config;
