@@ -55,7 +55,7 @@
                                                                                           \
                                                                                           \
 <!-- modules -->                                                                          \
-<!ELEMENT modules        (directory+, unload-after-fork?)>                                \
+<!ELEMENT modules        (directory+, unload-after-fork?, no-load?)>                      \
                                                                                           \
 <!ELEMENT directory       EMPTY>                                                          \
 <!ATTLIST directory src   CDATA #REQUIRED>                                                \
@@ -64,6 +64,8 @@
 <!ELEMENT module EMPTY>                                                                   \
 <!ATTLIST module                                                                          \
    name   CDATA #REQUIRED>                                                                \
+                                                                                          \
+<!ELEMENT no-load (module*)>                                                              \
                                                                                           \
 <!-- features -->                                                                         \
 <!ELEMENT features       (request-x-client-close?)>                                       \
