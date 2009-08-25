@@ -72,6 +72,44 @@ void turbulence_run_check_clean_start (TurbulenceCtx * ctx)
 }
 
 /** 
+ * @internal Function used to check a module name or a base module
+ * name to be not loaded by a no-load directive.
+ */
+axl_bool turbulence_run_check_no_load_module (TurbulenceCtx * ctx, 
+					      const char    * module_to_check)
+{
+	axlDoc     * doc = turbulence_config_get (ctx);
+	axlNode    * node;
+	int          length;
+	const char * module_name;
+
+	node = axl_doc_get (doc, "/turbulence/modules/no-load/module");
+	while (node != NULL) {
+
+		/* check module name without extension */
+		length      = 0;
+		while (module_to_check[length] && module_to_check[length] != '.')
+			length++;
+
+		/* check length */
+		module_name = ATTR_VALUE (node, "name");
+		if (length == strlen (module_name))  {
+			
+			/* check restriction without name */
+			msg ("checking %s with %s", module_name, module_to_check);
+			if (axl_memcmp (module_name, module_to_check, length))
+				return axl_false;
+		} /* end if */
+		
+		/* get next module */
+		node = axl_node_get_next_called (node, "module");
+	} /* end while */
+
+	/* no restriction found */
+	return axl_true;
+}
+
+/** 
  * @brief Tries to load all modules found at the directory already
  * located. In fact the function searches for xml files that points to
  * modules to be loaded.
@@ -87,6 +125,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 {
 	struct dirent    * entry;
 	char             * fullpath = NULL;
+	const char       * location;
 	axlDoc           * doc;
 	axlError         * error;
 	TurbulenceModule * module;
@@ -137,12 +176,25 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 
 		msg ("loading mod turbulence pointer: %s", fullpath);
 
+		/* check module basename to be not loaded */
+		location = ATTR_VALUE (axl_doc_get_root (doc), "location");
+		if (! turbulence_run_check_no_load_module (ctx, turbulence_file_name (location))) {
+			wrn ("module %s skipped by location", location);
+			goto next;
+		}
+
 		/* load the module man!!! */
-		module = turbulence_module_open (ctx, ATTR_VALUE (axl_doc_get_root (doc), "location"));
+		module = turbulence_module_open (ctx, location);
 		if (module == NULL) {
-			wrn ("unable to open module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
+			wrn ("unable to open module: %s", location);
 			goto next;
 		} /* end if */
+
+		/* check module name */
+		if (! turbulence_run_check_no_load_module (ctx, turbulence_module_name (module))) {
+			wrn ("module %s skipped by plugin name", turbulence_module_name (module));
+			goto next;
+		}
 
 		/* check if module exists */
 		if (turbulence_module_exists (module)) {
