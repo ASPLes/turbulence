@@ -134,7 +134,9 @@ int  turbulence_init (TurbulenceCtx * ctx,
 		return axl_false;
 	}
 
-	/* init profile path module */
+	/* init profile path module: this initialization must be done
+	 * before calling to turbulence_run_config to avoid third
+	 * party modules to install handler with higher priority. */
 	if (! turbulence_ppath_init (ctx)) {
 		return axl_false;
 	} /* end if */
