@@ -89,12 +89,14 @@
 	  chroot         CDATA #IMPLIED >
 
 <!ATTLIST if-success 
+	  serverName   CDATA #IMPLIED
           profile      CDATA #REQUIRED
           connmark     CDATA #IMPLIED
 	  max-per-conn CDATA #IMPLIED 
           preconnmark  CDATA #IMPLIED >
 	  
 <!ATTLIST allow
+	  serverName   CDATA #IMPLIED
           profile      CDATA #REQUIRED 
 	  max-per-conn CDATA #IMPLIED
           preconnmark  CDATA #IMPLIED >
