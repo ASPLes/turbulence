@@ -103,7 +103,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 	result->path   = axl_strdup (module);
 	result->ctx    = ctx;
 #if defined(AXL_OS_UNIX)
-	result->handle = dlopen (module, RTLD_LAZY);
+	result->handle = dlopen (module, RTLD_LAZY | RTLD_GLOBAL);
 #elif defined(AXL_OS_WIN32)
 	result->handle = LoadLibraryEx (module, NULL, 0);
 	if (result->handle == NULL)
