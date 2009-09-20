@@ -92,6 +92,9 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("disable-sigint", NULL, EXARG_NONE,
 			   "Allows to disable SIGINT handling done by Turbulence. This option is only useful for debugging purposes..");
 
+	exarg_install_arg ("local-management", "r", EXARG_NONE,
+			   "Allows to connect to local turbulence process CLI");
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -302,6 +305,11 @@ int main (int argc, char ** argv)
 	msg ("about to startup configuration found..");
 	if (! turbulence_run_config (ctx))
 		return -1;
+
+	/* create turbulence administrator socket */
+	if (! turbulence_radmin_init (ctx))
+		return -1;
+	
 
 	/* drop a log */
 	msg ("Turbulence STARTED OK (pid: %d)", getpid ());

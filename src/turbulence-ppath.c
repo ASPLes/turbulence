@@ -40,12 +40,6 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-#if defined(AXL_OS_UNIX)
-# include <pwd.h>
-# include <grp.h>
-#endif
-#include <unistd.h>
-
 typedef enum {
 	PROFILE_ALLOW, 
 	PROFILE_IF
@@ -519,22 +513,6 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 	return axl_true;
 }
 
-axl_bool __turbulence_is_num (const char * value)
-{
-	int iterator = 0;
-	while (iterator < value[iterator]) {
-		/* check value on each position */
-		if (! isdigit (value[iterator]))
-			return axl_false;
-
-		/* next position */
-		iterator++;
-	}
-
-	/* is a number */
-	return axl_true;
-}
-
 /** 
  * @internal Checks the user id value (or group id value if
  * check_user_id == axl_false) to store to user the user_id/group_id
@@ -545,43 +523,13 @@ void __turbulence_ppath_check_user (TurbulenceCtx      * ctx,
 				    const char         * value, 
 				    axl_bool             check_user_id) 
 {
-#if defined (AXL_OS_UNIX)
-	struct passwd * user_data;
-	struct group  * group_data;
-
 	if (check_user_id) {
-		msg ("checking user id: %s", value);
-		if (__turbulence_is_num (value)) 
-			user_data = getpwuid (atoi (value));
-		else 
-			user_data = getpwnam (value);
-
-		/* check user */
-		if (user_data == NULL) {
-			wrn ("Failed to find data associated to user (%s), it seems its missing", value);
-			CLEAN_START(ctx);
-		} /* end if */
-		
 		/* store user id */
-		pdef->user_id = (int) user_data->pw_uid;
+		pdef->user_id =  turbulence_get_system_id (ctx, value, check_user_id);
 	} else {
-		/* check group */
-		msg ("checking group id: %s", value);
-		if (__turbulence_is_num (value)) 
-			group_data = getgrgid (atoi (value));
-		else 
-			group_data = getgrnam (value);
-
-		/* check user */
-		if (group_data == NULL) {
-			wrn ("Failed to find data associated to group (%s), it seems its missing", value);
-			CLEAN_START(ctx);
-		} /* end if */
-
 		/* store group */
-		pdef->group_id = (int) group_data->gr_gid;
+		pdef->group_id = turbulence_get_system_id (ctx, value, check_user_id);
 	} /* end if */
-#endif
 	return;
 }
 

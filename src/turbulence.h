@@ -68,6 +68,8 @@ typedef struct _TurbulencePPathDef TurbulencePPathDef;
 #include <turbulence-db-list.h>
 #include <turbulence-conn-mgr.h>
 #include <turbulence-process.h>
+#include <turbulence-radmin.h>
+#include <turbulence-loop.h>
 
 /** 
  * \addtogroup turbulence
@@ -224,6 +226,20 @@ const char    * turbulence_sysconfdir     (void);
 
 const char    * turbulence_datadir        (void);
 
+axl_bool        turbulence_is_num         (const char * value);
+
+int             turbulence_get_system_id  (TurbulenceCtx * ctx,
+					   const char    * value, 
+					   axl_bool        get_user);
+
+axl_bool        turbulence_change_fd_owner (TurbulenceCtx * ctx,
+					    const char    * file_name,
+					    const char    * user,
+					    const char    * group);
+
+axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
+					    const char    * file_name,
+					    const char    * mode);
 
 #endif
 

@@ -154,199 +154,35 @@ void      turbulence_log_configure (TurbulenceCtx * ctx,
 	return;
 }
 
-/** 
- * @internal Type definition used to associate the pipe or socket
- * (descriptor) that is connecting to a child process producing logs
- * that must be routed to a particular file descriptor on the current
- * process (output_sink).
- */
-typedef struct _TurbulenceLogDescriptor {
-	/* descriptor where content will be receved from child
-	 * process */
-	int descriptor;
-	/* descriptor connecting to local log opened (maybe a file or
-	 * something else) */
-	int output_sink;
-} TurbulenceLogDescriptor;
 
-/* build file set to watch */
-int __turbulence_log_build_watch_set (TurbulenceCtx * ctx)
+axl_bool __turbulence_log_manager_transfer_content (TurbulenceLoop * loop, 
+						    TurbulenceCtx  * ctx,
+						    int              descriptor,
+						    axlPointer       ptr,
+						    axlPointer       ptr2)
 {
-	int                       max_fds = 0;
-	TurbulenceLogDescriptor * log_descriptor;
+	int     size;
+	int     size_written;
+	char    buffer[4097];
+	int     output_sink = PTR_TO_INT (ptr);
 
-	/* reset descriptor set */
-	__vortex_io_waiting_default_clear (ctx->log_manager_fileset);
-	
-	/* reset cursor */
-	axl_list_cursor_first (ctx->log_manager_cursor);
-	while (axl_list_cursor_has_item (ctx->log_manager_cursor)) {
-		/* get log descriptor */
-		log_descriptor = axl_list_cursor_get (ctx->log_manager_cursor);
-
-		/* now add to the waiting socket */
-		if (! __vortex_io_waiting_default_add_to (log_descriptor->descriptor, 
-							  NULL, 
-							  ctx->log_manager_fileset)) {
+	/* read content */
+	size = read (descriptor, buffer, 4096);
 			
-			/* failed to add descriptor, close it and remove from wait list */
-			axl_list_cursor_remove (ctx->log_manager_cursor);
-			continue;
-		} /* end if */
-
-		/* compute max_fds */
-		max_fds    = (log_descriptor->descriptor > max_fds) ? log_descriptor->descriptor: max_fds;
-		
-		/* get the next item */
-		axl_list_cursor_next (ctx->log_manager_cursor);
-	} /* end if */
-
-	return max_fds;
-}
-
-void __turbulence_log_manager_descriptor_free (axlPointer __log_descriptor)
-{
-	TurbulenceLogDescriptor * log_descriptor = __log_descriptor;
-	vortex_close_socket (log_descriptor->descriptor);
-	axl_free (log_descriptor);
-	return;
-}
-
-axl_bool __turbulence_log_manager_read_first (TurbulenceCtx * ctx)
-{
-	TurbulenceLogDescriptor * log_descriptor;
-
-	log_descriptor = vortex_async_queue_pop (ctx->log_manager_queue);
-
-	/* check item received: if null received terminate loop */
-	if (PTR_TO_INT (log_descriptor) == -4)
+	/* check closed socket (child process finished) */
+	if (size <= 0) 
 		return axl_false;
-
-	/* register log_descriptor on the list */
-	axl_list_append (ctx->log_manager_list, log_descriptor);       
-
-	return axl_true;
-}
-
-axl_bool __turbulence_log_manager_read_pending (TurbulenceCtx * ctx)
-{
-	TurbulenceLogDescriptor * log_descriptor;
-
-	while (axl_true) {
-		/* check if there are no pending items */
-		if (vortex_async_queue_items (ctx->log_manager_queue) == 0)
-			return axl_true;
-
-		/* get descriptor */
-		log_descriptor = vortex_async_queue_pop (ctx->log_manager_queue);
 			
-		/* check item received: if null received terminate loop */
-		if (PTR_TO_INT (log_descriptor) == -4)
-			return axl_false;
-
-		/* register log_descriptor on the list */
-		axl_list_append (ctx->log_manager_list, log_descriptor);       
+	/* transfer content to the associated socket */
+	buffer[size] = 0;
+	size_written = write (output_sink, buffer, size);
+	if (size_written != size) {
+		error ("failed to write log received from child, content differs (%d != %d), error was: %s", 
+		       size, size_written,
+		       vortex_errno_get_last_error ());
 	} /* end if */
 
 	return axl_true;
-}
-
-void __turbulence_log_manager_transfer_content (TurbulenceCtx * ctx)
-{
-	int                       size;
-	int                       size_written;
-	char                      buffer[4097];
-	TurbulenceLogDescriptor * log_descriptor;
-
-	/* reset cursor */
-	axl_list_cursor_first (ctx->log_manager_cursor);
-	while (axl_list_cursor_has_item (ctx->log_manager_cursor)) {
-		/* get log descriptor */
-		log_descriptor = axl_list_cursor_get (ctx->log_manager_cursor);
-
-		/* check if the log descriptor is set */
-		if (__vortex_io_waiting_default_is_set (log_descriptor->descriptor, ctx->log_manager_fileset, NULL)) {
-			
-			/* read content */
-			size = read (log_descriptor->descriptor, buffer, 4096);
-			
-			/* check closed socket (child process finished) */
-			if (size <= 0) {
-				/* remove descriptor link */
-				axl_list_cursor_remove (ctx->log_manager_cursor); 
-
-				continue;
-			}
-			
-			/* transfer content to the associated socket */
-			buffer[size] = 0;
-			size_written = write (log_descriptor->output_sink, buffer, size);
-			if (size_written != size) {
-				error ("failed to write log received from child, content differs (%d != %d), error was: %s", 
-				       size, size_written,
-				       vortex_errno_get_last_error ());
-			} /* end if */
-		} /* end if */
-		
-		/* get the next item */
-		axl_list_cursor_next (ctx->log_manager_cursor);
-	} /* end if */
-
-	return;
-}
-
-axlPointer __turbulence_log_manager_run (TurbulenceCtx * ctx)
-{
-	int                       max_fds;
-	int                       result;
-
-	/* init here list, its cursor, the fileset to watch fd for
-	 * changes and a queue to receive new registrations */
-	ctx->log_manager_list    = axl_list_new (axl_list_always_return_1, __turbulence_log_manager_descriptor_free);
-	ctx->log_manager_cursor  = axl_list_cursor_new (ctx->log_manager_list);
-	/* force to use always default select(2) based implementation */
-	ctx->log_manager_fileset = __vortex_io_waiting_default_create (turbulence_ctx_get_vortex_ctx (ctx), READ_OPERATIONS);
-	ctx->log_manager_queue   = vortex_async_queue_new ();
-
-	/* now loop watching content from the list */
-wait_for_first_item:
-	if (! __turbulence_log_manager_read_first (ctx))
-		return NULL;
-	
-	while (axl_true) {
-		/* build file set to watch */
-		max_fds = __turbulence_log_build_watch_set (ctx);
-
-		/* check if no descriptor must be watch */
-		if (axl_list_length (ctx->log_manager_list) == 0) {
-			msg ("no more log descriptors found to be watched, putting thread to sleep");
-			goto wait_for_first_item;
-		} /* end if */
-		
-		/* perform IO wait operation */
-		result = __vortex_io_waiting_default_wait_on (ctx->log_manager_fileset, max_fds, READ_OPERATIONS);
-		
-		/* check for timeout and errors */
-		if (result == -1 || result == -2)
-			goto process_pending;
-		if (result == -3) {
-			error ("fatal error received from io-wait function, finishing turbulence log manager..");
-			return NULL;
-		} /* end if */
-
-		/* transfer content found */
-		if (result > 0) 
-			__turbulence_log_manager_transfer_content (ctx);
-
-	process_pending:
-		/* check for pending descriptors and stop the loop if
-		 * found a signal for this */
-		if (! __turbulence_log_manager_read_pending (ctx))
-			return NULL;
-	} /* end if */
-	
-
-	return NULL;
 }
 
 /** 
@@ -363,15 +199,8 @@ void turbulence_log_manager_start (TurbulenceCtx * ctx)
 	}
 
 	/* crear manager */
-	if (! vortex_thread_create (&ctx->log_manager_thread, 
-				    (VortexThreadFunc) __turbulence_log_manager_run,
-				    ctx,
-				    VORTEX_THREAD_CONF_END)) {
-		error ("unable to start log manager loop, checking clean start..");
-		CLEAN_START (ctx);
-		return;
-	} /* end if */
-	
+	ctx->log_manager = turbulence_loop_create (ctx);
+
 	msg ("log manager started");
 	return;
 }
@@ -385,37 +214,46 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 					   LogReportType   type,
 					   int             descriptor)
 {
-	TurbulenceLogDescriptor * log_descriptor;
-
 	v_return_if_fail (ctx);
 
 	/* create log descriptor linking the descriptor received to
 	 * the current descriptor managing the context signaled by
 	 * type */
-	log_descriptor = axl_new (TurbulenceLogDescriptor, 1);
-	log_descriptor->descriptor = descriptor;
 	msg ("register fd: %d (type: %d)", descriptor, type);
 	switch (type) {
 	case LOG_REPORT_GENERAL:
 		/* configure general log watcher */
-		log_descriptor->output_sink = ctx->general_log;
+		turbulence_loop_watch_descriptor (ctx->log_manager,
+						  descriptor,
+						  __turbulence_log_manager_transfer_content,
+						  INT_TO_PTR (ctx->general_log),
+						  NULL);
 		break;
 	case LOG_REPORT_ERROR:
 		/* configure error log watcher */
-		log_descriptor->output_sink = ctx->error_log;
+		turbulence_loop_watch_descriptor (ctx->log_manager,
+						  descriptor,
+						  __turbulence_log_manager_transfer_content,
+						  INT_TO_PTR (ctx->error_log),
+						  NULL);
 		break;
 	case LOG_REPORT_ACCESS:
 		/* configure access log watcher */
-		log_descriptor->output_sink = ctx->access_log;
+		turbulence_loop_watch_descriptor (ctx->log_manager,
+						  descriptor,
+						  __turbulence_log_manager_transfer_content,
+						  INT_TO_PTR (ctx->access_log),
+						  NULL);
 		break;
 	case LOG_REPORT_VORTEX:
 		/* configure vortex log watcher */
-		log_descriptor->output_sink = ctx->vortex_log;
+		turbulence_loop_watch_descriptor (ctx->log_manager,
+						  descriptor,
+						  __turbulence_log_manager_transfer_content,
+						  INT_TO_PTR (ctx->vortex_log),
+						  NULL);
 		break;
-	}
-	
-	/* push new log descriptor */
-	vortex_async_queue_push (ctx->log_manager_queue, log_descriptor);
+	} /* end switch */
 	return;
 }
 
@@ -555,37 +393,9 @@ void turbulence_log_cleanup (TurbulenceCtx * ctx)
 	ctx->vortex_log = -1;
 
 	/* now finish log manager */
-	if (ctx->log_manager_queue != NULL) {
-		vortex_async_queue_push (ctx->log_manager_queue, INT_TO_PTR (-4));
-		vortex_thread_destroy (&ctx->log_manager_thread, axl_false);
-		
-		/* free list, queue and fileset */
-		turbulence_log_child_cleanup (ctx);
-	} /* end if */
+	turbulence_loop_close (ctx->log_manager, axl_true);
 
 	return;
 }
 
-/** 
- * @internal Function that release object used by central logging but
- * also cleanups all elements not required by child processes.
- */
-void      turbulence_log_child_cleanup (TurbulenceCtx * ctx)
-{
-	v_return_if_fail (ctx);
-
-	axl_list_free (ctx->log_manager_list);
-	ctx->log_manager_list = NULL;
-
-	axl_list_cursor_free (ctx->log_manager_cursor);
-	ctx->log_manager_cursor = NULL;
-
-	vortex_async_queue_unref (ctx->log_manager_queue);
-	ctx->log_manager_queue = NULL;
-
-	__vortex_io_waiting_default_destroy (ctx->log_manager_fileset);
-	ctx->log_manager_fileset = NULL;
-
-	return;
-}
 

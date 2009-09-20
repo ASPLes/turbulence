@@ -35,38 +35,13 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
-#ifndef __TURBULENCE_LOG_H__
-#define __TURBULENCE_LOG_H__
+#ifndef __TURBULENCE_RADMIN_H__
+#define __TURBULENCE_RADMIN_H__
 
 #include <turbulence.h>
 
-void      turbulence_log_init         (TurbulenceCtx * ctx);
+axl_bool turbulence_radmin_init    (TurbulenceCtx * ctx);
 
-typedef enum {LOG_REPORT_GENERAL = 1, 
-	      LOG_REPORT_ACCESS  = 1 << 2, 
-	      LOG_REPORT_VORTEX  = 1 << 3,
-	      LOG_REPORT_ERROR   = 1 << 4
-} LogReportType;
-
-void      turbulence_log_report (TurbulenceCtx * ctx,
-				 LogReportType   type, 
-				 const char    * message,
-				 va_list         args,
-				 const char    * file,
-				 int             line);
-
-void      turbulence_log_configure (TurbulenceCtx * ctx,
-				    LogReportType   type,
-				    int             descriptor);
-
-void      turbulence_log_manager_start (TurbulenceCtx * ctx);
-
-void      turbulence_log_manager_register (TurbulenceCtx * ctx,
-					   LogReportType   type,
-					   int             descriptor);
-
-axl_bool  turbulence_log_is_enabled    (TurbulenceCtx * ctx);
-
-void      turbulence_log_cleanup       (TurbulenceCtx * ctx);
+void     turbulence_radmin_cleanup (TurbulenceCtx * ctx);
 
 #endif

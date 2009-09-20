@@ -15,7 +15,8 @@
       on-bad-signal,                                                                      \
       clean-start?,                                                                       \
       connections,                                                                        \
-                    kill-childs-on-exit?)>                                                \
+                    kill-childs-on-exit?,                                                 \
+                    local-management?)>                                                   \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
 <!ELEMENT port            (#PCDATA)>                                                      \
@@ -47,6 +48,18 @@
                                                                                           \
 <!ELEMENT kill-childs-on-exit   EMPTY>                                                    \
 <!ATTLIST kill-childs-on-exit   value  (yes|no) #REQUIRED>                                \
+                                                                                          \
+<!ELEMENT local-management (file-socket, auth-config)>                                    \
+<!ATTLIST local-management enabled (yes|no) #REQUIRED>                                    \
+                                                                                          \
+<!ELEMENT file-socket EMPTY>                                                              \
+<!ATTLIST file-socket value  CDATA #REQUIRED                                              \
+               mode   CDATA #IMPLIED                                                      \
+               user   CDATA #IMPLIED                                                      \
+               group  CDATA #IMPLIED>                                                     \
+                                                                                          \
+<!ELEMENT auth-config EMPTY>                                                              \
+<!ATTLIST auth-config value CDATA #REQUIRED>                                              \
                                                                                           \
 <!ELEMENT connections       (max-connections)>                                            \
 <!ELEMENT max-connections   EMPTY>                                                        \
@@ -106,6 +119,8 @@
           profile      CDATA #REQUIRED                                                    \
    max-per-conn CDATA #IMPLIED                                                            \
           preconnmark  CDATA #IMPLIED >                                                   \
+                                                                                          \
+                                                                                          \
                                                                                           \
 \n"
 #endif

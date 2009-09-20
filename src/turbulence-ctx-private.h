@@ -79,11 +79,7 @@ struct _TurbulenceCtx {
 	int                  error_log;
 	int                  vortex_log;
 	int                  access_log;
-	VortexThread         log_manager_thread;
-	axlList            * log_manager_list;
-	axlListCursor      * log_manager_cursor;
-	axlPointer           log_manager_fileset;
-	VortexAsyncQueue   * log_manager_queue;
+	TurbulenceLoop     * log_manager;
 
 	/*** turbulence config module ***/
 	axlDoc             * config;
@@ -109,6 +105,10 @@ struct _TurbulenceCtx {
 	/*** turbulence process module ***/
 	axlList            * child_process;
 	VortexMutex          child_process_mutex;
+
+	/*** turbulence radmin module ***/
+	int                  management_socket;
+	TurbulenceLoop     * radmin_loop;
 };
 
 #endif
