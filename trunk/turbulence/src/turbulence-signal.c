@@ -65,6 +65,11 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 		msg ("child process (%d) finished with status: %d",
 		     pid, exit_status);
 
+		/* remove pid from list */
+		vortex_mutex_lock (&ctx->child_process_mutex);
+		axl_list_remove (ctx->child_process, INT_TO_PTR (pid));
+		vortex_mutex_unlock (&ctx->child_process_mutex);
+
 		/* reconfigure signal again */
 		signal (SIGCHLD, ctx->signal_handler);
 		

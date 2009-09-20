@@ -44,6 +44,19 @@
 
 #include <turbulence.h>
 
+
+#if defined(AXL_OS_UNIX)
+/* used by turbulence_get_system_id */
+# include <pwd.h>
+# include <grp.h>
+
+/* used by fchmod */
+# include <sys/types.h>
+# include <sys/stat.h>
+
+#endif
+#include <unistd.h>
+
 /* local include */
 #include <turbulence-ctx-private.h>
 
@@ -194,6 +207,7 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	v_return_if_fail (ctx);
 
 	msg ("cleaning up..");
+	turbulence_radmin_cleanup (ctx);
 
 	/* check to kill childs */
 	turbulence_process_kill_childs (ctx);
@@ -983,7 +997,7 @@ const char    * turbulence_sysconfdir     (void)
 	return SYSCONFDIR;
 }
 
-/**
+/** 
  * @brief Allows to get the TBC_DATADIR path provided at compilation
  * time. This is configured when the libturbulence.{dll,so} is built,
  * ensuring all pieces uses the same SYSCONFDIR value. See also \ref
@@ -999,6 +1013,169 @@ const char    * turbulence_datadir        (void)
 {
 	/* return current configuration */
 	return TBC_DATADIR;
+}
+
+/** 
+ * @brief Allows to check if the provided value contains a decimal
+ * number.
+ *
+ * @param value The decimal number to be checked.
+ *
+ * @return axl_true in the case a decimal value is found otherwise
+ * axl_false is returned.
+ */
+axl_bool  turbulence_is_num  (const char * value)
+{
+	int iterator = 0;
+	while (iterator < value[iterator]) {
+		/* check value on each position */
+		if (! isdigit (value[iterator]))
+			return axl_false;
+
+		/* next position */
+		iterator++;
+	}
+
+	/* is a number */
+	return axl_true;
+}
+
+#if !defined(getpwuid_r)
+int getpwuid_r (uid_t uid, struct passwd *pwbuf, char *buf, size_t buflen, struct passwd **pwbufp);
+#endif
+#if !defined(getpwnam_r)
+int getpwnam_r (const char *name, struct passwd *pwbuf, char *buf, size_t buflen, struct passwd **pwbufp);
+#endif
+#if !defined(getgrgid_r)
+int getgrgid_r (gid_t gid, struct group *gbuf, char *buf, size_t buflen, struct group **gbufp);
+#endif
+#if !defined(getgrnam_r)
+int getgrnam_r (const char *name, struct group *gbuf, char *buf, size_t buflen, struct group **gbufp);
+#endif
+
+/** 
+ * @brief Allows to get system user id or system group id from the
+ * provided string. If the string already contains the user id or
+ * group id, the function returns its corresponding integet value. The
+ * function also checks if the value (that should represent a user or
+ * group in some way) is present on the current system. get_user
+ * parameter controls if the operation should perform a user lookup or
+ * a group lookup.
+ * 
+ * @param value The user or group to get system id.
+ * @param get_user axl_true to signal the value to lookup user, otherwise axl_false to lookup for groups.
+ *
+ * @return The function returns the user or group id or -1 if it fails.
+ */
+int turbulence_get_system_id  (TurbulenceCtx * ctx, const char * value, axl_bool get_user)
+{
+#if defined (AXL_OS_UNIX)
+	axl_bool        result;
+	struct passwd   user_data;
+	struct passwd * user_data_ptr;
+	struct group    group_data;
+	struct group  * group_data_ptr;
+	char            info[1024];
+
+	if (get_user) {
+		msg ("checking user id: %s", value);
+		memset (&user_data, 0, sizeof (struct passwd));
+		if (turbulence_is_num (value)) 
+			result = (getpwuid_r (atoi (value), &user_data, info, 1023, &user_data_ptr) == 0);
+		else 
+			result = (getpwnam_r (value, &user_data, info, 1023, &user_data_ptr) == 0);
+
+		/* check user */
+		if (! result) {
+			wrn ("Failed to find data associated to user (%s), it seems its missing, errno=%d:%s", value,
+			     errno, vortex_errno_get_last_error ());
+			CLEAN_START(ctx);
+		} /* end if */
+		
+		/* store user id */
+		return (int) user_data.pw_uid;
+	} else {
+		/* check group */
+		msg ("checking group id: %s", value);
+		memset (&group_data, 0, sizeof (struct group));
+		if (turbulence_is_num (value)) 
+			result = (getgrgid_r (atoi (value), &group_data, info, 1023, &group_data_ptr) == 0);
+		else 
+			result = (getgrnam_r (value, &group_data, info, 1023, &group_data_ptr) == 0);
+
+		/* check user */
+		if (! result) {
+			wrn ("Failed to find data associated to group (%s), it seems its missing, errno=%d:%s", value,
+			     errno, vortex_errno_get_last_error ());
+			CLEAN_START(ctx);
+		} /* end if */
+
+		/* store group */
+		return (int) group_data.gr_gid;
+	} /* end if */
+#endif
+	/* nothing defined */
+	return -1;
+}
+
+/* horrible hack to get fchown definition */
+#if !defined(fchown)
+int fchown (int fd, uid_t owner, gid_t group);
+#endif
+
+/** 
+ * @brief Allows to change the owner (user and group) of the socket's
+ * file associated.
+ * @param ctx The Turbulence context.
+ * @param fd  The file descriptor pointing to an opened file.
+ *
+ * @param user The user string representing the user to change. If no
+ * user required to change, just pass empty string or NULL.
+ *
+ * @param group The group string representing the group to change. If
+ * no group required to change, just pass empty string or NULL.
+ *
+ * @return axl_true if the operation was completed, otherwise false is
+ * returned.
+ */
+axl_bool        turbulence_change_fd_owner (TurbulenceCtx * ctx,
+					    const char    * file_name,
+					    const char    * user,
+					    const char    * group)
+{
+#if defined(AXL_OS_UNIX)
+	/* call to change owners */
+	return chown (file_name, 
+		       /* get user */
+		       turbulence_get_system_id (ctx, user, axl_true), 
+		       /* get group */
+		       turbulence_get_system_id (ctx, group, axl_false)) == 0;
+#endif
+	return axl_true;
+}
+
+#if !defined(fchmod)
+int fchmod(int fildes, mode_t mode);
+#endif
+
+/** 
+ * @brief Allows to change the permissions of the socket's file associated.
+ *
+ * @param ctx The Turbulence context.
+ * @param fd The socket pointing to an opened file.
+ *
+ * @param mode The mode to configure.
+ */ 
+axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
+					    const char    * file_name,
+					    const char    * mode)
+{
+#if defined(AXL_OS_UNIX)
+	mode_t value = strtol (mode, NULL, 8);
+	/* call to change mode */
+	return chmod (file_name, value) == 0;
+#endif
+	return axl_true;
 }
 
 /* @} */

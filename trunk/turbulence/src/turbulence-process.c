@@ -81,18 +81,8 @@ TurbulenceCtx * ctx       = NULL;
 
 void turbulence_process_signal_received (int _signal) {
 	/* default handling */
-	int pid = turbulence_signal_received (ctx, _signal);
+	turbulence_signal_received (ctx, _signal);
 	
-	if (_signal == SIGCHLD) {
-		msg ("child process finished, removing from child list: %d", pid);
-		/* remove pid from list */
-		vortex_mutex_lock (&ctx->child_process_mutex);
-		
-		axl_list_remove (ctx->child_process, INT_TO_PTR (pid));
-
-		vortex_mutex_unlock (&ctx->child_process_mutex);
-	} /* end if */
-
 	return;
 }
 
@@ -187,8 +177,11 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 		vortex_close_socket (vortex_log[0]);                              /* close read end */
 	}
 
-	/* cleanup log stuff used by parent */
-	turbulence_log_child_cleanup (ctx);
+	/* cleanup log stuff used only by the parent process */
+	turbulence_loop_close (ctx->log_manager, axl_false);
+	ctx->log_manager = NULL;
+	turbulence_loop_close (ctx->radmin_loop, axl_false);
+	ctx->radmin_loop = NULL;
 
 	/* reconfigure signals */
 	turbulence_signal_install (ctx, 

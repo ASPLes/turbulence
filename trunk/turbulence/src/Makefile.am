@@ -47,7 +47,9 @@ libturbulenceinclude_HEADERS    = \
 	turbulence-db-list.h \
 	turbulence-conn-mgr.h \
 	turbulence-signal.h \
-	turbulence-process.h
+	turbulence-process.h \
+	turbulence-radmin.h \
+	turbulence-loop.h
 
 libturbulence_la_SOURCES = \
 	exarg.c \
@@ -62,7 +64,9 @@ libturbulence_la_SOURCES = \
 	turbulence-conn-mgr.c \
 	turbulence-signal.c \
 	turbulence-expr.c \
-	turbulence-process.c
+	turbulence-process.c \
+	turbulence-radmin.c \
+	turbulence-loop.c
 
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(PCRE_LIBS)
 libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'

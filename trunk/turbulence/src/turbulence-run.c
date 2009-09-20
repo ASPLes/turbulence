@@ -130,6 +130,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 	axlError         * error;
 	TurbulenceModule * module;
 	ModInitFunc        init;
+	char             * temp;
 				      
 
 
@@ -178,10 +179,13 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 
 		/* check module basename to be not loaded */
 		location = ATTR_VALUE (axl_doc_get_root (doc), "location");
-		if (! turbulence_run_check_no_load_module (ctx, turbulence_file_name (location))) {
+		temp     = turbulence_file_name (location);
+		if (! turbulence_run_check_no_load_module (ctx, temp)) {
+			axl_free (temp);
 			wrn ("module %s skipped by location", location);
 			goto next;
 		}
+		axl_free (temp);
 
 		/* load the module man!!! */
 		module = turbulence_module_open (ctx, location);
