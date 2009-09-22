@@ -49,7 +49,7 @@ int turbulence_radmin_create_file_socket (TurbulenceCtx * ctx, const char * file
 	size_t size;
 	
 	/* Create the socket. */
-	sock = socket (PF_UNIX, SOCK_DGRAM, 0);
+	sock = socket (PF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0) {
 		error ("socket() call failed while creating file socket");
 		CLEAN_START (ctx);
@@ -75,16 +75,49 @@ int turbulence_radmin_create_file_socket (TurbulenceCtx * ctx, const char * file
 	return sock;
 }
 
+int turbulence_radmin_file_socket_connect (TurbulenceCtx * ctx, const char * filename)
+{
+	struct sockaddr_un name;
+	int sock;
+	size_t size;
+	
+	/* Create the socket. */
+	sock = socket (PF_UNIX, SOCK_STREAM, 0);
+	if (sock < 0) {
+		error ("socket() call failed while creating file socket");
+		CLEAN_START (ctx);
+		return -1;
+	}
+
+	/* Bind a name to the socket. */
+	name.sun_family = AF_FILE;
+	strcpy (name.sun_path, filename);
+
+	/* The size of the address is the offset of the start of the
+	   filename, plus its length, plus one for the terminating
+	   null byte. */
+	size = (offsetof (struct sockaddr_un, sun_path) + strlen (name.sun_path) + 1);
+
+	if (connect (sock, (struct sockaddr *) &name, size) < 0) {
+		error ("connect() call failed while creating file socket, errno: %d, %s (file=%s)",
+		       errno, vortex_errno_get_last_error (), filename);
+		CLEAN_START(ctx);
+		return -1;
+	}
+
+	return sock;
+}
+
 typedef struct _TurbulenceRadminState {
 	axl_bool auth_complete;
 	int      tries;
 } TurbulenceRadminState;
 
-axl_bool turbulence_radmin_read_client (TurbulenceLoop * loop,
-					TurbulenceCtx  * ctx,
-					int              descriptor,
-					axlPointer       ptr,
-					axlPointer       ptr2)
+axl_bool turbulence_radmin_read_content (TurbulenceLoop * loop,
+					 TurbulenceCtx  * ctx,
+					 int              descriptor,
+					 axlPointer       ptr,
+					 axlPointer       ptr2)
 {
 	TurbulenceRadminState * state = (TurbulenceRadminState *) ptr;
 	char                    buffer[1024];
@@ -122,6 +155,8 @@ axl_bool turbulence_radmin_init_client (TurbulenceLoop * loop,
 	TurbulenceRadminState * state;
 	VORTEX_SOCKET           client = vortex_listener_accept (descriptor);
 
+	msg ("accepting client local management (%d)", client);
+
 	/* if an error is found do not continue */
 	if (client == VORTEX_SOCKET_ERROR)
 		return axl_true;
@@ -133,7 +168,7 @@ axl_bool turbulence_radmin_init_client (TurbulenceLoop * loop,
 
 	/* register socket */
 	turbulence_loop_watch_descriptor (loop, client, 
-					  turbulence_radmin_read_client,
+					  turbulence_radmin_read_content,
 					  state, NULL);
 	/* register the state to release its memory once closed the
 	   socket: the following will release the state either because
@@ -157,11 +192,13 @@ axl_bool turbulence_radmin_init (TurbulenceCtx * ctx)
 	const char * group;
 	const char * mode;
 
+	/* initialize socket */
+	ctx->management_socket = -1;
+
 	/* check if local management is enabled */
 	doc  = turbulence_config_get (ctx);
 	node = axl_doc_get (doc, "/turbulence/global-settings/local-management");
 	
-	ctx->management_socket = -1;
 	if (turbulence_config_is_attr_negative (ctx, node, "enabled")) {
 		msg ("turbulence local management interface not enabled, skipping");
 		return axl_true;
@@ -202,6 +239,7 @@ axl_bool turbulence_radmin_init (TurbulenceCtx * ctx)
 	} /* end if */
 
 	/* start admin loop */
+	msg ("started local management interface loop");
 	ctx->radmin_loop = turbulence_loop_create (ctx);
 
 	/* watch listener */
@@ -210,6 +248,121 @@ axl_bool turbulence_radmin_init (TurbulenceCtx * ctx)
 					  turbulence_radmin_init_client,
 					  NULL, NULL);
 	return axl_true;
+}
+
+/** 
+ * @internal Function used to handle content received from server
+ * component.
+ */
+axl_bool turbulence_radmin_client_handle (TurbulenceLoop * loop,
+					 TurbulenceCtx  * ctx,
+					 int              descriptor,
+					 axlPointer       ptr,
+					 axlPointer       ptr2)
+{
+	return axl_true;
+}
+
+/** 
+ * @internal Function used to handle content received from standard
+ * input, to be sent to the server component.
+ */
+axl_bool turbulence_radmin_read_client_input  (TurbulenceLoop * loop,
+					       TurbulenceCtx  * ctx,
+					       int              descriptor,
+					       axlPointer       ptr,
+					       axlPointer       ptr2)
+{
+	VortexAsyncQueue * queue  = (VortexAsyncQueue *) ptr; 
+	int                socket = PTR_TO_INT (ptr2); 
+	char               buffer[1024];
+	int                bytes;
+
+	/* read content */
+	bytes = read (descriptor, buffer, 1023);
+	buffer[bytes] = 0;
+
+	/* remove trailing \n */
+	if (bytes > 0 && buffer[bytes - 1] == '\n') {
+		buffer[bytes - 1] = 0;
+		bytes -= 1;
+	}
+
+	/* check quit command */
+	if (axl_cmp (buffer, "quit") || axl_cmp (buffer, "exit")) {
+		vortex_async_queue_push (queue, INT_TO_PTR (1));
+		return axl_false;
+	}
+
+	/* print prompt */
+	printf ("CLI*turbulence> ");
+	fflush (stdout);
+
+	/* now send content to socket */
+	msg ("Sending content over socket %d (bytes: %d)", socket, bytes);
+	bytes = write (socket, buffer, bytes);
+
+	return axl_true;
+}
+
+/** 
+ * @brief Performs a client local connect to local process using the
+ * file socket found at the configuration file.
+ *
+ * @param ctx The turbulence context.
+ * @param config The configuration location.
+ *
+ */
+void turbulence_radmin_client_connect (TurbulenceCtx * ctx, 
+				       const char    * config)
+{
+	VORTEX_SOCKET      socket;
+	axlNode          * node;
+	VortexAsyncQueue * queue;
+
+	/* load configuration file */
+	if (! turbulence_config_load (ctx, config)) 
+		return;
+
+	/* find socket location */
+	node = axl_doc_get (turbulence_config_get (ctx), "/turbulence/global-settings/local-management");
+	if (turbulence_config_is_attr_negative (ctx, node, "enabled")) {
+		error ("turbulence local management interface not enabled, unable to connect");
+		return;
+	} /* end if */
+	
+	/* seems management interface is enabled: connect using file socket */
+	node = axl_node_get_child_called (node, "file-socket");
+	
+	/* connect */
+	socket = turbulence_radmin_file_socket_connect (ctx, ATTR_VALUE (node, "value"));
+	if (socket == -1) {
+		error ("unable to connect to local management, errno %d:%s", errno, vortex_errno_get_last_error ());
+		return; /* return axl_true because the function already calls to CLEAN_START */
+	}
+	msg ("connected to local management file socket: %s (socket: %d)", ATTR_VALUE (node, "value"), socket);
+
+	/* print prompt */
+	printf ("CLI*turbulence> ");
+	fflush (stdout);
+
+	/* create loop to control client stuff */
+	ctx->radmin_loop = turbulence_loop_create (ctx);
+	
+	/* watch client */
+	queue = vortex_async_queue_new ();
+	turbulence_loop_watch_descriptor (ctx->radmin_loop, socket, turbulence_radmin_client_handle, queue, NULL);
+	turbulence_loop_watch_descriptor (ctx->radmin_loop, 1, turbulence_radmin_read_client_input, queue, INT_TO_PTR (socket));
+
+	/* pop to lock */
+	vortex_async_queue_pop (queue);
+	vortex_async_queue_unref (queue);
+
+	/* finish loop */
+	turbulence_loop_close (ctx->radmin_loop, axl_true);
+	ctx->radmin_loop = NULL;
+
+	return;
 }
 
 /** 

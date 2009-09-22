@@ -42,6 +42,9 @@
 
 axl_bool turbulence_radmin_init    (TurbulenceCtx * ctx);
 
+void     turbulence_radmin_client_connect (TurbulenceCtx * ctx, 
+					   const char * config);
+
 void     turbulence_radmin_cleanup (TurbulenceCtx * ctx);
 
 #endif

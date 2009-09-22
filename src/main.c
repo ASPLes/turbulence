@@ -276,6 +276,18 @@ int main (int argc, char ** argv)
 	/* check and get config location */
 	config = main_common_get_config_location (ctx, vortex_ctx);
 
+	/* check for local-management */
+	if (exarg_is_defined ("local-management")) {
+		/* call to activate local management */
+		turbulence_radmin_client_connect (ctx, config);
+		axl_free (config);
+
+		/* free context (the very last operation) */
+		turbulence_ctx_free (ctx);
+		vortex_ctx_free (vortex_ctx);
+		return 0;
+	}
+
 	/* check detach operation */
 	if (exarg_is_defined ("detach")) {
 		turbulence_detach_process ();
