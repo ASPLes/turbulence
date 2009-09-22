@@ -126,7 +126,7 @@ void __turbulence_loop_descriptor_free (axlPointer __loop_descriptor)
 /* build file set to watch */
 int __turbulence_loop_build_watch_set (TurbulenceLoop * loop)
 {
-	int                       max_fds = 0;
+	int                        max_fds = 0;
 	TurbulenceLoopDescriptor * loop_descriptor;
 
 	/* reset descriptor set */

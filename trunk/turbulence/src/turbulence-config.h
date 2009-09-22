@@ -40,7 +40,7 @@
 
 #include <turbulence.h>
 
-int             turbulence_config_load     (TurbulenceCtx * ctx, 
+axl_bool        turbulence_config_load     (TurbulenceCtx * ctx, 
 					    const char    * config);
 
 void            turbulence_config_cleanup  (TurbulenceCtx * ctx);

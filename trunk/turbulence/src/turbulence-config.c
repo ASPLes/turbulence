@@ -62,7 +62,7 @@
  * @return axl_true if the configuration file looks ok and it is
  * syncatically correct.
  */
-int  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
+axl_bool  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 {
 	axlError   * error;
 	axlDtd     * dtd_file;
