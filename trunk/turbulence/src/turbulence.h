@@ -68,8 +68,8 @@ typedef struct _TurbulencePPathDef TurbulencePPathDef;
 #include <turbulence-db-list.h>
 #include <turbulence-conn-mgr.h>
 #include <turbulence-process.h>
-#include <turbulence-radmin.h>
 #include <turbulence-loop.h>
+#include <turbulence-mediator.h>
 
 /** 
  * \addtogroup turbulence
