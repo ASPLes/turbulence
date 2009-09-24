@@ -15,8 +15,7 @@
       on-bad-signal,                                                                      \
       clean-start?,                                                                       \
       connections,                                                                        \
-                    kill-childs-on-exit?,                                                 \
-                    local-management?)>                                                   \
+                    kill-childs-on-exit?)>                                                \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
 <!ELEMENT port            (#PCDATA)>                                                      \
@@ -48,9 +47,6 @@
                                                                                           \
 <!ELEMENT kill-childs-on-exit   EMPTY>                                                    \
 <!ATTLIST kill-childs-on-exit   value  (yes|no) #REQUIRED>                                \
-                                                                                          \
-<!ELEMENT local-management (file-socket, auth-config)>                                    \
-<!ATTLIST local-management enabled (yes|no) #REQUIRED>                                    \
                                                                                           \
 <!ELEMENT file-socket EMPTY>                                                              \
 <!ATTLIST file-socket value  CDATA #REQUIRED                                              \

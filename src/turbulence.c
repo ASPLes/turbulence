@@ -207,7 +207,6 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	v_return_if_fail (ctx);
 
 	msg ("cleaning up..");
-	turbulence_radmin_cleanup (ctx);
 
 	/* check to kill childs */
 	turbulence_process_kill_childs (ctx);

@@ -106,9 +106,9 @@ struct _TurbulenceCtx {
 	axlList            * child_process;
 	VortexMutex          child_process_mutex;
 
-	/*** turbulence radmin module ***/
-	int                  management_socket;
-	TurbulenceLoop     * radmin_loop;
+	/*** turbulence mediator module ***/
+	axlHash            * mediator_hash;
+	VortexMutex          mediator_hash_mutex;
 };
 
 #endif

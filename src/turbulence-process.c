@@ -180,8 +180,6 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	/* cleanup log stuff used only by the parent process */
 	turbulence_loop_close (ctx->log_manager, axl_false);
 	ctx->log_manager = NULL;
-	turbulence_loop_close (ctx->radmin_loop, axl_false);
-	ctx->radmin_loop = NULL;
 
 	/* reconfigure signals */
 	turbulence_signal_install (ctx, 

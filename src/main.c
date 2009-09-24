@@ -92,9 +92,6 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("disable-sigint", NULL, EXARG_NONE,
 			   "Allows to disable SIGINT handling done by Turbulence. This option is only useful for debugging purposes..");
 
-	exarg_install_arg ("local-management", "r", EXARG_NONE,
-			   "Allows to connect to local turbulence process CLI");
-
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -276,18 +273,6 @@ int main (int argc, char ** argv)
 	/* check and get config location */
 	config = main_common_get_config_location (ctx, vortex_ctx);
 
-	/* check for local-management */
-	if (exarg_is_defined ("local-management")) {
-		/* call to activate local management */
-		turbulence_radmin_client_connect (ctx, config);
-		axl_free (config);
-
-		/* free context (the very last operation) */
-		turbulence_ctx_free (ctx);
-		vortex_ctx_free (vortex_ctx);
-		return 0;
-	}
-
 	/* check detach operation */
 	if (exarg_is_defined ("detach")) {
 		turbulence_detach_process ();
@@ -318,10 +303,6 @@ int main (int argc, char ** argv)
 	if (! turbulence_run_config (ctx))
 		return -1;
 
-	/* create turbulence administrator socket */
-	if (! turbulence_radmin_init (ctx))
-		return -1;
-	
 
 	/* drop a log */
 	msg ("Turbulence STARTED OK (pid: %d)", getpid ());

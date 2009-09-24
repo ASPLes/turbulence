@@ -1,3 +1,22 @@
+CURRENT FRANCIS WORK
+* Keep on working on turbulence mediator module to provide a low
+  coupling interface to connect modules and API not known each
+  other. 
+    - Add regression test to check its function. 
+
+    - Use this to implement mod-radmin allowing other modules to
+      install its commands.
+
+    - Add support to Libaxl to provide a way to dynamically extend a
+      DTD definition allowing to include an piece of XML inside a
+      document already validated with an DTD. Use this to include
+      attributes an entire xml sections to implement the next point.
+
+    - Use this to allow turbulence to check SASL users at
+      turbulence.conf without being linked to mod-sasl.
+
+LONG TERM/NEED HELP ELEMENTS
+
 * Make mod-sasl to support more SASL profiles (CRAM-MD5, DIGEST-MD5
 and anonymous). 
 
