@@ -168,6 +168,26 @@ AC_ARG_ENABLE(enable-tbc-dblist-mgr, [  --enable-tbc-dblist-mgr    Enable buildi
 	      enable_tbc_dblist_mgr=yes)
 AM_CONDITIONAL(ENABLE_TBC_DBLIST_MGR, test "x$enable_tbc_dblist_mgr" = "xyes")
 
+dnl check to build tbc-ctl tool
+AC_ARG_ENABLE(enable-tbc-ctl, [  --enable-tbc-ctl    Enable building tbc-ctl (CLI tool) [default=yes]], 
+	      enable_tbc_ctl="$enableval", 
+	      enable_tbc_ctl=yes)
+if test x$enable_tbc_ctl = xyes ; then
+   AC_CHECK_HEADER(readline/readline.h, readline_found=true, readline_found=false)
+   AC_TRY_LINK(,,[	READLINE_DEPLIBS="-lreadline" ],[ 
+		LIBS="$LIBS -ltermcap" 
+		AC_TRY_LINK(,,[ READLINE_DEPLIBS="-lreadline -ltermcap" ],[
+			AC_MSG_ERROR([Cannot figure out how to link with the readline library; see config.log for more information])
+		])
+	])
+   AM_CONDITIONAL(ENABLE_READLINE, test "x$readline_found" = "xtrue")
+
+   AC_ARG_VAR(READLINE_PATH, [Readline base include path. This can be helpful to set a different location for a readline installation.
+This will be used to build a include path as READLINE_PATH/include and a READLINE_PATH/lib.
+])
+   AM_CONDITIONAL(ENABLE_TBC_CTL, test "x$enable_tbc_ctl" = "xyes")
+fi
+
 dnl check for statusdir
 AC_ARG_ENABLE(status-dir, [  --status-dir=DIR          Allows to configure the status directory. 
                                 This directory is used to place pid file and status info. 
@@ -247,9 +267,11 @@ modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
 modules/mod-sasl/sasl-radmin.pc
 modules/mod-python/Makefile
+modules/mod-radmin/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile
+tools/tbc-ctl/Makefile
 test/Makefile
 turbulence.pc
 turbulence-config
@@ -269,6 +291,7 @@ fi
 echo "   Build tbc-sasl-conf:            [$termios_found]"
 echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
 echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"
+echo "   Build tbc-ctl:                  [$enable_tbc_ctl]"
 echo "   Build mod-python:               [$python_devel_found]"
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"

@@ -93,7 +93,7 @@ int  tbc_mod_gen_template_create ()
 	
 	/* get out dir */
 	outdir  = get_out_dir ();
-	doc     = axl_doc_create (NULL, NULL, true);
+	doc     = axl_doc_create (NULL, NULL, axl_true);
 	
 	node    = axl_node_create ("mod-def");
 	axl_doc_set_root (doc, node);
@@ -116,7 +116,7 @@ int  tbc_mod_gen_template_create ()
 	axl_node_set_comment (node, "init method, called once the module is loaded", -1);
 	nodeAux = axl_node_create ("init");
 	axl_node_set_child (node, nodeAux);
-	axl_node_set_cdata_content (nodeAux, "/* Place here your mod init code. This will be called once turbulence decides to include the module. */\nreturn true;", -1);
+	axl_node_set_cdata_content (nodeAux, "/* Place here your mod init code. This will be called once turbulence decides to include the module. */\nreturn axl_true;", -1);
 	
 	/* close node */
 	axl_node_set_comment (node, "close method, called once the module is going to be stoped", -1);
@@ -144,7 +144,7 @@ int  tbc_mod_gen_template_create ()
 
 	msg ("template created: OK");
 	
-	return true;
+	return axl_true;
 }
 
 int  tbc_mod_gen_compile ()
@@ -166,7 +166,7 @@ int  tbc_mod_gen_compile ()
 		error ("Failed to parse DTD, error found: %s", axl_error_get (error));
 		axl_error_free (error);
 
-		return false;
+		return axl_false;
 	} /* end if */
 	
 	/* nice, now parse the xml file */
@@ -189,7 +189,7 @@ int  tbc_mod_gen_compile ()
 		axl_error_free (error);
 		axl_doc_free (doc);
 		axl_dtd_free (dtd);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* ok, now produce source code  */
@@ -465,7 +465,7 @@ int  tbc_mod_gen_compile ()
 	msg ("%s created!", mod_name);
 	axl_free (mod_name);
 
-	return true;
+	return axl_true;
 }
 
 
@@ -513,7 +513,7 @@ int main (int argc, char ** argv)
 	vortex_support_init (vortex_ctx);
 
 	/* configure context debug according to values received */
-	turbulence_log_enable  (ctx, true);
+	turbulence_log_enable  (ctx, axl_true);
 	turbulence_log2_enable (ctx, exarg_is_defined ("debug2"));
 	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
 

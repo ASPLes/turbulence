@@ -58,7 +58,7 @@ typedef struct _TurbulenceMediatorObject TurbulenceMediatorObject;
  * turbulence_mediator_create_plug or \ref
  * turbulence_mediator_subscribe).
  */
-typedef void (*TurbulenceMediatorHandler) (TurbulenceMediatorObject * object, axlPointer user_data);
+typedef void (*TurbulenceMediatorHandler) (TurbulenceMediatorObject * object);
 
 void turbulence_mediator_init         (TurbulenceCtx * ctx);
 
@@ -109,30 +109,54 @@ typedef enum {
 axlPointer  turbulence_mediator_object_get (TurbulenceMediatorObject * object,
 					    TurbulenceMediatorAttr     attr);
 
-void turbulence_mediator_create_plug  (const char                * entry_name, 
-				       const char                * entry_domain,
-				       axl_bool                    subscribe,
-				       TurbulenceMediatorHandler   handler, 
-				       axlPointer                  user_data);
+void        turbulence_mediator_object_set_result (TurbulenceMediatorObject * object,
+						   axlPointer                 result);
 
-void turbulence_mediator_subscribe    (const char                * entry_name,
-				       const char                * entry_domain,
-				       TurbulenceMediatorHandler   handler,
-				       axlPointer                  user_data);
+axl_bool turbulence_mediator_create_plug  (TurbulenceCtx             * ctx,
+					   const char                * entry_name, 
+					   const char                * entry_domain,
+					   axl_bool                    subscribe,
+					   TurbulenceMediatorHandler   handler, 
+					   axlPointer                  user_data);
 
-void turbulence_mediator_remove_plug  (const char                * entry_name,
-				       const char                * entry_domain,
-				       TurbulenceMediatorHandler   handler,
-				       axlPointer                  user_data);
+int      turbulence_mediator_plug_num     (TurbulenceCtx             * ctx);
 
-void turbulence_mediator_push_event   (const char                * entry_name,
-				       const char                * entry_domain,
-				       axlPointer                  user_data,
-				       axlPointer                  user_data2,
-				       axlPointer                  user_data3);
+axl_bool turbulence_mediator_plug_exits   (TurbulenceCtx             * ctx,
+					   const char                * entry_name,
+					   const char                * entry_domain);
 
+axl_bool turbulence_mediator_subscribe    (TurbulenceCtx             * ctx,
+					   const char                * entry_name,
+					   const char                * entry_domain,
+					   TurbulenceMediatorHandler   handler,
+					   axlPointer                  user_data);
 
+axl_bool turbulence_mediator_create_api   (TurbulenceCtx             * ctx,
+					   const char                * entry_name, 
+					   const char                * entry_domain,
+					   TurbulenceMediatorHandler   handler, 
+					   axlPointer                  user_data);
 
-void turbulence_mediator_cleanup      (TurbulenceCtx * ctx);
+void     turbulence_mediator_remove_plug  (TurbulenceCtx             * ctx,
+					   const char                * entry_name,
+					   const char                * entry_domain,
+					   TurbulenceMediatorHandler   handler,
+					   axlPointer                  user_data);
+
+void     turbulence_mediator_push_event   (TurbulenceCtx             * ctx,
+					   const char                * entry_name,
+					   const char                * entry_domain,
+					   axlPointer                  event_data,
+					   axlPointer                  event_data2,
+					   axlPointer                  event_data3);
+
+axlPointer     turbulence_mediator_call_api     (TurbulenceCtx             * ctx,
+						 const char                * entry_name,
+						 const char                * entry_domain,
+						 axlPointer                  event_data,
+						 axlPointer                  event_data2,
+						 axlPointer                  event_data3);
+
+void     turbulence_mediator_cleanup      (TurbulenceCtx * ctx);
 
 #endif

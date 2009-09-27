@@ -126,6 +126,10 @@ int  turbulence_init (TurbulenceCtx * ctx,
 		return axl_false;
 	} /* end if */
 
+	/* init turbulence-mediator.c: init this module before others
+	   to acchieve notifications and push events  */
+	turbulence_mediator_init (ctx);
+
 	/*** not required to initialize axl library, already done by vortex ***/
 	msg ("turbulence internal init ctx: %p, vortex ctx: %p", ctx, vortex_ctx);
 
@@ -230,6 +234,9 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* terminate turbulence db list module at this point to avoid
 	 * modules referring to db-list to lost references */
 	turbulence_db_list_cleanup (ctx);
+
+	/* terminate turbulence mediator module */
+	turbulence_mediator_cleanup (ctx);
 
 	/* do not release the context (this is done by the caller) */
 	turbulence_log_cleanup (ctx);

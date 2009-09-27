@@ -707,7 +707,7 @@ int  test_03 ()
 
 	/* check remote admin activation support */
 	if (! common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
-		printf ("It was expected to find activated remote administration support for %s inside %s\n", 
+		printf ("(2) It was expected to find activated remote administration support for %s inside %s\n", 
 			acceptedUser, serverName);
 		return false;
 	} /* end if */
@@ -811,6 +811,175 @@ int  test_04 ()
 	return true;
 }
 
+void test_05_handler (TurbulenceMediatorObject * object)
+{
+	axlList * list;
+	int       value;
+	
+	/* get the user pointer value and check its content */
+	value = PTR_TO_INT (turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_USER_DATA)); 
+	if (value != 5)
+		return;
+
+	/* get the list reference */
+	list = turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_EVENT_DATA);
+	if (list == NULL)
+		return;
+	
+	/* store one item */
+	axl_list_append (list, INT_TO_PTR (6));
+	
+	return;
+}
+
+void test_05_handler2 (TurbulenceMediatorObject * object)
+{
+	axlList * list;
+	int       value;
+	
+	/* get the user pointer value and check its content */
+	value = PTR_TO_INT (turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_USER_DATA)); 
+	if (value != 7)
+		return;
+
+	/* get the list reference */
+	list = turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_EVENT_DATA);
+	if (list == NULL)
+		return;
+	
+	/* store one item */
+	axl_list_append (list, INT_TO_PTR (8));
+	return;
+}
+
+void test_05_handler3 (TurbulenceMediatorObject * object)
+{
+	/* check value */
+	int       value;
+	
+	/* get the user pointer value and check its content */
+	value = PTR_TO_INT (turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_USER_DATA)); 
+	if (value != 9)
+		return;
+
+	/* get the user pointer value and check its content */
+	value = PTR_TO_INT (turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_EVENT_DATA)); 
+	if (value != 20)
+		return;
+
+	/* configure return value */
+	turbulence_mediator_object_set_result (object, INT_TO_PTR (29));
+
+	return;
+}
+
+axl_bool test_05 () {
+	axlList       * list;
+	axlPointer      result;
+	
+	/* TEST-05::1 create a context */
+	TurbulenceCtx * ctx = turbulence_ctx_new ();
+	turbulence_mediator_init (ctx);
+
+	/* create a plug */
+	if (! turbulence_mediator_create_plug (ctx, "test-05", "entry",
+					       axl_true, test_05_handler, NULL)) {
+		printf ("ERROR: failed to create plug..\n");
+		return axl_false;
+	}
+
+	/* check plugs created on the system */
+	if (turbulence_mediator_plug_num (ctx) != 1) {
+		printf ("ERROR: expected to find one plug number created but found: %d..\n", turbulence_mediator_plug_num (ctx));
+		return axl_false;
+	} /* end if */
+
+	/* check existance */
+	if (! turbulence_mediator_plug_exits (ctx, "test-05", "entry")) {
+		printf ("ERROR: expected to find plugn num test-05/entry but not found..\n");
+		return axl_false;
+	}
+
+	/* call to finish without uninstalling */
+	turbulence_mediator_cleanup (ctx);
+	turbulence_ctx_free (ctx);
+
+	/* TEST-05::2 create a context */
+	ctx = turbulence_ctx_new ();
+	turbulence_mediator_init (ctx);
+
+	/* create a plug */
+	if (! turbulence_mediator_create_plug (ctx, "test-05", "entry",
+					       axl_true, test_05_handler, INT_TO_PTR (5))) {
+		printf ("ERROR: failed to create plug..\n");
+		return axl_false;
+	}
+
+	/* push an event */
+	list = axl_list_new (axl_list_equal_int, NULL);
+	turbulence_mediator_push_event (ctx, "test-05", "entry", list, NULL, NULL);
+	
+	/* check list status */
+	if (axl_list_length (list) == 0) {
+		printf ("ERROR: expected to find at least one item on the list..\n");
+		return axl_false;
+	}
+
+	/* check value stored */
+	if (PTR_TO_INT (axl_list_get_nth (list, 0)) != 6) {
+		printf ("ERROR: expected to find 6 value at list[0] but found: %d..\n",
+			PTR_TO_INT (axl_list_get_nth (list, 0)));
+		return axl_false;
+	}
+
+	/* now check subscribe other handler */
+	if (! turbulence_mediator_subscribe (ctx, "test-05", "entry", test_05_handler2, INT_TO_PTR (7))) {
+		printf ("Failed to subscribe second handler ..\n");
+		return axl_false;
+	}
+
+	/* push a second event */
+	turbulence_mediator_push_event (ctx, "test-05", "entry", list, NULL, NULL);
+
+	/* check list status */
+	if (axl_list_length (list) != 3) {
+		printf ("ERROR: expected to find at three items on the list but found: %d..\n", axl_list_length (list));
+		return axl_false;
+	}
+
+	/* check value stored */
+	if (PTR_TO_INT (axl_list_get_nth (list, 2)) != 8) {
+		printf ("ERROR: expected to find 8 value at list[2] but found: %d..\n",
+			PTR_TO_INT (axl_list_get_nth (list, 2)));
+		return axl_false;
+	}
+
+	/* register an api call */
+	if (! turbulence_mediator_create_api (ctx, "test-05", "api", test_05_handler3, INT_TO_PTR (9))) {
+		printf ("ERROR: failed to create api..\n");
+		return axl_false;
+	} /* end if */
+
+	/* call api */
+	result = turbulence_mediator_call_api (ctx, "test-05", "api", INT_TO_PTR (20), NULL, NULL);
+
+	/* check result */
+	if (PTR_TO_INT (result) != 29) {
+		printf ("ERROR: expected to find 29 value but found: %d..\n", PTR_TO_INT (result));
+		return axl_false;
+	} /* end if */
+
+	/* free list */
+	axl_list_free (list);
+
+	/* call to finish without uninstalling */
+	turbulence_mediator_cleanup (ctx);
+	turbulence_ctx_free (ctx);
+
+	return axl_true;
+}
+
+
 /** 
  * @brief General regression test to check all features inside
  * turbulence.
@@ -826,9 +995,9 @@ int main (int argc, char ** argv)
 	printf ("**                   axl:        %s\n**\n",
 		AXL_VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     time ./test_01\n**\n");
+	printf ("**     time ./test_01 [--debug]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
-	printf ("**     libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01\n**\n");
+	printf ("**     libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01 [--debug]\n**\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
@@ -839,9 +1008,17 @@ int main (int argc, char ** argv)
 	/* init vortex support */
 	vortex_support_init (vortex_ctx);
 
-	/* uncomment the following tree lines to get debug */
+	/* create turbulence context */
 	ctx = turbulence_ctx_new ();
 	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
+
+	/* uncomment the following four lines to get debug */
+	if (argc > 1 && axl_cmp (argv[1], "--debug")) {
+		turbulence_log_enable       (ctx, axl_true);
+		turbulence_color_log_enable (ctx, axl_true);
+		turbulence_log2_enable      (ctx, axl_true);
+		turbulence_log3_enable      (ctx, axl_true);
+	} /* end if */
 
 	/* init module functions */
 	turbulence_module_init (ctx);
@@ -874,7 +1051,14 @@ int main (int argc, char ** argv)
 	if (test_04 ()) {
 		printf ("Test 04: Check module loading support  [   OK   ]\n");
 	} else {
-		printf ("Test 03: Check module loading support  [ FAILED ]\n");
+		printf ("Test 04: Check module loading support  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_05 ()) {
+		printf ("Test 05: Check mediator API  [   OK   ]\n");
+	} else {
+		printf ("Test 05: Check mediator API  [ FAILED ]\n");
 		return -1;
 	}
 
