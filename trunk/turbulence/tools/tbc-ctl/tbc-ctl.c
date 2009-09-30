@@ -100,6 +100,13 @@ axl_bool tbc_ctl_enable_sasl (void)
 	VortexStatus   status;
 	char         * message = NULL;
 	char         * string;
+	int            stdout_fd;
+
+	/* init sasl */
+	if (! vortex_sasl_init (vortex_ctx)) {
+		printf ("ERROR: failed to initialize SASL module..unable to authenticate\n");
+		return axl_false;
+	}
 
 	/* get plan mechamis */
 	if (exarg_is_defined ("sasl-method"))
@@ -109,23 +116,29 @@ axl_bool tbc_ctl_enable_sasl (void)
 	/* get auth properies */
 	if (axl_cmp (mech, VORTEX_SASL_PLAIN)) {
 		if (exarg_is_defined ("user"))
-			vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID, exarg_get_string ("user"));
+			vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID, exarg_get_string ("user"), NULL);
 		else {
-			user = readline ("User: ");
-			vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID, string);
-			axl_free (string);
+			string = readline ("User: ");
+			vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID, string, axl_free);
 		} /* end if */
 
 		/* now password */
 		if (exarg_is_defined ("password"))
-			vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, exarg_get_string ("password"));
+			vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, exarg_get_string ("password"), NULL);
 		else {
-			string = readline ("Password: ");
-			vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, string);
-			axl_free (string);
+			/* close stdout */
+			stdout_fd = dup (1);
+			printf ("Password: ");
+			fflush (stdout);
+			close (1);
+			string = readline (NULL);
+			dup (stdout_fd);
+			close (stdout_fd);
+
+			/* end if */
+			vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, string, axl_free);
 		} /* end if */
-			
-	}
+	} /* end if */
 
 	/* enable auth operation */
 	vortex_sasl_start_auth_sync (conn, mech, &status, &message);
@@ -136,7 +149,6 @@ axl_bool tbc_ctl_enable_sasl (void)
 		error ("SASL status: %s", message);
 
 	/* free status message nad mech */
-	axl_free (message);
 	axl_free (mech);
 
 	/* return SASL auth status */
