@@ -14,6 +14,8 @@ CURRENT FRANCIS WORK
 
     - Use this to allow turbulence to check SASL users at
       turbulence.conf without being linked to mod-sasl.
+    
+    - Keep on working on tbc-ctl (check to reenable console stdout).
 
 LONG TERM/NEED HELP ELEMENTS
 
