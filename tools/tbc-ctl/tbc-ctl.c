@@ -63,6 +63,90 @@ VortexConnection * conn;
  */
 #define RADMIN_URI "urn:aspl.es:beep:profiles:radmin-ctl"
 
+#if !defined(getpass)
+/* add a prototype to avoid a warning */
+char *getpass( const char * prompt );
+#endif 
+
+#ifdef AXL_OS_WIN32
+char     tbc_ctl_getch (void )
+{
+
+	HANDLE hInput;
+	char   ch;
+	int   n;
+
+	/* get the STDIN handle. */
+	hInput = GetStdHandle(STD_INPUT_HANDLE);
+	
+	/* turn off echoing */
+        SetConsoleMode(hInput, ENABLE_PROCESSED_INPUT);
+	
+	/* reac one char from the console */
+	ReadConsole(hInput, &ch, 1, (DWORD *) &n, NULL);
+
+	return ch;
+}
+#endif
+
+/** 
+ * @brief Allows to get a password from the user writting to stdout hash simbols.
+ * 
+ * @param prompt The prompt to be showed to the user.
+ * 
+ * @return The password get. Do not free returned value. If you need a
+ * newly allocated value use \ref afdal_getpass_allocated.
+ */
+char  * tbc_ctl_getpass (char  * prompt) 
+{
+#ifdef AXL_OS_UNIX
+	char  * s;
+#endif
+#ifdef AXL_OS_WIN32	
+#define MAX_LEN 30
+	int character, length, maxlen = MAX_LEN;
+	static char s[MAX_LEN], *position;
+#endif
+
+	/* get the password unix way */
+#ifdef AXL_OS_UNIX
+	s =  getpass (prompt);
+#endif
+
+	/* get the password windows way */
+#ifdef AXL_OS_WIN32	
+	length   = 0;
+	position = s;
+	fprintf (stdout, prompt);
+
+	while ((character = tbc_ctl_getch ()) != '\r' && 
+	       (character != '\n') && (character != 27) && (length <= maxlen)) { 
+		if (character == '\b')	{
+			if ( length > 0 ) {
+				putchar('\b');
+				putchar(' ');
+				putchar('\b');
+				--length;
+				--position;
+			}
+		}
+		else if (character < 32 || character > 127);
+		else {   
+			putchar('#');
+			*position++ = (char) character;
+			++length;
+		}
+	}
+
+	*position = '\0';
+	putchar ('\n');
+
+#endif
+	/* function end */
+	return s;
+}
+
+
 axl_bool tbc_ctl_do_connection (void) {
 
 	const char * host = "localhost";
@@ -100,7 +184,6 @@ axl_bool tbc_ctl_enable_sasl (void)
 	VortexStatus   status;
 	char         * message = NULL;
 	char         * string;
-	int            stdout_fd;
 
 	/* init sasl */
 	if (! vortex_sasl_init (vortex_ctx)) {
@@ -127,13 +210,8 @@ axl_bool tbc_ctl_enable_sasl (void)
 			vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, exarg_get_string ("password"), NULL);
 		else {
 			/* close stdout */
-			stdout_fd = dup (1);
-			printf ("Password: ");
-			fflush (stdout);
-			close (1);
-			string = readline (NULL);
-			dup (stdout_fd);
-			close (stdout_fd);
+			string = tbc_ctl_getpass ("Password: ");
+			string = axl_strdup (string);
 
 			/* end if */
 			vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, string, axl_free);
@@ -196,6 +274,33 @@ axl_bool  tbc_ctl_create_management_channel (void) {
 	/* try again to create the channel */
 	goto create_channel;
 	return axl_false;
+}
+
+void tbc_ctl_command_loop (void)
+{
+	char * command;
+	char * prompt = axl_strdup_printf ("tbc-ctl:%s:%s> ", 
+					   vortex_connection_get_host (conn), vortex_connection_get_port (conn));
+
+	while (axl_true) {
+		/* read command */
+		command = readline (prompt);
+
+		/* process command */
+		if (command == NULL || axl_cmp (command, "quit") || axl_cmp (command, "exit")) {
+			axl_free (command);
+			msg ("Exiting..");
+			break;
+		}
+		
+		/* free command */
+		axl_free (command);
+	} /* end if */
+
+	/* terminate prompt */
+	axl_free (prompt);
+
+	return;
 }
 
 int main (int argc, char ** argv)
@@ -282,9 +387,14 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 
+	/* ok, we are now connected, loop reading user commands */
+	tbc_ctl_command_loop ();
+
 	/* free context */
 	turbulence_ctx_free (ctx);
-	vortex_ctx_free (vortex_ctx);
+
+	/* finish vortex */
+	vortex_exit_ctx (vortex_ctx, axl_true);
 
 	return 0;
 }
