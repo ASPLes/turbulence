@@ -917,7 +917,7 @@ axl_bool test_05 () {
 
 	/* push an event */
 	list = axl_list_new (axl_list_equal_int, NULL);
-	turbulence_mediator_push_event (ctx, "test-05", "entry", list, NULL, NULL);
+	turbulence_mediator_push_event (ctx, "test-05", "entry", list, NULL, NULL, NULL);
 	
 	/* check list status */
 	if (axl_list_length (list) == 0) {
@@ -939,7 +939,7 @@ axl_bool test_05 () {
 	}
 
 	/* push a second event */
-	turbulence_mediator_push_event (ctx, "test-05", "entry", list, NULL, NULL);
+	turbulence_mediator_push_event (ctx, "test-05", "entry", list, NULL, NULL, NULL);
 
 	/* check list status */
 	if (axl_list_length (list) != 3) {
@@ -961,7 +961,7 @@ axl_bool test_05 () {
 	} /* end if */
 
 	/* call api */
-	result = turbulence_mediator_call_api (ctx, "test-05", "api", INT_TO_PTR (20), NULL, NULL);
+	result = turbulence_mediator_call_api (ctx, "test-05", "api", INT_TO_PTR (20), NULL, NULL, NULL);
 
 	/* check result */
 	if (PTR_TO_INT (result) != 29) {

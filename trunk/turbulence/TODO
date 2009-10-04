@@ -17,6 +17,17 @@ CURRENT FRANCIS WORK
     
     - Keep on working on tbc-ctl (check to reenable console stdout).
 
+IDEAS & USEFUL HINTS
+
+* It would be great to allow turbulence configuring which kind of
+  frame types are expected to be received for each particular
+  profile. This will save people from checking if they have received
+  an allowed frame type.
+
+* Investigate how useful would be signalling turbulence/vortex engine
+  to do automatic empty replies in the case the frame received do not
+  do this.
+
 LONG TERM/NEED HELP ELEMENTS
 
 * Make mod-sasl to support more SASL profiles (CRAM-MD5, DIGEST-MD5
