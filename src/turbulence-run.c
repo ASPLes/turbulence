@@ -233,7 +233,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		/* now the module is registered, publish this is done */
 		turbulence_mediator_push_event (ctx, "turbulence", "module-registered", 
 						/* publish name added */
-						(axlPointer) turbulence_module_name (module), NULL, NULL);
+						(axlPointer) turbulence_module_name (module), NULL, NULL, NULL);
 	next:
 		/* free the document */
 		axl_doc_free (doc);

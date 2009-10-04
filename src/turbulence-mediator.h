@@ -103,7 +103,13 @@ typedef enum {
 	 * this is event specific so you have to check event
 	 * documentation.
 	 */
-	TURBULENCE_MEDIATOR_ATTR_EVENT_DATA3     = 7
+	TURBULENCE_MEDIATOR_ATTR_EVENT_DATA3     = 7,
+	/** 
+	 * @brief Ask object to return thid user data defined. Note
+	 * this is event specific so you have to check event
+	 * documentation.
+	 */
+	TURBULENCE_MEDIATOR_ATTR_EVENT_DATA4     = 8
 } TurbulenceMediatorAttr;
 
 axlPointer  turbulence_mediator_object_get (TurbulenceMediatorObject * object,
@@ -148,14 +154,16 @@ void     turbulence_mediator_push_event   (TurbulenceCtx             * ctx,
 					   const char                * entry_domain,
 					   axlPointer                  event_data,
 					   axlPointer                  event_data2,
-					   axlPointer                  event_data3);
+					   axlPointer                  event_data3,
+					   axlPointer                  event_data4);
 
 axlPointer     turbulence_mediator_call_api     (TurbulenceCtx             * ctx,
 						 const char                * entry_name,
 						 const char                * entry_domain,
 						 axlPointer                  event_data,
 						 axlPointer                  event_data2,
-						 axlPointer                  event_data3);
+						 axlPointer                  event_data3,
+						 axlPointer                  event_data4);
 
 void     turbulence_mediator_cleanup      (TurbulenceCtx * ctx);
 
