@@ -48,6 +48,7 @@ struct _TurbulenceMediatorObject {
 	axlPointer      event_data;
 	axlPointer      event_data2;
 	axlPointer      event_data3;
+	axlPointer      event_data4;
 	/* result returned for api calls */
 	axlPointer      result;
 };
@@ -126,6 +127,8 @@ axlPointer  turbulence_mediator_object_get (TurbulenceMediatorObject * object,
 		return (axlPointer)object->event_data2;
 	case TURBULENCE_MEDIATOR_ATTR_EVENT_DATA3:
 		return (axlPointer)object->event_data3;
+	case TURBULENCE_MEDIATOR_ATTR_EVENT_DATA4:
+		return (axlPointer)object->event_data4;
 	}
 	/* requested an unsupported value */
 	return NULL;
@@ -525,7 +528,8 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 					    const char                * entry_domain,
 					    axlPointer                  event_data,
 					    axlPointer                  event_data2,
-					    axlPointer                  event_data3)
+					    axlPointer                  event_data3,
+					    axlPointer                  event_data4)
 {
 	char                         * full_name;
 	TurbulenceMediatorPlug       * plug;
@@ -568,6 +572,7 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 	object->event_data   = event_data;
 	object->event_data2  = event_data2;
 	object->event_data3  = event_data3;
+	object->event_data4  = event_data4;
 
 	if (plug->is_api) {
 		/* get references to handler and user data */
@@ -644,16 +649,20 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 
  * @param event_data3 The third user data pointer to be notified to
  * registered handlers.
+ *
+ * @param event_data4 The fourth user data pointer to be notified to
+ * registered handlers.
  */ 
 void turbulence_mediator_push_event  (TurbulenceCtx             * ctx,
 				      const char                * entry_name,
 				      const char                * entry_domain,
 				      axlPointer                  event_data,
 				      axlPointer                  event_data2,
-				      axlPointer                  event_data3)
+				      axlPointer                  event_data3,
+				      axlPointer                  event_data4)
 {
 	/* do common call */
-	turbulence_mediator_common_call (ctx, axl_false, entry_name, entry_domain, event_data, event_data2, event_data3);
+	turbulence_mediator_common_call (ctx, axl_false, entry_name, entry_domain, event_data, event_data2, event_data3, event_data4);
 	return;
 }
 
@@ -667,6 +676,7 @@ void turbulence_mediator_push_event  (TurbulenceCtx             * ctx,
  * @param event_data First parameter to be passed to the API call. This is specific for each API call. Check its documentation.
  * @param event2_data Second parameter to be passed to the API call. This is specific for each API call. Check its documentation.
  * @param event3_data Third parameter to be passed to the API call. This is specific for each API call. Check its documentation.
+ * @param event4_data Fourth parameter to be passed to the API call. This is specific for each API call. Check its documentation.
  *
  * @return A pointer to the result returned by the API call.
  */
@@ -675,10 +685,11 @@ axlPointer     turbulence_mediator_call_api     (TurbulenceCtx             * ctx
 						 const char                * entry_domain,
 						 axlPointer                  event_data,
 						 axlPointer                  event_data2,
-						 axlPointer                  event_data3)
+						 axlPointer                  event_data3,
+						 axlPointer                  event_data4)
 {
 	/* do common call signaling it is an api call */
-	return turbulence_mediator_common_call (ctx, axl_true, entry_name, entry_domain, event_data, event_data2, event_data3);
+	return turbulence_mediator_common_call (ctx, axl_true, entry_name, entry_domain, event_data, event_data2, event_data3, event_data4);
 }
 
 /** 
