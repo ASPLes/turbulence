@@ -1223,6 +1223,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *  - \ref turbulence_db_list
  *  - \ref turbulence_conn_mgr
  *  - \ref turbulence_handlers
+ *  - \ref turbulence_types
  *  - \ref turbulence_ctx
  *  - \ref turbulence_run
  *  - \ref turbulence_expr

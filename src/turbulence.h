@@ -49,12 +49,8 @@
 /* XML support */
 #include <axl.h>
 
-/* types */
-typedef struct _TurbulencePPath TurbulencePPath;
-
-typedef struct _TurbulencePPathDef TurbulencePPathDef;
-
 /* local includes */
+#include <turbulence-types.h>
 #include <turbulence-ctx.h>
 #include <turbulence-handlers.h>
 #include <turbulence-expr.h>
