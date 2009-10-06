@@ -27,7 +27,7 @@ initial_build_doc:
 	@test -e doc.stamp || make build_doc
 	@test -e doc.stamp || touch doc.stamp
 
-build_doc:
+build_doc: turbulence-config-location.txt
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
@@ -41,3 +41,7 @@ build_doc:
 # 	cp body_back.gif html/
 	cp ../web/images/aspl-alt-compat-logo.png html/
 	cp aspl-logo-header.png html/
+
+turbulence-config-location.txt:
+	echo ">> turbulence --conf-location" > $@
+	../src/turbulence --conf-location >> $@

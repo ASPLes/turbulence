@@ -77,14 +77,16 @@ RECURSIVE              = NO
 EXCLUDE                = 
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = 
-EXAMPLE_PATH           = ../src
+EXAMPLE_PATH           = ../src \
+                         ../doc \
+			 ../web \
                          . \
                          ../modules/mod-sasl \
                          ../modules/mod-tunnel \
 		         ../modules/mod-test
 EXAMPLE_PATTERNS       = 
 EXAMPLE_RECURSIVE      = NO
-IMAGE_PATH             = ../logo ../doc
+IMAGE_PATH             = ../logo ../doc ../web/images
 INPUT_FILTER           = "grep -v exarg"
 FILTER_PATTERNS        = 
 FILTER_SOURCE_FILES    = NO
