@@ -1,5 +1,5 @@
 /*  Turbulence:  BEEP application server
- *  Copyright (C) 2008 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2009 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -35,34 +35,30 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
-#ifndef __TURBULENCE_LOOP_H__
-#define __TURBULENCE_LOOP_H__
-
-#include <turbulence.h>
+#ifndef __TURBULENCE_TYPES_H__
+#define __TURBULENCE_TYPES_H__
 
 /** 
- * \addtogroup turbulence_loop
+ * \defgroup turbulence_types Turbulence types: types used/exposed by Turbulence API
+ */
+
+/** 
+ * \addtogroup turbulence_types
  * @{
  */
 
-TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx);
+/* types */
+typedef struct _TurbulencePPath TurbulencePPath;
 
-void             turbulence_loop_set_read_handler (TurbulenceLoop        * loop,
-						   TurbulenceLoopOnRead    on_read,
-						   axlPointer              ptr,
-						   axlPointer              ptr2);
+typedef struct _TurbulencePPathDef TurbulencePPathDef;
 
-void             turbulence_loop_watch_descriptor (TurbulenceLoop        * loop,
-						   int                     descriptor,
-						   TurbulenceLoopOnRead    on_read,
-						   axlPointer              ptr,
-						   axlPointer              ptr2);
+/** 
+ * Object representing a loop watching a set of files. See \ref turbulence_loop.
+ */
+typedef struct _TurbulenceLoop TurbulenceLoop;
 
-void             turbulence_loop_close (TurbulenceLoop * loop, 
-					 axl_bool        notify);
+#endif
 
 /** 
  * @}
  */
-
-#endif

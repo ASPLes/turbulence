@@ -33,6 +33,7 @@ turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) libturbulence.la
 lib_LTLIBRARIES  = libturbulence.la
 
 libturbulenceinclude_HEADERS    = \
+	turbulence-types.h \
 	turbulence-expr.h \
 	turbulence-moddef.h \
 	turbulence.h \
