@@ -40,29 +40,15 @@
 
 #include <turbulence.h>
 
-typedef struct _TurbulenceLoop TurbulenceLoop;
+/** 
+ * \addtogroup turbulence_loop
+ * @{
+ */
 
 /** 
- * @brief Handler definition used by turbulence_loop_set_read_handler
- * to notify that the descriptor is ready to be read (either because
- * it has data or because it was closed).
- *
- * @param loop The loop wher the notification was found.
- * @param ctx The Turbulence context where the loop is running.
- * @param descriptor The descriptor that is ready to be read.
- * @param ptr User defined pointer defined at \ref turbulence_loop_set_read_handler and passed to this handler.
- * @param ptr2 User defined pointer defined at \ref turbulence_loop_set_read_handler and passed to this handler.
- *
- * @return The function return axl_true in the case the read operation
- * was completed without problem. Otherwise axl_false is returned
- * indicating that the turbulence loop engine should close the
- * descriptor.
+ * Object representing a loop watching a set of files. 
  */
-typedef axl_bool (*TurbulenceLoopOnRead) (TurbulenceLoop * loop, 
-					  TurbulenceCtx  * ctx,
-					  int              descriptor, 
-					  axlPointer       ptr, 
-					  axlPointer       ptr2);
+typedef struct _TurbulenceLoop TurbulenceLoop;
 
 TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx);
 
@@ -79,5 +65,9 @@ void             turbulence_loop_watch_descriptor (TurbulenceLoop        * loop,
 
 void             turbulence_loop_close (TurbulenceLoop * loop, 
 					 axl_bool        notify);
+
+/** 
+ * @}
+ */
 
 #endif

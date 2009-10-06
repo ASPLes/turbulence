@@ -37,6 +37,15 @@
  */
 #include <turbulence.h>
 
+/** 
+ * \defgroup turbulence_mediator Turbulence Mediator: broker API used to communicate modules and turbulence components
+ */
+
+/** 
+ * \addtogroup turbulence_mediator
+ * @{
+ */
+
 /* include private ctx */
 #include <turbulence-ctx-private.h>
 
@@ -170,6 +179,8 @@ void turbulence_mediator_plug_free (axlPointer _plug)
  * This function is used to create a new event and can be used to
  * register in the same step (setting subscribe to axl_true).
  *
+ * @param ctx The turbulence context where the plug will be created.
+ *
  * @param entry_name This is the event entry name.
  *
  * @param entry_domain This is the event entry domain, an string that
@@ -273,10 +284,14 @@ int      turbulence_mediator_plug_num     (TurbulenceCtx             * ctx)
 
 /** 
  * @brief Checks if a particular plug is already registered.
+ *
  * @param ctx The context where the plug existance will be checked.
- * @parm entry_name The plug entry name to check.
+ *
+ * @param entry_name The plug entry name to check.
  * @param entry_domain The plug entry domain to check.
- * @return axl_true if the plug exists, otherwise axl_false is returned.
+ *
+ * @return axl_true if the plug exists, otherwise axl_false is
+ * returned.
  */
 axl_bool turbulence_mediator_plug_exits   (TurbulenceCtx             * ctx,
 					   const char                * entry_name,
@@ -671,12 +686,19 @@ void turbulence_mediator_push_event  (TurbulenceCtx             * ctx,
  * 
  * @param ctx The turbulence context where the API call is defined.
  * @param entry_name The API entry name to be called.
- * @param entry_name The API entry domain to be called.
+ * @param entry_domain The API entry domain to be called.
  *
- * @param event_data First parameter to be passed to the API call. This is specific for each API call. Check its documentation.
- * @param event2_data Second parameter to be passed to the API call. This is specific for each API call. Check its documentation.
- * @param event3_data Third parameter to be passed to the API call. This is specific for each API call. Check its documentation.
- * @param event4_data Fourth parameter to be passed to the API call. This is specific for each API call. Check its documentation.
+ * @param event_data First parameter to be passed to the API
+ * call. This is specific for each API call. Check its documentation.
+ *
+ * @param event_data2 Second parameter to be passed to the API
+ * call. This is specific for each API call. Check its documentation.
+ *
+ * @param event_data3 Third parameter to be passed to the API
+ * call. This is specific for each API call. Check its documentation.
+ *
+ * @param event_data4 Fourth parameter to be passed to the API
+ * call. This is specific for each API call. Check its documentation.
  *
  * @return A pointer to the result returned by the API call.
  */
@@ -710,4 +732,8 @@ void turbulence_mediator_cleanup      (TurbulenceCtx * ctx)
 
 	return;
 }
+
+/** 
+ * @}
+ */
 

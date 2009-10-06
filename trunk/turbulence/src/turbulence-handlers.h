@@ -92,6 +92,28 @@ typedef int  (*TurbulenceDbListRemoveFunc) (const char * item_stored, axlPointer
  */
 typedef void (*TurbulenceSignalHandler) (int signal);
 
+/** 
+ * @brief Handler definition used by turbulence_loop_set_read_handler
+ * to notify that the descriptor is ready to be read (either because
+ * it has data or because it was closed).
+ *
+ * @param loop The loop wher the notification was found.
+ * @param ctx The Turbulence context where the loop is running.
+ * @param descriptor The descriptor that is ready to be read.
+ * @param ptr User defined pointer defined at \ref turbulence_loop_set_read_handler and passed to this handler.
+ * @param ptr2 User defined pointer defined at \ref turbulence_loop_set_read_handler and passed to this handler.
+ *
+ * @return The function return axl_true in the case the read operation
+ * was completed without problem. Otherwise axl_false is returned
+ * indicating that the turbulence loop engine should close the
+ * descriptor.
+ */
+typedef axl_bool (*TurbulenceLoopOnRead) (TurbulenceLoop * loop, 
+					  TurbulenceCtx  * ctx,
+					  int              descriptor, 
+					  axlPointer       ptr, 
+					  axlPointer       ptr2);
+
 #endif
 
 /**
