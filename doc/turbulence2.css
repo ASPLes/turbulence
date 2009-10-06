@@ -141,7 +141,9 @@ h2 a.anchor {
 
 pre.fragment {
   font-family: Monospace,Fixed,Courier;
-  font-size: 90%;
+  font-size: 11px;
+  background: #2e3436;
+  color: white;
 }
 
 .mdRow {

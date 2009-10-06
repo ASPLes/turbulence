@@ -1338,15 +1338,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * file should be found at the location provided by the following
  * command: 
  *
- * \code
- *   >> turbulence --conf-location
- *   VERSION:         0.3.2.b3708.g3749
- *   VORTEX_VERSION:  1.1.0.b3749.g3749
- *   AXL_VERSION:     0.5.6.b3738.g3749
- *   SYSCONFDIR:      /etc
- *   TBC_DATADIR:     /usr/share
- *   Default configuration file: /etc/turbulence/turbulence.conf
- * \endcode
+ * \include turbulence-config-location.txt
  * 
  * Alternatively you can provide your own configuration file by using
  * the <b>--config</b> option: 
@@ -1610,7 +1602,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * applied to the peer, discarding the rest of <b>&lt;path-def></b>
  * defined.  
  * 
- * <div class="center"><img  src="images/profile-path-chain.png" alt="[PROFILE PATH CHAIN]"></div> 
+ * \image html profile-path-chain.png "Profile path chain"
  *
  * As the previous image shows, the turbulence profile path
  * configuration is composed by several profile path definitions: 
