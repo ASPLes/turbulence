@@ -38,6 +38,11 @@
 #ifndef __TURBULENCE_MEDIATOR_H__
 #define __TURBULENCE_MEDIATOR_H__
 
+/** 
+ * \addtogroup turbulence_mediator
+ * @{
+ */
+
 #include <turbulence.h>
 
 /** 
@@ -168,3 +173,7 @@ axlPointer     turbulence_mediator_call_api     (TurbulenceCtx             * ctx
 void     turbulence_mediator_cleanup      (TurbulenceCtx * ctx);
 
 #endif
+
+/** 
+ * @}
+ */ 

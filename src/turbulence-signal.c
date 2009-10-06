@@ -41,8 +41,22 @@
 #include <sys/wait.h>
 
 /** 
- * @internal Termination signal received, notify.
+ * \defgroup turbulence_signal Turbulence Signal : signal handling support for turbulence
+ */
+
+/** 
+ * \addtogroup turbulence_signal
+ * @{
+ */
+
+/** 
+ * @brief Signal notify facility. This function is used to signal on
+ * the appropriate \ref TurbulenceCtx, a particular signal received.
+ *
+ * @param ctx The turbulence context where the signal will be handled.
  * @param _signal The signal received.
+ *
+ * @return Returns 0 or the pid in the case the signal is SIGHLD.
  */
 int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 {
@@ -121,11 +135,12 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 }
 
 /** 
- * @brief Terminates the turbulence excution, returing the exit signal
+ * @internal Terminates the turbulence excution, returing the exit signal
  * provided as first parameter. This function is used to notify a
  * context that a signal was received.
  * 
- * @param signal The exit code to return.
+ * @param ctx The turbulence context to terminate.
+ * @param _signal The exit code to return.
  */
 void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 {
@@ -199,7 +214,9 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	return;
 } /* end if */
 
-
+/** 
+ * @}
+ */
 
 
 

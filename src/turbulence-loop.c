@@ -37,6 +37,15 @@
  */
 #include <turbulence.h>
 
+/** 
+ * \defgroup turbulence_loop Turbulence Loop: socket descriptor watcher
+ */
+
+/** 
+ * \addtogroup turbulence_loop
+ * @{
+ */
+
 struct _TurbulenceLoop {
 	TurbulenceCtx      * ctx;
 	VortexThread         thread;
@@ -367,8 +376,13 @@ void             turbulence_loop_watch_descriptor (TurbulenceLoop        * loop,
 }
 
 /** 
- * @brief Finishes the provided TurbulenceLoop, releasing its
- * resources and stopping its resources..
+ * @brief Finishes the provided \ref TurbulenceLoop, releasing
+ * resources and stopping its resources.
+ *
+ * @param loop The loop to finish.
+ *
+ * @param notify In the case the internal thread started by the loop
+ * should be notified to be stopped.
  */
 void             turbulence_loop_close (TurbulenceLoop * loop, axl_bool notify)
 {
@@ -398,3 +412,7 @@ void             turbulence_loop_close (TurbulenceLoop * loop, axl_bool notify)
 	return;
 }
 
+
+/** 
+ * @}
+ */
