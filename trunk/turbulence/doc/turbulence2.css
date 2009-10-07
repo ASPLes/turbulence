@@ -134,9 +134,11 @@ div.navtab a:hover {
 }
 
 h2 a.anchor { 
-  padding: 2px;
-  background: #fff url("body_back.gif") repeat-x;
-  border: 1px solid #b0b0b0; 
+  font-size: 100%;
+  border-left: 5px solid #3465a4;
+  padding-left: 3px;
+  padding: 5px;
+  color: #2e3436;  
 }
 
 pre.fragment {
