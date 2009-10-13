@@ -1,0 +1,12 @@
+<global-settings>
+   <!--  ....more settings ....  -->
+   <!--  crash settings 
+       [*] hold:   lock the current instance so a developer can attach to the
+                   process  to debug what's happening.
+
+       [*] ignore: just ignore the signal, and try to keep running.
+
+       [*] quit,exit: terminates turbulence execution.
+     -->
+   <on-bad-signal action="hold" />
+</global-settings>

@@ -1,3 +1,8 @@
+xml_examples = \
+	global-settings.xml.tmp \
+	clean-start.xml.tmp \
+	on-bad-signal.xml.tmp
+
 EXTRA_DIST = turbulence-doc.doxygen \
 	main-page-logo.png \
 	body_back.gif \
@@ -5,7 +10,7 @@ EXTRA_DIST = turbulence-doc.doxygen \
 	turbulence-doc-footer.html \
 	turbulence-doc-header.html \
 	aspl-logo-header.png \
-	turbulence2.css 
+	turbulence2.css $(xml_examples)
 
 bin_SCRIPTS = initial_build_doc
 
@@ -27,7 +32,7 @@ initial_build_doc:
 	@test -e doc.stamp || make build_doc
 	@test -e doc.stamp || touch doc.stamp
 
-build_doc: turbulence-config-location.txt
+build_doc: turbulence-config-location.txt $(xml_examples)
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
@@ -45,3 +50,6 @@ build_doc: turbulence-config-location.txt
 turbulence-config-location.txt:
 	echo ">> turbulence --conf-location" > $@
 	../src/turbulence --conf-location >> $@
+
+%.xml.tmp: %.xml
+	axl-knife -i $< -o $@ -e -p fragment

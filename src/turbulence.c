@@ -1376,25 +1376,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * Ports and addresses used by Turbulence to listen are configured at
  * the <b>&lt;global-settings></b> section. Here is an example:
  * 
- * \code
- * <div class="xml-doc">
- *  &lt;<span class="node">global-settings</span>>
- *    <span class="comment">&lt;!-- ... more settings ... --></span>
- * 
- *    <span class="comment">&lt;!-- port to listen to --></span>
- *    &lt;<span class="node">ports</span>>
- *      &lt;<span class="node">port</span>>3206&lt;/<span class="node">port</span>>
- *      &lt;<span class="node">port</span>>44010&lt;/<span class="node">port</span>>
- *    &lt;/<span class="node">ports</span>>
- *
- *    <span class="comment">&lt;!-- listener configuration (address to listen) --></span>
- *    &lt;<span class="node">listener</span>>
- *      &lt;<span class="node">name</span>>0.0.0.0&lt;/<span class="node">name</span>>
- *    &lt;/<span class="node">listener</span>>
- *  &lt;/<span class="node">global-settings</span>>
- * </pre>
- * </div> <!-- class=xml-doc -->
- * \endcode
+ * \htmlinclude global-settings.xml.tmp
  *
  * Previous example will make Turbulence to listen on ports 3206 and
  * 44010 for all addresses that are known for the server hosting
@@ -1417,19 +1399,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * This is configured inside the <b>global-settings</b> section:
  *
- * \code
- *
- *   &lt;<span class="node">global-settings</span>>
- *      <span class="comment">&lt;!-- ... more settings ... --></span>
- *
- *      <span class="comment">&lt;!--  Configure the default turbulence behavior to start or stop
- *            if a configuration or module error is found. By default
- *            Turbulence will stop if a failure is found.
- *        --></span>
- *      &lt;<span class="node">clean-start</span> value=<span class="attrvalue">"yes"</span> />
- *   &lt;/<span class="node">global-settings</span>>
- *
- * \endcode
+ * \htmlinclude clean-start.xml.tmp
  *
  * 
  * Alternatively, during development or when it is found a turbulence
@@ -1437,21 +1407,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * crash (bad signal received). This is done by configuring the
  * following:
  *
- * \code
- *   &lt;<span class="node">global-settings</span>>
- *      <span class="comment">&lt;!--  ....more settings ....  --></span>
- *      <span class="comment">&lt;!--  crash settings 
- *       [*] hold:   lock the current instance so a developer can attach to the
- *                   process  to debug what's happening.
- *
- *       [*] ignore: just ignore the signal, and try to keep running.
- *
- *       [*] quit,exit: terminates turbulence execution.
- *      --></span>
- *      &lt;<span class="node">on-bad-signal</span> action=<span class="attrvalue">"hold"</span> />
- *   &lt;/<span class="node">global-settings</span>>
- *
- * \endcode
+ * \htmlinclude on-bad-signal.xml.tmp
  *
  * The <b>"hold"</b> option is really useful for real time debugging
  * because it hangs right after the signal is received. This allows to
