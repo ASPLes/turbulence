@@ -142,11 +142,41 @@ h2 a.anchor {
 }
 
 pre.fragment {
-  font-family: Monospace,Fixed,Courier;
-  font-size: 11px;
+  margin: 0px;
+  padding: 10px;
+/*  background: #4a554a; */
   background: #2e3436;
   color: white;
 }
+
+pre.fragment .stringliteral { 
+  color: #e9b96e;
+}
+
+div.xml-doc pre.fragment .keyword { 
+  color: white;
+}
+
+div.xml-doc pre.fragment .keywordflow { 
+  color: white;
+}
+
+span.comment { 
+  color: #ef2929;
+}
+
+span.attrvalue { 
+  color: #fcaf3e;
+}
+
+span.node { 
+  color: #ad7fa8;
+}
+
+span.header { 
+  color: #729fcf;
+}
+
 
 .mdRow {
   font-family: Monospace,Fixed,Courier;
