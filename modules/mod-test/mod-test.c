@@ -89,7 +89,7 @@ static int  test_init (TurbulenceCtx * _ctx)
 				  NULL, NULL,
 				  NULL, NULL);
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -100,6 +100,7 @@ static int  test_init (TurbulenceCtx * _ctx)
 static void test_close (TurbulenceCtx * ctx)
 {
 	msg ("Turbulence BEEP server, test module: close");
+	return;
 }
 
 /** 
@@ -110,9 +111,10 @@ static void test_close (TurbulenceCtx * ctx)
  */
 static void test_reconf (TurbulenceCtx * ctx) {
 	msg ("Turbulence BEEP server configuration have change");
+	return;
 }
 
-/**
+/** 
  * @brief Public entry point for the module to be loaded. This is the
  * symbol the turbulence will lookup to load the rest of items.
  */

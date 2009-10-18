@@ -166,10 +166,15 @@ int  turbulence_init (TurbulenceCtx * ctx,
 } /* end if */
 
 /** 
- * @internal Function that performs a reload operation for the current
- * turbulence instance.
+ * @brief Function that performs a reload operation for the current
+ * turbulence instance (represented by the provided TurbulenceCtx).
  * 
- * @param value The signal number caught.
+ * @param ctx The turbulence context representing a running instance
+ * that must reload.
+ *
+ * @param value The signal number caught. This value is optional since
+ * reloading can be triggered not only by a signal received (i.e.
+ * SIGHUP).
  */
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 {
@@ -1627,7 +1632,77 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
 /** 
  * \page turbulence_developer_manual Turbulence Developer manual
  *
- * 
+ * <b>Section 1: Creating turbulence modules</b>
+ *
+ *   - \ref turbulence_developer_manual_creating_modules
+ *
+ * \section turbulence_developer_manual_creating_modules How Turbulence module works
+ *
+ * Turbulence, from a simple point of view, is a listener application
+ * built on top of <a href="http://www.aspl.es/vortex">Vortex
+ * Library</a>, which reads a set of \ref configuring_turbulence
+ * "configuration files" to start at some selected ports, etc, and
+ * then load all modules installed to implement useful BEEP based
+ * things.
+ *
+ * These modules could implement new BEEP profiles or features that
+ * extend Turbulence internal function (not necessarily a new BEEP
+ * profile). This is because module structure is really simple (and
+ * this is intentional).
+ *
+ * Turbulence core is really small. The rest of features are added as
+ * modules. For example, Turbulence SASL support is a module which is
+ * configurable to use a particular user database and, with the help
+ * of some tools (<b>tbc-sasl-conf</b>), you can manage users that can
+ * connect to Turbulence.
+ *
+ * In fact, Turbulence doesn't known anything about SASL. \ref
+ * turbulence_mod_sasl "Turbulence SASL module" is implemented to
+ * install and configure the SASL profiles provided by Vortex, and
+ * using \ref profile_path_configuration "Profile Path" (a Turbulence
+ * core feature), the security provisioning is meet.
+ *
+ * Turbulence module form is fairly simple. It contains the following handlers (defined at \ref TurbulenceModDef):
+ * <ol>
+ *
+ *  <li>Init (\ref ModInitFunc): A handler called by Turbulence to start the module. Here
+ *  the developer must place all calls required to install/configure a
+ *  profile, init global variables, etc.</li>
+ *
+ *  <li>Close (\ref ModCloseFunc): Called by Turbulence to stop a module. Here the
+ *  developer must stop and dealloc all resources used by its
+ *  module.</li>
+ *
+ *  <li>Reconf (\ref ModReconfFunc): Called by Turbulence when a HUP signal is
+ *  received. This is a notification that the module should reload its
+ *  configuration files and start to behave as they propose.</li>
+ *
+ * </ol>
+ *
+ * \section turbulence_developer_manual_creating_modules_manually Creating a module from the scratch (dirty way)
+ *
+ * Maybe the easiest way to start writing a Turbulence Module is to
+ * take a look into mod-test source code. This module doesn't do
+ * anything but is maintained across releases to contain all handlers
+ * required and a brief help. You can use it as an official
+ * reference. A module is at minimum composed by the following tree
+ * files:
+ *
+ * - <b>mod-test.c</b>: base module source code: \ref turbulence_mod_test_c "mod-test.c" | <a href="https://dolphin.aspl.es/svn/publico/af-arch/turbulence/modules/mod-test/mod-test.c"><b>[TXT]</b></a>
+ * - <b>Makefile.am</b>: optional automake file used to build the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/turbulence/modules/mod-test/Makefile.am"><b>[TXT]</b></a>
+ * - <b>mod-test.xml.in</b>: xml module pointer, a file that is installed at the Turbulence modules dir to load the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/turbulence/modules/mod-test/mod-test.xml.in"><b>[TXT]</b></a>
+ *
+ * Now if your intention is to built a BEEP profile then you should do
+ * all calls to install it and its associated handlers using the
+ * vortex profiles API at the Init (\ref ModInitFunc) handler.
+ */
+
+/** 
+ * \page turbulence_mod_test_c mod-test.c source code
+ *
+ * You can copy and paste the following code to start a turbulence module. This code is checked against Turbulence source code.
+ *
+ * \include mod-test.c
  */
 
 
