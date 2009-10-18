@@ -3,7 +3,9 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 	-DAXL_VERSION=\"$(AXL_VERSION)\" -DVORTEX_VERSION=\"$(VORTEX_VERSION)\" \
         -DVERSION=\"$(VERSION)\" 
 
-configuration_files = test_07.conf
+configuration_files = \
+	test_07.conf \
+	test_08.conf
 
 EXTRA_DIST = $(configuration_files)
 
