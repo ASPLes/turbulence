@@ -28,7 +28,11 @@ mod_DATA = mod-sasl.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/sasl
-modconf_DATA = sasl.example.conf auth-db.example.xml remote-admins.example.xml
+modconf_DATA = sasl.example.conf sasl.example.conf.tmp auth-db.example.xml remote-admins.example.xml
+
+# render html version from default configuration files
+%.conf.tmp: %.conf
+	axl-knife -i $< -o $@ -e -p fragment
 
 # tool to admin sasl db 
 if ENABLE_TERMIOS

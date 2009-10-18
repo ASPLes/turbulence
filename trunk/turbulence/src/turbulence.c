@@ -1245,10 +1245,12 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *   - \ref turbulence_ports
  *   - \ref turbulence_clean_start
  *   - \ref turbulence_configuring_log_files
+ *   - \ref turbulence_db_list_management
  *
  * <b>Section 3: Turbulence module management</b> 
  *
  *   - \ref turbulence_modules_configuration
+ *   - \ref turbulence_mod_sasl
  *
  * <b>Section 4: BEEP profile management</b>
  *
