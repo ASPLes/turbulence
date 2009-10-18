@@ -217,13 +217,13 @@ TurbulenceModDef module_def = {
  *
  * \section turbulence_mod_sasl_intro Introduction
  *
- * mod-sasl module provides user authentication to Turbulence. Inside
+ * <b>mod-sasl</b> module provides user authentication to Turbulence. Inside
  * BEEP, the SASL protocol is used by default to provide user
  * authentication.
  *
  * \section turbulence_mod_sasl_configuration Base configuration
  *
- * mod-sasl is a module that provides SASL support for turbulence. It
+ * <b>mod-sasl</b> is a module that provides SASL support for turbulence. It
  * includes facilities to configure which SASL profiles can be enabled
  * and the users database to be used.
  *
@@ -240,20 +240,20 @@ TurbulenceModDef module_def = {
  *
  *
  * Once included the module you must restart Turbulence. Now the
- * mod-sasl is activated you must configure it. This is done by
- * updating sasl.conf file which is usually located at
- * /etc/turbulence/sasl/sasl.conf. Here is an example:
+ * <b>mod-sasl</b> is activated you must configure it. This is done by
+ * updating <b>sasl.conf</b> file which is usually located at
+ * <b>/etc/turbulence/sasl/sasl.conf</b>. Here is an example:
  * 
  * \htmlinclude sasl.example.conf.tmp
  *
  * Previous configuration file example states that there is a default
- * authentication database (no serverName configured), using the md5
- * format to store passwords (format), storing such user and password
- * using the default xml backend provided by turbulence (type), which
- * is located at the file provided (location).
+ * authentication database (no <b>serverName</b> configured), using the md5
+ * format to store passwords (<b>format</b>), storing such user and password
+ * using the default xml backend provided by turbulence (<b>type</b>), which
+ * is located at the file provided (<b>location</b>).
  *
- * The two remaining parameters (remote-admins and remote) allows to
- * configure the remote mod-sasl xml-rpc based administration
+ * The two remaining parameters (<b>remote-admins</b> and <b>remote</b>) allows to
+ * configure the remote <b>mod-sasl</b> xml-rpc based administration
  * interface and to configure the set of allowed users that could use
  * this interface. See later for more details.
  *
@@ -262,29 +262,33 @@ TurbulenceModDef module_def = {
  * host configuration for SASL module
  *
  * Previous example shows how to configure the default backend used
- * for all serverName configurations. Inside BEEP, once a channel is
- * created, it is allowed to configure the serverName parameter asking
+ * for all <b>serverName</b> configurations. Inside BEEP, once a channel is
+ * created, it is allowed to configure the <b>serverName</b> parameter asking
  * the server to act using such role. This value can be used to select
  * the proper auth backend configuration.
  *
- * How the mod-sasl selects the proper auth-db is done as follows:
+ * How the <b>mod-sasl</b> selects the proper auth-db is done as follows:
  *
  * <ol>
  *
  *  <li>If the SASL request is being received in a connection which
- *  has the serverName parameter configured (either due to a previous
+ *  has the <b>serverName</b> parameter configured (either due to a previous
  *  channel created or due to the current SASL channel exchange), then
- *  it is searched a <auth-db> node with matches the serverName
+ *  it is searched a <b><auth-db></b> node with matches the <b>serverName</b>
  *  parameter.</li>
  *
- *  <li>If no match is found in the previous search, it is used the first <auth-db> node found without the serverName attribute configured. That is, the <auth-db> node configured without serverName is used as fallback default auth-db for all auth operations.</li>
+ *  <li>If no match is found in the previous search, it is used the
+ *  first <b><auth-db></b> node found without the <b>serverName</b>
+ *  attribute configured. That is, the <b><auth-db></b> node
+ *  configured without <b>serverName</b> is used as fallback default
+ *  auth-db for all auth operations.</li>
  *
  * </ol>
  *
  * \section turbulence_mod_sasl_cli Command line interface to the mod-sasl: tbc-sasl-conf
  *
  * If you have a shell account into the turbulence machine, you can
- * use the tbc-sasl-conf tool to update users database (auth-db.xml),
+ * use the <b>tbc-sasl-conf</b> tool to update users database (<b>auth-db.xml</b>),
  * rather than editing directly. You can add a user using the
  * following:
  *
@@ -308,7 +312,7 @@ TurbulenceModDef module_def = {
  *   I: user beep-test added!
  * \endcode
  *
- * Use tbc-sasl-conf --help to get full help.
+ * Use <b>tbc-sasl-conf --help</b> to get full help.
  *
  * \section turbulence_mod_sasl_ramdin SASL-RADMIN: xml-rpc interface to manage SASL databases
  *
@@ -387,15 +391,15 @@ TurbulenceModDef module_def = {
  *
  * <li>This will build a set of files that must be integrated into
  * your client application according to your building tools. For
- * autoconf users just include that files into your "product_SOURCES"
+ * autoconf users just include that files into your <b>"product_SOURCES"</b>
  * directive. See Vortex xml-rpc-gen tool documentation for more
  * information for an initial explanation.</li>
  * 
  * <li>As a last step, you must activate the remote administration on
  * each domain that will be allowed to do so. This done by using the
- * remote and remote-admins attributes. The first one must be set to
- * "yes". The second must point to a db-list having a list of allowed
- * SASL administrators. See Db-list management to setup the
+ * <b>remote</b> and <b>remote-admins</b> attributes. The first one must be set to
+ * <b>"yes"</b>. The second must point to a db-list having a list of allowed
+ * SASL administrators. See \ref turbulence_db_list_management to setup the
  * administrator list.</li>
  * </ol>
  */
