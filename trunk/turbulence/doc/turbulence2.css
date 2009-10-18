@@ -153,12 +153,24 @@ pre.fragment .stringliteral {
   color: #e9b96e;
 }
 
-div.xml-doc pre.fragment .keyword { 
-  color: white;
+pre.fragment .keyword { 
+  color: #26c2b9;
+}
+
+pre.fragment .keywordflow { 
+  color: #26c2b9;
+}
+
+pre.fragment .keywordtype { 
+  color: #94f5ab;
 }
 
 div.xml-doc pre.fragment .keywordflow { 
   color: white;
+}
+
+pre.fragment .code { 
+  color: #93c6ff;
 }
 
 span.comment { 

@@ -38,7 +38,7 @@
 #ifndef __TURBULENCE_MODDEF_H__
 #define __TURBULENCE_MODDEF_H__
 
-/**
+/** 
  * \defgroup turbulence_moddef Turbulence Module Def: Type definitions for modules
  */
 
@@ -51,17 +51,17 @@
  * @brief Public definition for the init function that must implement
  * a turbulence module.
  *
- * The init function doesn't receive any thing, but it must return
- * true to signal that the modules was initialized and must be
- * registered.
+ * The module must return axl_true to signal the modules was
+ * initialized and must be registered as properly loaded.
  * 
- * @return true if the module is usable or false if not.
+ * @return axl_true if the module is usable or axl_false if
+ * not. Returning axl_false caused the module to be not loaded.
  */
 typedef int  (*ModInitFunc)  (TurbulenceCtx * ctx);
 
 /** 
  * @brief Public definition for the close function that must implement
- * all operations required to unload module.
+ * all operations required to unload and terminate a module.
  * 
  * The function doesn't receive and return any data.
  */
@@ -70,7 +70,8 @@ typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
 /** 
  * @brief Public definition for the reconfiguration function that must
  * be implemented to receive notification if the turbulence server
- * configuration is reloaded.
+ * configuration is reloaded (either because a signal was received or
+ * because some module has called \ref turbulence_reload_config).
  */
 typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
 
