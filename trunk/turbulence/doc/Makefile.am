@@ -1,7 +1,25 @@
-xml_examples = \
+tmp_xml_examples = \
 	global-settings.xml.tmp \
 	clean-start.xml.tmp \
-	on-bad-signal.xml.tmp
+	on-bad-signal.xml.tmp \
+	log-reporting.xml.tmp \
+	tbc-modules.xml.tmp \
+	module-conf.xml.tmp \
+	path-def.xml.tmp \
+	path-def-conf.xml.tmp \
+	path-def-example.xml.tmp 
+
+xml_examples = \
+	global-settings.xml \
+	clean-start.xml \
+	on-bad-signal.xml \
+	log-reporting.xml \
+	tbc-modules.xml \
+	module-conf.xml \
+	path-def.xml \
+	path-def-conf.xml \
+	path-def-example.xml
+
 
 EXTRA_DIST = turbulence-doc.doxygen \
 	main-page-logo.png \
@@ -10,7 +28,7 @@ EXTRA_DIST = turbulence-doc.doxygen \
 	turbulence-doc-footer.html \
 	turbulence-doc-header.html \
 	aspl-logo-header.png \
-	turbulence2.css $(xml_examples)
+	turbulence2.css $(xml_examples) $(tmp_xml_examples)
 
 bin_SCRIPTS = initial_build_doc
 
@@ -32,7 +50,7 @@ initial_build_doc:
 	@test -e doc.stamp || make build_doc
 	@test -e doc.stamp || touch doc.stamp
 
-build_doc: turbulence-config-location.txt $(xml_examples)
+build_doc: turbulence-config-location.txt $(tmp_xml_examples)
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/

@@ -1,0 +1,4 @@
+<modules>
+  <!-- directory where to find modules to load -->
+  <directory src="/etc/turbulence/mods-enabled" /> 
+</modules>
