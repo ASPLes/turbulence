@@ -1160,7 +1160,7 @@ axl_bool test_08 (void) {
 	VortexConnection * conn;
 	VortexChannel    * channel;
 
-	/* init vortex and turbulence */
+	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_08.conf")) 
 		return axl_false;
 
@@ -1220,6 +1220,42 @@ axl_bool test_08 (void) {
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
+
+	/* SECOND PART: now check unsupported profile path for connection location */
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_08b.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* check to connect to local host */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (7): expected to not find connection ok status after turbulence setup for local area network..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check status */
+	if (vortex_connection_get_status (conn) != VortexConnectionError) {
+		printf ("ERROR (8): expected to find connection status VortexConnectionError but found: %d..\n",
+			vortex_connection_get_status (conn));
+		return axl_false;
+	} /* end if */
+
+	/* close connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+	
 
 	return axl_true;
 }
