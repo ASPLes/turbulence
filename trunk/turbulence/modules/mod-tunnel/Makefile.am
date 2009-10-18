@@ -17,4 +17,13 @@ mod_DATA = mod-tunnel.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/tunnel
-modconf_DATA = tunnel.conf resolver.xml
+modconf_DATA = tunnel.conf tunnel.conf.tmp resolver.xml resolver.xml.tmp
+
+# render html version from default configuration files
+%.conf.tmp: %.conf
+	axl-knife -i $< -o $@ -e -p fragment
+# render html version from default configuration files
+%.xml.tmp: %.xml
+	axl-knife -i $< -o $@ -e -p fragment
+
+
