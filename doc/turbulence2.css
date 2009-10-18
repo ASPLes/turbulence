@@ -5,7 +5,7 @@
 
 body { 
    margin: 0px; 
-   background: #c9c9c9;
+   background: url("bg.gif");
    font-family: TrebuchetMS, Arial, FreeSans, Sans, Sans-Serif, Helvetica;
 }
 
@@ -203,7 +203,7 @@ span.header {
   height: 112px;
   border-top: 1px solid #193141;
   border-bottom: 1px solid #193141;
-  background: #c9c9c9;
+  background: url("bg.gif");
 }
 
 .ads iframe { 
@@ -218,7 +218,7 @@ span.header {
 .lateral-ad { 
   position: absolute;
   left: 84%;
-  top: 30%;
+  top: 40%;
   background: #c9c9c9;
 }
 
