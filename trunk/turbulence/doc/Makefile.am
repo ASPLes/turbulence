@@ -54,6 +54,7 @@ build_doc: turbulence-config-location.txt $(tmp_xml_examples)
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
+	cp ../web/images/bg.gif html/
 # cp ../web/turbulence.css html/
 	cp turbulence2.css html/
 	@test -d html/images || mkdir html/images
