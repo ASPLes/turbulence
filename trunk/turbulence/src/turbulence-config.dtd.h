@@ -61,7 +61,7 @@
 <!ELEMENT auth-config EMPTY>                                                              \
 <!ATTLIST auth-config value CDATA #REQUIRED>                                              \
                                                                                           \
-<!ELEMENT connections       (max-connections)>                                            \
+<!ELEMENT connections       (max-connections?)>                                           \
 <!ELEMENT max-connections   EMPTY>                                                        \
 <!ATTLIST max-connections   hard-limit CDATA #REQUIRED                                    \
                             soft-limit CDATA #REQUIRED>                                   \

@@ -373,22 +373,22 @@ axl_bool   turbulence_log_is_enabled    (TurbulenceCtx * ctx)
 void turbulence_log_cleanup (TurbulenceCtx * ctx)
 {
 	/* close the general log */
-	if (ctx->general_log)
+	if (ctx->general_log >= 0)
 		close (ctx->general_log);
 	ctx->general_log = -1;
 
 	/* close the error log */
-	if (ctx->error_log)
+	if (ctx->error_log >= 0)
 		close (ctx->error_log);
 	ctx->error_log = -1;
 
 	/* close the access log */
-	if (ctx->access_log)
+	if (ctx->access_log >= 0)
 		close (ctx->access_log);
 	ctx->access_log = -1;
 
 	/* close vortex log */
-	if (ctx->vortex_log)
+	if (ctx->vortex_log >= 0)
 		close (ctx->vortex_log);
 	ctx->vortex_log = -1;
 

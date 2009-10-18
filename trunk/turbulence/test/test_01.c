@@ -1020,6 +1020,15 @@ axl_bool test_common_init (VortexCtx     ** vCtx,
 	return axl_true;
 }
 
+void     test_common_microwait (long int microseconds)
+{
+	VortexAsyncQueue * queue;
+	queue = vortex_async_queue_new ();
+	vortex_async_queue_timedpop (queue, microseconds);
+	vortex_async_queue_unref (queue);
+	return;
+}
+
 axl_bool test_common_exit (VortexCtx      * vCtx,
 			   TurbulenceCtx  * tCtx)
 {
@@ -1086,6 +1095,9 @@ axl_bool test_07 (void) {
 	}
 	axl_list_free (list);
 
+	/* wait a 1ms to allow turbulence registering created connections */
+	test_common_microwait (1000);
+
 	/* check all connections */
 	list = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
 	if (axl_list_length (list) != 3) {
@@ -1123,6 +1135,88 @@ axl_bool test_07 (void) {
 		return axl_false;
 	}
 	axl_list_free (list);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+#define SIMPLE_URI_REGISTER(uri) do{                           \
+	vortex_profiles_register (vCtx, uri,                   \
+				  /* channel start handler */  \
+				  NULL, NULL,                  \
+				  /* channel close handler */  \
+				  NULL, NULL,                  \
+				  /* frame received handler */ \
+				  NULL, NULL);                 \
+	}while(0)
+
+#define SIMPLE_CHANNEL_CREATE(uri) vortex_channel_new (conn, 0, uri, NULL, NULL, NULL, NULL, NULL, NULL)
+
+axl_bool test_08 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_08.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* create connection to local server */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	if (channel != NULL) {
+		printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+
+	/* now check allow profile */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	if (channel == NULL) {
+		printf ("ERROR (3): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+
+	/* now create profile 1 and then profile 2 */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel == NULL) {
+		printf ("ERROR (4): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	if (channel == NULL) {
+		printf ("ERROR (5): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+
+	/* check profile 4 (must not work) */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-4");
+	if (channel != NULL) {
+		printf ("ERROR (6): expected to NULL reference after channel creation but found proper reference..\n");
+		return axl_false;
+	}
+
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
@@ -1223,6 +1317,13 @@ int main (int argc, char ** argv)
 		printf ("Test 07: Turbulence local connection  [   OK   ]\n");
 	} else {
 		printf ("Test 07: Turbulence local connection  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_08 ()) {
+		printf ("Test 08: Turbulence profile path filtering (basic)  [   OK   ]\n");
+	} else {
+		printf ("Test 08: Turbulence profile path filtering (basic)  [ FAILED ]\n");
 		return -1;
 	}
 

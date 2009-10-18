@@ -55,25 +55,6 @@ typedef struct _TurbulenceConnMgrState {
  * @{
  */
 
-void turbulence_conn_mgr_unref (axlPointer data)
-{
-	/* get a reference to the state */
-	TurbulenceConnMgrState * state = data;
-	TurbulenceCtx          * ctx   = state->ctx;
-
-	/* unref the connection */
-	msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
-	vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
-
-	/* nullify and free */
-	state->conn = NULL;
-	state->ctx  = NULL;
-	axl_free (state);
-
-	return;
-}
-
-
 /** 
  * @internal Handler called once the connection is about to be closed.
  * 
@@ -94,6 +75,29 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+	return;
+}
+
+
+void turbulence_conn_mgr_unref (axlPointer data)
+{
+	/* get a reference to the state */
+	TurbulenceConnMgrState * state = data;
+	TurbulenceCtx          * ctx   = state->ctx;
+
+	/* uninstall on close full handler to avoid race conditions */
+	if (! vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state)) 
+		error ("attention, failed to remove on close handler, this could cause problems..");
+
+	/* unref the connection */
+	msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
+	vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
+
+	/* nullify and free */
+	state->conn = NULL;
+	state->ctx  = NULL;
+	axl_free (state);
 
 	return;
 }
@@ -488,9 +492,10 @@ void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 {
 	
 	/* destroy mutex */
-	vortex_mutex_destroy (&ctx->conn_mgr_mutex);
 	axl_hash_free (ctx->conn_mgr_hash);
 	ctx->conn_mgr_hash = NULL;
+
+	vortex_mutex_destroy (&ctx->conn_mgr_mutex);
 
 	return;
 }
