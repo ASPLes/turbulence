@@ -989,6 +989,98 @@ axl_bool                turbulence_db_list_reload_module  ()
 	return axl_true;
 }
 
-
-
 /* @} */
+
+/** 
+ * \page turbulence_db_list_management Turbulence Db-List management
+ *
+ * \section turbulence_db_list_management_intro Site administrator introduction
+ *
+ * Turbulence Db-list is an abstraction that allows to maintain a list
+ * of items in a persistent storage. It is a general purpose list of
+ * items that could be used by turbulence module developers as a
+ * convenience and unified interface to allow module configurations to
+ * end users and administrators.
+ *
+ * Currently it only supports a xml backend (through the Axl Library)
+ * but it is expected to provide more backend while maintaining the
+ * API (mysql, DBberkeley, etc).
+ *
+ * From a module developer's view, the Turbulence Db-List has an API
+ * that allows to read/manage Db-List instances, where all changes are
+ * stored and, if changes happens in the storage, they are detected
+ * and reloaded transparently to the module. 
+ *
+ * From a site administrator's view it is a file that contains
+ * information, list of items, used by modules installed (and in the
+ * future, metadata pointing or configuring the right persistent
+ * storage). This document is about managing such db-list.
+ *
+ * \section turbulence_db_list_management_creating Creating a db-list
+ *
+ * You can create an empty db-list by using the following:
+ * 
+ * \code
+ *  >> tbc-dblist-mgr --touch test.xml
+ *  I: db list file not found, creating one: test.xml
+ * \endcode
+ *
+ *
+ * As you see, the tool do not find a test.xml db-list already created
+ * and makes it for you. If you execute the command again, you'll find
+ * the tool do nothing:
+ *
+ * \code
+ *  >> tbc-dblist-mgr --touch test.xml
+ * \endcode
+ *
+ * 
+ * Now add some items to the db-list for the next examples:
+ *
+ * \code
+ *  >> tbc-dblist-mgr --add ITEM1 test.xml
+ *  I: done
+ *
+ *  >> tbc-dblist-mgr --add "ITEM 2" test.xml
+ *  I: done
+ *
+ *  >> tbc-dblist-mgr --add "ITEM1 3" test.xml
+ *  I: done
+ * \endcode
+ *
+ * Note that, if a module has a opened reference to the db-list you
+ * are modifying, then the module will receive such updates in
+ * real-time (no reloaded or especial operation will be required by
+ * the module).  
+ *
+ * \section turbulence_db_list_management_listing Listing the content of a db-list
+ *
+ * 
+ * To list the content just run:
+ *
+ * \code
+ *  >> tbc-dblist-mgr --list test.xml
+ *  I: items found:
+ *    ITEM1
+ *    ITEM 2
+ *    ITEM 3
+ * \endcode
+ *
+ *
+ * \section turbulence_db_list_management_removing Removing items from the db-list
+ *
+ * Likewise adding items to the db-list, use the --remove option the
+ * delete items permanently:
+ *
+ * \code
+ *  >> tbc-dblist-mgr --remove ITEM1 test.xml
+ *  I: done
+ *
+ *  >> tbc-dblist-mgr --remove "ITEM 2" test.xml
+ *  I: done
+ *
+ *  >> tbc-dblist-mgr --remove "ITEM1 3" test.xml
+ *  I: done
+ * \endcode
+ */
+

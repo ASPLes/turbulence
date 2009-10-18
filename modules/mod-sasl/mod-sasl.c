@@ -198,7 +198,7 @@ static void sasl_unload (TurbulenceCtx * ctx)
 	return;
 }
 
-/**
+/** 
  * @brief Public entry point for the module to be loaded. This is the
  * symbol the turbulence will lookup to load the rest of items.
  */
@@ -212,3 +212,190 @@ TurbulenceModDef module_def = {
 	sasl_unload
 };
 
+/** 
+ * \page turbulence_mod_sasl mod-sasl: SASL support for Turbulence
+ *
+ * \section turbulence_mod_sasl_intro Introduction
+ *
+ * mod-sasl module provides user authentication to Turbulence. Inside
+ * BEEP, the SASL protocol is used by default to provide user
+ * authentication.
+ *
+ * \section turbulence_mod_sasl_configuration Base configuration
+ *
+ * mod-sasl is a module that provides SASL support for turbulence. It
+ * includes facilities to configure which SASL profiles can be enabled
+ * and the users database to be used.
+ *
+ * This module is included in the Turbulence official distribution. To
+ * enable it you must make it available at some of the directories
+ * that are used by Turbulence to load modules (see \ref
+ * turbulence_modules_configuration). Under most cases this is done as
+ * follows:
+ *
+ * \code
+ *   >> cd /etc/turbulence/mod-enabled
+ *   >> ln -s ../mod-available/mod-sasl.xml
+ * \endcode
+ *
+ *
+ * Once included the module you must restart Turbulence. Now the
+ * mod-sasl is activated you must configure it. This is done by
+ * updating sasl.conf file which is usually located at
+ * /etc/turbulence/sasl/sasl.conf. Here is an example:
+ * 
+ * \htmlinclude sasl.example.conf.tmp
+ *
+ * Previous configuration file example states that there is a default
+ * authentication database (no serverName configured), using the md5
+ * format to store passwords (format), storing such user and password
+ * using the default xml backend provided by turbulence (type), which
+ * is located at the file provided (location).
+ *
+ * The two remaining parameters (remote-admins and remote) allows to
+ * configure the remote mod-sasl xml-rpc based administration
+ * interface and to configure the set of allowed users that could use
+ * this interface. See later for more details.
+ *
+ * The rest of the file configures the allowed SASL profiles to be
+ * used by remote peers. Currently we only support plain.  Virtual
+ * host configuration for SASL module
+ *
+ * Previous example shows how to configure the default backend used
+ * for all serverName configurations. Inside BEEP, once a channel is
+ * created, it is allowed to configure the serverName parameter asking
+ * the server to act using such role. This value can be used to select
+ * the proper auth backend configuration.
+ *
+ * How the mod-sasl selects the proper auth-db is done as follows:
+ *
+ * <ol>
+ *
+ *  <li>If the SASL request is being received in a connection which
+ *  has the serverName parameter configured (either due to a previous
+ *  channel created or due to the current SASL channel exchange), then
+ *  it is searched a <auth-db> node with matches the serverName
+ *  parameter.</li>
+ *
+ *  <li>If no match is found in the previous search, it is used the first <auth-db> node found without the serverName attribute configured. That is, the <auth-db> node configured without serverName is used as fallback default auth-db for all auth operations.</li>
+ *
+ * </ol>
+ *
+ * \section turbulence_mod_sasl_cli Command line interface to the mod-sasl: tbc-sasl-conf
+ *
+ * If you have a shell account into the turbulence machine, you can
+ * use the tbc-sasl-conf tool to update users database (auth-db.xml),
+ * rather than editing directly. You can add a user using the
+ * following:
+ *
+ * \code
+ *   >> tbc-sasl-conf --add-user beep-test
+ *   I: adding user: beep-test..
+ *   Password:
+ *   Type again:
+ *   I: user beep-test added!
+ * \endcode
+ *
+ *
+ * You can use the --serverName option to select the auth-db to be
+ * used by the tool.
+ *
+ * \code
+ *   >> tbc-sasl-conf --add-user beep-test --serverName beep.aspl.es
+ *   I: adding user: beep-test..
+ *   Password:
+ *   Type again:
+ *   I: user beep-test added!
+ * \endcode
+ *
+ * Use tbc-sasl-conf --help to get full help.
+ *
+ * \section turbulence_mod_sasl_ramdin SASL-RADMIN: xml-rpc interface to manage SASL databases
+ *
+ * Starting from Turbulence 0.3.0, it is included a xml-rpc interface
+ * that allows full management for all sasl databases installed. This
+ * interface is mainly provided as a way to integrate into third party
+ * applications the possibility to manage users, passwords, etc for
+ * applications developed.
+ * 
+ * The following are a minimal set of instructions that will serve you
+ * as starting point to integrate and use SASL-RADMIN.
+ *
+ * <ol>
+ *
+ *   <li>First you must locate the idl interface installed in your
+ *   system. This is the sasl-radmin.idl file. On systems where
+ *   pkg-config is available you can find it by using the following:
+ *
+ * \code
+ *   >> pkg-config --cflags sasl-radmin
+ *   /usr/share/mod-sasl/radmin/sasl-radmin.idl
+ * \endcode
+ *
+ *  </li>
+ *
+ *  <li>This idl file includes not only the interface definition but
+ *  also the code for all services provided. To build the C client
+ *  interface, so you can perform XML-RPC invocations, you can do:
+ *
+ * \code
+ *  >> xml-rpc-gen --out-stub-dir . --only-client --disable-main-file
+ *                 --disable-autoconf /usr/share/mod-sasl/radmin/sasl-radmin.idl
+ * \encode
+ *
+ * In the case your system has pkg-config, you can do the following:
+ *
+ * \code
+ *  >> xml-rpc-gen --out-stub-dir . --only-client --disable-main-file
+ *                   --disable-autoconf `pkg-config --cflags sasl-radmin`
+ *  [ ok ] compiling: /usr/share/mod-sasl/radmin/sasl-radmin.idl..
+ *  [ ok ] detected IDL format definition..
+ *  [ ok ] detected xml-rpc definition: 'sasl-radmin'..
+ *  [ ok ] found enforced resource: sasl-radmin
+ *  [ ok ] registered valued attribute resource='sasl-radmin'..
+ *  [ ok ] service declaration get_users found..
+ *  [ ok ]   found additional options for get_users
+ *  [ ok ]   found include on body declaration for get_users
+ *  [ ok ]   found include on body file: get-users-include.c
+ *  [ EE ] Failed to open file: get-users-include.c
+ *  [ ok ] registered valued attribute resource='sasl-radmin'..
+ *  [ ok ] service declaration operate_sasl_user found..
+ *  [ ok ]   found additional options for operate_sasl_user
+ *  [ ok ]   found include on body declaration for operate_sasl_user
+ *  [ ok ]   found include on body file: operate-sasl-user.c
+ *  [ EE ] Failed to open file: operate-sasl-user.c
+ *  [ ok ] document is well-formed: /usr/share/mod-sasl/radmin/sasl-radmin.idl..
+ *  [ ok ] document is valid: /usr/share/mod-sasl/radmin/sasl-radmin.idl..
+ *  [ ok ] component name: 'sasl-radmin'..
+ *  [ ok ] using '.' as out directory..
+ *  [ ok ] generating client stub at: ...
+ *  [ ok ] creating file:             ./sasl_radmin_xml_rpc.h
+ *  [ ok ] creating file:             ./sasl_radmin_struct_sasluser_xml_rpc.h
+ *  [ ok ] creating file:             ./sasl_radmin_struct_sasluser_xml_rpc.c
+ *  [ ok ] creating file:             ./sasl_radmin_array_sasluserarray_xml_rpc.h
+ *  [ ok ] creating file:             ./sasl_radmin_array_sasluserarray_xml_rpc.c
+ *  [ ok ] creating file:             ./sasl_radmin_types.h
+ *  [ ok ] creating file:             ./sasl_radmin_xml_rpc.c
+ *  [ ok ] server stub have been disabled..
+ *  [ ok ] compilation ok
+ * \endcode
+ *
+ * Don't mind about EE messages about missing files. Those ones are
+ * used by the server side component, which is not your case. Along
+ * with the output, the command list the set of files installed.
+ * </li>
+ *
+ * <li>This will build a set of files that must be integrated into
+ * your client application according to your building tools. For
+ * autoconf users just include that files into your "product_SOURCES"
+ * directive. See Vortex xml-rpc-gen tool documentation for more
+ * information for an initial explanation.</li>
+ * 
+ * <li>As a last step, you must activate the remote administration on
+ * each domain that will be allowed to do so. This done by using the
+ * remote and remote-admins attributes. The first one must be set to
+ * "yes". The second must point to a db-list having a list of allowed
+ * SASL administrators. See Db-list management to setup the
+ * administrator list.</li>
+ * </ol>
+ */
