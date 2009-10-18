@@ -1,0 +1,12 @@
+<if-success profile="http://iana.org/beep/SASL/.*" connmark="sasl:is:authenticated" >
+   <!-- enforce all BEEP peers to do a successful SASL negotiation -->
+
+   <allow profile="http://turbulence.ws/profiles/test1"
+          preconnmark="sasl:is:authenticated"/>
+
+   <if-success profile="http://iana.org/beep/TLS" >
+      <allow profile="http://iana.org/beep/xmlrpc" />
+      <allow profile="http://fact.aspl.es/profiles/coyote_profile" />
+   </if-success>
+
+</if-success>

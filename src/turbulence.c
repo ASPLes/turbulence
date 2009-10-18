@@ -1425,20 +1425,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * that are configured at the at the <b>&lt;global-settings></b>
  * section:
  *
- * \code 
- * <div class="xml-doc">
- * <pre>
- *
- *    <span class="comment">&lt;!-- log reporting configuration --></span>
- *    &lt;<span class="node">log-reporting</span> enabled=<span class="attrvalue">"yes"</span>>
- *      &lt;<span class="node">general-log</span> file=<span class="attrvalue">"/var/log/turbulence/main.log"</span> />
- *      &lt;<span class="node">error-log</span>  file=<span class="attrvalue">"/var/log/turbulence/error.log"</span> />
- *      &lt;<span class="node">access-log</span> file=<span class="attrvalue">"/var/log/turbulence/access.log"</span> />
- *      &lt;<span class="node">vortex-log</span> file=<span class="attrvalue">"/var/log/turbulence/vortex.log"</span> />
- *    &lt;/<span class="node">log-reporting</span>>
- * </pre>
- * </div>
- * \endcode
+ * \htmlinclude log-reporting.xml.tmp
  *
  * These files hold logs for general information
  *  (<b>&lt;general-log></b>), error information
@@ -1488,30 +1475,12 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * configured in the <b>&lt;modules></b> section. Here is an
  * example:
  *
- * \code
- * <div class="xml-doc">
- *  <pre>
- *
- *  &lt;<span class="node">modules</span>>
- *    <span class="comment">&lt;!-- directory where to find modules to load --></span>
- *    &lt;<span class="node">directory</span> src=<span class="attrvalue">"/etc/turbulence/mods-enabled"</span> /> 
- *  &lt;/<span class="node">modules</span>>
- * </pre>
- * </div>
- *
- * \endcode
+ * \htmlinclude tbc-modules.xml.tmp
  * 
  * Every directory configured contains turbulence xml module pointers
  * having the following content: 
  *
- * \code
- * <div class="xml-doc">
- *  <pre>
- *
- *  &lt;<span class="node">mod-turbulence</span> location=<span class="attrvalue">"/usr/lib/turbulence/modules/mod-sasl.so"</span> />
- *  </pre>
- * </div>
- * \endcode
+ * \htmlinclude module-conf.xml.tmp
  * 
  * Each module have its own configuration file, which should use XML
  * as default configuration format. 
@@ -1533,18 +1502,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * With profile path this can be configured as:
  * 
- * \code
- * <div class="xml-doc">
- * <pre>
- *
- * &lt;<span class="node">path-def</span> server-name=<span class="attrvalue">".*"</span> src=<span class="attrvalue">"not 192.168.0.*"</span> path-name=<span class="attrvalue">"not local-parts"</span>>
- *   &lt;<span class="node">if-success</span> profile=<span class="attrvalue">"http://iana.org/beep/SASL/.*"</span> connmark=<span class="attrvalue">"sasl:is:authenticated"</span>>
- *      &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://iana.org/beep/TUNNEL"</span> />
- *   &lt;/<span class="node">if-success</span>>
- * &lt;/<span class="node">path-def</span>>
- * </pre>
- * </div>
- * \endcode
+ * \htmlinclude path-def.xml.tmp
  *
  * Previous example instruct Turbulence to apply a profile path called
  * "not local-parts" if the source of the connection comes <i>"not
@@ -1564,16 +1522,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * As the previous image shows, the turbulence profile path
  * configuration is composed by several profile path definitions: 
  * 
- * \code
- * <div class="xml-doc">
- *  <pre>
- *
- * &lt;<span class="node">path-def</span> server-name=<span class="attrvalue">".*"</span> src=<span class="attrvalue">"not 192.168.0.*"</span> path-name=<span class="attrvalue">"not local-parts"</span>>
- *   <span class="comment">&lt;!-- profile path configuration --></span>
- * &lt;/<span class="node">path-def</span>>
- * </pre>
- * </div>
- * \endcode
+ * \htmlinclude path-def-conf.xml.tmp
  * 
  * Once a connection is received, a path-def is selected and the
  * configuration inside it is applied. If no path-def is selected, the
@@ -1617,26 +1566,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * Let's see an example to show how it works:
  * 
- * \code
- * <div class="xml-doc">
- * <pre>
- *
- * <span class="comment">&lt;-- enforce all BEEP peers to do a successful SASL negotiation --></span>
- * &lt;<span class="node">if-success</span> profile=<span class="attrvalue">"http://iana.org/beep/SASL/.*"</span>
- *             connmark=<span class="attrvalue">"sasl:is:authenticated"</span> >
- *
- *    &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://turbulence.ws/profiles/test1"</span>
- *           preconnmark=<span class="attrvalue">"sasl:is:authenticated"</span>/>
- *
- *    &lt;<span class="node">if-success</span> profile=<span class="attrvalue">"http://iana.org/beep/TLS"</span> >
- *       &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://iana.org/beep/xmlrpc"</span> />
- *       &lt;<span class="node">allow</span> profile=<span class="attrvalue">"http://fact.aspl.es/profiles/coyote_profile"</span> />
- *    &lt;/<span class="node">if-success</span>>
- *
- * &lt;/<span class="node">if-success</span>>
- * </pre>
- * </div>
- * \endcode
+ * \htmlinclude path-def-example.xml.tmp
  *
  * Previous example have configured a particular profile path as
  * follows: 
@@ -1649,7 +1579,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * the connection in other to allow the connection to accept a profile
  * or the content of the following profiles.
  *
- * \section profile_path_flags_supported_by_allow_and_if_sucess Profile path configuration: flags supported by &lt;allow> and &lt;if-success>
+ * \section profile_path_flags_supported_by_allow_and_if_sucess Profile path configuration: flags supported by <allow> and <if-success>
  *
  * The following are the flags supported by <b>&lt;allow></b> and
  * <b>&lt;if-success></b>:
@@ -1658,12 +1588,12 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * <li><p><b>preconnmark</b>: if used, it means that the connection
  * must have the "mark" provided before the profile can be accepted to
- * be initiated. SUPPORTED: &lt;allow>, &lt;if-success></p></li>
+ * be initiated. <br>SUPPORTED: &lt;allow>, &lt;if-success></p></li>
  * 
  * <li><p><b>connmark</b>: can only be used from &lt;if-success> nodes, and
  * allows to protect the profile path content inside the
  * &lt;if-success> node, enforcing to not only create a channel under
- * the profile provided but also having the mark. SUPPORTED:
+ * the profile provided but also having the mark. <br>SUPPORTED:
  * &lt;if-success></p>
  *
  *
@@ -1674,7 +1604,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * <li><p><b>max-per-con</b>: allows to configure the maximum amount
  * of channels running the profile provided in the particular
- * connection instance. SUPPORTED: &lt;allow>,
+ * connection instance. <br>SUPPORTED: &lt;allow>,
  * &lt;if-success></p></li>
  *
  * </ol>
