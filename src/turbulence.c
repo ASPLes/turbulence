@@ -1206,7 +1206,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * <h2>Vortex API </h2>
  *
- *  Because Turbulence extends and it is built on top ov Vortex
+ *  Because Turbulence extends and it is built on top of Vortex
  *  Library 1.1, it is required to keep in mind and use Vortex
  *  API. Here is the reference:
  *
@@ -1251,6 +1251,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  *   - \ref turbulence_modules_configuration
  *   - \ref turbulence_mod_sasl
+ *   - \ref turbulence_mod_tunnel
  *
  * <b>Section 4: BEEP profile management</b>
  *

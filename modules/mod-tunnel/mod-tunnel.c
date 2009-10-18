@@ -211,3 +211,59 @@ TurbulenceModDef module_def = {
 	NULL
 };
 
+/** 
+ * \page turbulence_mod_tunnel mod-tunnel: TUNNEL support for Turbulence
+ *
+ * \section turbulence_mod_tunnel_intro Introduction
+ *
+ * <b>mod-tunnel</b> implements the general purpose connection proxy for
+ * BEEP. It is based on the <b>TUNNEL</b> profile and allows to connect to a
+ * remote BEEP peer through a box that is acting as a "proxy".
+ *
+ * \section turbulence_mod_tunnel_base Base configuration
+ *
+ * <b>mod-tunnel</b> is a module that provides TUNNEL profile (RFC3620)
+ * support for Turbulence. It provides facilities to activate the
+ * profile and to provide resolve services if received TUNNEL requests
+ * to connect to "endpoint", "profile" and other abstract BEEP
+ * connection configurations provided by the TUNNEL profile.
+ *
+ * This module is included in the Turbulence official distribution. To
+ * enable it you must make it available in some of the directories
+ * that are used by Turbulence to load modules (see \ref
+ * turbulence_modules_configuration). Under most cases this is done as
+ * follows:
+ *
+ * \code
+ * >> cd /etc/turbulence/mod-enabled
+ * >> ln -s ../mod-available/mod-tunnel.xml
+ * \endcode
+ *
+ * Once included the module you must restart Turbulence. Now the
+ * <b>mod-tunnel</b> is activated you must configure it. This is done by
+ * updating <b>tunnel.conf</b> file which is usually located at
+ * <b>/etc/turbulence/tunnel/tunnel.conf</b>. Here is an example:
+ *
+ * \htmlinclude tunnel.conf.tmp
+ *
+ * Under normal operations, a client BEEP peer requesting to create a
+ * TUNNEL to a remote BEEP listener, provides an IP address and its
+ * associated port. However, TUNNEL profile allows to provide abstract
+ * configurations such:
+ *
+ * <ol>
+ * <li>Connect to a remote endpoint called: "my application server": <b><endpoint></b> configuration.</li>
+ * <li>Connect to a BEEP server running a particular BEEP profile: <b><profile></b> configuration.</li>
+ * </ol>
+ *
+ * Previous configuration are abstract in the sense they have to be
+ * resolved to a particular endpoint IP address and a port. This is
+ * because the <b>resolver.xml</b> file is provided.
+ *
+ * The <b>resolver.xml</b> file includes mappings to translate these
+ * "abstract request" to particular endpoint addresses. Here is an
+ * example:
+ * 
+ * \htmlinclude resolver.xml.tmp
+ *
+ */
