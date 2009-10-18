@@ -881,6 +881,12 @@ axl_bool test_05 () {
 	TurbulenceCtx * ctx = turbulence_ctx_new ();
 	turbulence_mediator_init (ctx);
 
+	/* check here default plugs created by the system */
+	if (turbulence_mediator_plug_num (ctx) != 1) {
+		printf ("ERROR: expected to find one plug number created but found: %d..\n", turbulence_mediator_plug_num (ctx));
+		return axl_false;
+	} /* end if */
+
 	/* create a plug */
 	if (! turbulence_mediator_create_plug (ctx, "test-05", "entry",
 					       axl_true, test_05_handler, NULL)) {
@@ -889,7 +895,7 @@ axl_bool test_05 () {
 	}
 
 	/* check plugs created on the system */
-	if (turbulence_mediator_plug_num (ctx) != 1) {
+	if (turbulence_mediator_plug_num (ctx) != 2) {
 		printf ("ERROR: expected to find one plug number created but found: %d..\n", turbulence_mediator_plug_num (ctx));
 		return axl_false;
 	} /* end if */
@@ -979,6 +985,150 @@ axl_bool test_05 () {
 	return axl_true;
 }
 
+axl_bool test_common_enable_debug = axl_false;
+
+axl_bool test_common_init (VortexCtx     ** vCtx, 
+			   TurbulenceCtx ** tCtx, 
+			   const char     * config)
+{
+	/* init vortex context and support module */
+	(*vCtx) = vortex_ctx_new ();
+
+	/* init vortex support */
+	vortex_support_init ((*vCtx));
+
+	/* create turbulence context */
+	(*tCtx) = turbulence_ctx_new ();
+	turbulence_ctx_set_vortex_ctx ((*tCtx), (*vCtx));
+
+	/* init libraries */
+	if (! turbulence_init ((*tCtx), (*vCtx), config)) {
+
+		/* free turbulence ctx */
+		turbulence_ctx_free ((*tCtx));
+		return axl_false;
+	} /* end if */
+
+	if (test_common_enable_debug) {
+		turbulence_log_enable       ((*tCtx), axl_true);
+		turbulence_color_log_enable ((*tCtx), axl_true);
+		turbulence_log2_enable      ((*tCtx), axl_true);
+		turbulence_log3_enable      ((*tCtx), axl_true);
+	}
+
+	/* init ok */
+	return axl_true;
+}
+
+axl_bool test_common_exit (VortexCtx      * vCtx,
+			   TurbulenceCtx  * tCtx)
+{
+	/* terminate turbulence execution */
+	turbulence_exit (tCtx, axl_false, axl_false);
+
+	/* free context (the very last operation) */
+	turbulence_ctx_free (tCtx);
+	vortex_ctx_free (vCtx);
+
+	return axl_false;
+}
+
+axl_bool test_06 (void) {
+	TurbulenceCtx * tCtx;
+	VortexCtx     * vCtx;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "../data/turbulence.example.conf"))
+		return axl_false;
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+axl_bool test_07 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	axlList          * list;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_07.conf"))
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx))
+		return axl_false;
+
+	/* check current connections handled */
+	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleMasterListener, NULL);
+	if (axl_list_length (list) != 1) {
+		printf ("ERROR (1): expected to find 1 master connection registered, but found %d..\n", 
+			axl_list_length (list));
+		return axl_false;
+	}
+	axl_list_free (list);
+
+	/* connect to local host */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (2): expected to find proper connection after turbulence initialization..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check here connection manager */
+	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleInitiator, NULL);
+	if (axl_list_length (list) != 1) {
+		printf ("ERROR (3): expected to find 1 client connection registered, but found %d..\n", 
+			axl_list_length (list));
+		return axl_false;
+	}
+	axl_list_free (list);
+
+	/* check all connections */
+	list = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
+	if (axl_list_length (list) != 3) {
+		printf ("ERROR (4): expected to find 3 connections registered, but found %d..\n", 
+			axl_list_length (list));
+		return axl_false;
+	}
+	axl_list_free (list);
+
+	/* check how many initiators we have */
+	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleInitiator, NULL);
+	if (axl_list_length (list) != 1) {
+		printf ("ERROR (5): expected to find 1 connection registered, but found %d..\n", 
+			axl_list_length (list));
+		return axl_false;
+	}
+	axl_list_free (list);
+
+	/* check how many initiators we have */
+	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleListener, NULL);
+	if (axl_list_length (list) != 1) {
+		printf ("ERROR (5): expected to find 1 listener connection registered, but found %d..\n", 
+			axl_list_length (list));
+		return axl_false;
+	}
+	axl_list_free (list);
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleInitiator, NULL);
+	if (axl_list_length (list) != 0) {
+		printf ("ERROR (5): expected to find 0 connections registered, but found %d..\n", 
+			axl_list_length (list));
+		return axl_false;
+	}
+	axl_list_free (list);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
 
 /** 
  * @brief General regression test to check all features inside
@@ -1001,7 +1151,6 @@ int main (int argc, char ** argv)
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
-
 	/* init vortex context and support module */
 	vortex_ctx = vortex_ctx_new ();
 
@@ -1014,6 +1163,7 @@ int main (int argc, char ** argv)
 
 	/* uncomment the following four lines to get debug */
 	if (argc > 1 && axl_cmp (argv[1], "--debug")) {
+		test_common_enable_debug = axl_true;
 		turbulence_log_enable       (ctx, axl_true);
 		turbulence_color_log_enable (ctx, axl_true);
 		turbulence_log2_enable      (ctx, axl_true);
@@ -1059,6 +1209,20 @@ int main (int argc, char ** argv)
 		printf ("Test 05: Check mediator API  [   OK   ]\n");
 	} else {
 		printf ("Test 05: Check mediator API  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_06 ()) {
+		printf ("Test 06: Turbulence startup and stop  [   OK   ]\n");
+	} else {
+		printf ("Test 06: Turbulence startup and stop  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_07 ()) {
+		printf ("Test 07: Turbulence local connection  [   OK   ]\n");
+	} else {
+		printf ("Test 07: Turbulence local connection  [ FAILED ]\n");
 		return -1;
 	}
 

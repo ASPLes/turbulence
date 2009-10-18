@@ -15,7 +15,8 @@
       on-bad-signal,                                                                      \
       clean-start?,                                                                       \
       connections,                                                                        \
-                    kill-childs-on-exit?)>                                                \
+                    kill-childs-on-exit?,                                                 \
+                    allow-start-without-profiles?)>                                       \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
 <!ELEMENT port            (#PCDATA)>                                                      \
@@ -48,6 +49,9 @@
 <!ELEMENT kill-childs-on-exit   EMPTY>                                                    \
 <!ATTLIST kill-childs-on-exit   value  (yes|no) #REQUIRED>                                \
                                                                                           \
+<!ELEMENT allow-start-without-profiles   EMPTY>                                           \
+<!ATTLIST allow-start-without-profiles   value  (yes|no) #REQUIRED>                       \
+                                                                                          \
 <!ELEMENT file-socket EMPTY>                                                              \
 <!ATTLIST file-socket value  CDATA #REQUIRED                                              \
                mode   CDATA #IMPLIED                                                      \
@@ -64,7 +68,7 @@
                                                                                           \
                                                                                           \
 <!-- modules -->                                                                          \
-<!ELEMENT modules        (directory+, unload-after-fork?, no-load?)>                      \
+<!ELEMENT modules        (directory*, unload-after-fork?, no-load?)>                      \
                                                                                           \
 <!ELEMENT directory       EMPTY>                                                          \
 <!ATTLIST directory src   CDATA #REQUIRED>                                                \

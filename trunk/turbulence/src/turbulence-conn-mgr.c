@@ -409,6 +409,78 @@ int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	return axl_true;
 }
 
+void turbulence_conn_mgr_conn_list_free_item (axlPointer _conn)
+{
+	vortex_connection_unref ((VortexConnection *) _conn, "conn-mgr-list");
+	return;
+}
+
+/** 
+ * @brief Allows to get a list of connections registered on the
+ * connection manager, matching the providing role and then filtered
+ * by the provided filter string. 
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param role Connection role to select connections. Use -1 to select
+ * all connections registered on the manager, no matter its role. 
+ *
+ * @param filter Optional filter expresion to resulting connection
+ * list. It can be NULL.
+ *
+ * @return A newly allocated connection list having on each position a
+ * reference to a VortexConnection object. The caller must finish the
+ * list with axl_list_free to free resources. The function returns NULL if it fails.
+ */
+axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx, 
+					    VortexPeerRole             role,
+					    const char               * filter)
+{
+	axlList                * result;
+	VortexConnection       * conn;
+	axlHashCursor          * cursor;
+	TurbulenceConnMgrState * state;
+
+	v_return_val_if_fail (ctx, NULL);
+
+	/* lock and send */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+	
+	/* create the cursor */
+	cursor = axl_hash_cursor_new (ctx->conn_mgr_hash);
+	result = axl_list_new (axl_list_always_return_1, turbulence_conn_mgr_conn_list_free_item);
+
+	msg ("connections registered: %d..", axl_hash_items (ctx->conn_mgr_hash));
+
+	while (axl_hash_cursor_has_item (cursor)) {
+		
+		/* get data */
+		state   = axl_hash_cursor_get_value (cursor);
+		conn    = state->conn;
+
+		/* check connection role to add it to the result
+		   list */
+		msg ("Checking connection role %d == %d", vortex_connection_get_role (conn), role);
+		if ((role == -1) || vortex_connection_get_role (conn) == role) {
+			/* update reference and add the connection */
+			vortex_connection_ref (conn, "conn-mgr-list");
+			axl_list_append (result, conn);
+		} /* end if */
+		
+		/* next cursor */
+		axl_hash_cursor_next (cursor);
+	}
+
+	/* unlock */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+	/* free cursor */
+	axl_hash_cursor_free (cursor);
+
+	/* return list */
+	return result;
+}
+
 /** 
  * @internal Module cleanup.
  */
@@ -423,6 +495,6 @@ void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 	return;
 }
 
-/**
+/** 
  * @}
  */
