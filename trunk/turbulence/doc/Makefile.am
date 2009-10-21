@@ -7,7 +7,8 @@ tmp_xml_examples = \
 	module-conf.xml.tmp \
 	path-def.xml.tmp \
 	path-def-conf.xml.tmp \
-	path-def-example.xml.tmp 
+	path-def-example.xml.tmp \
+	template.xml.tmp 
 
 xml_examples = \
 	global-settings.xml \
@@ -50,7 +51,7 @@ initial_build_doc:
 	@test -e doc.stamp || make build_doc
 	@test -e doc.stamp || touch doc.stamp
 
-build_doc: turbulence-config-location.txt $(tmp_xml_examples)
+build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_examples)
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
@@ -70,5 +71,10 @@ turbulence-config-location.txt:
 	echo ">> turbulence --conf-location" > $@
 	../src/turbulence --conf-location >> $@
 
-%.xml.tmp: %.xml
+%.xml.tmp: %.xml 
 	axl-knife -i $< -o $@ -e -p fragment
+
+clean_template:
+	rm -f template.xml
+template.xml:
+	../tools/tbc-mod-gen/tbc-mod-gen -t

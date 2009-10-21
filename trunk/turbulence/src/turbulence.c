@@ -1688,19 +1688,81 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * reference. A module is at minimum composed by the following tree
  * files:
  *
- * - <b>mod-test.c</b>: base module source code: \ref turbulence_mod_test_c "mod-test.c" | <a href="https://dolphin.aspl.es/svn/publico/af-arch/turbulence/modules/mod-test/mod-test.c"><b>[TXT]</b></a>
- * - <b>Makefile.am</b>: optional automake file used to build the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/turbulence/modules/mod-test/Makefile.am"><b>[TXT]</b></a>
- * - <b>mod-test.xml.in</b>: xml module pointer, a file that is installed at the Turbulence modules dir to load the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/turbulence/modules/mod-test/mod-test.xml.in"><b>[TXT]</b></a>
+ * - <b>mod-test.c</b>: base module source code: \ref turbulence_mod_test_c "mod-test.c" | <a href="https://dolphin.aspl.es/svn/publico/af-arch/trunk/turbulence/modules/mod-test/mod-test.c"><b>[TXT]</b></a>
+ * - <b>Makefile.am</b>: optional automake file used to build the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/trunk/turbulence/modules/mod-test/Makefile.am"><b>[TXT]</b></a>
+ * - <b>mod-test.xml.in</b>: xml module pointer, a file that is installed at the Turbulence modules dir to load the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/trunk/turbulence/modules/mod-test/mod-test.xml.in"><b>[TXT]</b></a>
  *
  * Now if your intention is to built a BEEP profile then you should do
  * all calls to install it and its associated handlers using the
  * vortex profiles API at the Init (\ref ModInitFunc) handler.
+ *
+ * \section turbulence_developer_manual_using_tbc_mod_gen Using tbc-mod-gen to create the module (recommended)
+ *
+ * This tool allows to create a XML template that is used to produce
+ * the module output. Here is an example:
+ *
+ * First we create a xml empty module template:
+ *
+ * \code
+ * >> mkdir template
+ * >> cd template
+ * >> tbc-mod-gen --template --enable-autoconf --out-dir .
+ * I: producing a template definition at the location provided
+ * I: creating file:             ./template.xml
+ * I: template created: OK
+ * \endcode
+ *
+ * Now you should rename the file <b>template.xml</b> to something more
+ * appropriate and edit the template content, changing the module name
+ * and its description. Do not change the content of init, close and
+ * reconf nodes for now:
+ *
+ * \htmlinclude template.xml.tmp
+ *
+ * Now, do the following to compile the content and produce a module
+ * that is compatible with the Turbulence interface, and it is full
+ * ready to be compiled and installed:
+ *
+ * \code 
+ *  >> tbc-mod-gen --compile template.xml --out-dir . --enable-autoconf
+ *  I: creating file:             ./mod_template.c
+ *  I: creating file:             ./Makefile.am
+ *  I: found autoconf support files request..
+ *  I: creating file:             ./autogen.sh
+ *  I: making executable:         ./autogen.sh
+ *  I: creating file:             ./configure.ac
+ *  I: creating file:             ./gen-code
+ *  I: making executable:         ./gen-code
+ *  I: mod_template created!
+ * \endcode
+ *
+ * Now take a look into the files created, specially
+ * <b>mod_template.c</b>. Once you are ready, type the following to build the
+ * module:
+ *
+ * \code
+ *  >> ./autogen.sh
+ *  >> make
+ *  >> make install
+ * \endcode
+ *
+ * If you are new to autotools, you have to now that the first command
+ * (autogen.sh) is only execute once. Next times you can run
+ * <b>./configure</b> which have the same effect and run faster. The
+ * <b>autogen.sh</b> command is executed to bootstrap the project, adding all
+ * missing files.
+ *
+ * Now you are ready to complete the module with your particular
+ * code. For that, you'll have to use the Turbulence API and specially
+ * the Vortex API. <a href="http://www.aspl.es/turbulence/doc.html">See document section for more details.</a>
  */
 
 /** 
  * \page turbulence_mod_test_c mod-test.c source code
  *
- * You can copy and paste the following code to start a turbulence module. This code is checked against Turbulence source code.
+ * You can copy and paste the following code to start a turbulence
+ * module. This code is checked (through compilation) against
+ * Turbulence source code.
  *
  * \include mod-test.c
  */
