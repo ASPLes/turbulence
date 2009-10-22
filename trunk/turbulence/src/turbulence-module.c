@@ -53,6 +53,9 @@ struct _TurbulenceModule {
 
 	/* context that loaded the module */
 	TurbulenceCtx    * ctx;
+
+	/* list of profiles provided by this module */
+	axlList          * provided_profiles;
 };
 
 /** 

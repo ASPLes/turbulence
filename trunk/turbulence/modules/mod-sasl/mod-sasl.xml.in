@@ -1,1 +1,7 @@
-<mod-turbulence location="@prefix@/lib/turbulence/modules/mod-sasl.so"/>
+<mod-turbulence location="@prefix@/lib/turbulence/modules/mod-sasl.so">
+  <!-- notify turbulence which profiles provides this module -->
+  <provides>
+    <!-- set an expression to detect all SASL profiles -->
+    <profile value="http://iana.org/beep/SASL/.*" />
+  </provides>
+</mod-turbulence>

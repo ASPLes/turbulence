@@ -1635,6 +1635,8 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  * <b>Section 1: Creating turbulence modules</b>
  *
  *   - \ref turbulence_developer_manual_creating_modules
+ *   - \ref turbulence_developer_manual_creating_modules_manually
+ *   - \ref turbulence_developer_manual_using_tbc_mod_gen
  *
  * \section turbulence_developer_manual_creating_modules How Turbulence module works
  *

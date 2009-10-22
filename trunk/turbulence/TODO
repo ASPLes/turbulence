@@ -4,6 +4,10 @@ CURRENT FRANCIS WORK
   other. 
     - Add regression test to check its function. 
 
+    - Finish module "provides profile" function and use it to not
+      allow unloading modules from profiles path that uses profiles
+      provided by such modules. 
+
     - Use this to implement mod-radmin allowing other modules to
       install its commands.
 
