@@ -70,7 +70,8 @@ void mod_radmin_command_item_free (axlPointer data) {
 
 axlDoc * mod_radmin_command_reload (const char * line, axlPointer user_data, axl_bool * status)
 {
-	axlDoc * doc;
+	axlDoc   * doc;
+	axlError * err = NULL;
 
 	/* signal command returned proper status */
 	(*status) = axl_true;
@@ -78,8 +79,16 @@ axlDoc * mod_radmin_command_reload (const char * line, axlPointer user_data, axl
 	/* call to reload */
 	turbulence_reload_config (ctx, 0);
 
-	/* return simple result */
-	doc = axl_doc_parse ("<simple code='0' msg='reload ok' />", -1, NULL);
+	/* result document */
+	doc = axl_doc_parse_strings (&err, 
+				     "<table>",
+				     " <title>Reload status</title>",
+				     " <column-description>",
+				     "   <column name='code' description='Status code from reload operation' />",
+				     "   <column name='message' description='Status textual message' />",
+				     " </column-description>",
+				     " <content><row><d>0</d><d>reload ok</d></row></content>",
+				     "</table>", NULL);
 
 	return doc;
 }
@@ -91,7 +100,7 @@ axlDoc * mod_ramdin_command_commands_available (const char * line, axlPointer us
 	axlDoc               * result;
 	axlNode              * node;
 	axlNode              * nodeAux;
-	axlError             * error = NULL;
+	axlError             * err = NULL;
 
 	/* signal command returned proper status */
 	(*status) = axl_true;
@@ -100,7 +109,7 @@ axlDoc * mod_ramdin_command_commands_available (const char * line, axlPointer us
 	vortex_mutex_lock (&commands_mutex);
 
 	/* result document */
-	result = axl_doc_parse_strings (&error, 
+	result = axl_doc_parse_strings (&err, 
 					"<table>",
 					" <title>List of commands available</title>",
 					" <description>The following is the list of commands that can be used.</description>",
@@ -113,8 +122,8 @@ axlDoc * mod_ramdin_command_commands_available (const char * line, axlPointer us
 	/* check document created */
 	if (result == NULL) {
 		error ("Failed to produce base table output for commands available, error was: %d:%s",
-		       axl_error_get_code (error), axl_error_get (error));
-		axl_error_free (error);
+		       axl_error_get_code (err), axl_error_get (err));
+		axl_error_free (err);
 		return NULL;
 	} /* end if */
 

@@ -1255,7 +1255,6 @@ axl_bool test_08 (void) {
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
-	
 
 	return axl_true;
 }
