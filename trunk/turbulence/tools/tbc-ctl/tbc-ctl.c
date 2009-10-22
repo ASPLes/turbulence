@@ -188,11 +188,12 @@ axl_bool tbc_ctl_do_connection (void) {
  * @internal Common parsing handling to check errors returned by
  * remote turbulence process.
  */
-axlDoc * tbc_ctl_parse_content_and_check_errors (VortexFrame * frame, const char ** content)
+axlDoc * tbc_ctl_parse_content_and_check_errors (VortexFrame * frame)
 {
-	axlDoc   * doc;
-	axlError * err = NULL;
-	axlNode  * node;
+	axlDoc        * doc;
+	axlError      * err = NULL;
+	axlNode       * node;
+	const char    * content;
 	
 
 	/* parse content returned */
@@ -216,19 +217,14 @@ axlDoc * tbc_ctl_parse_content_and_check_errors (VortexFrame * frame, const char
 		node = axl_node_get_child_called (node, "msg");
 		printf (" ERROR msg:      %s\n", axl_node_get_content (node, NULL));
 		node = axl_node_get_next_called  (node, "content");
-		(*content) = axl_node_get_content (node, NULL);
-		if ((*content) != NULL && strlen ((*content)) > 0)
-			printf (" ERROR content:  %s\n", (*content));
+		content = axl_node_get_content (node, NULL);
+		if (content != NULL && strlen (content) > 0)
+			printf (" ERROR content:  %s\n", content);
 
 		/* free document */
 		axl_doc_free (doc);
 		return NULL;
 	}
-
-	/* get content */
-	node = axl_doc_get_root (doc);
-	node = axl_node_get_child_called (node, "content");
-	(*content) = axl_node_get_content (node, NULL);
 
 	/* document seems ok, return it */
 	return doc;
@@ -240,17 +236,11 @@ void tbc_ctl_frame_received (VortexChannel    * channel,
 			     axlPointer         user_data)
 {
 	axlDoc     * doc;
-	const char * content = NULL;
 
 	/* parse content received and check errors */
-	doc = tbc_ctl_parse_content_and_check_errors (frame, &content);
+	doc = tbc_ctl_parse_content_and_check_errors (frame);
 	if (doc == NULL)
 		return;
-
-	/* show result */
-	
-	/* content received */
-	printf ("%s\n", (char *) content);
 
 	/* free document received */
 	axl_doc_free (doc);
@@ -355,45 +345,38 @@ axl_bool  tbc_ctl_create_management_channel (void) {
 	return axl_false;
 }
 
-void tbc_refresh_available_commands (const char * content)
+void tbc_refresh_available_commands (axlDoc * doc)
 {
-	axlDoc        * doc;
 	axlNode       * node;
-	axlError      * err;
+	axlNode       * command;
 	TbcCtlCommand * cmd;
 
-	/* parse list of commands available */
-	doc = axl_doc_parse (content, -1, &err);
-	if (doc == NULL) {
-		printf (" ERROR code:    7\n");
-		printf (" ERROR msg:     Failed to parse list of commands available at server.\n");
-		printf (" ERROR error:   %d:%s\n", axl_error_get_code (err), axl_error_get (err));
-		axl_error_free (err);
-		return;
-	} /* end if */
-	
 	/* create the list of commands */
 	if (commands != NULL)
 		axl_list_free (commands);
 	commands = axl_list_new (axl_list_always_return_1, tbc_ctl_command_free);
 	
 	/* for each command registered */
-	node = axl_doc_get (doc, "/commands/command");
+	node = axl_doc_get (doc, "/table/content/row");
 	while (node != NULL) {
+		/* get command node (first column) */
+		command = axl_node_get_child_called (node, "d");
+		
 		/* create a command node */
 		cmd              = axl_new (TbcCtlCommand, 1);
-		cmd->command     = axl_strdup (ATTR_VALUE (node, "value"));
-		cmd->description = axl_strdup (axl_node_get_content (node, NULL));
+		cmd->command     = axl_strdup (axl_node_get_content (command, NULL));
+		
+		/* get description */
+		command = axl_node_get_next_called (command, "d");
+		cmd->description = axl_strdup (axl_node_get_content (command, NULL));
 
 		/* insert into the list */
 		axl_list_append (commands, cmd);
 
 		/* call to get next node */
-		node = axl_node_get_next_called (node, "command");
+		node = axl_node_get_next_called (node, "row");
 	} /* end while */
 
-	/* free document */
-	axl_doc_free (doc);
 	return;
 }
 
@@ -404,7 +387,6 @@ void tbc_ctl_update_commands_available (void)
 	int             msg_no;
 	axlDoc        * doc;
 	VortexFrame   * frame;
-	const char    * content = NULL;
 
 	/* ask turbulence server to send back a list of commands that
 	   can be used */
@@ -427,13 +409,13 @@ void tbc_ctl_update_commands_available (void)
 	frame = vortex_channel_wait_reply (channel, msg_no, wait_reply);
 	
 	/* parse content received and check errors */
-	doc = tbc_ctl_parse_content_and_check_errors (frame, &content);
+	doc = tbc_ctl_parse_content_and_check_errors (frame);
 	vortex_frame_unref (frame);
 	if (doc == NULL) 
 		return;
 
 	/* install commands available */
-	tbc_refresh_available_commands (content);
+	tbc_refresh_available_commands (doc);
 
 	/* free document */
 	axl_doc_free (doc);
@@ -447,7 +429,6 @@ void tbc_ctl_command_send (const char * command)
 	WaitReplyData * wait_reply;
 	int             msg_no;
 	VortexFrame   * frame;
-	const char    * content = NULL;
 	axlDoc        * doc;
 
 	if (command == NULL || strlen (command) == 0)
@@ -476,12 +457,12 @@ void tbc_ctl_command_send (const char * command)
 	frame = vortex_channel_wait_reply (channel, msg_no, wait_reply);
 	
 	/* parse content received and check errors */
-	doc = tbc_ctl_parse_content_and_check_errors (frame, &content);
+	doc = tbc_ctl_parse_content_and_check_errors (frame);
 	if (doc == NULL) 
 		return;
 
 	/* content received */
-	printf ("%s\n", (char *) content);
+	printf ("%s\n", (char *) vortex_frame_get_payload (frame));
 
 	/* free document received */
 	axl_doc_free (doc);

@@ -91,6 +91,7 @@ axlDoc * mod_ramdin_command_commands_available (const char * line, axlPointer us
 	axlDoc               * result;
 	axlNode              * node;
 	axlNode              * nodeAux;
+	axlError             * error = NULL;
 
 	/* signal command returned proper status */
 	(*status) = axl_true;
@@ -99,11 +100,25 @@ axlDoc * mod_ramdin_command_commands_available (const char * line, axlPointer us
 	vortex_mutex_lock (&commands_mutex);
 
 	/* result document */
-	result = axl_doc_parse_strings (NULL, "<table>",
+	result = axl_doc_parse_strings (&error, 
+					"<table>",
 					" <title>List of commands available</title>",
 					" <description>The following is the list of commands that can be used.</description>",
+					" <column-description>",
+					"   <column name='command' description='Full command name used to invoke the function' />",
+					"   <column name='description' description='Command help description' />",
+					" </column-description>",
 					" <content></content>",
 					"</table>", NULL);
+	/* check document created */
+	if (result == NULL) {
+		error ("Failed to produce base table output for commands available, error was: %d:%s",
+		       axl_error_get_code (error), axl_error_get (error));
+		axl_error_free (error);
+		return NULL;
+	} /* end if */
+
+	/* now get a reference to the content to introduce content */
 	node   = axl_doc_get (result, "/table/content");
 
 	/* create the cursor */
@@ -112,7 +127,7 @@ axlDoc * mod_ramdin_command_commands_available (const char * line, axlPointer us
 		item    = axl_list_get_nth (commands, iterator);
 		
 		/* create command item */
-		nodeAux = axl_node_parse (NULL, "<row command='%s' description='%s' />",
+		nodeAux = axl_node_parse (NULL, "<row><d><![CDATA[%s]]></d><d><![CDATA[%s]]></d></row>",
 					  item->command, item->description);
 		
 		/* set child */
@@ -227,7 +242,7 @@ ModRadminCommandItem * mod_radmin_find_handler (const char * command)
 	} /* end while */
 
 	if (last != NULL)
-		msg ("selected command handler for: %s", cmd->command);
+		msg ("selected command handler for: %s", last->command);
 
 	/* unlock mutex */
 	vortex_mutex_unlock (&commands_mutex);
@@ -266,6 +281,7 @@ void mod_radmin_handle_command (VortexConnection * conn,
 	
 	/* get command */
 	/* lock mutex */
+	msg ("checking handler for command: %s..", command);
 	cmd = mod_radmin_find_handler (command);
 
 	if (cmd == NULL) {
@@ -290,6 +306,7 @@ void mod_radmin_handle_command (VortexConnection * conn,
 	} 
 
 	/* FIXME: implement here format conversion */
+
 	/* build string representation */
 	if (! axl_doc_dump (result, &str_result, &str_size)) {
 		vortex_channel_send_errv (channel, 
@@ -301,12 +318,13 @@ void mod_radmin_handle_command (VortexConnection * conn,
 	}
 	
 	/* return content */
-	vortex_channel_send_rpyv (channel,
-				  vortex_frame_get_msgno (frame),
-				  "<reply><msg>Command handler returned proper status</msg><content><![CDATA[%s]]></content></reply>",
-				  result);
+	vortex_channel_send_rpy (channel,
+				 str_result, str_size,
+				 vortex_frame_get_msgno (frame));
+
 	/* free result returned by command handler */
-	axl_free (result);
+	axl_free (str_result);
+	axl_doc_free (result);
 
 	return;
 }
