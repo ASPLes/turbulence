@@ -21,6 +21,10 @@ xml_examples = \
 	path-def-conf.xml \
 	path-def-example.xml
 
+drafts_and_docs = \
+	draft-brosnan-beep-limit-close.txt \
+	draft-brosnan-beep-servername-feature.txt
+
 
 EXTRA_DIST = turbulence-doc.doxygen \
 	main-page-logo.png \
@@ -29,7 +33,9 @@ EXTRA_DIST = turbulence-doc.doxygen \
 	turbulence-doc-footer.html \
 	turbulence-doc-header.html \
 	aspl-logo-header.png \
-	turbulence2.css $(xml_examples) $(tmp_xml_examples)
+	draft-brosnan-beep-servername-feature.xml draft-brosnan-beep-servername-feature.txt \
+	draft-brosnan-beep-limit-close.txt draft-brosnan-beep-limit-close.xml \
+	turbulence2.css $(xml_examples) $(tmp_xml_examples) $(drafts_and_docs)
 
 bin_SCRIPTS = initial_build_doc
 
@@ -41,9 +47,9 @@ help:
 	@echo " --> To regenerate or force doc building type make build_doc or remove doc.stamp";
 	@echo
 
-
-#draft-brosnan-beep-limit-close.txt: draft-brosnan-beep-limit-close.xml
-#	xml2rfc draft-brosnan-beep-limit-close.xml
+# build drafts and xml rfcs
+%.txt: %.xml
+	xml2rfc $<
 
 initial_build_doc: 
 	@echo "checking documenation stamp..";
@@ -51,7 +57,7 @@ initial_build_doc:
 	@test -e doc.stamp || make build_doc
 	@test -e doc.stamp || touch doc.stamp
 
-build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_examples)
+build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_examples) $(drafts_and_docs)
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
