@@ -5,7 +5,8 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 
 configuration_files = \
 	test_07.conf \
-	test_08.conf
+	test_08.conf \
+	test_09.conf
 
 EXTRA_DIST = $(configuration_files)
 

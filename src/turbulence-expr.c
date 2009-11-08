@@ -77,11 +77,27 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 		return axl_true;
 	} /* end if */
 
+ 	/* skip initial white spaces */
+ 	while (iterator < expression_size && expression[iterator] == ' ')
+ 		iterator++;
+
 	/* iterate over all content defined */
 	while (iterator < expression_size) {
 
+		/* check for *. pattern */
+		if ((iterator == 0) && expression[iterator] == '*') {
+ 			result = axl_true;
+ 			(*added_size) += 1;
+ 		}
+
 		/* check for .* */
 		if (expression [iterator] == '*' && expression [iterator - 1] != '.' ) {
+			result = axl_true;
+			(*added_size) += 1;
+		}
+
+		/* check for .? -> \.? */
+		if (expression [iterator] == '.' && expression [iterator + 1] != '*') {
 			result = axl_true;
 			(*added_size) += 1;
 		}
@@ -115,7 +131,7 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 	axl_return_val_if_fail (expression, axl_false);
 
 	/* allocate the memory to be returned */
-	result = axl_new (char, expression_size + additional_size + 1);
+	result = axl_new (char, expression_size + additional_size + 2);
 	
 	/* check for basic case '*' */
 	if (axl_cmp (expression, "*")) {
@@ -123,11 +139,22 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 		return result;
 	}
 
+ 	/* skip initial white spaces */
+ 	while ((iterator < expression_size) && (expression[iterator] == ' '))
+ 		iterator++;
+ 	iterator2 = iterator;
+
 	/* iterate over all expression defined */
+	iterator = 0;
 	while (iterator2 < expression_size) {
+		if (expression[iterator2] == '*') 
+			goto replace;
+
 		if (iterator2 > 0) {
+
 			/* check for .* */
 			if (expression [iterator2] == '*' && expression [iterator2 - 1] != '.') {
+			replace:
 				memcpy (result + iterator, ".*", 2);
 				iterator += 2;
 				iterator2++;
@@ -141,8 +168,17 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 				iterator2++;
 				continue;
 			}
-		} /* end if */
 
+			/* check for .? -> \.? */
+			if (expression [iterator2] == '.' && expression [iterator2 + 1] != '*') {
+				memcpy (result + iterator, "\\.", 2);
+				iterator += 2;
+				iterator2++;
+				continue;
+			}
+
+		} /* end if */
+		
 		/* copy value received because it is not an escape
 		 * sequence */
 		memcpy (result + iterator, expression + iterator2, 1);
@@ -245,7 +281,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 		msg ("      to: '%s'..", expression);
 		dealloc    = axl_true;
 	} /* end if */
-	
+
 	/* compile expression */
 	expr->expr = pcre_compile (
 		/* the pattern to compile */
@@ -258,7 +294,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 	if (expr->expr == NULL) {
 		/* failed to parse server name matching */
 		error ("%s: %s, error: %s, at: %d",
-		       error_msg, expression, error, erroroffset);
+		       error_msg ? error_msg : "ERROR", expression, error, erroroffset);
 
 		/* free expr */
 		axl_free (expr);
