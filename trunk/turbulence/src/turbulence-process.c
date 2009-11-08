@@ -217,7 +217,7 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	} /* end if */
 
 	/* now finish and register the connection */
-	vortex_listener_complete_register (conn, axl_true);
+	vortex_reader_watch_connection (vortex_ctx, conn);
 	
 	msg ("child process created...wait for exit");
 	vortex_listener_wait (turbulence_ctx_get_vortex_ctx (ctx));

@@ -73,6 +73,7 @@ struct _TurbulenceCtx {
 
 	/*** turbulence ppath module ***/
 	TurbulencePPath    * paths;
+	axl_bool             all_rules_address_based;
 
 	/*** turbulence log module ***/
 	int                  general_log;

@@ -38,6 +38,9 @@
 /* include local turbulence header */
 #include <turbulence.h>
 
+/* include private turbulence headers */
+#include <turbulence-ctx-private.h>
+
 /* local include to check mod-sasl */
 #include <common-sasl.h>
 
@@ -47,20 +50,32 @@ TurbulenceCtx * ctx = NULL;
 /* vortex context */
 VortexCtx     * vortex_ctx = NULL;
 
+#define	INIT_AND_RUN_CONF(conf) do {                            \
+	if (! test_common_init (&vCtx, &tCtx, conf))            \
+		return axl_false;                               \
+                                                                \
+	/* run configuration */                                 \
+	if (! turbulence_run_config (tCtx)) {                   \
+		printf ("Failed to run configuration with %s, try running reg test with: \n  >> VORTEX_DEBUG=1 VORTEX_DEBUG_COLOR=1 ./test_01\n", \
+			conf);				        \
+		return axl_false;                               \
+	} /* end if */                                          \
+} while (0);
+
 int  test_01_remove_all (const char * item_stored, axlPointer user_data)
 {
 	/* just remove dude! */
-	return true;
+	return axl_true;
 }
 
 /** 
  * @brief Check the turbulence db list implementation.
  * 
  * 
- * @return true if the dblist implementation is ok, otherwise false is
+ * @return axl_true if the dblist implementation is ok, otherwise false is
  * returned.
  */
-int  test_01 ()
+axl_bool  test_01 ()
 {
 	TurbulenceDbList * dblist;
 	axlError         * err;
@@ -69,7 +84,7 @@ int  test_01 ()
 	/* init turbulence db list */
 	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");
-		return false;
+		return axl_false;
 	}
 	
 	/* test if the file exists and remote it */
@@ -77,7 +92,7 @@ int  test_01 ()
 		/* file exist, remote it */
 		if (unlink ("test_01.xml") != 0) {
 			printf ("Found db list file: test_01.xml but it failed to be removed\n");
-			return false;
+			return axl_false;
 		} /* end if */
 	} /* end if */
 	
@@ -86,62 +101,62 @@ int  test_01 ()
 	if (dblist == NULL) {
 		printf ("Failed to open db list, %s\n", axl_error_get (err));
 		axl_error_free (err);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* check the count of items inside */
 	if (turbulence_db_list_count (dblist) != 0) {
 		printf ("Expected to find 0 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* add items to the list */
 	if (! turbulence_db_list_add (dblist, "TEST")) {
 		printf ("Expected to be able to add items to the dblist\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_db_list_add (dblist, "TEST 2")) {
 		printf ("Expected to be able to add items to the dblist\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_db_list_add (dblist, "TEST 3")) {
 		printf ("Expected to be able to add items to the dblist\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check the count of items inside */
 	if (turbulence_db_list_count (dblist) != 3) {
 		printf ("Expected to find 3 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	if (! turbulence_db_list_exists (dblist, "TEST")) {
 		printf ("Expected to find an item but exist function failed..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* get the list */
 	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 3) {
 		printf ("Expected to a list with 3 items but it wasn't found..\n");
-		return false;
+		return axl_false;
 	}
 	
 	if (! axl_cmp ("TEST", axl_list_get_nth (list, 0))) {
 		printf ("Expected to find TEST item at the 0, but it wasn't fuond..\n");
-		return false;
+		return axl_false;
 	}
 	if (! axl_cmp ("TEST 2", axl_list_get_nth (list, 1))) {
 		printf ("Expected to find TEST 2 item at the 1, but it wasn't fuond..\n");
-		return false;
+		return axl_false;
 	}
 	if (! axl_cmp ("TEST 3", axl_list_get_nth (list, 2))) {
 		printf ("Expected to find TEST 3 item at the 2, but it wasn't fuond..\n");
-		return false;
+		return axl_false;
 	}
 
 	axl_list_free (list);
@@ -149,35 +164,35 @@ int  test_01 ()
 	/* remove items to the list */
 	if (! turbulence_db_list_remove (dblist, "TEST")) {
 		printf ("Expected to be able to remove items to the dblist\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check the count of items inside */
 	if (turbulence_db_list_count (dblist) != 2) {
 		printf ("Expected to find 2 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	if (! turbulence_db_list_exists (dblist, "TEST 2")) {
 		printf ("Expected to find an item but exist function failed..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* get the list */
 	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 2) {
 		printf ("Expected to a list with 2 items but it wasn't found..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! axl_cmp ("TEST 2", axl_list_get_nth (list, 0))) {
 		printf ("Expected to find TEST 2 item at the 0, but it wasn't fuond..\n");
-		return false;
+		return axl_false;
 	}
 	if (! axl_cmp ("TEST 3", axl_list_get_nth (list, 1))) {
 		printf ("Expected to find TEST 3 item at the 1, but it wasn't fuond..\n");
-		return false;
+		return axl_false;
 	}
 
 	axl_list_free (list);
@@ -185,31 +200,31 @@ int  test_01 ()
 	/* remove items to the list */
 	if (! turbulence_db_list_remove (dblist, "TEST 2")) {
 		printf ("Expected to be able to remove items to the dblist\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check the count of items inside */
 	if (turbulence_db_list_count (dblist) != 1) {
 		printf ("Expected to find 1 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	if (! turbulence_db_list_exists (dblist, "TEST 3")) {
 		printf ("Expected to find an item but exist function failed..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* get the list */
 	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 1) {
 		printf ("Expected to a list with 1 items but it wasn't found..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! axl_cmp ("TEST 3", axl_list_get_nth (list, 0))) {
 		printf ("Expected to find TEST 3 item at the 0, but it wasn't fuond..\n");
-		return false;
+		return axl_false;
 	}
 
 	axl_list_free (list);
@@ -217,21 +232,21 @@ int  test_01 ()
 	/* remove items to the list */
 	if (! turbulence_db_list_remove (dblist, "TEST 3")) {
 		printf ("Expected to be able to remove items to the dblist\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check the count of items inside */
 	if (turbulence_db_list_count (dblist) != 0) {
 		printf ("Expected to find 0 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* get the list */
 	list = turbulence_db_list_get (dblist);
 	if (list == NULL || axl_list_length (list) != 0) {
 		printf ("Expected to find empty list but it wasn't found..\n");
-		return false;
+		return axl_false;
 	}
 	axl_list_free (list);
 
@@ -243,7 +258,7 @@ int  test_01 ()
 	if (dblist == NULL) {
 		printf ("Failed to open db list, %s\n", axl_error_get (err));
 		axl_error_free (err);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* add items */
@@ -257,7 +272,7 @@ int  test_01 ()
 	if (turbulence_db_list_count (dblist) != 5) {
 		printf ("Expected to find 5 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* remove all items */
@@ -267,7 +282,7 @@ int  test_01 ()
 	if (turbulence_db_list_count (dblist) != 0) {
 		printf ("Expected to find 0 items stored in the db-list, but found: %d\n", 
 			turbulence_db_list_count (dblist));
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* close the db list */
@@ -279,7 +294,7 @@ int  test_01 ()
 	/* init turbulence db list */
 	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* open again the list */
@@ -287,72 +302,125 @@ int  test_01 ()
 	if (dblist == NULL) {
 		printf ("Failed to open db list, %s\n", axl_error_get (err));
 		axl_error_free (err);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* terminate the db list */
 	turbulence_db_list_cleanup (ctx);
 	
-	return true;
+	return axl_true;
+}
+
+#define MATCH_AND_CHECK(_expr, string, ok)  do{				       \
+	/* compile and match */                                                \
+	expr = turbulence_expr_compile (ctx, _expr, NULL);                     \
+	if (expr == NULL) {                                                    \
+		printf ("Failed to compile expression: %s..\n", _expr);        \
+		return axl_false;                                              \
+	}                                                                      \
+	/* now match */                                                        \
+	if (ok && ! turbulence_expr_match (expr, string)) {                       \
+		printf ("Expected to find proper match for value %s against expression %s..\n", \
+			string, _expr);                                        \
+		return axl_false;                                              \
+	} else if (! ok && turbulence_expr_match (expr, string)) {	       \
+		printf ("Expected to *NOT* find proper match for value %s against expression %s..\n", \
+			string, _expr);                                        \
+		return axl_false;                                              \
+	}                                                                      \
+	/* free expression */                                                  \
+	turbulence_expr_free (expr);                                           \
+} while(0)
+
+/** 
+ * Check regular expressions.
+ */
+axl_bool  test_01a () {
+	
+	TurbulenceExpr * expr;
+
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.*", "192.168.0.10", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.*", "192.168.1.10", axl_false);
+	
+	/* compile and match */
+	MATCH_AND_CHECK("*.wildcard.test", "test.wildcard.test", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("info.*.test", "info.wildcard.test", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("    *.wildcard.test", "test.wildcard.test", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("    *.wildcard.test", "test.1wildcard.test", axl_false);
+
+	/* compile and match */
+	MATCH_AND_CHECK("not 192.168.0.*", "192.168.1.10", axl_true);
+
+
+	return axl_true;
 }
 
 /** 
  * @brie Check misc turbulence functions.
  * 
  * 
- * @return true if they succeed, othewise false is returned.
+ * @return axl_true if they succeed, othewise axl_false is returned.
  */
-int  test_02 ()
+axl_bool  test_02 ()
 {
 	char * value;
 
 	if (turbulence_file_is_fullpath ("test")) {
 		printf ("Expected to find a relative path..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (turbulence_file_is_fullpath ("test/test2")) {
 		printf ("Expected to find a relative path..\n");
-		return false;
+		return axl_false;
 	}
 
 #if defined(AXL_OS_WIN32)
 	if (! turbulence_file_is_fullpath ("c:/test")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 	if (! turbulence_file_is_fullpath ("c:\\test")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_file_is_fullpath ("d:/test")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 	if (! turbulence_file_is_fullpath ("c:/")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_file_is_fullpath ("c:\\")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 #elif defined(AXL_OS_UNIX) 
 	if (! turbulence_file_is_fullpath ("/")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_file_is_fullpath ("/home")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! turbulence_file_is_fullpath ("/test")) {
 		printf ("Expected to find a full path..\n");
-		return false;
+		return axl_false;
 	}
 #endif
 
@@ -360,56 +428,56 @@ int  test_02 ()
 	value = turbulence_base_dir ("/test");
 	if (! axl_cmp (value, "/")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("/test/value");
 	if (! axl_cmp (value, "/test")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("/test/value/base-value.txt");
 	if (! axl_cmp (value, "/test/value")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("c:/test/value/base-value.txt");
 	if (! axl_cmp (value, "c:/test/value")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("c:\\test\\value\\base-value.txt");
 	if (! axl_cmp (value, "c:\\test\\value")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("c:\\test value\\value\\base-value.txt");
 	if (! axl_cmp (value, "c:\\test value\\value")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("c:\\test value \\value \\base-value.txt");
 	if (! axl_cmp (value, "c:\\test value \\value ")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_base_dir ("c:\\test value \\value \\ base-value.txt");
 	if (! axl_cmp (value, "c:\\test value \\value ")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
@@ -417,77 +485,77 @@ int  test_02 ()
 	value = turbulence_file_name ("test");
 	if (! axl_cmp (value, "test")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("/test");
 	if (! axl_cmp (value, "test")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("/test/value");
 	if (! axl_cmp (value, "value")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("/test/value/base-value.txt");
 	if (! axl_cmp (value, "base-value.txt")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("c:/test/value/base-value.txt");
 	if (! axl_cmp (value, "base-value.txt")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("c:\\test\\value\\base-value.txt");
 	if (! axl_cmp (value, "base-value.txt")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("c:\\test value\\value\\base-value.txt");
 	if (! axl_cmp (value, "base-value.txt")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("c:\\test value \\value \\base-value.txt");
 	if (! axl_cmp (value, "base-value.txt")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	value = turbulence_file_name ("c:\\test value \\value \\ base-value.txt");
 	if (! axl_cmp (value, " base-value.txt")) {
 		printf ("Expected to find a different value but found: %s\n", value);
-		return false;
+		return axl_false;
 	} /* end if */
 	axl_free (value);
 
 	/* all test ok */
-	return true;
+	return axl_true;
 }
 
 /** 
  * @brief Allows to check the sasl backend.
  * 
  * 
- * @return true if it is workin, false if some error is found.
+ * @return axl_true if it is workin, axl_false if some error is found.
  */
-int  test_03 ()
+axl_bool  test_03 ()
 {
 	/* local reference */
 	SaslAuthBackend * sasl_backend;
@@ -504,13 +572,13 @@ int  test_03 ()
 	/* init the db list support */
 	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* start the sasl backend */
 	if (! common_sasl_load_config (ctx, &sasl_backend, "test_03.sasl.conf", &mutex)) {
 		printf ("Unable to initialize the sasl backend..\n");
-		return false;
+		return axl_false;
 	}
 	
 	/* check if the default aspl user exists */
@@ -519,13 +587,13 @@ int  test_03 ()
 		printf ("Failed while checking if the user already exists, error found: %s....\n",
 			axl_error_get (err));
 		axl_error_free (err);
-		return false;
+		return axl_false;
 	}
 
-	/* check we don't provide false positive values */
+	/* check we don't provide axl_false positive values */
 	if (common_sasl_user_exists (sasl_backend, "aspl2", serverName, &err, &mutex)) {
 		printf ("It was expected to not find the user \"aspl2\" but it was found!....\n");
-		return false;
+		return axl_false;
 	}
 	/* free error associated we know it happens */
 	axl_error_free (err);
@@ -533,94 +601,94 @@ int  test_03 ()
 	/* now check passwords */
 	if (! common_sasl_auth_user (sasl_backend, NULL, acceptedUser, NULL, "test", serverName, &mutex)) {
 		printf ("Expected to find proper validation for aspl user\n");
-		return false;
+		return axl_false;
 	}
 
 	/* now check passwords */
 	if (common_sasl_auth_user (sasl_backend, NULL, "aspl2", NULL, "test", serverName, &mutex)) {
 		printf ("Expected to a failure while validating aspl2 user\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check default methods allowed */
 	if (! common_sasl_method_allowed (sasl_backend, "plain", &mutex)) {
 		printf ("Expected to find \"plain\" as a proper method accepted..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* get the list of users */
 	users = common_sasl_get_users (sasl_backend, serverName, &mutex);
 	if (users == NULL || axl_list_length (users) == 0) {
 		printf ("Expected to find a list with one item: aspl..\n");
-		return false;
+		return axl_false;
 	}
 	
 	/* check users in the list */
 	user = axl_list_get_nth (users, 0);
 	if (! axl_cmp (user->auth_id, acceptedUser)) {
 		printf ("Expected to find the user aspl..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (user->disabled) {
 		printf ("Expected to find user not disabled..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* dealloc the list associated */
 	axl_list_free (users);
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, true, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, axl_true, &mutex)) {
 		printf ("failed to disable a user ..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* get the list of users */
 	users = common_sasl_get_users (sasl_backend, serverName, &mutex);
 	if (users == NULL || axl_list_length (users) == 0) {
 		printf ("Expected to find a list with one item: aspl..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check users in the list */
 	user = axl_list_get_nth (users, 0);
 	if (! axl_cmp (user->auth_id, acceptedUser)) {
 		printf ("Expected to find the user aspl..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! user->disabled) {
 		printf ("Expected to find user disabled..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* dealloc the list associated */
 	axl_list_free (users);
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, false, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, axl_false, &mutex)) {
 		printf ("failed to disable a user ..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* get the list of users */
 	users = common_sasl_get_users (sasl_backend, serverName, &mutex);
 	if (users == NULL || axl_list_length (users) == 0) {
 		printf ("Expected to find a list with one item: aspl..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check users in the list */
 	user = axl_list_get_nth (users, 0);
 	if (! axl_cmp (user->auth_id, acceptedUser)) {
 		printf ("Expected to find the user aspl..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (user->disabled) {
 		printf ("Expected to find user not disabled..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* dealloc the list associated */
@@ -628,66 +696,66 @@ int  test_03 ()
 
 	if (common_sasl_user_is_disabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("Expected to find user not disabled, but found in such state..\n");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, true, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, axl_true, &mutex)) {
 		printf ("failed to disable a user ..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (! common_sasl_user_is_disabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("Expected to find user disabled, but found in such state..\n");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* check disable function */
-	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, false, &mutex)) {
+	if (! common_sasl_user_disable (sasl_backend, acceptedUser, serverName, axl_false, &mutex)) {
 		printf ("failed to enable a user ..\n");
-		return false;
+		return axl_false;
 	}
 
 	if (common_sasl_user_is_disabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("Expected to find user not disabled, but found in such state..\n");
-		return false;
+		return axl_false;
 	} /* end if */
 	
 	/* CHECK ADDING/REMOVING/CHECKING USERS ON THE FLY */
 	if (! common_sasl_user_add (sasl_backend, "aspl2", "test", serverName, &mutex)) {
 		printf ("Expected to add without problems user aspl2, but a failure was found..\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check new user added */
 	if (common_sasl_user_is_disabled (sasl_backend, "aspl2", serverName, &mutex)) {
 		printf ("Expected to find user not disabled, but found in such state..\n");
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* auth the new user */
 	if (! common_sasl_auth_user (sasl_backend, NULL, "aspl2", NULL, "test", serverName, &mutex)) {
 		printf ("Expected to find proper validation for aspl user\n");
-		return false;
+		return axl_false;
 	}
 
 	/* check if the user exists */
 	if (! common_sasl_user_exists (sasl_backend, "aspl2", serverName, &err, &mutex)) {
 		printf ("It was expected to find the user \"aspl2\" but it wasn' found!....\n");
-		return false;
+		return axl_false;
 	}
 
 	/* now remove */
 	if (! common_sasl_user_remove (sasl_backend, "aspl2", serverName, &mutex)) {
 		printf ("Expected to add without problems user aspl2, but a failure was found..\n");
-		return false;
+		return axl_false;
 	}
 	
 
 	/* check if the user do not exists, now */
 	if (common_sasl_user_exists (sasl_backend, "aspl2", serverName, &err, &mutex)) {
 		printf ("It was expected to not find the user \"aspl2\" but it wasn' found!....\n");
-		return false;
+		return axl_false;
 	}
 	axl_error_free (err);
 
@@ -695,35 +763,35 @@ int  test_03 ()
 	if (common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("It was expected to not find activated remote administration support for %s inside %s\n", 
 			acceptedUser, serverName);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* activate remote admin */
-	if (! common_sasl_enable_remote_admin (sasl_backend, acceptedUser, serverName, true, &mutex)) {
+	if (! common_sasl_enable_remote_admin (sasl_backend, acceptedUser, serverName, axl_true, &mutex)) {
 		printf ("It was expected to be able to enable remote administration support for %s inside %s\n",
 			acceptedUser, serverName);
-		return false;
+		return axl_false;
 	}
 
 	/* check remote admin activation support */
 	if (! common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("(2) It was expected to find activated remote administration support for %s inside %s\n", 
 			acceptedUser, serverName);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* activate remote admin */
-	if (! common_sasl_enable_remote_admin (sasl_backend, acceptedUser, serverName, false, &mutex)) {
+	if (! common_sasl_enable_remote_admin (sasl_backend, acceptedUser, serverName, axl_false, &mutex)) {
 		printf ("It was expected to be able to disable remote administration support for %s inside %s\n",
 			acceptedUser, serverName);
-		return false;
+		return axl_false;
 	}
 
 	/* check remote admin activation support */
 	if (common_sasl_is_remote_admin_enabled (sasl_backend, acceptedUser, serverName, &mutex)) {
 		printf ("It was expected to not find activated remote administration support for %s inside %s, after configuring it.\n", 
 			acceptedUser, serverName);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* now check the backend with a particular serverName
@@ -745,7 +813,7 @@ int  test_03 ()
 	 * administration support) */
 	turbulence_db_list_cleanup (ctx);
 
-	return true;
+	return axl_true;
 }
 
 /** 
@@ -754,14 +822,15 @@ int  test_03 ()
  * base code.
  * 
  * 
- * @return true if module support is working, otherwise, false is
+ * @return axl_true if module support is working, otherwise, axl_false is
  * returned.
  */
-int  test_04 ()
+axl_bool  test_04 ()
 {
 	TurbulenceModule * module = NULL;
 	const char       * path;
-	int                registered = false;
+	int                registered = axl_false;
+	
 
  test_04_load_again:
 	/* load the module, checking the appropiate match */
@@ -791,24 +860,26 @@ int  test_04 ()
  test_04_check:
 	if (module == NULL) {
 		printf ("Test 04: unable to open module, failed to execute test..\n");
-		return false;
+		return axl_false;
 	}
 	
 	if (! registered) {
+		printf ("Test 04: freeing module..\n");
 		/* close the module */
 		turbulence_module_free (module);
 
 		/* load again the module */
-		registered = true;
+		registered = axl_true;
 		goto test_04_load_again;
 	} else {
+		printf ("Test 04: registering module..\n");
+
 		/* register the module */
 		turbulence_module_register (module);
 	}
 
-
 	/* test ok */
-	return true;
+	return axl_true;
 }
 
 void test_05_handler (TurbulenceMediatorObject * object)
@@ -1063,12 +1134,13 @@ axl_bool test_07 (void) {
 	axlList          * list;
 
 	/* init vortex and turbulence */
-	if (! test_common_init (&vCtx, &tCtx, "test_07.conf"))
-		return axl_false;
+	INIT_AND_RUN_CONF ("test_07.conf");
 
-	/* run configuration */
-	if (! turbulence_run_config (tCtx))
+	/* check here all rules are address based flag */
+	if (! tCtx->all_rules_address_based) {
+		printf ("ERROR (-1) expected to find all rules address based indication but found different value..\n");
 		return axl_false;
+	}
 
 	/* check current connections handled */
 	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleMasterListener, NULL);
@@ -1096,7 +1168,7 @@ axl_bool test_07 (void) {
 	axl_list_free (list);
 
 	/* wait a 1ms to allow turbulence registering created connections */
-	test_common_microwait (1000);
+	test_common_microwait (3000);
 
 	/* check all connections */
 	list = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
@@ -1244,13 +1316,140 @@ axl_bool test_08 (void) {
 	} /* end if */
 
 	/* check status */
-	if (vortex_connection_get_status (conn) != VortexConnectionError) {
-		printf ("ERROR (8): expected to find connection status VortexConnectionError but found: %d..\n",
-			vortex_connection_get_status (conn));
+	if (vortex_connection_get_status (conn) != VortexGreetingsFailure) {
+		printf ("ERROR (8): expected to find connection status VortexGreetingsFailure (10) but found: %d:%s..\n",
+			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
 		return axl_false;
 	} /* end if */
 
 	/* close connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+axl_bool test_09 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_09.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* create connection to local server */
+	printf ("Test 09: testing services provided to test-09.server domain..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-09.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	if (channel != NULL) {
+		printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+
+	/* now check profile 3: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	if (channel != NULL) {
+		printf ("ERROR (3): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+
+	/* now create profile 1: MUST WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel == NULL) {
+		printf ("ERROR (4): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	/* create connection to local server: request for test-09.second.server domain */
+	printf ("Test 09: testing services provided to test-09.second.server domain..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-09.second.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (5): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	if (channel != NULL) {
+		printf ("ERROR (6): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+
+	/* now check profile 3: MUST WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	if (channel == NULL) {
+		printf ("ERROR (7): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+
+	/* now create profile 1: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel != NULL) {
+		printf ("ERROR (8): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	/* create connection to local server: request for test.wilcard.com domain */
+	printf ("Test 09: testing services provided to test.wilcard.com domain..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test.wildcard.com"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (9): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	if (channel != NULL) {
+		printf ("ERROR (10): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+
+	/* now check profile 3: MUST WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	if (channel != NULL) {
+		printf ("ERROR (11): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+
+	/* now create profile 1: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-4");
+	if (channel == NULL) {
+		printf ("ERROR (12): expected to find proper channel reference (create operation) but found NULL reference..\n");
+		return axl_false;
+	}
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
 	vortex_connection_close (conn);
 
 	/* finish turbulence */
@@ -1313,6 +1512,13 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 
+	if (test_01a ()) {
+		printf ("Test 01-a: Regular expressions [   OK   ]\n");
+	}else {
+		printf ("Test 01-a: Regular expressions [ FAILED ]\n");
+		return -1;
+	} /* end if */
+
 	if (test_02 ()) {
 		printf ("Test 02: Turbulence misc functions [   OK   ]\n");
 	}else {
@@ -1359,6 +1565,13 @@ int main (int argc, char ** argv)
 		printf ("Test 08: Turbulence profile path filtering (basic)  [   OK   ]\n");
 	} else {
 		printf ("Test 08: Turbulence profile path filtering (basic)  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_09 ()) {
+		printf ("Test 09: Turbulence profile path filtering (serverName)  [   OK   ]\n");
+	} else {
+		printf ("Test 09: Turbulence profile path filtering (serverName)  [ FAILED ]\n");
 		return -1;
 	}
 

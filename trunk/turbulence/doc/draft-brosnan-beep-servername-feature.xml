@@ -68,15 +68,15 @@ features for virtual servers (like provisioning particular values according to
 such serverName value). </t>
 
 <t>As defined in "2.3.1.2 The Start Message" (inside <xref
-target="RFC3080" />), serverName value is establish on the first
+target="RFC3080" />), serverName value is established on the first
 successful channel opened requesting such value, causing the
 connection/session to be bound to such value. Next channels opened
 requesting other serverName values are ignored.</t>
 
 <t>The serverName feature presented (for now x-serverName feature) is
-defined to allow a connecting BEEP peer to signal serverName value at
-the beginning of the session/connection, without waiting the first
-channel to be opened.</t>
+defined to allow a connecting BEEP peer to signal serverName value
+desired at the beginning of the session/connection, without waiting
+the first channel to be opened.</t>
 
 <t>The intention is to provide an easy mechanism for BEEP listeners to
 decide providing services according to requested serverName, without
@@ -84,7 +84,21 @@ waiting to channel start requests.</t>
 
 <t>The mechanism is entirely optional due to BEEP features nature, but
 when available, will provide a clear path to provide services for only
-a set of serverNames available.</t>
+a set of serverNames available. It is worth to mention this feature do
+not fix nor provide any missing feature; it just provide a
+simply way for both listener and initiator to setup serverName.</t>
+
+</section>
+
+<section title='Use cases for serverName feature'>
+
+<section title='Listener view: provide services for a set of domains'>
+
+<t>For a general purpose BEEP server, in the case it is required to
+provide a different profile policy according to the serverName, it is
+required to delay such provisioning </t>
+
+</section>
 
 </section>
 

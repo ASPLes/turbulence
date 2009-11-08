@@ -334,13 +334,13 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
  * handled and sequenced by the client according to the state of the
  * connection (profiles already accepted, etc).
  */
-int  __turbulence_ppath_mask (VortexConnection  * connection, 
-			      int                 channel_num,
-			      const char        * uri,
-			      const char        * profile_content,
-			      const char        * serverName,
-			      char             ** error_msg,
-			      axlPointer         user_data)
+axl_bool  __turbulence_ppath_mask (VortexConnection  * connection, 
+				   int                 channel_num,
+				   const char        * uri,
+				   const char        * profile_content,
+				   const char        * serverName,
+				   char             ** error_msg,
+				   axlPointer         user_data)
 {
 	/* get a reference to the turbulence profile path state */
 	TurbulencePPathState  * state  = user_data;
@@ -388,6 +388,59 @@ int  __turbulence_ppath_mask (VortexConnection  * connection,
 	return axl_true;
 }
 
+/** 
+ * @internal Mask function that is used to provide access to still
+ * unclassified BEEP connections to profiles available at the root
+ * level on existing profile path configurations. When this mask is
+ * called means that not all profile path rules are ip based so it is
+ * required further steps in the BEEP negotiation to let the
+ * connection BEEP peer to provide a serverName that will finally (or
+ * not) select an appropriate profile path.
+ *
+ * This function has a relation with __turbulence_ppath_mask in the
+ * fact that the former is called when it is clear the profile path
+ * selected (due to address rules). When this function (mask_temporal)
+ * selects an appropriate profile mask, it is then configured
+ * __turbulence_ppath_mask to be called always.
+ *
+ */
+axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection, 
+					      int                 channel_num,
+					      const char        * uri,
+					      const char        * profile_content,
+					      const char        * serverName,
+					      char             ** error_msg,
+					      axlPointer         user_data)
+{
+	TurbulencePPathState * state;
+	TurbulenceCtx        * ctx;
+	
+	/* get current state */
+	state = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
+	ctx   = state->ctx;
+
+	msg ("Called to temporal profile mask on %s phase, for connection id=%d", 
+	     channel_num == -1 ? "greetings" : "channel creation", vortex_connection_get_id (connection));
+	
+	/* check if the state has a profile path selected */
+	if (state->path_selected == NULL) {
+		/* no profile path selected, check if we are in greetings phase */
+		if (channel_num == -1) 
+			return axl_true; /* filter profile */
+
+		/* call to select a profile path with the received
+		   serverName and signaling we are NOT in on connect phase */
+		if (! __turbulence_ppath_select (state->ctx, connection, serverName, axl_false)) { 
+			error ("channel creation for profile %s was filtered since no profile path was found..", uri);
+			return axl_true; /* filter channel creation */
+		} /* end if */
+	} /* end if */
+
+	/* reached this point we have the path seletected so call to
+	   base function */
+	return __turbulence_ppath_mask (connection, channel_num, uri, profile_content, serverName, error_msg, user_data);
+}
+
 axl_bool __turbulence_ppath_handle_connection_match_src (VortexConnection * connection, 
 							 TurbulenceExpr   * expr, 
 							 const char       * src)
@@ -423,29 +476,55 @@ axl_bool __turbulence_ppath_handle_connection_match_dst (VortexConnection * conn
 }
 
 /** 
- * @internal Server init handler that allows to check the connectio
- * source and select the appropiate profile path to be used for the
- * connection. It also sets the required handler to enforce profile
- * path policy.
+ * @internal Function that allows to select a profile path for a
+ * connection. The variable on_connect signals if the connection
+ * notified is on server accept or because client greetings was
+ * received.
  *
- * In the case a profile path definition is not found, the handler
- * just denies the connection.
+ * @return The function returns axl_false to signal that the
+ * connection not accepted due to profile path configuration. The
+ * caller must deny connection operation according to the connection
+ * stage, otherwise axl_true is returned either because the profile
+ * path was configured or because it will be configured on next calls
+ * to __turbulence_ppath_select
  */
-axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, axlPointer data)
+axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx, 
+				    VortexConnection   * connection, 
+				    /* value requested through x-serverName (serverName) feature. */
+				    const char         * serverName, 
+				    axl_bool             on_connect)
 {
 	/* get turbulence context */
 	TurbulencePPathState * state;
 	TurbulencePPathDef   * def = NULL;
-	TurbulenceCtx        * ctx;
 	int                    iterator;
 	const char           * src;
 	const char           * dst;
 	axl_bool               src_status;
 	axl_bool               dst_status;
-	
+	axl_bool               serverName_status;
 
-	/* get the current context (TurbulenceCtx) */
-	ctx = data;
+	if (on_connect) {
+		/* called to select profile path at connection time:
+		   still BEEP listener greetings wasn't sent so we can
+		   only select if all profile path references to src=
+		   and dst= */
+		if (! ctx->all_rules_address_based)  {
+			/* configure a profile mask to select an appropriate ppath state in the next channel
+			   start request where the remote BEEP peer has a chance to select a serverName value */
+			state                = axl_new (TurbulencePPathState, 1);
+			state->path_selected = NULL; /* still no profile path selected */
+			state->ctx           = ctx;
+			vortex_connection_set_data_full (connection, 
+							 /* the key and its associated value */
+							 TURBULENCE_PPATH_STATE, state,
+							 /* destroy functions */
+							 NULL, axl_free);
+			vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask_temporal, state);
+
+			return axl_true; /* signal no profile path still selected */
+		}
+	} /* end if */
 
 	/* try to find a profile path that match with the provided
 	 * source */
@@ -458,17 +537,25 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 		msg ("checking profile path def: %s", def->path_name ? def->path_name : "(no path name defined)");
 
 		/* get src status */
-		src_status = __turbulence_ppath_handle_connection_match_src (connection, def->src, src);
+		src_status        = __turbulence_ppath_handle_connection_match_src (connection, def->src, src);
 
 		/* get dst status */
-		dst_status = __turbulence_ppath_handle_connection_match_src (connection, def->dst, dst);
+		dst_status        = __turbulence_ppath_handle_connection_match_src (connection, def->dst, dst);
+
+		/* get serverName status */
+		serverName_status = __turbulence_ppath_handle_connection_match_src (connection, def->serverName, serverName);
 
 		/* match found */
-		if (src_status && dst_status) {
-			msg ("profile path found, setting default state: %s, connection id=%d, src=%s local_addr=%s", 
+		if (src_status && dst_status && serverName_status) {
+			msg ("profile path found, setting default state: %s, connection id=%d, src=%s local_addr=%s serverName=%s ", 
 			     def->path_name ? def->path_name : "(no path name defined)",
-			     vortex_connection_get_id (connection), src, dst);
+			     vortex_connection_get_id (connection), src, dst, serverName ? serverName : "");
 			break;
+		} else {
+			/* show profile path not mached */
+			msg2 ("profile path do not match: %s, for connection id=%d, src=%s local_addr=%s serverName=%s ", 
+			      def->path_name ? def->path_name : "(no path name defined)",
+			      vortex_connection_get_id (connection), src, dst, serverName ? serverName : "");
 		} /* end if */
 
 		/* next profile path definition */
@@ -483,6 +570,14 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 		error ("no profile path def match, rejecting connection: id=%d, src=%s", 
 		       vortex_connection_get_id (connection), src);
 		return axl_false;
+	} /* end if */
+
+	/* check if this function was called to select a path with an
+	   state created */
+	state                = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
+	if (state != NULL) {
+		state->path_selected = def;
+		return axl_true;
 	} /* end if */
 
 	/* create and store */
@@ -509,9 +604,100 @@ axl_bool  __turbulence_ppath_handle_connection (VortexConnection * connection, a
 		return axl_false;
 	} /* end if */
 	
-	
 	return axl_true;
 }
+
+/** 
+ * @internal Server init handler that allows to check the connectio
+ * source and select the appropiate profile path to be used for the
+ * connection. It also sets the required handler to enforce profile
+ * path policy.
+ *
+ * In the case a profile path definition is not found, the handler
+ * just denies the connection.
+ */
+axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * connection, axlPointer data)
+{
+	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
+	return __turbulence_ppath_select ((TurbulenceCtx *) data, connection, "", axl_true);
+}
+
+
+/** 
+ * @internal Helper for __turbulence_ppath_get_server_name_feature.
+ */
+char * __turbulence_ppath_get_server_name_feature_aux (const char * features)
+{
+	int    last     = 0;
+	int    iterator = 0;
+	char * result;
+
+	/* check last position */
+	while (iterator < features[last] && features[last] != 0 && features[last] != ' ')
+		last++;
+
+	/* check for empty results */
+	if (last == iterator)
+		return NULL;
+	
+	/* check we have found last position */
+	if (features[last] == 0 || features[last] == ' ') {
+		result = axl_new (char, last - iterator + 1);
+		memcpy (result, features, last - iterator);
+		return result;
+	}
+	return NULL;
+}
+
+/** 
+ * @internal Function used to get the serverName reported by
+ * x-serverName feature (if found). The function returns NULL if
+ * nothing is found.
+ */
+char * __turbulence_ppath_get_server_name_feature (const char * features)
+{
+	int iterator = 0;
+
+	/* check for empty features */
+	if (features == NULL)
+		return NULL;
+
+	while (iterator < strlen (features)) {
+
+		if (axl_memcmp (features + iterator, "x-serverName:", 13)) 
+			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 13);
+		if (axl_memcmp (features + iterator, "serverName:", 11)) 
+			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 11);
+		if (axl_memcmp (features + iterator, "x-serverName=", 13)) 
+			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 13);
+		if (axl_memcmp (features + iterator, "serverName=", 11)) 
+			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 11);
+
+		/* next position */
+		iterator++;
+	}
+	return NULL;
+}
+
+/** 
+ * @internal Handler called to configure/reconfigure profile path to
+ * be applied to this connection. This handler is called after the
+ * connection was accepted and once the client greetings was received.
+ *
+ * See also __turbulence_ppath_handle_connection_on_connect which also
+ * configures profile path but before this function, that is, once the
+ * connection is received.
+ */
+int __turbulence_ppath_handle_connection_on_greetings (VortexCtx               * vortex_ctx,
+						       VortexConnection        * connection,
+						       VortexConnection       ** new_conn,
+						       VortexConnectionStage     state,
+						       axlPointer                user_data)
+{
+	/* for now return ok */
+	return 0;
+}
+
 
 /** 
  * @internal Checks the user id value (or group id value if
@@ -566,6 +752,10 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 	ctx->paths        = axl_new (TurbulencePPath, 1);
 	ctx->paths->items = axl_new (TurbulencePPathDef *, axl_node_get_child_num (node) + 1);
 
+	/* flag profile path rules as only ip based and change this
+	   value as long as we read rules */
+	ctx->all_rules_address_based = axl_true;
+
 	/* now parse each profile path def found */
 	iterator = 0;
 	while (pdef != NULL) {
@@ -598,6 +788,26 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 								   ATTR_VALUE (pdef, "dst"),
 								   "Failed to parse \"src\" expression at profile def");
 		} /* end if (HAS_ATTR (pdef, "dst")) */
+
+		/* ensure all rules we have are address based making
+		   posible to apply profile path policy on server
+		   accept handler rather waiting client greetings
+		   reception */
+		if (ctx->all_rules_address_based) {
+			/* if has server-Name defined and its value is
+			   different .* (which means all serverName
+			   allowed including empty value). The following signals all rules are address based if: 
+			   - It has serverName defined and
+			   - It has a value different from .* and
+			   - the rule having serverName configuration have no address match 
+			*/
+
+			if ((HAS_ATTR (pdef, "server-name")) && 
+			    (! HAS_ATTR_VALUE (pdef, "server-name", ".*")) && 
+			    (HAS_ATTR (pdef, "src") || HAS_ATTR (pdef, "dst"))) {
+				ctx->all_rules_address_based = axl_false;
+			} /* end if */
+		} /* end if */
 
 #if defined(AXL_OS_UNIX)
 		/* set default user id and group id */
@@ -648,9 +858,15 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 	} /* end while */
 
 	/* install server connection accepted */
-	vortex_listener_set_on_connection_accepted (vortex_ctx, __turbulence_ppath_handle_connection, ctx);
+	vortex_listener_set_on_connection_accepted (vortex_ctx, 
+						    __turbulence_ppath_handle_connection_on_connect, 
+						    ctx); 
+	vortex_connection_set_connection_actions   (vortex_ctx,
+						    CONNECTION_STAGE_PROCESS_GREETINGS_FEATURES,
+						    __turbulence_ppath_handle_connection_on_greetings,
+						    ctx);
 	
-	msg ("profile path definition ok..");
+	msg ("profile path definition ok (all rules address based status: %d)..", ctx->all_rules_address_based);
 
 	/* return ok code */
 	return axl_true;
