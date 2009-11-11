@@ -523,7 +523,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 			vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask_temporal, state);
 
 			return axl_true; /* signal no profile path still selected */
-		}
+		} /* end if */
 	} /* end if */
 
 	/* try to find a profile path that match with the provided
@@ -577,31 +577,27 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	state                = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
 	if (state != NULL) {
 		state->path_selected = def;
-		return axl_true;
+	} else {
+		/* create and store */
+		state                = axl_new (TurbulencePPathState, 1);
+		state->path_selected = def;
+		state->ctx           = ctx;
+		vortex_connection_set_data_full (connection, 
+						 /* the key and its associated value */
+						 TURBULENCE_PPATH_STATE, state,
+						 /* destroy functions */
+						 NULL, axl_free);
+		
+		/* now configure the profile path mask to handle how channels
+		 * and profiles are accepted */
+		vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask, state);
 	} /* end if */
-
-	/* create and store */
-	state                = axl_new (TurbulencePPathState, 1);
-	state->path_selected = def;
-	state->ctx           = ctx;
-	vortex_connection_set_data_full (connection, 
-					 /* the key and its associated value */
-					 TURBULENCE_PPATH_STATE, state,
-					 /* destroy functions */
-					 NULL, axl_free);
-	
-	/* now configure the profile path mask to handle how channels
-	 * and profiles are accepted */
-	vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask, state);
-
+		
 	/* check for process separation and apply operation here */
 	if (def->separate) {
 		/* call to create process */
 		turbulence_process_create_child (ctx, connection, def);
-		
-		/* return false to avoid accepting the connection
-		 * inside the context of the parent process */
-		return axl_false;
+		msg ("finished turbulence_process_create_child..");
 	} /* end if */
 	
 	return axl_true;

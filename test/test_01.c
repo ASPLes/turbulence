@@ -1458,6 +1458,31 @@ axl_bool test_09 (void) {
 	return axl_true;
 }
 
+axl_bool test_10 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_10.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 /** 
  * @brief General regression test to check all features inside
  * turbulence.
@@ -1572,6 +1597,13 @@ int main (int argc, char ** argv)
 		printf ("Test 09: Turbulence profile path filtering (serverName)  [   OK   ]\n");
 	} else {
 		printf ("Test 09: Turbulence profile path filtering (serverName)  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_10 ()) {
+		printf ("Test 10: Turbulence profile path filtering (child processes)  [   OK   ]\n");
+	} else {
+		printf ("Test 10: Turbulence profile path filtering (child processes)  [ FAILED ]\n");
 		return -1;
 	}
 
