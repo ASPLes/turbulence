@@ -122,7 +122,7 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	if (pid != 0) {
 		/* parent code, just return */
 		vortex_connection_set_close_socket (conn, axl_false);
-		vortex_connection_shutdown (conn); 
+
 
 		/* register pipes to receive child logs */
 		if (turbulence_log_is_enabled (ctx)) {

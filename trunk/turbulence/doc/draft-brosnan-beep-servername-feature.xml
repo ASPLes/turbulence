@@ -41,7 +41,7 @@
   <date month='October' year='2009' />
   
   <abstract>
-    
+  
     <t>This document defines one feature for the BEEP <xref
     target="RFC3080" /> protocol that allows to request serverName value at session
    initialization.</t>
