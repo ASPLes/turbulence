@@ -382,7 +382,6 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 				vortex_connection_get_port (connection));
 		} /* end if */
 	} /* end if */
-	
 
 	/* filter any other option */
 	return axl_true;
@@ -434,6 +433,20 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 			error ("channel creation for profile %s was filtered since no profile path was found..", uri);
 			return axl_true; /* filter channel creation */
 		} /* end if */
+
+		/* check if a profile path was selected to close the
+		   connection if not */
+		if (state->path_selected == NULL) {
+			error ("Unable to accept connection, no profile path matches after first channel start for uri=%s: conn id: %d [%s:%s])", 
+			       uri,
+			       vortex_connection_get_id (connection), 
+			       vortex_connection_get_host (connection),
+			       vortex_connection_get_port (connection));
+			vortex_connection_shutdown (connection);
+			return axl_false;
+		} /* end if */
+
+		
 	} /* end if */
 
 	/* reached this point we have the path seletected so call to

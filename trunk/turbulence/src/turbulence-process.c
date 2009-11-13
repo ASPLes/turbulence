@@ -120,9 +120,10 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	/* call to fork */
 	pid = fork ();
 	if (pid != 0) {
-		/* parent code, just return */
-		vortex_connection_set_close_socket (conn, axl_false);
-
+		/* unwatch the connection from the parent to avoid
+		   receiving more content which now handled by the
+		   child */
+		vortex_reader_unwatch_connection (CONN_CTX (conn), conn);
 
 		/* register pipes to receive child logs */
 		if (turbulence_log_is_enabled (ctx)) {
@@ -207,10 +208,11 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	/* call to unload modules after fork */
 	turbulence_module_unload_after_fork (ctx);
 
-	/* set finish handler  */
+	/* set finish handler that will help to finish child process
+	   (or not) */
 	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, NULL);
 
-	/* restart vortex */
+	/* (re)start vortex */
 	if (! vortex_init_ctx (vortex_ctx)) {
 		error ("failed to restart vortex engine after fork operation");
 		exit (-1);
