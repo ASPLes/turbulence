@@ -346,6 +346,16 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 	TurbulencePPathState  * state  = user_data;
 	TurbulenceCtx         * ctx    = state->ctx;
 
+	if (state == NULL || state->path_selected == NULL) {
+		error ("No profile path selected, deny: %s (conn id: %d [%s:%s])", 
+				uri, 
+				vortex_connection_get_id (connection), 
+				vortex_connection_get_host (connection),
+				vortex_connection_get_port (connection));
+		/* filter, no profile path selected */
+		return axl_true;
+	} /* end if */
+
 	/* check if the profile provided is found in the <allow> or
 	 * <if-success> configuration */
 	if (! __turbulence_ppath_mask_items (ctx, 
@@ -445,8 +455,19 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 			vortex_connection_shutdown (connection);
 			return axl_false;
 		} /* end if */
-
 		
+		/* check if the connection will be handled by a child
+		 * proces */
+		if (state->path_selected->separate) {
+			/* flag the connection to skip futher handling
+			 * letting the child process to finish start
+			 * handle */
+			vortex_connection_set_data (connection, VORTEX_CONNECTION_SKIP_HANDLING, INT_TO_PTR (axl_true));
+			return axl_true; /* return true, to filter at
+					  * the parent and to skip
+					  * parent handling */
+		} /* end if */
+
 	} /* end if */
 
 	/* reached this point we have the path seletected so call to
