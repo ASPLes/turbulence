@@ -45,9 +45,20 @@ void turbulence_process_init         (TurbulenceCtx * ctx,
 
 void turbulence_process_create_child (TurbulenceCtx       * ctx, 
 				      VortexConnection    * conn,
-				      TurbulencePPathDef  * def);
+				      TurbulencePPathDef  * def,
+				      axl_bool              handle_start_reply,
+				      int                   channel_num,
+				      const char          * profile,
+				      const char          * profile_content,
+				      VortexEncoding        encoding,
+				      const char          * serverName,
+				      VortexFrame         * frame);
 
 void turbulence_process_kill_childs  (TurbulenceCtx * ctx);
+
+int      turbulence_process_child_count  (TurbulenceCtx * ctx);
+
+axl_bool turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid);
 
 void turbulence_process_cleanup      (TurbulenceCtx * ctx);
 

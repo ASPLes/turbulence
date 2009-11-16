@@ -94,6 +94,9 @@ TurbulenceCtx * turbulence_ctx_new ()
  */
 void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
 {
+	/* init pid to the child */
+	ctx->pid = getpid ();
+
 	/* re-init mutex */
 	vortex_mutex_create (&ctx->exit_mutex);
 	vortex_mutex_create (&ctx->db_list_mutex);
