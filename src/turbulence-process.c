@@ -77,11 +77,11 @@ void turbulence_process_finished (VortexCtx * ctx, axlPointer user_data)
  * @internal Reference to the context used by the child process inside
  * turbulence_process_create_child.
  */
-TurbulenceCtx * ctx       = NULL;
+TurbulenceCtx * child_ctx   = NULL;
 
 void turbulence_process_signal_received (int _signal) {
 	/* default handling */
-	turbulence_signal_received (ctx, _signal);
+	turbulence_signal_received (child_ctx, _signal);
 	
 	return;
 }
@@ -91,9 +91,16 @@ void turbulence_process_signal_received (int _signal) {
  * @internal Allows to create a child process running listener connection
  * provided.
  */
-void turbulence_process_create_child (TurbulenceCtx       * _ctx, 
+void turbulence_process_create_child (TurbulenceCtx       * ctx, 
 				      VortexConnection    * conn, 
-				      TurbulencePPathDef  * def)
+				      TurbulencePPathDef  * def,
+				      axl_bool              handle_start_reply,
+				      int                   channel_num,
+				      const char          * profile,
+				      const char          * profile_content,
+				      VortexEncoding        encoding,
+				      const char          * serverName,
+				      VortexFrame         * frame)
 {
 	int                   pid;
 	VortexCtx        *    vortex_ctx;
@@ -114,8 +121,6 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 		if (pipe (vortex_log) != 0)
 			error ("unable to create pipe to transport vortex log, this will cause these logs to be lost");
 	} /* end if */
-
-	msg ("Creating child process to manage connection id=%d", vortex_connection_get_id (conn));
 
 	/* call to fork */
 	pid = fork ();
@@ -142,19 +147,20 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 			/* support for vortex-log */
 			turbulence_log_manager_register (ctx, LOG_REPORT_VORTEX, vortex_log[0]); /* register read end */
 			vortex_close_socket (vortex_log[1]);                                      /* close write end */
-		}
+		} /* end if */
 
-		/* record child */
-		msg ("Created child process pid=%d", pid);
+		/* register the child process identifier */
 		vortex_mutex_lock (&ctx->child_process_mutex);
 		axl_list_append (ctx->child_process, INT_TO_PTR (pid));
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 
+		/* record child */
+		msg ("PARENT=%d: Created child process pid=%d (childs: %d)", getpid (), pid, turbulence_process_child_count (ctx));
 		return;
 	} /* end if */
 
 	/* do not log messages until turbulence_ctx_reinit finishes */
-	ctx = _ctx;
+	child_ctx = ctx;
 
 	/* reinit TurbulenceCtx */
 	turbulence_ctx_reinit (ctx);
@@ -192,7 +198,7 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 				   axl_false,
 				   turbulence_process_signal_received);
 
-	msg ("Created child prcess: %d", getpid ());
+	msg ("CHILD: Created child process: %d", getpid ());
 
 	/* check here to change root path, in the case it is defined
 	 * now we still have priviledges */
@@ -220,10 +226,27 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 
 	/* now finish and register the connection */
 	vortex_reader_watch_connection (vortex_ctx, conn);
+
+	/* check to handle start reply message */
+	if (handle_start_reply) {
+		if (! vortex_channel_0_handle_start_msg_reply (vortex_ctx, conn, channel_num,
+							       profile, profile_content,
+							       encoding, serverName, vortex_frame_get_msgno (frame))) {
+			error ("Channel start not accepted on child process, finising process=%d, closing conn id=%d..",
+			       getpid (), vortex_connection_get_id (conn));
+			vortex_connection_shutdown (conn);
+			goto finish;
+		}
+		msg ("Channel start accepted on child..");
+	} /* end if */
 	
 	msg ("child process created...wait for exit");
 	vortex_listener_wait (turbulence_ctx_get_vortex_ctx (ctx));
 	msg ("finishing process...");
+
+ finish:
+	/* release frame received */
+	vortex_frame_unref (frame);
 
 	/* terminate turbulence execution */
 	turbulence_exit (ctx, axl_false, axl_false);
@@ -231,7 +254,7 @@ void turbulence_process_create_child (TurbulenceCtx       * _ctx,
 	/* free context (the very last operation) */
 	turbulence_ctx_free (ctx);
 	vortex_ctx_free (vortex_ctx);
-	
+
 	/* finish process */
 	exit (0);
 	
@@ -290,6 +313,54 @@ void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
 	vortex_mutex_unlock (&ctx->child_process_mutex);
 
 	return;
+}
+
+/** 
+ * @brief Allows to return the number of child processes  created. 
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @return Number of child process created or -1 it if fails.
+ */
+int      turbulence_process_child_count  (TurbulenceCtx * ctx)
+{
+	int count;
+
+	/* check context received */
+	if (ctx == NULL)
+		return -1;
+
+	vortex_mutex_lock (&ctx->child_process_mutex);
+	count = axl_list_length (ctx->child_process);
+	vortex_mutex_unlock (&ctx->child_process_mutex);
+	msg ("child process count: %d..", count);
+	return count;
+}
+
+/** 
+ * @brief Allows to check if the provided process Id belongs to a
+ * child process currently running.
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param pid The process identifier.
+ *
+ * @return axl_true if the process exists, otherwise axl_false is
+ * returned.
+ */
+axl_bool turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid)
+{
+	axl_bool result;
+
+	/* check context received */
+	if (ctx == NULL || pid < 0)
+		return axl_false;
+
+	vortex_mutex_lock (&ctx->child_process_mutex);
+	result = axl_list_exists (ctx->child_process, INT_TO_PTR (pid));
+	vortex_mutex_unlock (&ctx->child_process_mutex);
+
+	return result;
 }
 
 /** 

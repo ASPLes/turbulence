@@ -1458,14 +1458,38 @@ axl_bool test_09 (void) {
 	return axl_true;
 }
 
+void test_10_received (VortexChannel    * channel, 
+		       VortexConnection * connection, 
+		       VortexFrame      * frame, 
+		       axlPointer         user_data)
+{
+	msg ("Received frame request at child (pid: %d): %s",
+	     getpid (), (char*) vortex_frame_get_payload (frame));
+
+	/* send pid reply */
+	if (axl_cmp ("GET pid", (char*) vortex_frame_get_payload (frame))) 
+		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%d", getpid ());
+	return;
+}
+
+TurbulenceCtx    * tCtxTest10 = NULL;
+
+void test_10_signal_handler (int _signal)
+{
+	/* marshal signal */
+	turbulence_signal_received (tCtxTest10, _signal);
+}
+
 axl_bool test_10 (void) {
-	TurbulenceCtx    * tCtx;
+
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
 	VortexChannel    * channel;
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
 
 	/* FIRST PART: init vortex and turbulence */
-	if (! test_common_init (&vCtx, &tCtx, "test_10.conf")) 
+	if (! test_common_init (&vCtx, &tCtxTest10, "test_10.conf")) 
 		return axl_false;
 
 	/* register here all profiles required by tests */
@@ -1473,12 +1497,105 @@ axl_bool test_10 (void) {
 	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
 	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
 
+	/* register a frame received for the remote side (child process) */
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-1", 
+					      test_10_received, NULL);
+
 	/* run configuration */
-	if (! turbulence_run_config (tCtx)) 
+	if (! turbulence_run_config (tCtxTest10)) 
 		return axl_false;
 
+	/* install signal handling */
+	turbulence_signal_install (tCtxTest10, axl_false, axl_false, axl_true, test_10_signal_handler);
+
+	/* check process created at this point */
+	if (turbulence_process_child_count (tCtxTest10) != 0) {
+		printf ("ERROR (0): expected to find child process count equal to 0 but found: %d..\n",
+			turbulence_process_child_count (tCtxTest10));
+		return axl_false;
+	} /* end if */
+
+	/* create connection to local server */
+	printf ("Test 10: testing services provided to test-10.server domain..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel: MUST WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+
+	/* check connection after created it */
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (4): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check process created at this point */
+	if (turbulence_process_child_count (tCtxTest10) != 1) {
+		printf ("ERROR (3): expected to find child process count equal to 1 but found: %d..\n",
+			turbulence_process_child_count (tCtxTest10));
+		return axl_false;
+	} /* end if */
+
+	/* now check serverName status */
+	if (! axl_cmp (vortex_connection_get_server_name (conn), "test-10.server")) {
+		printf ("ERROR (5): expected to find server name %s, but found: %s..\n",
+			"test-10.server", vortex_connection_get_server_name (conn));
+		return axl_false;
+	} /* end if */
+
+	/* ask for remote pid and compare it to the current value */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "GET pid", 7, NULL)) {
+		printf ("ERROR (6): expected to find remote pid request message sent successfully but found an error..\n");
+		return axl_false;
+	} /* end if */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (7): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 10: Pid received: %s (parent pid: %d)..\n", (const char *) vortex_frame_get_payload (frame),
+		getpid ());
+
+	/* check child pid with the pid stored */
+	if (! turbulence_process_child_exits (tCtxTest10, vortex_support_strtod ((const char*) vortex_frame_get_payload (frame), NULL))) {
+		printf ("ERROR (8): expected to find child process %s to exist, but it wasn't found in the child list..\n",
+			(const char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	} 
+
+	vortex_frame_unref (frame);
+
+	/* close the connection and check child process */
+	printf ("Test 10: closing connection and checking childs..\n");
+	vortex_connection_close (conn);
+
+	/* do a micro wait */
+	test_common_microwait (1000000);
+
+	/* check child count */
+	if (turbulence_process_child_count (tCtxTest10) != 0) {
+		printf ("ERROR (9): expected to find child process count equal to 0 but found: %d..\n",
+			turbulence_process_child_count (tCtxTest10));
+		return axl_false;
+	} /* end if */
+
+	/* unref queue */
+	vortex_async_queue_unref (queue);
+
 	/* finish turbulence */
-	test_common_exit (vCtx, tCtx);
+	test_common_exit (vCtx, tCtxTest10);
 
 	return axl_true;
 }
@@ -1528,6 +1645,8 @@ int main (int argc, char ** argv)
 
 	/* configure an additional path to run tests */
 	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", "../data");
+
+	goto init;
 
 	/* test dblist */
 	if (test_01 ()) {
@@ -1599,6 +1718,8 @@ int main (int argc, char ** argv)
 		printf ("Test 09: Turbulence profile path filtering (serverName)  [ FAILED ]\n");
 		return -1;
 	}
+
+ init:
 
 	if (test_10 ()) {
 		printf ("Test 10: Turbulence profile path filtering (child processes)  [   OK   ]\n");

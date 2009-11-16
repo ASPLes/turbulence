@@ -52,7 +52,12 @@ void turbulence_ppath_change_root    (TurbulenceCtx      * ctx,
 
 axl_bool __turbulence_ppath_select   (TurbulenceCtx      * ctx, 
 				      VortexConnection   * connection, 
+				      int                  channel_num,
+				      const char         * uri,
+				      const char         * profile_content,
+				      VortexEncoding       encoding,
 				      const char         * serverName, 
+				      VortexFrame        * frame,
 				      axl_bool             on_connect);
 
 #endif /* end __TURBULENCE_PPATH_H__ */

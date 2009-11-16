@@ -150,10 +150,10 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 
 axl_bool turbulence_conn_mgr_int_foreach (axlPointer key, axlPointer data, axlPointer user_data) 
 {
-	TurbulenceConnMgrState * state = (TurbulenceConnMgrState *) data;
+	/* TurbulenceConnMgrState * state = (TurbulenceConnMgrState *) data; */
 
 	/* do not close transport */
-	vortex_connection_set_close_socket (state->conn, axl_false);
+	/* vortex_connection_set_close_socket (state->conn, axl_false); */
 
 	/* do not stop foreach process until the last item */
 	return axl_false;

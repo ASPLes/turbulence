@@ -338,7 +338,9 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 				   int                 channel_num,
 				   const char        * uri,
 				   const char        * profile_content,
+				   VortexEncoding      encoding,
 				   const char        * serverName,
+				   VortexFrame       * frame,
 				   char             ** error_msg,
 				   axlPointer         user_data)
 {
@@ -417,9 +419,11 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 					      int                 channel_num,
 					      const char        * uri,
 					      const char        * profile_content,
+					      VortexEncoding      encoding,
 					      const char        * serverName,
+					      VortexFrame       * frame,
 					      char             ** error_msg,
-					      axlPointer         user_data)
+					      axlPointer          user_data)
 {
 	TurbulencePPathState * state;
 	TurbulenceCtx        * ctx;
@@ -439,7 +443,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 
 		/* call to select a profile path with the received
 		   serverName and signaling we are NOT in on connect phase */
-		if (! __turbulence_ppath_select (state->ctx, connection, serverName, axl_false)) { 
+		if (! __turbulence_ppath_select (state->ctx, connection, channel_num, uri, profile_content, encoding, serverName, frame, axl_false)) {
 			error ("channel creation for profile %s was filtered since no profile path was found..", uri);
 			return axl_true; /* filter channel creation */
 		} /* end if */
@@ -472,7 +476,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 
 	/* reached this point we have the path seletected so call to
 	   base function */
-	return __turbulence_ppath_mask (connection, channel_num, uri, profile_content, serverName, error_msg, user_data);
+	return __turbulence_ppath_mask (connection, channel_num, uri, profile_content, encoding, serverName, frame, error_msg, user_data);
 }
 
 axl_bool __turbulence_ppath_handle_connection_match_src (VortexConnection * connection, 
@@ -524,8 +528,13 @@ axl_bool __turbulence_ppath_handle_connection_match_dst (VortexConnection * conn
  */
 axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx, 
 				    VortexConnection   * connection, 
+				    int                  channel_num,
+				    const char         * uri,
+				    const char         * profile_content,
+				    VortexEncoding       encoding,
 				    /* value requested through x-serverName (serverName) feature. */
 				    const char         * serverName, 
+				    VortexFrame        * frame,
 				    axl_bool             on_connect)
 {
 	/* get turbulence context */
@@ -630,7 +639,12 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	/* check for process separation and apply operation here */
 	if (def->separate) {
 		/* call to create process */
-		turbulence_process_create_child (ctx, connection, def);
+		turbulence_process_create_child (ctx, connection, def, 
+						 /* signal to handle start request reply */
+						 ! on_connect, 
+						 channel_num,
+						 uri, profile_content, encoding, serverName, 
+						 frame);
 		msg ("finished turbulence_process_create_child..");
 	} /* end if */
 	
@@ -649,7 +663,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * connection, axlPointer data)
 {
 	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
-	return __turbulence_ppath_select ((TurbulenceCtx *) data, connection, "", axl_true);
+	return __turbulence_ppath_select ((TurbulenceCtx *) data, connection, -1, NULL, NULL, -1, "", NULL, axl_true);
 }
 
 
