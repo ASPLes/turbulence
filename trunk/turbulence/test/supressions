@@ -1,0 +1,47 @@
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   obj:/lib/libc-2.7.so
+   fun:__nss_database_lookup
+   obj:*
+   obj:*
+   fun:getpwnam_r
+   fun:turbulence_get_system_id
+   fun:__turbulence_ppath_check_user
+   fun:turbulence_ppath_init
+   fun:turbulence_init
+   fun:test_common_init
+   fun:test_06
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   obj:/lib/libc-2.7.so
+   fun:__nss_database_lookup
+   obj:*
+   obj:*
+   fun:getpwnam_r
+   fun:turbulence_get_system_id
+   fun:__turbulence_ppath_check_user
+   fun:turbulence_ppath_init
+   fun:turbulence_init
+   fun:test_common_init
+   fun:test_06
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:inet_ntoa
+   fun:vortex_support_inet_ntoa
+   fun:vortex_connection_set_socket
+   fun:vortex_connection_new_empty_from_connection
+   fun:__vortex_listener_initial_accept
+   fun:vortex_listener_accept_connections
+   fun:__vortex_io_waiting_epoll_dispatch
+   fun:__vortex_reader_run
+   fun:start_thread
+   fun:clone
+}

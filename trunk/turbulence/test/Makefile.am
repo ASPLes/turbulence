@@ -6,9 +6,10 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 configuration_files = \
 	test_07.conf \
 	test_08.conf \
-	test_09.conf
+	test_09.conf \
+	test_10.conf
 
-EXTRA_DIST = $(configuration_files)
+EXTRA_DIST = $(configuration_files) suppressions
 
 # replace with bin_PROGRAMS to check performance
 bin_PROGRAMS = test_01 
