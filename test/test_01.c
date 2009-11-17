@@ -1168,7 +1168,7 @@ axl_bool test_07 (void) {
 	axl_list_free (list);
 
 	/* wait a 1ms to allow turbulence registering created connections */
-	test_common_microwait (3000);
+	test_common_microwait (30000);
 
 	/* check all connections */
 	list = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
@@ -1646,8 +1646,6 @@ int main (int argc, char ** argv)
 	/* configure an additional path to run tests */
 	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", "../data");
 
-	goto init;
-
 	/* test dblist */
 	if (test_01 ()) {
 		printf ("Test 01: Turbulence db-list implementation [   OK   ]\n");
@@ -1718,8 +1716,6 @@ int main (int argc, char ** argv)
 		printf ("Test 09: Turbulence profile path filtering (serverName)  [ FAILED ]\n");
 		return -1;
 	}
-
- init:
 
 	if (test_10 ()) {
 		printf ("Test 10: Turbulence profile path filtering (child processes)  [   OK   ]\n");
