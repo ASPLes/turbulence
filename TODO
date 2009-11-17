@@ -4,10 +4,6 @@ CURRENT FRANCIS WORK
   other. 
     - Add regression test to check its function. 
 
-    - Finish module "provides profile" function and use it to not
-      allow unloading modules from profiles path that uses profiles
-      provided by such modules. 
-
     - Use this to implement mod-radmin allowing other modules to
       install its commands.
 
@@ -19,7 +15,17 @@ CURRENT FRANCIS WORK
     - Use this to allow turbulence to check SASL users at
       turbulence.conf without being linked to mod-sasl.
     
-    - Keep on working on tbc-ctl (check to reenable console stdout).
+    - Keep on working on tbc-ctl (check to reenable console
+      stdout). Rewrite the tool to use PyVortex.
+
+* Remove support for unloading modules. Is causing more problems than
+  advantages. Add support for loading particular modules from inside
+  profile paths.
+
+* Test 10: extend test to check a serverName catched by default path
+  name (to check first profile path is not matched).
+
+* Test 10: extend test to check an unsupported serverName.
 
 IDEAS & USEFUL HINTS
 

@@ -5,17 +5,18 @@
                      -= Introduction =-
 
   Turbulence is a general BEEP application server that provides many
-features already implemented. It is built on top of Vortex Library,
-and new functionality is added through modules. 
+features already implemented and required by server BEEP
+applications. It is built on top of Vortex Library, and new
+functionality is added through modules.
 
-  The idea behind Turbulence is to create a new module implementing
-your profile (or any other feature), that turbulence will load and
-expose according to is configuration.
+  The idea behind Turbulence is to create a modules implementing your
+profile (or any other feature), that turbulence will load and expose
+according to is configuration.
 
   All project documentation can be found at: http://www.turbulence.ws
 
   Additional resources such mailing list, etc are also found at the
-previous site. 
+previous site.
 
 --
 Francis Brosnan Blázquez
