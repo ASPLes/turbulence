@@ -4,7 +4,7 @@
 BEEP serverName feature                              F. Brosnan Blazquez
                                       Advanced Software Production Line,
                                                                     S.L.
-                                                        October 24, 2009
+                                                            October 2009
 
 
                         BEEP serverName feature
@@ -19,12 +19,12 @@ Table of Contents
 
    1.  Requirements notation . . . . . . . . . . . . . . . . . . . . . 2
    2.  Motivation  . . . . . . . . . . . . . . . . . . . . . . . . . . 2
-   3.  Requesting a BEEP session with serverName . . . . . . . . . . . 2
-   4.  serverName Feature Registration . . . . . . . . . . . . . . . . 3
-   5.  Normative References  . . . . . . . . . . . . . . . . . . . . . 3
+   3.  Use cases for serverName feature  . . . . . . . . . . . . . . . 2
+     3.1.  Listener view: provide services for a set of domains  . . . 2
+   4.  Requesting a BEEP session with serverName . . . . . . . . . . . 2
+   5.  serverName Feature Registration . . . . . . . . . . . . . . . . 3
+   6.  Normative References  . . . . . . . . . . . . . . . . . . . . . 3
    Author's Address  . . . . . . . . . . . . . . . . . . . . . . . . . 4
-
-
 
 
 
@@ -72,15 +72,15 @@ BEEP serverName feature  BEEP serverName feature            October 2009
    such serverName value).
 
    As defined in "2.3.1.2 The Start Message" (inside [RFC3080]),
-   serverName value is establish on the first successful channel opened
-   requesting such value, causing the connection/session to be bound to
-   such value.  Next channels opened requesting other serverName values
-   are ignored.
+   serverName value is established on the first successful channel
+   opened requesting such value, causing the connection/session to be
+   bound to such value.  Next channels opened requesting other
+   serverName values are ignored.
 
    The serverName feature presented (for now x-serverName feature) is
-   defined to allow a connecting BEEP peer to signal serverName value at
-   the beginning of the session/connection, without waiting the first
-   channel to be opened.
+   defined to allow a connecting BEEP peer to signal serverName value
+   desired at the beginning of the session/connection, without waiting
+   the first channel to be opened.
 
    The intention is to provide an easy mechanism for BEEP listeners to
    decide providing services according to requested serverName, without
@@ -88,29 +88,33 @@ BEEP serverName feature  BEEP serverName feature            October 2009
 
    The mechanism is entirely optional due to BEEP features nature, but
    when available, will provide a clear path to provide services for
-   only a set of serverNames available.
+   only a set of serverNames available.  It is worth to mention this
+   feature do not fix nor provide any missing feature; it just provide a
+   simply way for both listener and initiator to setup serverName.
 
 
-3.  Requesting a BEEP session with serverName
+3.  Use cases for serverName feature
+
+3.1.  Listener view: provide services for a set of domains
+
+   For a general purpose BEEP server, in the case it is required to
+   provide a different profile policy according to the serverName, it is
+   required to delay such provisioning
+
+
+4.  Requesting a BEEP session with serverName
 
    Taking as reference section 2.4 "Session Establishment and Release"
-   from [RFC3080], a session is opened as usual, but requesting on
-   greetings feature the serverName desired value.  Here is an example:
-
-
-
-
-
-
-
-
-
 
 
 
 Brosnan Blazquez                                                [Page 2]
 
 BEEP serverName feature  BEEP serverName feature            October 2009
+
+
+   from [RFC3080], a session is opened as usual, but requesting on
+   greetings feature the serverName desired value.  Here is an example:
 
 
           L: <wait for incoming connection>
@@ -141,7 +145,7 @@ BEEP serverName feature  BEEP serverName feature            October 2009
    log a diagnostic error).
 
 
-4.  serverName Feature Registration
+5.  serverName Feature Registration
 
    Feature Identification: x-serverName .
 
@@ -151,22 +155,21 @@ BEEP serverName feature  BEEP serverName feature            October 2009
    Contact Information: see document author contact details.
 
 
-5.  Normative References
+6.  Normative References
 
    [RFC3080]  Rose, M., "The Blocks Extensible Exchange Protocol Core",
               RFC 3080, March 2001.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119, March 1997.
-
-
-
 
 
 
 Brosnan Blazquez                                                [Page 3]
 
 BEEP serverName feature  BEEP serverName feature            October 2009
+
+
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
 
 
 Author's Address
@@ -180,9 +183,6 @@ Author's Address
    Phone: 00 34 91 134 14 22
    Email: francis@aspl.es
    URI:   http://www.aspl.es
-
-
-
 
 
 

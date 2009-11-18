@@ -441,35 +441,6 @@ void               turbulence_module_notify_close (TurbulenceCtx * ctx)
 }
 
 /** 
- * @internal Function used to find and unload all modules 
- */
-void               turbulence_module_unload_after_fork (TurbulenceCtx * ctx)
-{
-	/* find all modules configured to load them after activating
-	 * vortex function */
-	axlNode * node;
-
-	node = axl_doc_get (ctx->config, "/turbulence/modules/unload-after-fork/module");
-	if (node == NULL) {
-		msg ("no module to disable after fork");
-		return;
-	} /* end if */
-
-	/* for each module defined, call to unload */
-	while (node != NULL) {
-
-		/* call to unload module name */
-		msg ("unloading module %s after fork", ATTR_VALUE (node, "name"));
-		turbulence_module_unload (ctx, ATTR_VALUE (node, "name"));
-		
-		/* get next node */
-		node = axl_node_get_next_called (node, "module");
-	}
-
-	return;
-}
-
-/** 
  * @brief Cleans the module, releasing all resources and unloading all
  * modules.
  */
