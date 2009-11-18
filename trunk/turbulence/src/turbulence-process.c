@@ -242,9 +242,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			 * remote BEEP peer */
 			channel0 = vortex_connection_get_channel (conn, 0);
 			vortex_channel_block_until_replies_are_sent (channel0, 1000);
-
-			vortex_connection_shutdown (conn);
-			goto finish;
 		}
 		msg ("Channel start accepted on child..");
 	} /* end if */
@@ -253,7 +250,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	vortex_listener_wait (turbulence_ctx_get_vortex_ctx (ctx));
 	msg ("finishing process...");
 
- finish:
 	/* release frame received */
 	vortex_frame_unref (frame);
 

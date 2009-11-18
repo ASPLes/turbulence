@@ -50,6 +50,8 @@ void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
 void turbulence_ppath_change_root    (TurbulenceCtx      * ctx, 
 				      TurbulencePPathDef * ppath_def);
 
+const char * turbulence_ppath_selected (VortexConnection * conn);
+
 axl_bool __turbulence_ppath_select   (TurbulenceCtx      * ctx, 
 				      VortexConnection   * connection, 
 				      int                  channel_num,
