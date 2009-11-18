@@ -104,6 +104,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 {
 	int                   pid;
 	VortexCtx        *    vortex_ctx;
+	VortexChannel    *    channel0;
 
 	/* pipes to communicate logs from child to parent */
 	int                   general_log[2] = {-1, -1};
@@ -225,15 +226,23 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	} /* end if */
 
 	/* now finish and register the connection */
+	vortex_connection_set_close_socket (conn, axl_true);
 	vortex_reader_watch_connection (vortex_ctx, conn);
 
 	/* check to handle start reply message */
 	if (handle_start_reply) {
+		/* handle start channel reply */
 		if (! vortex_channel_0_handle_start_msg_reply (vortex_ctx, conn, channel_num,
 							       profile, profile_content,
-							       encoding, serverName, vortex_frame_get_msgno (frame))) {
+							       encoding, serverName, frame)) {
 			error ("Channel start not accepted on child process, finising process=%d, closing conn id=%d..",
 			       getpid (), vortex_connection_get_id (conn));
+
+			/* wait here so the error message reaches the
+			 * remote BEEP peer */
+			channel0 = vortex_connection_get_channel (conn, 0);
+			vortex_channel_block_until_replies_are_sent (channel0, 1000);
+
 			vortex_connection_shutdown (conn);
 			goto finish;
 		}
