@@ -1664,6 +1664,10 @@ axl_bool test_10 (void) {
 	return axl_true;
 }
 
+axl_bool test_11 (void) {
+	return axl_false;
+}
+
 /** 
  * @brief General regression test to check all features inside
  * turbulence.
@@ -1785,6 +1789,13 @@ int main (int argc, char ** argv)
 		printf ("Test 10: Turbulence profile path filtering (child processes)  [   OK   ]\n");
 	} else {
 		printf ("Test 10: Turbulence profile path filtering (child processes)  [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_11 ()) {
+		printf ("Test 11: Check turbulence <load />  [   OK   ]\n");
+	} else {
+		printf ("Test 11: Check turbulence <load />  [ FAILED ]\n");
 		return -1;
 	}
 
