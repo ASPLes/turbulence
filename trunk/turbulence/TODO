@@ -18,14 +18,8 @@ CURRENT FRANCIS WORK
     - Keep on working on tbc-ctl (check to reenable console
       stdout). Rewrite the tool to use PyVortex.
 
-* Remove support for unloading modules. Is causing more problems than
-  advantages. Add support for loading particular modules from inside
-  profile paths.
-
-* Test 10: extend test to check a serverName catched by default path
-  name (to check first profile path is not matched).
-
-* Test 10: extend test to check an unsupported serverName.
+* Add support for loading particular modules from inside profile
+  paths.
 
 IDEAS & USEFUL HINTS
 

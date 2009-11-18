@@ -134,7 +134,7 @@ int  tbc_mod_gen_template_create ()
 	axl_node_set_comment (node, "unload method, called once the module is required to be unloaded from memory due to child process creation (or similar)", -1);
 	nodeAux = axl_node_create ("unload");
 	axl_node_set_child (node, nodeAux);
-	axl_node_set_cdata_content (nodeAux, "/* Place here the code required to dealloc resources used by your module because turbulence signaled the child process must not have access (using unload-after-fork option) */", -1);
+	axl_node_set_cdata_content (nodeAux, "/* Place here the code required to dealloc resources used by your module because turbulence signaled the child process must not have access */", -1);
 
 	/* dump the xml document */
 	support_dump_file (ctx, doc, 3, "%stemplate.xml", get_out_dir ());

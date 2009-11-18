@@ -70,6 +70,4 @@ void               turbulence_module_notify_close (TurbulenceCtx * ctx);
 
 void               turbulence_module_cleanup      (TurbulenceCtx * ctx);
 
-void               turbulence_module_unload_after_fork (TurbulenceCtx * ctx);
-
 #endif

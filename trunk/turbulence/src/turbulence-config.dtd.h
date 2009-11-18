@@ -68,12 +68,11 @@
                                                                                           \
                                                                                           \
 <!-- modules -->                                                                          \
-<!ELEMENT modules        (directory*, unload-after-fork?, no-load?)>                      \
+<!ELEMENT modules        (directory*, no-load?)>                                          \
                                                                                           \
 <!ELEMENT directory       EMPTY>                                                          \
 <!ATTLIST directory src   CDATA #REQUIRED>                                                \
                                                                                           \
-<!ELEMENT unload-after-fork (module*)>                                                    \
 <!ELEMENT module EMPTY>                                                                   \
 <!ATTLIST module                                                                          \
    name   CDATA #REQUIRED>                                                                \

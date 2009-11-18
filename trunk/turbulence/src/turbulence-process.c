@@ -212,9 +212,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 	vortex_ctx_reinit (vortex_ctx);
 
-	/* call to unload modules after fork */
-	turbulence_module_unload_after_fork (ctx);
-
 	/* set finish handler that will help to finish child process
 	   (or not) */
 	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, NULL);
