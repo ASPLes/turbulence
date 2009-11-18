@@ -1591,6 +1591,29 @@ axl_bool test_10 (void) {
 		return axl_false;
 	} /* end if */
 
+	/* create connection to local server */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (10): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 1 channel: MUST NOT WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel != NULL) {
+		printf ("ERROR (11): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+	
+	/* check connection after created it */
+	if (vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (12): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
 	/* unref queue */
 	vortex_async_queue_unref (queue);
 
