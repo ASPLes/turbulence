@@ -1029,6 +1029,31 @@ void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
 	return;
 }
 
+/** 
+ * @internal Allows to get the current selected profile path on the
+ * provided connection.
+ *
+ * @param conn The connection where the Profile path configured is requested.
+ *
+ * @return The profile path name or NULL if it has no profile path
+ * defined.
+ */
+const char * turbulence_ppath_selected (VortexConnection * conn)
+{
+	TurbulencePPathState * state;
+
+	/* check connection reference */
+	v_return_val_if_fail (conn, axl_false);
+
+	/* get state */
+	state = vortex_connection_get_data (conn, TURBULENCE_PPATH_STATE);
+	if (state == NULL || state->path_selected == NULL)
+		return NULL;
+	
+	/* return path name */
+	return state->path_selected->path_name;
+}
+
 #if defined(DEFINE_CHROOT_PROTO)
 int  chroot (const char * path);
 #endif

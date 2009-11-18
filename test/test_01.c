@@ -1469,6 +1469,9 @@ void test_10_received (VortexChannel    * channel,
 	/* send pid reply */
 	if (axl_cmp ("GET pid", (char*) vortex_frame_get_payload (frame))) 
 		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%d", getpid ());
+
+	if (axl_cmp ("GET profile path", (char*) vortex_frame_get_payload (frame))) 
+		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%s", turbulence_ppath_selected (connection));
 	return;
 }
 
@@ -1494,11 +1497,14 @@ axl_bool test_10 (void) {
 
 	/* register here all profiles required by tests */
 	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-2");
 	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
 	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
 
 	/* register a frame received for the remote side (child process) */
 	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-1", 
+					      test_10_received, NULL);
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-2", 
 					      test_10_received, NULL);
 
 	/* run configuration */
@@ -1582,7 +1588,7 @@ axl_bool test_10 (void) {
 	vortex_connection_close (conn);
 
 	/* do a micro wait */
-	test_common_microwait (1000000);
+	test_common_microwait (2000000);
 
 	/* check child count */
 	if (turbulence_process_child_count (tCtxTest10) != 0) {
@@ -1604,13 +1610,48 @@ axl_bool test_10 (void) {
 		printf ("ERROR (11): expected to find NULL channel reference (creation failure) but found proper result..\n");
 		return axl_false;
 	}
-	
-	/* check connection after created it */
-	if (vortex_connection_is_ok (conn, axl_false)) {
-		printf ("ERROR (12): expected to find proper connection after turbulence startup..\n");
+
+	/* check connection status */
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (12): expected to find connection in proper status but found unconnected..\n");
+		return axl_false;
+	}
+
+	/* check to create profile 2 channel:  MUST WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-2");
+	if (channel == NULL) {
+		printf ("ERROR (13): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	}
+
+	/* check connection status */
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (14): expected to find connection in proper status but found unconnected..\n");
+		return axl_false;
+	}
+
+	/* call to get default profile path selected */
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "GET profile path", 16, NULL)) {
+		printf ("ERROR (15): expected to find remote pid request message sent successfully but found an error..\n");
+		return axl_false;
+	} /* end if */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (16): expected to find reply for get pid request...\n");
 		return axl_false;
 	} /* end if */
 
+	printf ("Test 10: Profile path received: %s..\n", (const char *) vortex_frame_get_payload (frame));
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "default...")) {
+		printf ("ERROR (17): expected to find profile path 'default...' but found %s..\n",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* release the frame */
+	vortex_frame_unref (frame);
+	
 	/* close the connection */
 	vortex_connection_close (conn);
 
