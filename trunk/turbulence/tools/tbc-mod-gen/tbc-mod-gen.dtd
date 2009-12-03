@@ -6,7 +6,7 @@
 
 <!ELEMENT description (#PCDATA)>
 
-<!ELEMENT source-code (additional-content?, init, close, reconf, unload)>
+<!ELEMENT source-code (additional-content?, init, close, reconf, unload, ppath-selected)>
 
 <!ELEMENT additional-content (#PCDATA)>
 
@@ -17,3 +17,5 @@
 <!ELEMENT reconf (#PCDATA)>
 
 <!ELEMENT unload (#PCDATA)>
+
+<!ELEMENT ppath-selected (#PCDATA)>
