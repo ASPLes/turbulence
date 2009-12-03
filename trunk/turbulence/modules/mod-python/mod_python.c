@@ -347,22 +347,21 @@ static int  mod_python_init (TurbulenceCtx * _ctx) {
 		error ("failed to load mod-python configuration file, error found was: %s", 
 		       axl_error_get (error));
 		axl_error_free (error);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* for each application found, register it and call to
 	 * initialize its function */
 	if (! mod_python_init_applications ())
-		return false;
+		return axl_false;
 
 	/* let other threads to enter inside python engine: this must be the last call */
 	PyEval_ReleaseLock ();
 
 	msg ("mod-python started..");
 
-	return true;
+	return axl_true;
 } /* end mod_python_init */
-
 
 void mod_python_close_module (axlNode * node, axlNode * location)
 {

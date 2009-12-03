@@ -53,17 +53,23 @@
  *
  * The module must return axl_true to signal the modules was
  * initialized and must be registered as properly loaded.
+ *
+ * @param ctx The turbulence context where the init operation is
+ * taking place.
  * 
  * @return axl_true if the module is usable or axl_false if
  * not. Returning axl_false caused the module to be not loaded.
  */
-typedef int  (*ModInitFunc)  (TurbulenceCtx * ctx);
+typedef axl_bool  (*ModInitFunc)  (TurbulenceCtx * ctx);
 
 /** 
  * @brief Public definition for the close function that must implement
  * all operations required to unload and terminate a module.
  * 
  * The function doesn't receive and return any data.
+ *
+ * @param ctx The turbulence context where the close operation is
+ * taking place.
  */
 typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
 
@@ -72,8 +78,21 @@ typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
  * be implemented to receive notification if the turbulence server
  * configuration is reloaded (either because a signal was received or
  * because some module has called \ref turbulence_reload_config).
+ *
+ * @param ctx The turbulence context where the reconf operation is
+ * taking place.
  */
 typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
+
+/** 
+ * @brief Allows to notify the module that a profile path was selected
+ * for a connection.
+ *
+ * @param ctx The turbulence context where the profile path is being selected.
+ * @param ppath_selected The profile path selected.
+ * @param conn The connection where the profile path was selected.
+ */
+typedef void (*ModPPathSelected) (TurbulenceCtx * ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn);
 
 
 /** 
@@ -129,6 +148,11 @@ typedef struct _TurbulenceModDef {
 	 * permissions user.
 	 */
 	ModCloseFunc  unload;
+
+	/** 
+	 * @brief A reference to the profile path selected handler.
+	 */
+	ModPPathSelected ppath_selected;
 } TurbulenceModDef;
 
 /** 

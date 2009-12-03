@@ -9,6 +9,8 @@ configuration_files = \
 	test_09.conf \
 	test_10.conf
 
+SUBDIRS = test_11_module
+
 EXTRA_DIST = $(configuration_files) suppressions
 
 # replace with bin_PROGRAMS to check performance

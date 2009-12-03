@@ -303,7 +303,7 @@ int  tbc_mod_gen_compile ()
 	write ("%s_init,\n", tolower);
 	write ("%s_close,\n", tolower);
 	write ("%s_reconf,\n", tolower);
-	write ("%s_unload\n", tolower);
+	write ("%s_unload,\n", tolower);
 	write ("%s_ppath_selected\n", tolower);
 	pop_indent ();
 
