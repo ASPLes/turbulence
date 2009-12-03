@@ -1038,7 +1038,7 @@ void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
  * @return The profile path name or NULL if it has no profile path
  * defined.
  */
-const char * turbulence_ppath_selected (VortexConnection * conn)
+TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn)
 {
 	TurbulencePPathState * state;
 
@@ -1051,7 +1051,21 @@ const char * turbulence_ppath_selected (VortexConnection * conn)
 		return NULL;
 	
 	/* return path name */
-	return state->path_selected->path_name;
+	return state->path_selected;
+}
+
+/** 
+ * @brief Allows to get profile path name from the provided profile
+ * path.
+ * @param ppath_def The profile path definition.
+ *
+ * @return A reference to the profile path name or NULL it if fails.
+ */
+const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def)
+{
+	if (ppath_def == NULL)
+		return NULL;
+	return ppath_def->path_name;
 }
 
 #if defined(DEFINE_CHROOT_PROTO)

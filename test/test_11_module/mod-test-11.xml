@@ -1,0 +1,18 @@
+<?xml version='1.0' standalone='yes' ?>
+<mod-def>
+   <name>mod-test-11</name>
+   <description>Module used to run test_11 and check profile path function</description>
+   <source-code>
+      <!-- init method, called once the module is loaded -->
+      <init><![CDATA[/* nothing to do here */
+return axl_true;]]></init>
+      <!-- close method, called once the module is going to be stoped -->
+      <close><![CDATA[/* no close code */]]></close>
+      <!-- reconf method, called once it is received a 'reconfiguration signal' -->
+      <reconf><![CDATA[/* no reconf code */]]></reconf>
+      <!-- unload method, called once the module is required to be unloaded from memory due to child process creation (or similar) -->
+      <unload><![CDATA[/* no unload code */]]></unload>
+      <!-- ppath_selected method, called once a profile path has been selected for a connection. -->
+      <ppath-selected><![CDATA[]]></ppath-selected>
+   </source-code>
+</mod-def>

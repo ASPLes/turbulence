@@ -1665,6 +1665,9 @@ axl_bool test_10 (void) {
 }
 
 axl_bool test_11 (void) {
+	
+	
+
 	return axl_false;
 }
 
@@ -1793,9 +1796,9 @@ int main (int argc, char ** argv)
 	}
 
 	if (test_11 ()) {
-		printf ("Test 11: Check turbulence <load />  [   OK   ]\n");
+		printf ("Test 11: Check turbulence profile path selected  [   OK   ]\n");
 	} else {
-		printf ("Test 11: Check turbulence <load />  [ FAILED ]\n");
+		printf ("Test 11: Check turbulence profile path selected  [ FAILED ]\n");
 		return -1;
 	}
 
