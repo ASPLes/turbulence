@@ -130,11 +130,17 @@ int  tbc_mod_gen_template_create ()
 	axl_node_set_child (node, nodeAux);
 	axl_node_set_cdata_content (nodeAux, "/* Place here all your optional reconf code if the HUP signal is received */", -1);
 
-	/* close node */
+	/* unload node */
 	axl_node_set_comment (node, "unload method, called once the module is required to be unloaded from memory due to child process creation (or similar)", -1);
 	nodeAux = axl_node_create ("unload");
 	axl_node_set_child (node, nodeAux);
 	axl_node_set_cdata_content (nodeAux, "/* Place here the code required to dealloc resources used by your module because turbulence signaled the child process must not have access */", -1);
+
+	/* ppath-selected node */
+	axl_node_set_comment (node, "ppath_selected method, called once a profile path has been selected for a connection.", -1);
+	nodeAux = axl_node_create ("ppath-selected");
+	axl_node_set_child (node, nodeAux);
+	axl_node_set_cdata_content (nodeAux, "/* Place here the code to implement all provisioning that was deferred because non enough data was available at init method (connection and profile path selected) */", -1);
 
 	/* dump the xml document */
 	support_dump_file (ctx, doc, 3, "%stemplate.xml", get_out_dir ());
@@ -274,6 +280,16 @@ int  tbc_mod_gen_compile ()
 	}
 	write ("} /* end %s_unload */\n\n", tolower);
 
+	/* ppath_selected handler */
+	write ("/* %s ppath-selected handler */\n", mod_name);
+	write ("static void %s_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {\n", tolower);
+	node = axl_doc_get (doc, "/mod-def/source-code/ppath-selected");
+	if (axl_node_get_content (node, NULL)) {
+		/* write the content defined */
+		write ("%s\n", axl_node_get_content (node, NULL));
+	}
+	write ("} /* end %s_ppath_selected */\n\n", tolower);
+
 	/* write handler description */
 	write ("/* Entry point definition for all handlers included in this module */\n");
 	write ("TurbulenceModDef module_def = {\n");
@@ -288,6 +304,7 @@ int  tbc_mod_gen_compile ()
 	write ("%s_close,\n", tolower);
 	write ("%s_reconf,\n", tolower);
 	write ("%s_unload\n", tolower);
+	write ("%s_ppath_selected\n", tolower);
 	pop_indent ();
 
 	write ("};\n\n");
