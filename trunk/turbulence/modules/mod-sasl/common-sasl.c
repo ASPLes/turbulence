@@ -327,10 +327,10 @@ int  common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * s
  * @param mutex Optional mutex variable used to lock the
  * implementation to avoid race conditions between threads.
  */
-int  common_sasl_load_config (TurbulenceCtx    * ctx,
-			      SaslAuthBackend ** sasl_backend,
-			      const char       * alt_location,
-			      VortexMutex      * mutex)
+axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
+				   SaslAuthBackend ** sasl_backend,
+				   const char       * alt_location,
+				   VortexMutex      * mutex)
 {
 	axlNode         * node;
 	axlError        * err;
@@ -469,6 +469,8 @@ int  common_sasl_load_config (TurbulenceCtx    * ctx,
 		common_sasl_free (result);
                 return axl_false;
 	}
+
+	msg ("SASL configuration %s loaded OK", result->sasl_conf_path);
 
 	return axl_true;
 }
@@ -804,13 +806,16 @@ int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 
 	/* check serverName authentication */
 	if (serverName != NULL) {
+		msg ("check SASL databases for serverName=%s", serverName);
 		/* try to find the associated database */
 		db = axl_hash_get (sasl_backend->dbs, (axlPointer) serverName);
 	} /* end if */
 
 	/* if no database found, use the default one */
-	if (db == NULL)
+	if (db == NULL) {
+		msg ("no especific serverName database found, using default: %p", sasl_backend->default_db);
 		db = sasl_backend->default_db;
+	}
 
 	/* check database */
 	if (db == NULL) {

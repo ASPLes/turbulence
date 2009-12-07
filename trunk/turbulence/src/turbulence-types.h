@@ -47,15 +47,49 @@
  * @{
  */
 
-/* types */
+/** 
+ * @internal Type that represents all turbulence profile paths
+ */
 typedef struct _TurbulencePPath TurbulencePPath;
 
+/** 
+ * @brief Type definition that represents a singl profile path configuration.
+ */
 typedef struct _TurbulencePPathDef TurbulencePPathDef;
 
 /** 
- * Object representing a loop watching a set of files. See \ref turbulence_loop.
+ * @brief Type representing a loop watching a set of files. See \ref turbulence_loop.
  */
 typedef struct _TurbulenceLoop TurbulenceLoop;
+
+/** 
+ * @brief Type that represents a turbulence module.
+ */
+typedef struct _TurbulenceModule TurbulenceModule;
+
+/** 
+ * @brief Set of handlers that are supported by modules. This handler
+ * descriptors are used by some functions to notify which handlers to
+ * call: \ref turbulence_module_notify.
+ */
+typedef enum {
+	/** 
+	 * @brief Module reload handler 
+	 */
+	TBC_RELOAD_HANDLER = 1,
+	/** 
+	 * @brief Module close handler 
+	 */
+	TBC_CLOSE_HANDLER  = 2,
+	/** 
+	 * @brief Module init handler 
+	 */
+	TBC_INIT_HANDLER   = 3,
+	/** 
+	 * @brief Module profile path selected handler.
+	 */ 
+	TBC_PPATH_SELECTED_HANDLER = 4
+} TurbulenceModHandler;
 
 #endif
 

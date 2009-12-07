@@ -1668,7 +1668,9 @@ axl_bool test_11 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
-	VortexChannel    * channel;
+	VortexChannel    * channel; 
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
 
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_11.conf")) 
@@ -1681,18 +1683,149 @@ axl_bool test_11 (void) {
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-11.server"),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
 		return axl_false;
 	} /* end if */
 
+	/* now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+	
+	/* send a message and check result */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "content", 7, NULL)) {
+		printf ("ERROR (3): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (4): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "profile path notified")) {
+		printf ("ERROR (5): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* close connection */
+	vortex_connection_close (conn);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
 
-	return axl_false;
+	return axl_true;
 }
+
+axl_bool test_12 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel; 
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
+
+	/* SASL status */
+	VortexStatus       status         = VortexError;
+	char             * status_message = NULL;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_12.conf")) 
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
+						   vortex_support_build_filename ("test_12_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* now open connection to localhost */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* enable SASL auth for current connection */
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	
+	if (status != VortexOk) {
+		printf ("ERROR (2): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+		return axl_false;
+	} /* end if */
+
+	/* now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+	
+	/* send a message and check result */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "content", 7, NULL)) {
+		printf ("ERROR (3): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (4): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "profile path notified")) {
+		printf ("ERROR (5): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* close connection */
+	vortex_connection_close (conn);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+
+#define run_test(function, message) do{           \
+    if (function ()) {                            \
+          printf ("%s [   OK   ]\n", message);    \
+    } else {                                      \
+          printf ("%s [ FAILED ]\n", message);    \
+          return -1;                              \
+    }                                             \
+}while(0);
 
 /** 
  * @brief General regression test to check all features inside
@@ -1740,90 +1873,35 @@ int main (int argc, char ** argv)
 	/* configure an additional path to run tests */
 	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", "../data");
 
-	/* test dblist */
-	if (test_01 ()) {
-		printf ("Test 01: Turbulence db-list implementation [   OK   ]\n");
-	}else {
-		printf ("Test 01: Turbulence db-list implementation [ FAILED ]\n");
-		return -1;
-	} /* end if */
+	goto init;
 
-	if (test_01a ()) {
-		printf ("Test 01-a: Regular expressions [   OK   ]\n");
-	}else {
-		printf ("Test 01-a: Regular expressions [ FAILED ]\n");
-		return -1;
-	} /* end if */
+	/* run tests */
+	run_test (test_01, "Test 01: Turbulence db-list implementation");
 
-	if (test_02 ()) {
-		printf ("Test 02: Turbulence misc functions [   OK   ]\n");
-	}else {
-		printf ("Test 02: Turbulence misc functions [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_01a, "Test 01-a: Regular expressions");
 
-	if (test_03 ()) {
-		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [   OK   ]\n");
-	} else {
-		printf ("Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_02, "Test 02: Turbulence misc functions");
 
-	if (test_04 ()) {
-		printf ("Test 04: Check module loading support  [   OK   ]\n");
-	} else {
-		printf ("Test 04: Check module loading support  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)");
 
-	if (test_05 ()) {
-		printf ("Test 05: Check mediator API  [   OK   ]\n");
-	} else {
-		printf ("Test 05: Check mediator API  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_04, "Test 04: Check module loading support");
+	
+	run_test (test_05, "Test 05: Check mediator API");
 
-	if (test_06 ()) {
-		printf ("Test 06: Turbulence startup and stop  [   OK   ]\n");
-	} else {
-		printf ("Test 06: Turbulence startup and stop  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_06, "Test 06: Turbulence startup and stop");
 
-	if (test_07 ()) {
-		printf ("Test 07: Turbulence local connection  [   OK   ]\n");
-	} else {
-		printf ("Test 07: Turbulence local connection  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_07, "Test 07: Turbulence local connection");
 
-	if (test_08 ()) {
-		printf ("Test 08: Turbulence profile path filtering (basic)  [   OK   ]\n");
-	} else {
-		printf ("Test 08: Turbulence profile path filtering (basic)  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_08, "Test 08: Turbulence profile path filtering (basic)");
 
-	if (test_09 ()) {
-		printf ("Test 09: Turbulence profile path filtering (serverName)  [   OK   ]\n");
-	} else {
-		printf ("Test 09: Turbulence profile path filtering (serverName)  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_09, "Test 09: Turbulence profile path filtering (serverName)");
 
-	if (test_10 ()) {
-		printf ("Test 10: Turbulence profile path filtering (child processes)  [   OK   ]\n");
-	} else {
-		printf ("Test 10: Turbulence profile path filtering (child processes)  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
 
-	if (test_11 ()) {
-		printf ("Test 11: Check turbulence profile path selected  [   OK   ]\n");
-	} else {
-		printf ("Test 11: Check turbulence profile path selected  [ FAILED ]\n");
-		return -1;
-	}
+	run_test (test_11, "Test 11: Check turbulence profile path selected");
+
+ init:
+	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)");
 
 	/* terminate turbulence support module */
 	vortex_support_cleanup (vortex_ctx);

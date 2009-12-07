@@ -152,14 +152,14 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		if (! vortex_support_file_test (fullpath, FILE_IS_REGULAR))
 			goto next;
 
-		/* notify file found */
-		msg ("file found: %s", fullpath);		
-
-		/* check if the fullpath is ended with a ~ sign */
-		if (fullpath [strlen (fullpath) - 1] == '~') {
-			wrn ("skiping file %s which looks a backup one", fullpath);
+		/* check if the fullpath is ended with .xml */
+		if (strlen (fullpath) < 5 || ! axl_cmp (fullpath + (strlen (fullpath) - 4), ".xml")) {
+			msg2 ("skiping file %s which do not end with .xml", fullpath);
 			goto next;
 		} /* end if */
+
+		/* notify file found */
+		msg ("possible module pointer found: %s", fullpath);		
 		
 		/* check its xml format */
 		doc = axl_doc_parse_from_file (fullpath, &error);

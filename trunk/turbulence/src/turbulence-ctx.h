@@ -57,6 +57,17 @@ void            turbulence_ctx_reinit         (TurbulenceCtx * ctx);
 void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx, 
 					       VortexCtx     * vortex_ctx);
 
+/** 
+ * @brief Allows to get the vortex context associated to the
+ * turbulence context provided.
+ * 
+ * @param _ctx The turbulence context which is required to return the
+ * vortex context associated.
+ * 
+ * @return A reference to the vortex context associated.
+ */
+#define TBC_VORTEX_CTX(_ctx) (turbulence_ctx_get_vortex_ctx (_ctx))
+
 VortexCtx     * turbulence_ctx_get_vortex_ctx (TurbulenceCtx * ctx);
 
 void            turbulence_ctx_set_data       (TurbulenceCtx * ctx,

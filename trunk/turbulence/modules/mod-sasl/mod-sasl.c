@@ -48,7 +48,7 @@ int      mod_sasl_plain_validation  (VortexConnection * connection,
 				     const char       * authorization_id,
 				     const char       * password)
 {
-	msg ("required to auth: auth_id=%s, authorization_id=%s", 
+	msg ("required to auth: auth_id=%s, authorization_id=%s, serverName=%s", 
 	     auth_id ? auth_id : "", authorization_id ? authorization_id : "");
 
 	/* call to authenticate */
@@ -59,40 +59,23 @@ int      mod_sasl_plain_validation  (VortexConnection * connection,
 				   password,
 				   vortex_connection_get_server_name (connection),
 				   &sasl_xml_db_mutex)) {
-		return true;
+		return axl_true;
 	} /* end if */
 
         /* deny SASL request to authenticate remote peer */
 	error ("auth failed for auth_id=%s", auth_id);
-        return false;
-}
-
-/** 
- * @brief Loads current sasl configuration and user databases.
- */
-int  sasl_load_config (TurbulenceCtx * ctx)
-{
-	/* load and check sasl conf */
-	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, &sasl_xml_db_mutex)) {
-		/* failed to load sasl module */
-		return false;
-	}
-
-	/* sasl loaded and prepared */
-	return true;
+        return axl_false;
 }
 
 
 /** 
  * @brief Init function, perform all the necessary code to register
  * profiles, configure Vortex, and any other task. The function must
- * return true to signal that the module was initialized
- * ok. Otherwise, false must be returned.
+ * return axl_true to signal that the module was initialized
+ * ok. Otherwise, axl_false must be returned.
  */
-static int  sasl_init (TurbulenceCtx * _ctx)
+static int  mod_sasl_init (TurbulenceCtx * _ctx)
 {
-	int  at_least_one_method = false;
-
 	/* prepare mod-sasl module */
 	TBC_MOD_PREPARE (_ctx);
 
@@ -103,19 +86,30 @@ static int  sasl_init (TurbulenceCtx * _ctx)
 		error ("Unable to start SASL support, init function failed");
 		/* call to check clean start */
 		CLEAN_START(ctx);
-		return false;
+		return axl_false;
 	} /* end if */
 
 	/* init mutex */
 	vortex_mutex_create (&sasl_xml_db_mutex);
 
-	/* load configuration file */
-	if (! sasl_load_config (ctx)) {
-		/* call to check clean start */
-		CLEAN_START(ctx);
+	return axl_true;
+}
 
-		return false;
-	}
+/** 
+ * @brief Handler called once a profile path was selected for a
+ * particular connection.
+ */
+static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx, 
+				     TurbulencePPathDef * ppath_selected, 
+				     VortexConnection   * conn) {
+
+	/* load configuration file and populate backend with the
+	   serverName required for this connection */
+	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, &sasl_xml_db_mutex))  {
+		wrn ("Failed to loas SASL configuration for ppath selected '%s' and connection id %d", 
+		     turbulence_ppath_get_name (ppath_selected), vortex_connection_get_id (conn));
+		return;
+	} /* end if */
 
 	/* check for sasl methods to be activated */
 	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_xml_db_mutex)) {
@@ -128,12 +122,8 @@ static int  sasl_init (TurbulenceCtx * _ctx)
 		if (! vortex_sasl_accept_negotiation (TBC_VORTEX_CTX(ctx), VORTEX_SASL_PLAIN)) {
 			error ("Unable accept incoming SASL PLAIN profile");
 		} /* end if */			
-		
-		/* set that at least one method is activated */
-		at_least_one_method = true;
 	} else {
 		error ("not allowed PLAIN authentication method..");
-		
 	} /* end if */
 
 	/* check databases that have remote admin */
@@ -152,9 +142,8 @@ static int  sasl_init (TurbulenceCtx * _ctx)
 			/* no user space data for the dispatch function. */
 			sasl_backend);
 	}
-
-	/* return if one authentication method as activated */
-	return at_least_one_method;
+	
+	return;
 }
 
 /** 
@@ -162,7 +151,7 @@ static int  sasl_init (TurbulenceCtx * _ctx)
  * unload the module or it is being closed. All resource deallocation
  * and stop operation required must be done here.
  */
-static void sasl_close (TurbulenceCtx * ctx)
+static void mod_sasl_close (TurbulenceCtx * ctx)
 {
 	msg ("turbulence SASL close");
 	/* call to free all resources dumping back to disk current
@@ -185,7 +174,7 @@ static void sasl_close (TurbulenceCtx * ctx)
  * all memory and elements used keeping in mind the module may be
  * still in by turbulence main process.
  */
-static void sasl_unload (TurbulenceCtx * ctx)
+static void mod_sasl_unload (TurbulenceCtx * ctx)
 {
 	msg ("unloading SASL module..");
 
@@ -205,11 +194,13 @@ static void sasl_unload (TurbulenceCtx * ctx)
 TurbulenceModDef module_def = {
 	"mod-sasl",
 	"Auth functions, SASL profile",
-	sasl_init,
-	sasl_close,
+	mod_sasl_init,
+	mod_sasl_close,
 	/* no reconf function for now */
 	NULL,
-	sasl_unload
+	mod_sasl_unload,
+	/* profile path selected */
+	mod_sasl_ppath_selected
 };
 
 /** 
