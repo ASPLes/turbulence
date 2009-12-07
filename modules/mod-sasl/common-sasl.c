@@ -255,8 +255,10 @@ void common_sasl_free_common (SaslAuthBackend * backend, axl_bool dump_content)
 	axl_hash_free       (backend->dbs);
 
 	/* free default database */
-	backend->default_db->dump_on_close = dump_content;
-	common_sasl_db_free (backend->default_db);
+	if (backend->default_db) {
+		backend->default_db->dump_on_close = dump_content;
+		common_sasl_db_free (backend->default_db);
+	} /* end if */
 
 	/* free node itself */
 	axl_free            (backend);

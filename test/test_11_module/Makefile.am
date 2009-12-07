@@ -18,5 +18,5 @@ modconfdir   = `turbulence-config --mod-xml`
 modconf_DATA = mod_test_11.xml mod_test_11.win32.xml
 
 mod_test_11.xml mod_test_11.win32.xml:
-	echo "<mod-turbulence location=\"`turbulence-config --mod-dir`/mod_test_11.so\"/>" > mod_test_11.xml
-	echo "<mod-turbulence location=\"../modules/mod_test_11.dll\"/>" > mod_test_11.win32.xml
+	echo "<mod-turbulence location=\"`find ../test_11_module/ -name *.so`\"/>" > mod_test_11.xml
+	echo "<mod-turbulence location=\"`find ../test_11_module/ -name *.dll`\"/>" > mod_test_11.win32.xml

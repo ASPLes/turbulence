@@ -250,6 +250,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		msg ("Channel start accepted on child..");
 	} /* end if */
 	
+	/* calling to cleanup */
+	turbulence_process_child_cleanup (ctx);
+	
 	msg ("child process created...wait for exit");
 	vortex_listener_wait (turbulence_ctx_get_vortex_ctx (ctx));
 	msg ("finishing process...");
@@ -370,6 +373,50 @@ axl_bool turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid)
 	vortex_mutex_unlock (&ctx->child_process_mutex);
 
 	return result;
+}
+
+/** 
+ * @internal Allows to install a handler that is called to cleanup
+ * child processes created.
+ */
+void turbulence_process_install_child_cleanup (TurbulenceCtx           * ctx, 
+					       TurbulenceChildCleanup    child_cleanup, 
+					       axlPointer                user_data)
+{
+	/* check for maximum cleanup handlers */
+	if (ctx->child_cleanup_installed == TBC_MAX_CLEANUP_HANDLERS)
+		return;
+
+	/* install handler and pointer */
+	ctx->child_cleanup[ctx->child_cleanup_installed] = child_cleanup;
+	ctx->child_pointer[ctx->child_cleanup_installed] = user_data;
+
+	/* update cleanup handlers */
+	ctx->child_cleanup_installed++;
+	return;
+}
+
+/** 
+ * @internal Function used to cleanup the child process created (for
+ * example removing memory used by parent process which is not used by
+ * child process).
+ *
+ * @param ctx Context where the child cleanup will be run.
+ */
+void turbulence_process_child_cleanup (TurbulenceCtx * ctx)
+{
+	TurbulenceChildCleanup cleanup_handler;
+
+	int iterator = 0;
+	while (iterator < ctx->child_cleanup_installed) {
+		/* call cleanup handler */
+		cleanup_handler = ctx->child_cleanup[iterator];
+		cleanup_handler (ctx, ctx->child_pointer[iterator]);
+
+		/* next position */
+		iterator++;
+	} /* end while */
+	return;
 }
 
 /** 

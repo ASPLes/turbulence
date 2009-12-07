@@ -1705,12 +1705,14 @@ axl_bool test_11 (void) {
 		return axl_false;
 	} /* end if */
 
+	printf ("Test 11: waiting turbulence reply..\n");
 	frame = vortex_channel_get_reply (channel, queue);
 	if (frame == NULL) {
 		printf ("ERROR (4): expected to find reply for get pid request...\n");
 		return axl_false;
 	} /* end if */
 
+	printf ("Test 11: reply received checking content..\n");
 	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "profile path notified")) {
 		printf ("ERROR (5): expected to find 'profile path notified' but found '%s'",
 			(const char*) vortex_frame_get_payload (frame));
@@ -1730,6 +1732,19 @@ axl_bool test_11 (void) {
 	test_common_exit (vCtx, tCtx);
 
 	return axl_true;
+}
+
+void test_12_cleanup (TurbulenceCtx * ctx, axlPointer pointer)
+{
+	VortexConnection * conn = (VortexConnection *) pointer;
+
+	printf ("Test 12: calling to cleanup id=%d (refs: %d)..\n", vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
+	vortex_connection_set_close_socket (conn, axl_false);
+	vortex_connection_shutdown (conn);
+	vortex_connection_unref (conn, "test_12_cleanup"
+
+);
+	return;
 }
 
 axl_bool test_12 (void) {
@@ -1765,6 +1780,9 @@ axl_bool test_12 (void) {
 		return axl_false;
 	} /* end if */
 
+	/* install cleanup to remove connection from the child */
+	turbulence_process_install_child_cleanup (tCtx, test_12_cleanup, conn);
+	
 	/* enable SASL auth for current connection */
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
@@ -1774,6 +1792,8 @@ axl_bool test_12 (void) {
 		printf ("ERROR (2): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
 		return axl_false;
 	} /* end if */
+
+	printf ("Test 12: authentication under domain test-12.server COMPLETE\n");
 
 	/* now create a channel */
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
@@ -1818,6 +1838,12 @@ axl_bool test_12 (void) {
 }
 
 
+/** 
+ * @brief Helper handler that allows to execute the function provided
+ * with the message associated.
+ * @param function The handler to be called (test)
+ * @param message The message value.
+ */
 #define run_test(function, message) do{           \
     if (function ()) {                            \
           printf ("%s [   OK   ]\n", message);    \
@@ -1826,6 +1852,49 @@ axl_bool test_12 (void) {
           return -1;                              \
     }                                             \
 }while(0);
+
+void test_with_context_init (void) {
+
+	/* init vortex context and support module */
+	vortex_ctx = vortex_ctx_new ();
+
+	/* init vortex support */
+	vortex_support_init (vortex_ctx);
+
+	/* create turbulence context */
+	ctx = turbulence_ctx_new ();
+	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
+
+	/* init module functions */
+	turbulence_module_init (ctx);
+
+	/* uncomment the following four lines to get debug */
+	if (test_common_enable_debug) {
+		turbulence_log_enable       (ctx, axl_true);
+		turbulence_color_log_enable (ctx, axl_true);
+		turbulence_log2_enable      (ctx, axl_true);
+		turbulence_log3_enable      (ctx, axl_true);
+	} /* end if */
+
+	/* configure an additional path to run tests */
+	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", "../data");
+
+	return;
+}
+
+void terminate_contexts (void) {
+	/* terminate turbulence support module */
+	vortex_support_cleanup (vortex_ctx);
+
+	/* terminate module functions */
+	turbulence_module_cleanup (ctx);
+
+	/* free context */
+	vortex_ctx_free (vortex_ctx);
+	turbulence_ctx_free (ctx);
+	
+	return;
+}
 
 /** 
  * @brief General regression test to check all features inside
@@ -1848,32 +1917,15 @@ int main (int argc, char ** argv)
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
-	/* init vortex context and support module */
-	vortex_ctx = vortex_ctx_new ();
-
-	/* init vortex support */
-	vortex_support_init (vortex_ctx);
-
-	/* create turbulence context */
-	ctx = turbulence_ctx_new ();
-	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
-
 	/* uncomment the following four lines to get debug */
 	if (argc > 1 && axl_cmp (argv[1], "--debug")) {
 		test_common_enable_debug = axl_true;
-		turbulence_log_enable       (ctx, axl_true);
-		turbulence_color_log_enable (ctx, axl_true);
-		turbulence_log2_enable      (ctx, axl_true);
-		turbulence_log3_enable      (ctx, axl_true);
 	} /* end if */
 
-	/* init module functions */
-	turbulence_module_init (ctx);
-
-	/* configure an additional path to run tests */
-	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", "../data");
-
 	goto init;
+
+	/* init context to be used on the following tests */
+	test_with_context_init ();
 
 	/* run tests */
 	run_test (test_01, "Test 01: Turbulence db-list implementation");
@@ -1885,6 +1937,9 @@ int main (int argc, char ** argv)
 	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)");
 
 	run_test (test_04, "Test 04: Check module loading support");
+
+	/* terminate context used by previous tests */
+	terminate_contexts ();
 	
 	run_test (test_05, "Test 05: Check mediator API");
 
@@ -1899,19 +1954,8 @@ int main (int argc, char ** argv)
 	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
 
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
-
- init:
-	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)");
-
-	/* terminate turbulence support module */
-	vortex_support_cleanup (vortex_ctx);
-
-	/* terminate module functions */
-	turbulence_module_cleanup (ctx);
-
-	/* free context */
-	vortex_ctx_free (vortex_ctx);
-	turbulence_ctx_free (ctx);
+init:
+	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 
 	printf ("All tests passed OK!\n");
 

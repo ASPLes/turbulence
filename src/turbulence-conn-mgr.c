@@ -87,9 +87,8 @@ void turbulence_conn_mgr_unref (axlPointer data)
 	TurbulenceCtx          * ctx   = state->ctx;
 
 	/* uninstall on close full handler to avoid race conditions */
-	if (! vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state)) 
-		error ("attention, failed to remove on close handler, this could cause problems..");
-
+	vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state);
+	
 	/* unref the connection */
 	msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
 	vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
