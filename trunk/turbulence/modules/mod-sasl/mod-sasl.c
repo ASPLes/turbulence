@@ -43,28 +43,34 @@ char            * sasl_xml_db_path = NULL;
 VortexMutex       sasl_xml_db_mutex;
 TurbulenceCtx   * ctx              = NULL;
 
-int      mod_sasl_plain_validation  (VortexConnection * connection,
-				     const char       * auth_id,
-				     const char       * authorization_id,
-				     const char       * password)
+axlPointer      mod_sasl_validation  (VortexConnection * connection,
+				      VortexSaslProps  * props,
+				      axlPointer         user_data)
 {
+	const char * serverName = vortex_connection_get_server_name (connection);
+
+	if (serverName == NULL)
+		serverName = props->serverName;
+
 	msg ("required to auth: auth_id=%s, authorization_id=%s, serverName=%s", 
-	     auth_id ? auth_id : "", authorization_id ? authorization_id : "");
+	     props->auth_id ? props->auth_id : "", props->authorization_id ? props->authorization_id : "", serverName ? serverName : "");
 
 	/* call to authenticate */
-	if (common_sasl_auth_user (sasl_backend, 
-				   connection,
-				   auth_id, 
-				   authorization_id, 
-				   password,
-				   vortex_connection_get_server_name (connection),
-				   &sasl_xml_db_mutex)) {
-		return axl_true;
+	if (axl_cmp (props->mech, VORTEX_SASL_PLAIN)) {
+		if (common_sasl_auth_user (sasl_backend, 
+					   connection,
+					   props->auth_id, 
+					   props->authorization_id, 
+					   props->password,
+					   serverName,
+					   &sasl_xml_db_mutex)) {
+			return INT_TO_PTR (axl_true);
+		} /* end if */
 	} /* end if */
 
         /* deny SASL request to authenticate remote peer */
-	error ("auth failed for auth_id=%s", auth_id);
-        return axl_false;
+	error ("auth failed for auth_id=%s", props->auth_id);
+        return INT_TO_PTR (axl_false);
 }
 
 
@@ -116,10 +122,7 @@ static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 		
 		msg ("configuring PLAIN authentication method..");
 		/* accept plain profile */
-		vortex_sasl_set_plain_validation (TBC_VORTEX_CTX(ctx), mod_sasl_plain_validation);
-		
-		/* accept SASL PLAIN incoming requests */
-		if (! vortex_sasl_accept_negotiation (TBC_VORTEX_CTX(ctx), VORTEX_SASL_PLAIN)) {
+		if (! vortex_sasl_accept_negotiation_common (TBC_VORTEX_CTX (ctx), VORTEX_SASL_PLAIN, mod_sasl_validation, NULL)) {
 			error ("Unable accept incoming SASL PLAIN profile");
 		} /* end if */			
 	} else {
