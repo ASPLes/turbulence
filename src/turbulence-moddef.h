@@ -52,7 +52,11 @@
  * a turbulence module.
  *
  * The module must return axl_true to signal the modules was
- * initialized and must be registered as properly loaded.
+ * initialized and must be registered as properly loaded. This handler
+ * is called when the module is loaded and after a fork operation
+ * (child process created) when turbulence signals the module to
+ * reinitialize some structures that may be affected by the fork
+ * operation (like mutexes, threads..).
  *
  * @param ctx The turbulence context where the init operation is
  * taking place.
@@ -114,7 +118,8 @@ typedef struct _TurbulenceModDef {
 	char         * mod_description;
 
 	/** 
-	 * @brief A reference to the init function associated to the module.
+	 * @brief A reference to the init function associated to the
+	 * module.
 	 */
 	ModInitFunc    init;
 
@@ -165,17 +170,6 @@ typedef struct _TurbulenceModDef {
  * @param _ctx The context received by the module at the init functio.
  */
 #define TBC_MOD_PREPARE(_ctx) do{ctx = _ctx;}while(0)
-
-/** 
- * @brief Allows to get the vortex context associated to the
- * turbulence context provided.
- * 
- * @param _ctx The turbulence context which is required to return the
- * vortex context associated.
- * 
- * @return A reference to the vortex context associated.
- */
-#define TBC_VORTEX_CTX(_ctx) (turbulence_ctx_get_vortex_ctx (_ctx))
 
 #endif
 

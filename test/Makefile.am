@@ -7,7 +7,9 @@ configuration_files = \
 	test_07.conf \
 	test_08.conf \
 	test_09.conf \
-	test_10.conf
+	test_10.conf \
+	test_11.conf \
+	test_12.conf
 
 SUBDIRS = test_11_module
 

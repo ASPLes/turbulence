@@ -21,6 +21,9 @@ CURRENT FRANCIS WORK
 * Add support for loading particular modules from inside profile
   paths.
 
+* Add limit support to control child process created globally and
+  childs process created due to profile path configuration.
+
 IDEAS & USEFUL HINTS
 
 * It would be great to allow turbulence configuring which kind of

@@ -38,6 +38,16 @@
 
 #include <turbulence.h>
 
+/** 
+ * \defgroup turbulence_module Turbulence Module: API used to load modules and invoke handlers provided by them.
+ */
+
+/** 
+ * \addtogroup turbulence_module
+ * @{
+ */
+
+
 /* local include */
 #include <turbulence-ctx-private.h>
 
@@ -91,6 +101,7 @@ const char       * turbulence_module_name        (TurbulenceModule * module)
 /** 
  * @brief Loads a turbulence module, from the provided path.
  * 
+ * @param ctx The context where the module will be opened.
  * @param module The module path to load.
  * 
  * @return A reference to the module loaded or NULL if it fails.
@@ -331,7 +342,7 @@ void               turbulence_module_register  (TurbulenceModule * module)
 /** 
  * @brief Unregister the module provided from the list of modules
  * loaded. The function do not close the module (\ref
- * turbulence_module_close). This is required to be done by the
+ * turbulence_module_free). This is required to be done by the
  * caller.
  * 
  * @param module The module to unregister.
@@ -379,12 +390,26 @@ void               turbulence_module_free (TurbulenceModule * module)
 	return;
 }
 
-
 /** 
- * @brief Allows to notify all modules loaded, that implements the
- * \ref ModReconfFunc, to reload its configuration data.
+ * @brief Allows to do a handler notification on all registered
+ * modules.
+ * @param ctx The context where the notification will take place.
+ * @param handler The handler to be called.
+ *
+ * @param data Optional data to be passed to the handler. This pointer
+ * is handler especific.
+ *
+ * @param data2 Second optional data to be passed to the handler. This
+ * pointer is handler especific.
+ *
+ * @param data3 Third optional data to be passed to the handler. This
+ * pointer is handler especific.
  */
-void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx)
+void               turbulence_module_notify      (TurbulenceCtx         * ctx, 
+						  TurbulenceModHandler    handler,
+						  axlPointer              data,
+						  axlPointer              data2,
+						  axlPointer              data3)
 {
 	/* get turbulence context */
 	TurbulenceModule * module;
@@ -395,10 +420,41 @@ void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx)
 		/* get the module */
 		module = axl_list_get_nth (ctx->registered_modules, iterator);
 
-		/* notify if defined reconf function */
-		if (module->def->reconf != NULL) {
-			/* call to reconfigured */
-			module->def->reconf (ctx);
+		/* check reference */
+		if (module == NULL || module->def == NULL) {
+			iterator++;
+			continue;
+		} /* end if */
+			
+		switch (handler) {
+		case TBC_CLOSE_HANDLER:
+			/* notify if defined reconf function */
+			if (module->def->close != NULL) {
+				msg ("closing module: %s", module->def->mod_name);
+				module->def->close (ctx);
+			}
+			break;
+		case TBC_RELOAD_HANDLER:
+			/* notify if defined reconf function */
+			if (module->def->reconf != NULL) {
+				msg ("reloading module: %s", module->def->mod_name);
+				module->def->reconf (ctx);
+			}
+			break;
+		case TBC_INIT_HANDLER:
+			/* notify if defined reconf function */
+			if (module->def->init != NULL) {
+				msg ("initializing module: %s", module->def->mod_name);
+				module->def->init (ctx);
+			}
+			break;
+		case TBC_PPATH_SELECTED_HANDLER:
+			/* notify if defined reconf function */
+			if (module->def->ppath_selected != NULL) {
+				msg ("notifying profile path selected on module: %s", module->def->mod_name);
+				module->def->ppath_selected (ctx, data, data2);
+			}
+			break;
 		}
 
 		/* next iterator */
@@ -410,32 +466,25 @@ void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx)
 	return;
 }
 
+
+/** 
+ * @brief Allows to notify all modules loaded, that implements the
+ * \ref ModReconfFunc, to reload its configuration data.
+ */
+void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx)
+{
+	turbulence_module_notify (ctx, TBC_RELOAD_HANDLER, NULL, NULL, NULL);
+
+	return;
+}
+
 /** 
  * @brief Send a module close notification to all modules registered
  * without unloading module code.
  */
 void               turbulence_module_notify_close (TurbulenceCtx * ctx)
 {
-	/* get turbulence context */
-	TurbulenceModule * module;
-
-	int iterator = 0;
-	vortex_mutex_lock (&ctx->registered_modules_mutex);
-	while (iterator < axl_list_length (ctx->registered_modules)) {
-		/* get the module */
-		module = axl_list_get_nth (ctx->registered_modules, iterator);
-
-		/* notify if defined reconf function */
-		if (module->def != NULL && module->def->close != NULL) {
-			msg ("closing module: %s", module->def->mod_name);
-			module->def->close (ctx);
-		}
-
-		/* next iterator */
-		iterator++;
-
-	} /* end if */
-	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+	turbulence_module_notify (ctx, TBC_CLOSE_HANDLER, NULL, NULL, NULL);
 
 	return;
 }
@@ -460,3 +509,6 @@ void               turbulence_module_cleanup   (TurbulenceCtx * ctx)
 
 
 
+/** 
+ * @}
+ */

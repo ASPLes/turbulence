@@ -201,13 +201,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 	msg ("CHILD: Created child process: %d", getpid ());
 
-	/* check here to change root path, in the case it is defined
-	 * now we still have priviledges */
-	turbulence_ppath_change_root (ctx, def);
-
-	/* check here for setuid support */
-	turbulence_ppath_change_user_id (ctx, def);
-
 	/* reinit vortex ctx */
 	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 	vortex_ctx_reinit (vortex_ctx);
@@ -221,6 +214,20 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		error ("failed to restart vortex engine after fork operation");
 		exit (-1);
 	} /* end if */
+
+	/* (re)initialize here all modules */
+	turbulence_module_notify (ctx, TBC_INIT_HANDLER, NULL, NULL, NULL);
+
+	/* check here to change root path, in the case it is defined
+	 * now we still have priviledges */
+	turbulence_ppath_change_root (ctx, def);
+
+	/* check here for setuid support */
+	turbulence_ppath_change_user_id (ctx, def);
+
+	/* now notify profile path selected after dropping
+	   priviledges */
+	turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, conn, NULL);
 
 	/* now finish and register the connection */
 	vortex_connection_set_close_socket (conn, axl_true);

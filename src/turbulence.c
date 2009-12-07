@@ -1234,6 +1234,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *  - \ref turbulence_expr
  *  - \ref turbulence_loop
  *  - \ref turbulence_mediator
+ *  - \ref turbulence_module
  */
 
 /** 
@@ -1594,21 +1595,18 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
  *
  * <ol>
  *
- * <li><p><b>preconnmark</b>: if used, it means that the connection
- * must have the "mark" provided before the profile can be accepted to
- * be initiated. <br>SUPPORTED: &lt;allow>, &lt;if-success></p></li>
+ * <li><p><b>preconnmark</b>: if used, it means connections must have
+ * the "mark" provided before the profile can be accepted/used. <br>SUPPORTED: &lt;allow>, &lt;if-success></p></li>
  * 
- * <li><p><b>connmark</b>: can only be used from &lt;if-success> nodes, and
- * allows to protect the profile path content inside the
- * &lt;if-success> node, enforcing to not only create a channel under
- * the profile provided but also having the mark. <br>SUPPORTED:
- * &lt;if-success></p>
- *
+ * <li><p><b>connmark</b>: can only be used from &lt;if-success>
+ * nodes. Allows to restrict profiles allowed inside &lt;if-success>
+ * only if the provided mark is defined. </p>
  *
  * <p>This is particular useful for the SASL case because having a
  * SASL channel created isn't a warranty of a connection
  * authenticated. Thus, an additional mark is required to properly
- * ensure that the connection was authenticated.</p></li>
+ * ensure that the connection was authenticated. These "marks" are
+ * profile/module especific.</p></li>
  *
  * <li><p><b>max-per-con</b>: allows to configure the maximum amount
  * of channels running the profile provided in the particular
