@@ -19,7 +19,10 @@ CURRENT FRANCIS WORK
       stdout). Rewrite the tool to use PyVortex.
 
 * Add support for loading particular modules from inside profile
-  paths.
+  paths. Add support to module to load particular settings according
+  to requested serverName. Work around
+  turbulence_ppath_get_server_name. Updated test_12 to check different
+  databases.
 
 * Add limit support to control child process created globally and
   childs process created due to profile path configuration.

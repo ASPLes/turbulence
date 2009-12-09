@@ -109,9 +109,13 @@ static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 				     TurbulencePPathDef * ppath_selected, 
 				     VortexConnection   * conn) {
 
+	const char * serverName = turbulence_ppath_get_server_name (conn);
+
+	msg ("Notified profile path selected, ppath serverName: %s (conn id=%d)", serverName ? serverName : "", vortex_connection_get_id (conn));
+
 	/* load configuration file and populate backend with the
 	   serverName required for this connection */
-	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, &sasl_xml_db_mutex))  {
+	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, NULL, &sasl_xml_db_mutex))  {
 		wrn ("Failed to loas SASL configuration for ppath selected '%s' and connection id %d", 
 		     turbulence_ppath_get_name (ppath_selected), vortex_connection_get_id (conn));
 		return;

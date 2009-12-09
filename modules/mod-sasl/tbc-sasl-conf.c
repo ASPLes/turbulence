@@ -250,7 +250,7 @@ int main (int argc, char ** argv)
 	}
 
 	/* load sasl module configuration */
-	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, NULL))
+	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, exarg_get_string ("serverName"), NULL))
 		goto finish;
 
 	msg2 ("sasl auth-db loaded..");
