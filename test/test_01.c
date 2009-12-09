@@ -1458,11 +1458,16 @@ axl_bool test_09 (void) {
 	return axl_true;
 }
 
+TurbulenceCtx    * tCtxTest10 = NULL;
+
 void test_10_received (VortexChannel    * channel, 
 		       VortexConnection * connection, 
 		       VortexFrame      * frame, 
 		       axlPointer         user_data)
 {
+	TurbulenceCtx      * ctx = tCtxTest10;
+	TurbulencePPathDef * ppath_selected;
+
 	msg ("Received frame request at child (pid: %d): %s",
 	     getpid (), (char*) vortex_frame_get_payload (frame));
 
@@ -1470,12 +1475,12 @@ void test_10_received (VortexChannel    * channel,
 	if (axl_cmp ("GET pid", (char*) vortex_frame_get_payload (frame))) 
 		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%d", getpid ());
 
-	if (axl_cmp ("GET profile path", (char*) vortex_frame_get_payload (frame))) 
-		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%s", turbulence_ppath_selected (connection));
+	if (axl_cmp ("GET profile path", (char*) vortex_frame_get_payload (frame)))  {
+		ppath_selected = turbulence_ppath_selected (connection);
+		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%s", turbulence_ppath_get_name (ppath_selected));
+	}
 	return;
 }
-
-TurbulenceCtx    * tCtxTest10 = NULL;
 
 void test_10_signal_handler (int _signal)
 {
@@ -1734,19 +1739,6 @@ axl_bool test_11 (void) {
 	return axl_true;
 }
 
-void test_12_cleanup (TurbulenceCtx * ctx, axlPointer pointer)
-{
-	VortexConnection * conn = (VortexConnection *) pointer;
-
-	printf ("Test 12: calling to cleanup id=%d (refs: %d)..\n", vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
-	vortex_connection_set_close_socket (conn, axl_false);
-	vortex_connection_shutdown (conn);
-	vortex_connection_unref (conn, "test_12_cleanup"
-
-);
-	return;
-}
-
 axl_bool test_12 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -1754,6 +1746,7 @@ axl_bool test_12 (void) {
 	VortexChannel    * channel; 
 	VortexAsyncQueue * queue;
 	VortexFrame      * frame;
+	axlList          * connList;
 
 	/* SASL status */
 	VortexStatus       status         = VortexError;
@@ -1780,9 +1773,6 @@ axl_bool test_12 (void) {
 		return axl_false;
 	} /* end if */
 
-	/* install cleanup to remove connection from the child */
-	turbulence_process_install_child_cleanup (tCtx, test_12_cleanup, conn);
-	
 	/* enable SASL auth for current connection */
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
@@ -1825,8 +1815,52 @@ axl_bool test_12 (void) {
 	/* clear frame */
 	vortex_frame_unref (frame);
 
+	printf ("Test 12: getting list of connections at child process..\n");
+
+	/* now check how many registered connections are on the child
+	   process side */
+	if (! vortex_channel_send_msg (channel, "connections count", 17, NULL)) {
+		printf ("ERROR (6): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (7): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "1")) {
+		printf ("ERROR (8): expected to find connection count equal to 1 but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 12: connection list ok, now finish..\n");
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* at this point we must have 2 connections registered (conn and the master listener) */
+	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
+	if (axl_list_length (connList) != 2) {
+		printf ("ERROR (9): Expected to find registered connections equal to 2 but found %d", 
+			axl_list_length (connList));
+		return axl_false;
+	} /* end if */
+	axl_list_free (connList);
+
 	/* close connection */
 	vortex_connection_close (conn);
+
+	/* at this point we must have 1 connections registered (the master listener) */
+	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
+	if (axl_list_length (connList) != 1) {
+		printf ("ERROR (9): Expected to find registered connections equal to 1 but found %d", 
+			axl_list_length (connList));
+		return axl_false;
+	} /* end if */
+	axl_list_free (connList);
 
 	/* finish queue */
 	vortex_async_queue_unref (queue);
@@ -1922,8 +1956,6 @@ int main (int argc, char ** argv)
 		test_common_enable_debug = axl_true;
 	} /* end if */
 
-	goto init;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -1954,7 +1986,7 @@ int main (int argc, char ** argv)
 	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
 
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
-init:
+
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 
 	printf ("All tests passed OK!\n");

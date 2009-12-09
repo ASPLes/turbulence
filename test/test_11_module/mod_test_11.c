@@ -47,8 +47,26 @@ void mod_test_11_frame_received (VortexChannel    * channel,
 				 VortexFrame      * frame, 
 				 axlPointer         user_data)
 {
-	/* send reply */
-	vortex_channel_send_rpy (channel, "profile path notified", 21, vortex_frame_get_msgno (frame));
+	/* get the command */
+	const char * command = (const char *) vortex_frame_get_payload (frame);
+	char       * result;
+	axlList    * connList;
+
+	msg ("Received command: '%s'", command);
+
+	if (axl_cmp (command, "content")) {
+		/* send reply */
+		vortex_channel_send_rpy (channel, "profile path notified", 21, vortex_frame_get_msgno (frame));
+	} else if (axl_cmp (command, "connections count")) {
+		/* get the list of connections */
+		connList = turbulence_conn_mgr_conn_list (ctx, VortexRoleListener, NULL);
+		result   = axl_strdup_printf ("%d", axl_list_length (connList));
+
+		vortex_channel_send_rpy (channel, result, strlen (result), vortex_frame_get_msgno (frame));
+
+		axl_free (result);
+		axl_list_free (connList);
+	}
 	return;
 }
 

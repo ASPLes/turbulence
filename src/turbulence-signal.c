@@ -92,7 +92,7 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 	} /* end if */
 
 	/* notify */
-	msg ("received termination signal (%d)", _signal);
+	msg ("received termination signal (%d) on PID %d", _signal, getpid ());
 	turbulence_signal_exit (ctx, _signal);
 
 	return 0;	
@@ -148,19 +148,22 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	axlDoc           * doc;
 	axlNode          * node;
 	VortexAsyncQueue * queue;
-	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* lock the mutex and check */
 	vortex_mutex_lock (&ctx->exit_mutex);
 	if (ctx->is_existing) {
+		msg ("process already existing, doing nothing...");
+
 		/* other thread is already cleaning */
 		vortex_mutex_unlock (&ctx->exit_mutex);
 		return;
 	} /* end if */
 
+	msg ("preparing exit process...");
+
 	/* flag that turbulence is existing and do all cleanup
 	 * operations */
-	ctx->is_existing = true;
+	ctx->is_existing = axl_true;
 	vortex_mutex_unlock (&ctx->exit_mutex);
 	
 	switch (_signal) {
@@ -209,7 +212,10 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	 * operation here because we are in the middle of a signal
 	 * handler execution. By unlocking the listener, the
 	 * turbulence_cleanup is called cleaning the room. */
-	vortex_listener_unlock (vortex_ctx);
+	msg ("Unlocking turbulence listener: %p", ctx);
+	if (ctx->child_wait) {
+		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
+	} /* end if */
 
 	return;
 } /* end if */

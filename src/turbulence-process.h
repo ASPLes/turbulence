@@ -54,12 +54,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 				      const char          * serverName,
 				      VortexFrame         * frame);
 
-void turbulence_process_child_cleanup (TurbulenceCtx * ctx);
-
-void turbulence_process_install_child_cleanup (TurbulenceCtx           * ctx, 
-					       TurbulenceChildCleanup    child_cleanup, 
-					       axlPointer                user_data);
-
 void turbulence_process_kill_childs  (TurbulenceCtx * ctx);
 
 int      turbulence_process_child_count  (TurbulenceCtx * ctx);

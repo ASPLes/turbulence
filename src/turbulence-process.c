@@ -42,6 +42,8 @@
 
 /* include signal handler: SIGCHLD */
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 /** 
  * @internal Function used to init process module (for its internal
@@ -66,10 +68,15 @@ void turbulence_process_init         (TurbulenceCtx * ctx, axl_bool reinit)
 	return;
 }
 
-void turbulence_process_finished (VortexCtx * ctx, axlPointer user_data)
+void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
 {
+	TurbulenceCtx * ctx = user_data;
+
 	/* unlock waiting child */
-	vortex_listener_unlock (ctx);
+	msg ("calling to unlock due to vortex reader stoped (no more connections to be watched)..");
+	if (ctx->child_wait) {
+		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
+	}
 	return;
 }
 
@@ -82,7 +89,6 @@ TurbulenceCtx * child_ctx   = NULL;
 void turbulence_process_signal_received (int _signal) {
 	/* default handling */
 	turbulence_signal_received (child_ctx, _signal);
-	
 	return;
 }
 
@@ -128,8 +134,12 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	if (pid != 0) {
 		/* unwatch the connection from the parent to avoid
 		   receiving more content which now handled by the
-		   child */
+		   child and unregister from connection manager */
 		vortex_reader_unwatch_connection (CONN_CTX (conn), conn);
+
+		/* terminate the connection */
+		vortex_connection_set_close_socket (conn, axl_false);
+		vortex_connection_shutdown (conn);
 
 		/* register pipes to receive child logs */
 		if (turbulence_log_is_enabled (ctx)) {
@@ -207,7 +217,8 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 	/* set finish handler that will help to finish child process
 	   (or not) */
-	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, NULL);
+	ctx->child_wait = vortex_async_queue_new ();
+	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, ctx);
 
 	/* (re)start vortex */
 	if (! vortex_init_ctx (vortex_ctx)) {
@@ -233,6 +244,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	vortex_connection_set_close_socket (conn, axl_true);
 	vortex_reader_watch_connection (vortex_ctx, conn);
 
+	/* because the conn manager module was bee initialized again,
+	   register the connection handling by this process */
+	turbulence_conn_mgr_register (ctx, conn);
+
 	/* check to handle start reply message */
 	if (handle_start_reply) {
 		/* handle start channel reply */
@@ -245,16 +260,19 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			/* wait here so the error message reaches the
 			 * remote BEEP peer */
 			channel0 = vortex_connection_get_channel (conn, 0);
-			vortex_channel_block_until_replies_are_sent (channel0, 1000);
+			if (channel0 != NULL) 
+				vortex_channel_block_until_replies_are_sent (channel0, 1000);
 		}
 		msg ("Channel start accepted on child..");
 	} /* end if */
-	
-	/* calling to cleanup */
-	turbulence_process_child_cleanup (ctx);
+
+	/* unref connection since it is registered */
+	vortex_connection_unref (conn, "turbulence process, conn registered");
 	
 	msg ("child process created...wait for exit");
-	vortex_listener_wait (turbulence_ctx_get_vortex_ctx (ctx));
+	vortex_async_queue_pop (ctx->child_wait);
+	vortex_async_queue_unref (ctx->child_wait);
+	ctx->child_wait = NULL;
 	msg ("finishing process...");
 
 	/* release frame received */
@@ -289,7 +307,7 @@ void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
 	axlDoc  * doc;
 	axlNode * node;
 	int       pid;
-	int       iterator;
+	int       status;
 
 	/* get user doc */
 	doc  = turbulence_config_get (ctx);
@@ -305,24 +323,37 @@ void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
 		return;
 	} /* end if */
 
+	/* disable signal handling because we are the parent and we
+	   are killing childs (we know childs are stopping). The
+	   following is to avoid races with
+	   turbulence_signal_received for SIGCHLD */
+	signal (SIGCHLD, NULL);
+
 	/* send a kill operation to all childs */
-	vortex_mutex_lock (&ctx->child_process_mutex);
-	iterator = 0;
-	while (iterator < axl_list_length (ctx->child_process)) {
+	while (axl_list_length (ctx->child_process) > 0) {
+		/* lock child to get first element and remove it */
+		vortex_mutex_lock (&ctx->child_process_mutex);
+
 		/* get pid */
-		pid = PTR_TO_INT (axl_list_get_nth (ctx->child_process, iterator));
+		pid = PTR_TO_INT (axl_list_get_first (ctx->child_process));
 		msg ("killing child process: %d", pid);
+		axl_list_remove_first (ctx->child_process);
+
+		/* unlock the list during the kill and wait */
+		vortex_mutex_unlock (&ctx->child_process_mutex);
 
 		/* send term signal */
 		if (kill (pid, SIGTERM) != 0)
 			error ("failed to kill child (%d) error was: %d:%s",
 			       pid, errno, vortex_errno_get_last_error ());
 		
-
-		/* next iterator */
-		iterator++;
+		/* wait childs to finish */
+		msg ("waiting child %d to finish...", pid);
+		status = 0;
+		waitpid (pid, &status, 0);
+		msg ("...child %d finish, exit status: %d", pid, status);
 	} /* end while */
-	vortex_mutex_unlock (&ctx->child_process_mutex);
+
 
 	return;
 }
@@ -375,49 +406,6 @@ axl_bool turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid)
 	return result;
 }
 
-/** 
- * @internal Allows to install a handler that is called to cleanup
- * child processes created.
- */
-void turbulence_process_install_child_cleanup (TurbulenceCtx           * ctx, 
-					       TurbulenceChildCleanup    child_cleanup, 
-					       axlPointer                user_data)
-{
-	/* check for maximum cleanup handlers */
-	if (ctx->child_cleanup_installed == TBC_MAX_CLEANUP_HANDLERS)
-		return;
-
-	/* install handler and pointer */
-	ctx->child_cleanup[ctx->child_cleanup_installed] = child_cleanup;
-	ctx->child_pointer[ctx->child_cleanup_installed] = user_data;
-
-	/* update cleanup handlers */
-	ctx->child_cleanup_installed++;
-	return;
-}
-
-/** 
- * @internal Function used to cleanup the child process created (for
- * example removing memory used by parent process which is not used by
- * child process).
- *
- * @param ctx Context where the child cleanup will be run.
- */
-void turbulence_process_child_cleanup (TurbulenceCtx * ctx)
-{
-	TurbulenceChildCleanup cleanup_handler;
-
-	int iterator = 0;
-	while (iterator < ctx->child_cleanup_installed) {
-		/* call cleanup handler */
-		cleanup_handler = ctx->child_cleanup[iterator];
-		cleanup_handler (ctx, ctx->child_pointer[iterator]);
-
-		/* next position */
-		iterator++;
-	} /* end while */
-	return;
-}
 
 /** 
  * @internal Function used to cleanup the process module.
