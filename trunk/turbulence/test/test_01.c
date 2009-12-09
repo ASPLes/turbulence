@@ -576,7 +576,7 @@ axl_bool  test_03 ()
 	}
 
 	/* start the sasl backend */
-	if (! common_sasl_load_config (ctx, &sasl_backend, "test_03.sasl.conf", &mutex)) {
+	if (! common_sasl_load_config (ctx, &sasl_backend, "test_03.sasl.conf", NULL,  &mutex)) {
 		printf ("Unable to initialize the sasl backend..\n");
 		return axl_false;
 	}
@@ -1956,6 +1956,8 @@ int main (int argc, char ** argv)
 		test_common_enable_debug = axl_true;
 	} /* end if */
 
+	goto init;
+
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -1966,7 +1968,7 @@ int main (int argc, char ** argv)
 
 	run_test (test_02, "Test 02: Turbulence misc functions");
 
-	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl,tbc-sasl-conf)");
+	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl, tbc-sasl-conf)");
 
 	run_test (test_04, "Test 04: Check module loading support");
 
@@ -1986,6 +1988,8 @@ int main (int argc, char ** argv)
 	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
 
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
+
+init:
 
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 

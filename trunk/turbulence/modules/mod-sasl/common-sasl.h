@@ -60,6 +60,7 @@ typedef struct _SaslAuthDb SaslAuthDb;
 int             common_sasl_load_config    (TurbulenceCtx    * ctx,
 					    SaslAuthBackend ** sasl_backend,
 					    const char       * alt_location,
+					    const char       * serverName,
 					    VortexMutex      * mutex);
 
 int             common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,

@@ -117,10 +117,22 @@ typedef struct _TurbulencePPathState {
 	 * connection */
 	TurbulencePPathDef * path_selected;
 
+	/* requested serverName found at the profile path selection */
+	char               * requested_serverName;
 
 	/* turbulence context */
 	TurbulenceCtx      * ctx;
 } TurbulencePPathState;
+
+void __turbulence_ppath_state_free (axlPointer _state) {
+	TurbulencePPathState * state = _state;
+
+	if (state == NULL)
+		return;
+	axl_free (state->requested_serverName);
+	axl_free (state);
+	return;
+}
 
 struct _TurbulencePPath {
 	/* list of profile paths found */
@@ -459,7 +471,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 			vortex_connection_shutdown (connection);
 			return axl_false;
 		} /* end if */
-		
+
 		/* check if the connection will be handled by a child
 		 * proces */
 		if (state->path_selected->separate) {
@@ -562,7 +574,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 							 /* the key and its associated value */
 							 TURBULENCE_PPATH_STATE, state,
 							 /* destroy functions */
-							 NULL, axl_free);
+							 NULL, __turbulence_ppath_state_free);
 			vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask_temporal, state);
 
 			return axl_true; /* signal no profile path still selected */
@@ -629,11 +641,22 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 						 /* the key and its associated value */
 						 TURBULENCE_PPATH_STATE, state,
 						 /* destroy functions */
-						 NULL, axl_free);
+						 NULL, __turbulence_ppath_state_free);
 		
 		/* now configure the profile path mask to handle how channels
 		 * and profiles are accepted */
 		vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask, state);
+	} /* end if */
+
+	/* profile path selected but we have no way to configure the
+	 * serverName to be used on this connection until the first
+	 * channel is accepted (with the serverName configured). So
+	 * the following sets the requested serverName so modules
+	 * notified through profile path selected and react according
+	 * to this value. */
+	if (serverName) {
+		msg ("Setting requested serverName=%s but still first opened channel is required", serverName);
+		state->requested_serverName = axl_strdup (serverName);
 	} /* end if */
 		
 	/* check for process separation and apply operation here */
@@ -1066,6 +1089,41 @@ const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def)
 	if (ppath_def == NULL)
 		return NULL;
 	return ppath_def->path_name;
+}
+
+/** 
+ * @brief Allows to get the serverName requested for the profile path
+ * selected. This value represents the serverName sent on channel
+ * start request and was used, along with other datas, to select
+ * current profile path. This value may be NULL since serverName is
+ * optional.
+ *
+ * @param ppath_def The profile path selected where the serverName
+ * requested will be returned.
+ *
+ * @return A reference to the serverName value or NULL if it fails.
+ *
+ * <b>NOTE: this is NOT the serverName. In many cases they are the
+ * same value, but it must be considered as a requested value, until
+ * the first channel with serverName is accepted. Then a call to
+ * vortex_connection_get_server_name can be done. </b>
+ */
+const char         * turbulence_ppath_get_server_name (VortexConnection * conn)
+{
+	TurbulencePPathState * state;
+	TurbulenceCtx        * ctx;
+	if (conn == NULL)
+		return NULL;
+
+	/* get state */
+	state = vortex_connection_get_data (conn, TURBULENCE_PPATH_STATE);
+	if (state == NULL)
+		return NULL;
+
+	/* get context */
+	ctx   = state->ctx;
+	msg ("returing serverName on state %p, %p", state, state->requested_serverName);
+	return state->requested_serverName;
 }
 
 #if defined(DEFINE_CHROOT_PROTO)

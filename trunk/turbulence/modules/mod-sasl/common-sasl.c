@@ -326,12 +326,18 @@ int  common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * s
  * @param alt_location An optional value that allows to configure
  * which is the location of the sasl backend.
  *
+ * @param serverName Optional parameter that allows signaling what
+ * SASL database must be loaded. This will cause the SaslAuthBackend
+ * to load a database that either matches serverName or default
+ * database is used.
+ *
  * @param mutex Optional mutex variable used to lock the
  * implementation to avoid race conditions between threads.
  */
 axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 				   SaslAuthBackend ** sasl_backend,
 				   const char       * alt_location,
+				   const char       * serverName,
 				   VortexMutex      * mutex)
 {
 	axlNode         * node;
