@@ -114,15 +114,6 @@ typedef axl_bool (*TurbulenceLoopOnRead) (TurbulenceLoop * loop,
 					  axlPointer       ptr, 
 					  axlPointer       ptr2);
 
-/** 
- * @brief Handler definition for the set of function used to cleanup
- * child processes created after they are started.
- * @param ctx The context where the cleanup is taking place.
- * @param data Reference to user defined data.
- */
-typedef void (*TurbulenceChildCleanup) (TurbulenceCtx * ctx, 
-					axlPointer      data);
-
 #endif
 
 /**

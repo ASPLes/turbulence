@@ -86,12 +86,15 @@ void turbulence_conn_mgr_unref (axlPointer data)
 	TurbulenceConnMgrState * state = data;
 	TurbulenceCtx          * ctx   = state->ctx;
 
-	/* uninstall on close full handler to avoid race conditions */
-	vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state);
-	
-	/* unref the connection */
-	msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
-	vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
+	/* check connection status */
+	if (state->conn) {
+		/* uninstall on close full handler to avoid race conditions */
+		vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state);
+		
+		/* unref the connection */
+		msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
+		vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
+	} /* end if */
 
 	/* nullify and free */
 	state->conn = NULL;
@@ -129,7 +132,8 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	state->ctx  = ctx;
 
 	/* store in the hash */
-	msg ("Registering connection: %d (%p)", vortex_connection_get_id (conn), conn);
+	msg ("Registering connection: %d (%p, refs: %d)", vortex_connection_get_id (conn), conn, 
+	     vortex_connection_ref_count (conn));
 	axl_hash_insert_full (ctx->conn_mgr_hash, 
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,
@@ -278,6 +282,20 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 	turbulence_mediator_subscribe (ctx, "turbulence", "module-registered", 
 				       turbulence_conn_mgr_module_registered, NULL);
 
+	return;
+}
+
+/** 
+ * @internal Function used to manually register connections on
+ * turbulence connection manager.
+ */
+void turbulence_conn_mgr_register (TurbulenceCtx * ctx, VortexConnection * conn)
+{
+	/* simulate event */
+	msg ("Registering connection and child process (%d) conn id: %d, refs: %d", 
+	     getpid (), vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
+	turbulence_conn_mgr_notify (TBC_VORTEX_CTX (ctx), conn, NULL, CONNECTION_STAGE_POST_CREATED, ctx);
+	msg ("After register, connections are: %d", axl_hash_items (ctx->conn_mgr_hash));
 	return;
 }
 
@@ -485,11 +503,40 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 }
 
 /** 
+ * @internal Ensure we close all active connections before existing...
+ */
+axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer data, axlPointer user_data) 
+{
+	TurbulenceConnMgrState * state = data;
+	TurbulenceCtx          * ctx   = state->ctx;
+	VortexConnection       * conn  = state->conn;
+
+	/* nullify conn reference on state */
+	state->conn = NULL;
+	
+	/* uninstall on close full handler to avoid race conditions */
+	vortex_connection_remove_on_close_full (conn, turbulence_conn_mgr_on_close, state);
+
+	msg ("shutting down connection id %d", vortex_connection_get_id (conn));
+	vortex_connection_shutdown (conn);
+	msg ("..socket status after shutdown: %d..", vortex_connection_get_socket (conn));
+
+	/* now unref */
+	vortex_connection_unref (conn, "turbulence-conn-mgr shutdown");
+
+	/* keep on iterating over all connections */
+	return axl_false;
+}
+
+/** 
  * @internal Module cleanup.
  */
 void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 {
-	
+	/* shutdown all pending connections */
+	msg ("calling to cleanup registered connections that are still opened: %d", axl_hash_items (ctx->conn_mgr_hash));
+	axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_shutdown_connections, NULL);
+
 	/* destroy mutex */
 	axl_hash_free (ctx->conn_mgr_hash);
 	ctx->conn_mgr_hash = NULL;

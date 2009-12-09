@@ -38,11 +38,6 @@
 #ifndef __TURBULENCE_CTX_PRIVATE_H__
 #define __TURBULENCE_CTX_PRIVATE_H__
 
-/** 
- * @internal Maximum set of cleanup handlers that can be installed.
- */
-#define TBC_MAX_CLEANUP_HANDLERS 2
-
 
 struct _TurbulenceCtx {
 	/* Reference to the turbulence vortex context associated.
@@ -111,9 +106,7 @@ struct _TurbulenceCtx {
 	/*** turbulence process module ***/
 	axlList                 * child_process;
 	VortexMutex               child_process_mutex;
-	int                       child_cleanup_installed;
-	axlPointer                child_cleanup [TBC_MAX_CLEANUP_HANDLERS];
-	axlPointer                child_pointer [TBC_MAX_CLEANUP_HANDLERS];
+	VortexAsyncQueue        * child_wait;
 
 	/*** turbulence mediator module ***/
 	axlHash            * mediator_hash;
