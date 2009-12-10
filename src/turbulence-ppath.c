@@ -110,6 +110,10 @@ struct _TurbulencePPathDef {
 
 	/* allows to change working directory to the provided value */
 	const char * chroot;	
+
+	/* allows to configure a working directory associated to the
+	 * profile path. */
+	const char * work_dir;
 };
 
 typedef struct _TurbulencePPathState {
@@ -901,6 +905,9 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		/* check for chroot value */
 		definition->chroot   = ATTR_VALUE (pdef, "chroot");
 
+		/* check for chroot value */
+		definition->work_dir = ATTR_VALUE (pdef, "work-dir");
+
 		/* now, we have to parse all childs. Rules from the
 		 * same level are chosable at the same time. If the
 		 * expression found is an <if-success>, it is managed
@@ -1080,7 +1087,7 @@ TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn)
 /** 
  * @brief Allows to get profile path name from the provided profile
  * path.
- * @param ppath_def The profile path definition.
+ * @param ppath_def The profile path definition where the name is retrieved.
  *
  * @return A reference to the profile path name or NULL it if fails.
  */
@@ -1090,6 +1097,36 @@ const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def)
 		return NULL;
 	return ppath_def->path_name;
 }
+
+/** 
+ * @brief Allows to get the profile path working directory.
+ *
+ * @param ppath_def The profile path definition where the work
+ * directory is retrieved.
+ *
+ * @return A reference to the work directory defined on the profile
+ * path or NULL it is not defined.
+ */
+const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,
+						       TurbulencePPathDef * ppath_def)
+{
+	DIR           * directory;
+
+	if (ppath_def == NULL)
+		return NULL;
+	if (ppath_def->work_dir && strlen (ppath_def->work_dir) > 0) {
+		/* check that the directory path is indeed a directory and we can open it */
+		directory = opendir (ppath_def->work_dir);
+		if (directory == NULL) {
+			wrn ("Defined a work directory for profile path not accesible: %s", ppath_def->work_dir);
+			return NULL;
+		}
+		closedir (directory);
+
+		return ppath_def->work_dir;
+	}
+	return NULL;
+} 
 
 /** 
  * @brief Allows to get the serverName requested for the profile path

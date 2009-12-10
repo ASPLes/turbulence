@@ -104,7 +104,8 @@
    run-as-user    CDATA #IMPLIED                                                          \
    run-as-group   CDATA #IMPLIED                                                          \
    separate       CDATA #IMPLIED                                                          \
-   chroot         CDATA #IMPLIED >                                                        \
+   chroot         CDATA #IMPLIED                                                          \
+          work-dir       CDATA #IMPLIED>                                                  \
                                                                                           \
 <!ATTLIST if-success                                                                      \
    serverName   CDATA #IMPLIED                                                            \
