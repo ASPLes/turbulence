@@ -115,7 +115,7 @@ static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* load configuration file and populate backend with the
 	   serverName required for this connection */
-	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, NULL, &sasl_xml_db_mutex))  {
+	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, serverName, &sasl_xml_db_mutex))  {
 		wrn ("Failed to loas SASL configuration for ppath selected '%s' and connection id %d", 
 		     turbulence_ppath_get_name (ppath_selected), vortex_connection_get_id (conn));
 		return;
