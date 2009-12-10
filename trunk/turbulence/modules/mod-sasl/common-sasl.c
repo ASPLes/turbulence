@@ -431,6 +431,14 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 	/* now load all users dbs */
 	node                = axl_doc_get (result->sasl_xml_conf, "/mod-sasl/auth-db");
 	while (node != NULL) {
+
+		/* check for serverName definition */
+		if (serverName != NULL && HAS_ATTR (node, "serverName") && ! HAS_ATTR_VALUE (node, "serverName", serverName)) {
+			/* get next auth db */
+			node = axl_node_get_next_called (node, "auth-db");
+			continue;
+		} /* end if */
+
 		if (HAS_ATTR_VALUE (node, "type", "xml") &&
 		    HAS_ATTR (node, "location")) {
 

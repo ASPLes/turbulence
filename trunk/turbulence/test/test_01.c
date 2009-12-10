@@ -1862,6 +1862,52 @@ axl_bool test_12 (void) {
 	} /* end if */
 	axl_list_free (connList);
 
+	/*** now connect using test-12.another-server to use another database **/
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.another-server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (10): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */	
+
+	/* enable SASL auth for current connection */
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	
+	if (status == VortexOk) {
+		printf ("ERROR (11): expected to find auth failure for aspl user under test-12.another-server, but error found was: (%d) %s..\n", status, status_message);
+		return axl_false;
+	} /* end if */
+
+	/* now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel != NULL) {
+		printf ("ERROR (12): expected to not find proper channel creation but channel was created..\n");
+		return axl_false;
+	}
+
+	/* enable SASL auth for current connection */
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl2", NULL);
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+
+	if (status != VortexOk) {
+		printf ("ERROR (13): expected to not find auth failure for aspl2 user under test-12.another-server, but error found was: (%d) %s..\n", status, status_message);
+		return axl_false;
+	} /* end if */
+
+	/* now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel == NULL) {
+		printf ("ERROR (14): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	vortex_connection_close (conn);
+
+
 	/* finish queue */
 	vortex_async_queue_unref (queue);
 
