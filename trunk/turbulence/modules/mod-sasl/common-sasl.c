@@ -370,12 +370,12 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
 	} else {
 		/* configure lookup domain for mod sasl settings */
-		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"),
-							   turbulence_base_dir (alt_location));
+		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"), axl_strdup (alt_location));
 
 		/* us the alternative location to load the document */
-		result->sasl_conf_path  = axl_strdup (alt_location);
-		
+		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
+		if (result->sasl_conf_path == NULL)
+			result->sasl_conf_path = axl_strdup (alt_location);
 	} /* end if */
 
 	/* check if the path provided is valid */
@@ -388,6 +388,7 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 	}
 
 	/* load the document */
+	msg ("loading SASL configuration from: %s", result->sasl_conf_path);
 	result->sasl_xml_conf   = axl_doc_parse_from_file (result->sasl_conf_path, &err);
 
 	/* check result */

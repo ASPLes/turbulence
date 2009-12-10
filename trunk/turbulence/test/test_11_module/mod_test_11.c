@@ -55,8 +55,13 @@ void mod_test_11_frame_received (VortexChannel    * channel,
 	msg ("Received command: '%s'", command);
 
 	if (axl_cmp (command, "content")) {
-		/* send reply */
-		vortex_channel_send_rpy (channel, "profile path notified", 21, vortex_frame_get_msgno (frame));
+		if (axl_cmp (vortex_connection_get_server_name (connection), "test-12.third-server")) {
+			/* send reply */
+			vortex_channel_send_rpy (channel, "profile path notified for test-12.third-server", 46, vortex_frame_get_msgno (frame));
+		} else {
+			/* send reply */
+			vortex_channel_send_rpy (channel, "profile path notified", 21, vortex_frame_get_msgno (frame));
+		}
 	} else if (axl_cmp (command, "connections count")) {
 		/* get the list of connections */
 		connList = turbulence_conn_mgr_conn_list (ctx, VortexRoleListener, NULL);

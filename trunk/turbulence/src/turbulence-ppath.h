@@ -54,6 +54,9 @@ TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn);
 
 const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def);
 
+const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,
+						       TurbulencePPathDef * ppath_def);
+
 const char         * turbulence_ppath_get_server_name (VortexConnection * conn);
 
 axl_bool __turbulence_ppath_select   (TurbulenceCtx      * ctx, 
