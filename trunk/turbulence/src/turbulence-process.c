@@ -73,8 +73,9 @@ void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
 	TurbulenceCtx * ctx = user_data;
 
 	/* unlock waiting child */
-	msg ("calling to unlock due to vortex reader stoped (no more connections to be watched)..");
-	if (ctx->child_wait) {
+	msg ("calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p)..",
+	     ctx, ctx->child_wait);
+	if (ctx && ctx->child_wait) {
 		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
 	}
 	return;

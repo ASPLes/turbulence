@@ -156,8 +156,13 @@ int       common_sasl_validate_resource (VortexConnection * conn,
 
 
 /* private API */
+char * common_sasl_find_alt_file  (TurbulenceCtx * ctx, 
+				   const char    * alt_location, 
+				   const char    * file);
+
 int  common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
 				   axlNode          * node,
+				   const char       * alt_location,
 				   VortexMutex      * mutex);
 				   
 int  common_sasl_load_users_db    (TurbulenceCtx    * ctx,

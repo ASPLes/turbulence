@@ -318,20 +318,32 @@ int  common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * s
 /** 
  * @internal Function used to find sasl.conf file when an alternative
  * location is provided.
+ *
+ * @param ctx The context where the load operation will take place.
+ * @param alt_location The alternative location.
+ * @param file The base file name to locate.
+ *
+ * @return A reference to the file path or NULL if it fails to locate
+ * it.
+ *
  */
-char * common_sasl_find_sasl_conf (TurbulenceCtx * ctx, const char * alt_location)
+char * common_sasl_find_alt_file (TurbulenceCtx * ctx, 
+				  const char    * alt_location, 
+				  const char    * file)
 {
 	char * path;
 
 	/* check to find "sasl.conf" file at the alt_location */
-	path = vortex_support_build_filename (alt_location, "sasl.conf", NULL);
+	path = vortex_support_build_filename (alt_location, file, NULL);
 	if (vortex_support_file_test (path, FILE_EXISTS | FILE_IS_REGULAR)) 
 		return path;
 	
 	axl_free (path);
 	/* check if the alt_location is indeed a
 	   direct path to sasl.conf */
-	if (strlen (alt_location) > 9 && axl_cmp (path + strlen (path) - 9, "sasl.conf")) {
+	printf ("checking %s != %s\n", alt_location + strlen (alt_location) - strlen (file), file);
+	if (strlen (alt_location) > strlen (file) && axl_cmp (alt_location + strlen (alt_location) - strlen (file), file)) {
+		printf ("Found file: %s\n", alt_location);
 		return axl_strdup (alt_location);
 	} /* end if */
 	
@@ -339,7 +351,7 @@ char * common_sasl_find_sasl_conf (TurbulenceCtx * ctx, const char * alt_locatio
 	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"), axl_strdup (alt_location));
 
 	/* us the alternative location to load the document */
-	path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
+	path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", file);
 	if (path == NULL) {
 		/* remove here path added for domain search */
 		return NULL;
@@ -403,7 +415,8 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
 	} else {
 		/* find sasl.conf path using provided alt location. */
-		result->sasl_conf_path  = common_sasl_find_sasl_conf (ctx, alt_location);
+		printf ("Loading alternative location: %s\n", alt_location);
+		result->sasl_conf_path  = common_sasl_find_alt_file (ctx, alt_location, "sasl.conf");
 	} /* end if */
 
 	/* check if the path provided is valid */
@@ -472,7 +485,7 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 		    HAS_ATTR (node, "location")) {
 
 			/* call to load the database in xml format */
-			if (! common_sasl_load_auth_db_xml (result, node, mutex)) {
+			if (! common_sasl_load_auth_db_xml (result, node, alt_location, mutex)) {
 				/* failed to load some database */
 				common_sasl_free (result);
 
@@ -534,6 +547,7 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
  */
 int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 				   axlNode         * node,
+				   const char      * alt_location,
 				   VortexMutex     * mutex)
 {
 	/* get a reference to the turbulence context */
@@ -548,7 +562,11 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	db->type          = SASL_BACKEND_XML;
 
 	/* find the file */
-	db->db_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "location"));
+	if (alt_location) {
+		db->db_path  = common_sasl_find_alt_file (ctx, alt_location, ATTR_VALUE (node, "location"));
+	} else {
+		db->db_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "location"));
+	}
 
 	/* check if the path provided is valid */
 	if (db->db_path == NULL) {
