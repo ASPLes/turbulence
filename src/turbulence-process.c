@@ -227,7 +227,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	} /* end if */
 
 	/* (re)initialize here all modules */
-	turbulence_module_notify (ctx, TBC_INIT_HANDLER, NULL, NULL, NULL);
+	if (! turbulence_module_notify (ctx, TBC_INIT_HANDLER, NULL, NULL, NULL)) {
+		CLEAN_START(ctx); /* check to terminate child if clean start is defined */
+	}
 
 	/* check here to change root path, in the case it is defined
 	 * now we still have priviledges */
@@ -238,7 +240,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 	/* now notify profile path selected after dropping
 	   priviledges */
-	turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, conn, NULL);
+	if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, conn, NULL)) {
+		CLEAN_START(ctx); /* check to terminate child if clean start is defined */
+	}
 
 	/* now finish and register the connection */
 	vortex_connection_set_close_socket (conn, axl_true);
@@ -249,6 +253,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	turbulence_conn_mgr_register (ctx, conn);
 
 	/* check to handle start reply message */
+	msg ("Checking to handle start channel reply=%d at child=%d", handle_start_reply, getpid ());
 	if (handle_start_reply) {
 		/* handle start channel reply */
 		if (! vortex_channel_0_handle_start_msg_reply (vortex_ctx, conn, channel_num,

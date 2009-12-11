@@ -404,8 +404,12 @@ void               turbulence_module_free (TurbulenceModule * module)
  *
  * @param data3 Third optional data to be passed to the handler. This
  * pointer is handler especific.
+ *
+ * @return Returns axl_true if all handlers executed also returned
+ * axl_true. Those handler that have no return value will cause the
+ * function to always return axl_true. 
  */
-void               turbulence_module_notify      (TurbulenceCtx         * ctx, 
+axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx, 
 						  TurbulenceModHandler    handler,
 						  axlPointer              data,
 						  axlPointer              data2,
@@ -445,14 +449,25 @@ void               turbulence_module_notify      (TurbulenceCtx         * ctx,
 			/* notify if defined reconf function */
 			if (module->def->init != NULL) {
 				msg ("initializing module: %s", module->def->mod_name);
-				module->def->init (ctx);
+				if (! module->def->init (ctx)) {
+					/* init failed */
+					wrn ("failed to initialized module: %s, it returned initialization failure", module->def->mod_name);
+					vortex_mutex_unlock (&ctx->registered_modules_mutex);
+					return axl_false;
+				}
+					
 			}
 			break;
 		case TBC_PPATH_SELECTED_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->ppath_selected != NULL) {
 				msg ("notifying profile path selected on module: %s", module->def->mod_name);
-				module->def->ppath_selected (ctx, data, data2);
+				if (! module->def->ppath_selected (ctx, data, data2))  {
+					/* init failed */
+					wrn ("profile path selection for module: %s returned failure", module->def->mod_name);
+					vortex_mutex_unlock (&ctx->registered_modules_mutex);
+					return axl_false;
+				} /* end if */
 			}
 			break;
 		}
@@ -463,7 +478,8 @@ void               turbulence_module_notify      (TurbulenceCtx         * ctx,
 	} /* end if */
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
-	return;
+	/* reached this point always return TRUE dude!! */
+	return axl_true;
 }
 
 

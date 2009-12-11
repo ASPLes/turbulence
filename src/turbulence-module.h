@@ -62,7 +62,7 @@ void               turbulence_module_unregister  (TurbulenceModule * module);
 
 void               turbulence_module_free        (TurbulenceModule  * module);
 
-void               turbulence_module_notify      (TurbulenceCtx         * ctx, 
+axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx, 
 						  TurbulenceModHandler    handler,
 						  axlPointer              data,
 						  axlPointer              data2,

@@ -316,6 +316,39 @@ int  common_sasl_get_accounts_disabled (TurbulenceCtx * ctx, SaslAuthBackend * s
 }
 
 /** 
+ * @internal Function used to find sasl.conf file when an alternative
+ * location is provided.
+ */
+char * common_sasl_find_sasl_conf (TurbulenceCtx * ctx, const char * alt_location)
+{
+	char * path;
+
+	/* check to find "sasl.conf" file at the alt_location */
+	path = vortex_support_build_filename (alt_location, "sasl.conf", NULL);
+	if (vortex_support_file_test (path, FILE_EXISTS | FILE_IS_REGULAR)) 
+		return path;
+	
+	axl_free (path);
+	/* check if the alt_location is indeed a
+	   direct path to sasl.conf */
+	if (strlen (alt_location) > 9 && axl_cmp (path + strlen (path) - 9, "sasl.conf")) {
+		return axl_strdup (alt_location);
+	} /* end if */
+	
+	/* configure lookup domain for mod sasl settings */
+	vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"), axl_strdup (alt_location));
+
+	/* us the alternative location to load the document */
+	path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
+	if (path == NULL) {
+		/* remove here path added for domain search */
+		return NULL;
+	}
+	/* file located */
+	return path;
+}
+
+/** 
  * @brief Public mod-sasl APi that allows to load sasl backend from
  * the default file or the one located using alt_location. The
  * function return on success a reference to the sasl backend loaded,
@@ -369,13 +402,8 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 		/* find and load the file */
 		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
 	} else {
-		/* configure lookup domain for mod sasl settings */
-		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("sasl"), axl_strdup (alt_location));
-
-		/* us the alternative location to load the document */
-		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
-		if (result->sasl_conf_path == NULL)
-			result->sasl_conf_path = axl_strdup (alt_location);
+		/* find sasl.conf path using provided alt location. */
+		result->sasl_conf_path  = common_sasl_find_sasl_conf (ctx, alt_location);
 	} /* end if */
 
 	/* check if the path provided is valid */
