@@ -1058,6 +1058,8 @@ axl_bool test_05 () {
 
 axl_bool test_common_enable_debug = axl_false;
 
+
+
 axl_bool test_common_init (VortexCtx     ** vCtx, 
 			   TurbulenceCtx ** tCtx, 
 			   const char     * config)
@@ -1739,7 +1741,14 @@ axl_bool test_11 (void) {
 	return axl_true;
 }
 
+TurbulenceCtx * test12Ctx = NULL;
+void test_12_signal_received (int signal) {
+	/* marshall signal */
+	turbulence_signal_received (test12Ctx, signal);
+}
+
 axl_bool test_12 (void) {
+
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
@@ -1755,6 +1764,10 @@ axl_bool test_12 (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_12.conf")) 
 		return axl_false;
+
+	/* configure signal handling */
+	test12Ctx = tCtx;
+	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, test_12_signal_received);
 
 	/* configure test path to locate appropriate sasl.conf files */
 	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
@@ -1852,6 +1865,7 @@ axl_bool test_12 (void) {
 
 	/* close connection */
 	vortex_connection_close (conn);
+	printf ("Test 12: connection closed..\n");
 
 	/* at this point we must have 1 connections registered (the master listener) */
 	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
@@ -1906,6 +1920,7 @@ axl_bool test_12 (void) {
 	}
 
 	vortex_connection_close (conn);
+	printf ("Test 12: connection closed (2)..\n");
 
 
 	/*** now connect using test-12.another-server to use another database **/
@@ -1959,6 +1974,20 @@ axl_bool test_12 (void) {
 	/* clear frame */
 	vortex_frame_unref (frame);
 
+	/* close connection */
+	vortex_connection_close (conn);
+	printf ("Test 12: connection closed (3)..\n");
+
+	/* do a microwait to wait for childs to finish */
+	test_common_microwait (1000000);
+
+	/* check child count here */
+	printf ("Test 12: checking process count list %d..\n", turbulence_process_child_count (tCtx));
+	if (turbulence_process_child_count (tCtx) != 0) {
+		printf ("ERROR (20): expected to find child count 0 but found %d..\n", 
+			turbulence_process_child_count (tCtx));
+		return axl_false;
+	}
 
 	/* finish queue */
 	vortex_async_queue_unref (queue);
@@ -2054,8 +2083,6 @@ int main (int argc, char ** argv)
 		test_common_enable_debug = axl_true;
 	} /* end if */
 
-	goto init;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -2086,8 +2113,6 @@ int main (int argc, char ** argv)
 	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
 
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
-
-init:
 
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 

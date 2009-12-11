@@ -76,7 +76,7 @@ void mod_test_11_frame_received (VortexChannel    * channel,
 }
 
 /* mod_test_11 ppath-selected handler */
-static void mod_test_11_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {
+static axl_bool mod_test_11_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {
 
 	/* mutex lock */
 	vortex_mutex_lock (&mutex);
@@ -91,7 +91,8 @@ static void mod_test_11_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef
 	vortex_profiles_register (TBC_VORTEX_CTX (ctx), "urn:aspl.es:beep:profiles:reg-test:profile-11",
 				  NULL, NULL, NULL, NULL, mod_test_11_frame_received, NULL);
 
-	return;
+	/* notification ok */
+	return true;
 } /* end mod_test_11_ppath_selected */
 
 /* Entry point definition for all handlers included in this module */
