@@ -1909,6 +1909,7 @@ axl_bool test_12 (void) {
 
 
 	/*** now connect using test-12.another-server to use another database **/
+	printf ("Test 12: testing test-12.third-server, user defined SASL database..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
 					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.third-server"),
 					   NULL, NULL);

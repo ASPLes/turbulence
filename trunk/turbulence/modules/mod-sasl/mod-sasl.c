@@ -105,7 +105,7 @@ static int  mod_sasl_init (TurbulenceCtx * _ctx)
  * @brief Handler called once a profile path was selected for a
  * particular connection.
  */
-static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx, 
+static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx, 
 				     TurbulencePPathDef * ppath_selected, 
 				     VortexConnection   * conn) {
 
@@ -121,9 +121,9 @@ static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 	/* load configuration file and populate backend with the
 	   serverName required for this connection */
 	if (! common_sasl_load_config (ctx, &sasl_backend, workDir, serverName, &sasl_xml_db_mutex))  {
-		wrn ("Failed to loas SASL configuration for ppath selected '%s' and connection id %d", 
+		wrn ("Failed to load SASL configuration for ppath selected '%s' and connection id %d", 
 		     turbulence_ppath_get_name (ppath_selected), vortex_connection_get_id (conn));
-		return;
+		return axl_false;
 	} /* end if */
 
 	/* check for sasl methods to be activated */
@@ -155,7 +155,7 @@ static void mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 			sasl_backend);
 	}
 	
-	return;
+	return axl_true;
 }
 
 /** 

@@ -95,8 +95,11 @@ typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
  * @param ctx The turbulence context where the profile path is being selected.
  * @param ppath_selected The profile path selected.
  * @param conn The connection where the profile path was selected.
+ *
+ * @return Like \ref ModInitFunc "init" function, if this handler
+ * returns axl_false the connection is closed.
  */
-typedef void (*ModPPathSelected) (TurbulenceCtx * ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn);
+typedef axl_bool (*ModPPathSelected) (TurbulenceCtx * ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn);
 
 
 /** 
