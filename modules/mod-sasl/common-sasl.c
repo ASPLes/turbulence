@@ -341,9 +341,7 @@ char * common_sasl_find_alt_file (TurbulenceCtx * ctx,
 	axl_free (path);
 	/* check if the alt_location is indeed a
 	   direct path to sasl.conf */
-	printf ("checking %s != %s\n", alt_location + strlen (alt_location) - strlen (file), file);
 	if (strlen (alt_location) > strlen (file) && axl_cmp (alt_location + strlen (alt_location) - strlen (file), file)) {
-		printf ("Found file: %s\n", alt_location);
 		return axl_strdup (alt_location);
 	} /* end if */
 	
@@ -415,7 +413,6 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
 	} else {
 		/* find sasl.conf path using provided alt location. */
-		printf ("Loading alternative location: %s\n", alt_location);
 		result->sasl_conf_path  = common_sasl_find_alt_file (ctx, alt_location, "sasl.conf");
 	} /* end if */
 
@@ -554,16 +551,22 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	TurbulenceCtx * ctx = sasl_backend->ctx;
 	SaslAuthDb    * db;
 	axlError      * err  = NULL;
+	char          * base_dir;
 	char          * path;
 
 	/* create one db */
-	db               = axl_new (SaslAuthDb, 1);
+	db                = axl_new (SaslAuthDb, 1);
 	db->dump_on_close = axl_true;
 	db->type          = SASL_BACKEND_XML;
 
 	/* find the file */
 	if (alt_location) {
-		db->db_path  = common_sasl_find_alt_file (ctx, alt_location, ATTR_VALUE (node, "location"));
+		if (vortex_support_file_test (alt_location, FILE_IS_DIR))
+			path = axl_strdup (alt_location);
+		else 
+			path = turbulence_base_dir (alt_location);
+		db->db_path  = common_sasl_find_alt_file (ctx, path, ATTR_VALUE (node, "location"));
+		axl_free (path);
 	} else {
 		db->db_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "location"));
 	}
@@ -611,23 +614,20 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		
 		/* check remote admins */
 		if (db->remote_admin && HAS_ATTR (node, "remote-admins") && strlen (ATTR_VALUE (node, "remote-admins")) > 0) {
-			
+
 			/* load the turbulence db list */
 			msg2 ("found remote admins, loading dblist: '%s'", ATTR_VALUE (node, "remote-admins"));
-			if (turbulence_file_is_fullpath (ATTR_VALUE (node, "remote-admins"))) {
-				/* full path, try to load */
-				db->allowed_admins = turbulence_db_list_open (ctx, &err, ATTR_VALUE (node, "remote-admins"), NULL);
+			if (alt_location) {
+				base_dir = turbulence_base_dir (alt_location);
+				path     = common_sasl_find_alt_file (ctx, base_dir, ATTR_VALUE (node, "remote-admins"));
+				axl_free (base_dir);
 			} else {
-				/* relative, try to load */
-				path               = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "remote-admins"));
-				if (path != NULL) {
-					msg2 ("loading allowed admins from: %s..", path);
-					db->allowed_admins = turbulence_db_list_open (ctx, &err, path, NULL);
-					axl_free (path);
-				} else {
-					error ("unable to find a file (%s) at the locations configured..",
-					       ATTR_VALUE (node, "remote-admins"));
-				} /* end if */
+				path     = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "remote-admins"));
+			} /* end if */
+
+			if (path) {
+				db->allowed_admins = turbulence_db_list_open (ctx, &err, path, NULL);
+				axl_free (path);
 			} /* end if */
 			
 			if (db->allowed_admins == NULL) {
