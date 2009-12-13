@@ -39,8 +39,8 @@
 #include <service_dispatch.h>
 
 SaslAuthBackend * sasl_backend     = NULL;
-char            * sasl_xml_db_path = NULL;
-VortexMutex       sasl_xml_db_mutex;
+VortexMutex       sasl_db_mutex;
+VortexMutex       sasl_top_mutex;
 TurbulenceCtx   * ctx              = NULL;
 
 axlPointer      mod_sasl_validation  (VortexConnection * connection,
@@ -63,7 +63,7 @@ axlPointer      mod_sasl_validation  (VortexConnection * connection,
 					   props->authorization_id, 
 					   props->password,
 					   serverName,
-					   &sasl_xml_db_mutex)) {
+					   &sasl_db_mutex)) {
 			return INT_TO_PTR (axl_true);
 		} /* end if */
 	} /* end if */
@@ -95,8 +95,13 @@ static int  mod_sasl_init (TurbulenceCtx * _ctx)
 		return axl_false;
 	} /* end if */
 
+
+	/* initialize backends */
+	
+
 	/* init mutex */
-	vortex_mutex_create (&sasl_xml_db_mutex);
+	vortex_mutex_create (&sasl_db_mutex);
+	vortex_mutex_create (&sasl_top_mutex);
 
 	return axl_true;
 }
@@ -106,28 +111,57 @@ static int  mod_sasl_init (TurbulenceCtx * _ctx)
  * particular connection.
  */
 static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx, 
-				     TurbulencePPathDef * ppath_selected, 
-				     VortexConnection   * conn) {
+					 TurbulencePPathDef * ppath_selected, 
+					 VortexConnection   * conn) {
 
-	const char * serverName = turbulence_ppath_get_server_name (conn);
-	const char * workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
+	const char * serverName;
+	const char * workDir;
+	axl_bool     result;
+
+	serverName = turbulence_ppath_get_server_name (conn);
+	workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
 
 	msg ("Notified profile path selected, ppath serverName: %s (conn id=%d), workdir: %s", 
 	     serverName ? serverName : "", 
 	     vortex_connection_get_id (conn),
 	     workDir ? workDir : "");
-	     
+
+	/* check if the database was already loaded */
+	vortex_mutex_lock (&sasl_top_mutex);
+	if (sasl_backend != NULL) {
+		/* check for default database */
+		if (serverName == NULL) {
+			result = common_sasl_has_default (sasl_backend, NULL, &sasl_db_mutex);
+			vortex_mutex_unlock (&sasl_top_mutex);
+			return result;
+		} /* end if */
+
+		/* ok, database already loaded, check if it supports
+		   the serverName requested or the default */
+		if (common_sasl_serverName_exists (sasl_backend, serverName, NULL, &sasl_db_mutex)) {
+			msg ("SASL database for serverName=%s already loaded", serverName);
+			vortex_mutex_unlock (&sasl_top_mutex);
+			return axl_true;
+		} /* end if */
+
+		/* try to load database associated to serverName */
+		result = common_sasl_load_serverName (ctx, sasl_backend, serverName, &sasl_db_mutex);
+		msg ("SASL database load for serverName=%s status=%d", serverName, result);
+		vortex_mutex_unlock (&sasl_top_mutex);
+		return result;
+	}
 
 	/* load configuration file and populate backend with the
 	   serverName required for this connection */
-	if (! common_sasl_load_config (ctx, &sasl_backend, workDir, serverName, &sasl_xml_db_mutex))  {
+	if (! common_sasl_load_config (ctx, &sasl_backend, workDir, serverName, &sasl_db_mutex))  {
 		wrn ("Failed to load SASL configuration for ppath selected '%s' and connection id %d", 
 		     turbulence_ppath_get_name (ppath_selected), vortex_connection_get_id (conn));
+		vortex_mutex_unlock (&sasl_top_mutex);
 		return axl_false;
 	} /* end if */
 
 	/* check for sasl methods to be activated */
-	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_xml_db_mutex)) {
+	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_db_mutex)) {
 		
 		msg ("configuring PLAIN authentication method..");
 		/* accept plain profile */
@@ -139,7 +173,7 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 	} /* end if */
 
 	/* check databases that have remote admin */
-	if (common_sasl_activate_remote_admin (sasl_backend, &sasl_xml_db_mutex)) {
+	if (common_sasl_activate_remote_admin (sasl_backend, &sasl_db_mutex)) {
 		/* install the xml-rpc profile support to handle session share
 		 * services */
 		vortex_xml_rpc_accept_negotiation (
@@ -154,7 +188,8 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 			/* no user space data for the dispatch function. */
 			sasl_backend);
 	}
-	
+
+	vortex_mutex_unlock (&sasl_top_mutex);
 	return axl_true;
 }
 
@@ -171,7 +206,8 @@ static void mod_sasl_close (TurbulenceCtx * ctx)
 	common_sasl_free (sasl_backend);
 	
 	/* close mutex */
-	vortex_mutex_destroy (&sasl_xml_db_mutex);
+	vortex_mutex_destroy (&sasl_db_mutex);
+	vortex_mutex_destroy (&sasl_top_mutex);
 
 	return;
 }
@@ -194,7 +230,8 @@ static void mod_sasl_unload (TurbulenceCtx * ctx)
 	common_sasl_free_common (sasl_backend, axl_false);
 
 	/* close mutex */
-	vortex_mutex_destroy (&sasl_xml_db_mutex);
+	vortex_mutex_destroy (&sasl_db_mutex);
+	vortex_mutex_destroy (&sasl_top_mutex);
 
 	return;
 }

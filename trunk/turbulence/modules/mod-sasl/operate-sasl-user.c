@@ -4,5 +4,5 @@
 
 /* external variables to implement the backend module */
 extern SaslAuthBackend * sasl_backend;
-extern VortexMutex       sasl_xml_db_mutex;
+extern VortexMutex       sasl_db_mutex;
 
