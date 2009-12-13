@@ -531,6 +531,81 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 }
 
 /** 
+ * @brief Given a loaded SaslAuthBackend, allows to load the provided
+ * serverName (if found), adding it to the backend or just returning
+ * if it is already loaded.
+ *
+ * @param ctx The turbulence context where the load operation will take place.
+ * @param sasl_backend A SASL backend already initialized.
+ *
+ * @param serverName The serverName used to locate the database
+ * configuration to load or to check if it is already loaded.
+ *
+ * @param mutex Optional mutex variable used to lock the
+ * implementation to avoid race conditions between threads.
+ *
+ * @return axl_true In the case the serverName load was done (or it
+ * was already done), otherwise axl_false is returned.
+ */
+axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
+					     SaslAuthBackend * sasl_backend,
+					     const char      * serverName,
+					     VortexMutex     * mutex)
+{
+	axlNode * node;
+	char    * base_dir;
+
+	/* check input parameters */
+	v_return_val_if_fail (ctx,          axl_false);
+	v_return_val_if_fail (sasl_backend, axl_false);
+	v_return_val_if_fail (serverName,   axl_false);
+
+	/* check if the database already this database loaded */
+	if (common_sasl_serverName_exists (sasl_backend, serverName, NULL, mutex))
+		return axl_true;
+
+	/* now load all users dbs */
+	node                = axl_doc_get (sasl_backend->sasl_xml_conf, "/mod-sasl/auth-db");
+	while (node != NULL) {
+
+		/* check for serverName definition */
+		msg ("Checking database serverName=%s with %s", serverName, ATTR_VALUE (node, "serverName"));
+		if (HAS_ATTR (node, "serverName") && ! HAS_ATTR_VALUE (node, "serverName", serverName)) {
+			/* get next auth db */
+			node = axl_node_get_next_called (node, "auth-db");
+			continue;
+		} /* end if */
+
+		if (HAS_ATTR_VALUE (node, "type", "xml") &&
+		    HAS_ATTR (node, "location")) {
+
+			/* call to load the database in xml format */
+			base_dir = turbulence_base_dir (sasl_backend->sasl_conf_path);
+			if (! common_sasl_load_auth_db_xml (sasl_backend, node, base_dir, mutex)) {
+				axl_free (base_dir);
+
+				error ("SASL: failed to load some databases configured");
+				return axl_false;
+			} /* end if */
+			axl_free (base_dir);
+
+			/* database loaded */
+			return axl_true;
+			
+		} else {
+			/* add here other formats ... */
+			
+		} /* end if */
+
+		/* get the next database */
+		node = axl_node_get_next_called (node, "auth-db");
+
+	} /* end while */
+
+	return axl_false;
+}
+
+/** 
  * @internal Function that performs the loading of the auth-db in xml
  * format.
  * 
@@ -1117,10 +1192,10 @@ int  common_sasl_user_exists      (SaslAuthBackend   * sasl_backend,
  * @return axl_true if the user already exists, otherwise axl_false is
  * returned.
  */
-int       common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
-					 const char        * serverName,
-					 axlError         ** err,
-					 VortexMutex       * mutex)
+axl_bool       common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
+					      const char        * serverName,
+					      axlError         ** err,
+					      VortexMutex       * mutex)
 {
 	int  result;
 
@@ -1142,6 +1217,30 @@ int       common_sasl_serverName_exists (SaslAuthBackend   * sasl_backend,
 	UNLOCK;
 
 	return result;
+}
+
+/** 
+ * @brief Allows to check if there is a SASL default database backend
+ * loaded on the provided SaslAuthBackend reference.
+ *
+ * @param sasl_backend The SASL backend where the operation will be
+ * implemented.
+ *
+ * @param err An optional reference to an axlError where an textual
+ * diagnostic error is returned if the function fails.
+ *
+ * @param mutex An optional mutex used by the library to lock the
+ * database while operating.
+ * 
+ * @return axl_true the SASL backend has a default database or NULL if
+ * it fails.
+ */
+axl_bool        common_sasl_has_default       (SaslAuthBackend   * sasl_backend,
+					       axlError         ** err,
+					       VortexMutex       * mutex)
+{
+	/* check if it has a reference and default defined */
+	return (sasl_backend && sasl_backend->default_db);
 }
 
 /** 

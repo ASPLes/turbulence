@@ -22,7 +22,7 @@
 
 /* external variables to implement the backend module */
 extern SaslAuthBackend * sasl_backend;
-extern VortexMutex       sasl_xml_db_mutex;
+extern VortexMutex       sasl_db_mutex;
 
 SaslUserArray * get_users_0 (char ** fault_error, int * fault_code, VortexChannel * channel)
 {
@@ -35,7 +35,7 @@ SaslUserArray * get_users_0 (char ** fault_error, int * fault_code, VortexChanne
 		const char       * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 		
 		/* get the user list associated to the current serverName */
-		list     = common_sasl_get_users (sasl_backend, serverName, &sasl_xml_db_mutex);
+		list     = common_sasl_get_users (sasl_backend, serverName, &sasl_db_mutex);
 		users    = sasl_radmin_sasluserarray_new (axl_list_length (list));
 		while (axl_list_length (list) > 0) {
 			/* get a user */

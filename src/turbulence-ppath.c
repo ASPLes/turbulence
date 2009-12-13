@@ -673,6 +673,14 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 						 uri, profile_content, encoding, serverName, 
 						 frame);
 		msg ("finished turbulence_process_create_child..");
+	} else {
+
+		/* notify profile path selected in the case no child
+		   is created because turbulence_process_create_child
+		   already do it */
+		if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, connection, NULL)) {
+			CLEAN_START(ctx); /* check to terminate child if clean start is defined */
+		}
 	} /* end if */
 	
 	return axl_true;

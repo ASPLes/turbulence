@@ -451,6 +451,13 @@ static void mod_python_reconf (TurbulenceCtx * _ctx) {
 	return;
 } /* end mod_python_reconf */
 
+static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx, 
+					   TurbulencePPathDef * ppath_selected, 
+					   VortexConnection   * conn) {
+	/* still not implemented */
+	return axl_true;
+}
+
 /* Entry point definition for all handlers included in this module */
 TurbulenceModDef module_def = {
 	"mod_python",
@@ -458,6 +465,9 @@ TurbulenceModDef module_def = {
 	mod_python_init,
 	mod_python_close,
 	mod_python_reconf,
+	/* unload handler */
+	NULL, 
+	mod_python_ppath_selected
 };
 
 END_C_DECLS

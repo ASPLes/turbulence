@@ -1747,10 +1747,16 @@ void test_12_signal_received (int signal) {
 	turbulence_signal_received (test12Ctx, signal);
 }
 
-axl_bool test_12 (void) {
-
-	TurbulenceCtx    * tCtx;
-	VortexCtx        * vCtx;
+/** 
+ * @internal Common implementation for test_12 (to check mod-sasl with
+ * and without child process creation).
+ */
+axl_bool test_12_common (VortexCtx     * vCtx, 
+			 TurbulenceCtx * tCtx, 
+			 int             number_of_connections, 
+			 int             connections_after_close,
+			 axl_bool        test_local_sasl)
+{
 	VortexConnection * conn;
 	VortexChannel    * channel; 
 	VortexAsyncQueue * queue;
@@ -1760,22 +1766,6 @@ axl_bool test_12 (void) {
 	/* SASL status */
 	VortexStatus       status         = VortexError;
 	char             * status_message = NULL;
-
-	/* FIRST PART: init vortex and turbulence */
-	if (! test_common_init (&vCtx, &tCtx, "test_12.conf")) 
-		return axl_false;
-
-	/* configure signal handling */
-	test12Ctx = tCtx;
-	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, test_12_signal_received);
-
-	/* configure test path to locate appropriate sasl.conf files */
-	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
-						   vortex_support_build_filename ("test_12_module", NULL));
-
-	/* run configuration */
-	if (! turbulence_run_config (tCtx)) 
-		return axl_false;
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
@@ -1856,9 +1846,9 @@ axl_bool test_12 (void) {
 
 	/* at this point we must have 2 connections registered (conn and the master listener) */
 	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
-	if (axl_list_length (connList) != 2) {
-		printf ("ERROR (9): Expected to find registered connections equal to 2 but found %d", 
-			axl_list_length (connList));
+	if (axl_list_length (connList) != number_of_connections) {
+		printf ("ERROR (9): Expected to find registered connections equal to %d but found %d\n", 
+			number_of_connections, axl_list_length (connList));
 		return axl_false;
 	} /* end if */
 	axl_list_free (connList);
@@ -1869,9 +1859,9 @@ axl_bool test_12 (void) {
 
 	/* at this point we must have 1 connections registered (the master listener) */
 	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
-	if (axl_list_length (connList) != 1) {
-		printf ("ERROR (9): Expected to find registered connections equal to 1 but found %d", 
-			axl_list_length (connList));
+	if (axl_list_length (connList) != connections_after_close) {
+		printf ("ERROR (9.1): Expected to find registered connections equal to %d but found %d\n", 
+			connections_after_close, axl_list_length (connList));
 		return axl_false;
 	} /* end if */
 	axl_list_free (connList);
@@ -1924,70 +1914,72 @@ axl_bool test_12 (void) {
 
 
 	/*** now connect using test-12.another-server to use another database **/
-	printf ("Test 12: testing test-12.third-server, user defined SASL database..\n");
-	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.third-server"),
+	if (test_local_sasl) {
+		printf ("Test 12: testing test-12.third-server, user defined SASL database..\n");
+		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.third-server"),
 					   NULL, NULL);
-	if (! vortex_connection_is_ok (conn, axl_false)) {
-		printf ("ERROR (15): expected to find proper connection after turbulence startup..\n");
-		return axl_false;
-	} /* end if */	
-
-	/* enable SASL auth for current connection */
-	status = VortexError;
-	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl3", NULL);
-	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
-	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
-	
-	if (status != VortexOk) {
-		printf ("ERROR (16): expected to not find auth failure for aspl user under test-12.third-server, but error found was: (%d) %s..\n", status, status_message);
-		return axl_false;
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (15): expected to find proper connection after turbulence startup..\n");
+			return axl_false;
+		} /* end if */	
+		
+		/* enable SASL auth for current connection */
+		status = VortexError;
+		vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl3", NULL);
+		vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+		vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+		
+		if (status != VortexOk) {
+			printf ("ERROR (16): expected to not find auth failure for aspl user under test-12.third-server, but error found was: (%d) %s..\n", status, status_message);
+			return axl_false;
+		} /* end if */
+		
+		printf ("Test 12: proper auth found for test-12.third-server..\n");
+		
+		/* now create a channel */
+		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+		if (channel == NULL) {
+			printf ("ERROR (16): expected to not find proper channel creation but channel was created..\n");
+			return axl_false;
+		}
+		
+		vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+		if (! vortex_channel_send_msg (channel, "content", 7, NULL)) {
+			printf ("ERROR (17): expected to send content but found error..\n");
+			return axl_false;
+		} /* end if */
+		
+		frame = vortex_channel_get_reply (channel, queue);
+		if (frame == NULL) {
+			printf ("ERROR (18): expected to find reply for get pid request...\n");
+			return axl_false;
+		} /* end if */
+		
+		if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "profile path notified for test-12.third-server")) {
+			printf ("ERROR (19): expected to find 'profile path notified' but found '%s'",
+				(const char*) vortex_frame_get_payload (frame));
+			return axl_false;
+		} /* end if */
+		
+		/* clear frame */
+		vortex_frame_unref (frame);
+		
+		/* close connection */
+		vortex_connection_close (conn);
+		printf ("Test 12: connection closed (3)..\n");
+		
+		/* do a microwait to wait for childs to finish */
+		test_common_microwait (1000000);
+		
+		/* check child count here */
+		printf ("Test 12: checking process count list %d..\n", turbulence_process_child_count (tCtx));
+		if (turbulence_process_child_count (tCtx) != 0) {
+			printf ("ERROR (20): expected to find child count 0 but found %d..\n", 
+				turbulence_process_child_count (tCtx));
+			return axl_false;
+		}
 	} /* end if */
-
-	printf ("Test 12: proper auth found for test-12.third-server..\n");
-
-	/* now create a channel */
-	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
-	if (channel == NULL) {
-		printf ("ERROR (16): expected to not find proper channel creation but channel was created..\n");
-		return axl_false;
-	}
-
-	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
-	if (! vortex_channel_send_msg (channel, "content", 7, NULL)) {
-		printf ("ERROR (17): expected to send content but found error..\n");
-		return axl_false;
-	} /* end if */
-
-	frame = vortex_channel_get_reply (channel, queue);
-	if (frame == NULL) {
-		printf ("ERROR (18): expected to find reply for get pid request...\n");
-		return axl_false;
-	} /* end if */
-
-	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "profile path notified for test-12.third-server")) {
-		printf ("ERROR (19): expected to find 'profile path notified' but found '%s'",
-			(const char*) vortex_frame_get_payload (frame));
-		return axl_false;
-	} /* end if */
-
-	/* clear frame */
-	vortex_frame_unref (frame);
-
-	/* close connection */
-	vortex_connection_close (conn);
-	printf ("Test 12: connection closed (3)..\n");
-
-	/* do a microwait to wait for childs to finish */
-	test_common_microwait (1000000);
-
-	/* check child count here */
-	printf ("Test 12: checking process count list %d..\n", turbulence_process_child_count (tCtx));
-	if (turbulence_process_child_count (tCtx) != 0) {
-		printf ("ERROR (20): expected to find child count 0 but found %d..\n", 
-			turbulence_process_child_count (tCtx));
-		return axl_false;
-	}
 
 	/* finish queue */
 	vortex_async_queue_unref (queue);
@@ -1996,6 +1988,52 @@ axl_bool test_12 (void) {
 	test_common_exit (vCtx, tCtx);
 
 	return axl_true;
+}
+
+axl_bool test_12 (void) {
+
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_12.conf")) 
+		return axl_false;
+
+	/* configure signal handling */
+	test12Ctx = tCtx;
+	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, test_12_signal_received);
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
+						   vortex_support_build_filename ("test_12_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* call implement common test_12 */
+	return test_12_common (vCtx, tCtx, 2, 1, axl_true);
+}
+
+axl_bool test_12a (void) {
+
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_12a.conf")) 
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
+						   vortex_support_build_filename ("test_12_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* call implement common test_12 */
+	return test_12_common (vCtx, tCtx, 3, 1, axl_false);
 }
 
 
@@ -2115,6 +2153,8 @@ int main (int argc, char ** argv)
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
 
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
+	
+	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
 
 	printf ("All tests passed OK!\n");
 

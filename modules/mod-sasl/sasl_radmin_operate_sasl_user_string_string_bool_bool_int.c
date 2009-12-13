@@ -22,7 +22,7 @@
 
 /* external variables to implement the backend module */
 extern SaslAuthBackend * sasl_backend;
-extern VortexMutex       sasl_xml_db_mutex;
+extern VortexMutex       sasl_db_mutex;
 
 
 int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, int remote_admin, int disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
@@ -40,7 +40,7 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 			     auth_id, remote_admin, disabled);
 
 			/* before continue, check if the user already exists */
-			if (common_sasl_user_exists (sasl_backend, auth_id, serverName, NULL, &sasl_xml_db_mutex)) {
+			if (common_sasl_user_exists (sasl_backend, auth_id, serverName, NULL, &sasl_db_mutex)) {
 				REPLY_FAULT ("Unable to create user, auth_id is already in use (user already exists!", -1, false);
 			}
 
@@ -53,29 +53,29 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 						    /* no server name */
 						    serverName,
 						    /* mutex */
-						    &sasl_xml_db_mutex)) {
+						    &sasl_db_mutex)) {
 				error ("failed to create the user %s", auth_id);
 				return false;
 			} /* end if */
 
 			/* now configure additional values */
 			if (! common_sasl_user_disable (sasl_backend,
-							auth_id, serverName, disabled, &sasl_xml_db_mutex)) {
+							auth_id, serverName, disabled, &sasl_db_mutex)) {
 				error ("failed to set disabled state to user, unable to create the user");
 
 				/* failed to disabled the operation, remote the user */
-				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_db_mutex);
 				return false;
 			} /* end if */
 
 			/* now configure remote administration support */
 			if (! common_sasl_enable_remote_admin (sasl_backend,
-							       auth_id, serverName, remote_admin, &sasl_xml_db_mutex)) {
+							       auth_id, serverName, remote_admin, &sasl_db_mutex)) {
 				error ("failed to configured remote administration support provided=%d, unable to create the user",
 				       remote_admin);
 
 				/* failed to disabled the operation, remote the user */
-				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_db_mutex);
 				return false;
 			} /* end if */
 
@@ -86,7 +86,7 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 
 			/* remove from the remote admins */
 			common_sasl_enable_remote_admin (sasl_backend, auth_id, serverName,
-							 false, &sasl_xml_db_mutex);
+							 false, &sasl_db_mutex);
 
 			/* remove a paritcular sasl user */
 			common_sasl_user_remove (sasl_backend, 
@@ -95,30 +95,30 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 						 /* no server name */
 						 serverName,
 						 /* mutex */
-						 &sasl_xml_db_mutex);
+						 &sasl_db_mutex);
 
 			/* return true */
 			return true;
 		case 3:
 			/* change user password */
-			return common_sasl_user_password_change (sasl_backend, auth_id, additional_value, serverName, &sasl_xml_db_mutex);
+			return common_sasl_user_password_change (sasl_backend, auth_id, additional_value, serverName, &sasl_db_mutex);
 		case 4:
 			/* edit user auth id */
 			if (! common_sasl_user_edit_auth_id (sasl_backend, auth_id, additional_value,
-							     serverName, &sasl_xml_db_mutex)) {
+							     serverName, &sasl_db_mutex)) {
 				/* failed to change the user id */
 				return false;
 			} /* end if */
 
 			/* now set the rest of values */
-			if (! common_sasl_user_disable (sasl_backend, additional_value, serverName, disabled, &sasl_xml_db_mutex)) {
+			if (! common_sasl_user_disable (sasl_backend, additional_value, serverName, disabled, &sasl_db_mutex)) {
 				error ("failed to enable/disable sasl user for %s", auth_id);
 				return false;
 			}
 
 			/* update remote admin flag */
 			msg ("configuring remote admininistration for auth_id %s, status: %d", additional_value, remote_admin);
-			if (! common_sasl_enable_remote_admin (sasl_backend, additional_value, serverName, remote_admin, &sasl_xml_db_mutex)) {
+			if (! common_sasl_enable_remote_admin (sasl_backend, additional_value, serverName, remote_admin, &sasl_db_mutex)) {
 				error ("failed to enable/disable remote administration for sasl user %s", auth_id);
 				return false;
 			}
@@ -129,21 +129,21 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 			/* make the user provided to have remote
 			 * administration support */
 			/* update remote admin flag */
-			return common_sasl_enable_remote_admin (sasl_backend, auth_id, serverName, true, &sasl_xml_db_mutex);
+			return common_sasl_enable_remote_admin (sasl_backend, auth_id, serverName, true, &sasl_db_mutex);
 		case 6:
 			msg ("received request to check if remote admin is enabled for auth_id=%s and serverName=%s",
 			     auth_id, serverName ? serverName : "");
 			/* check if the provided user is
 			 * administrator */
-			return common_sasl_is_remote_admin_enabled (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+			return common_sasl_is_remote_admin_enabled (sasl_backend, auth_id, serverName, &sasl_db_mutex);
 		case 7:
 			/* now configure additional values */
 			if (! common_sasl_user_disable (sasl_backend,
-							auth_id, serverName, disabled, &sasl_xml_db_mutex)) {
+							auth_id, serverName, disabled, &sasl_db_mutex)) {
 				error ("failed to set disabled state to user, unable to create the user");
 
 				/* failed to disabled the operation, remote the user */
-				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_xml_db_mutex);
+				common_sasl_user_remove (sasl_backend, auth_id, serverName, &sasl_db_mutex);
 				return false;
 			} /* end if */
 			
