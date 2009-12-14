@@ -2036,6 +2036,110 @@ axl_bool test_12a (void) {
 	return test_12_common (vCtx, tCtx, 3, 1, axl_false);
 }
 
+axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
+	VortexConnection * conn;
+	VortexChannel    * channel; 
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
+
+	/* SASL status */
+	VortexStatus       status         = VortexError;
+	char             * status_message = NULL;
+
+	/* now open connection to localhost */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* enable SASL auth for current connection */
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	
+	if (status != VortexOk) {
+		printf ("ERROR (2): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 12: authentication under domain test-12.server COMPLETE\n");
+
+	/* now create a channel (just to check channels provided by other modules) */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel == NULL) {
+		printf ("ERROR (3): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* now create a channel registered by python code */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test");
+	if (channel == NULL) {
+		printf ("ERROR (4): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+	
+	/* send a message and check result */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "python-check", 12, NULL)) {
+		printf ("ERROR (5): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (6): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 1")) {
+		printf ("ERROR (7): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	/* unref the queue */
+	vortex_async_queue_unref (queue);
+
+	return axl_false;
+}
+
+axl_bool test_13 (void) {
+	TurbulenceCtx * tCtx;
+	VortexCtx     * vCtx;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_13.conf")) 
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("python"), 
+						   vortex_support_build_filename ("test_13_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* call to test common python functions */
+	if (! test_13_common (vCtx, tCtx))
+		return axl_false;
+
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 
 /** 
  * @brief Helper handler that allows to execute the function provided
@@ -2121,6 +2225,8 @@ int main (int argc, char ** argv)
 		test_common_enable_debug = axl_true;
 	} /* end if */
 
+	goto init;
+
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -2155,6 +2261,10 @@ int main (int argc, char ** argv)
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 	
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
+
+ init:
+
+	run_test (test_13, "Test 13: Check mod python (no childs)");
 
 	printf ("All tests passed OK!\n");
 
