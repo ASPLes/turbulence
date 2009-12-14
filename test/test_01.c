@@ -2110,7 +2110,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 	/* unref the queue */
 	vortex_async_queue_unref (queue);
 
-	return axl_false;
+	return axl_true;
 }
 
 axl_bool test_13 (void) {

@@ -10,12 +10,14 @@ tbc = None
 
 def frame_received (conn, channel, frame, xml_conf):
 
-    if frame.content == "python-check":
+    tbc.msg ("Test 13: python-test received content: '" + frame.payload + "'")
+
+    if frame.payload == "python-check":
         channel.send_rpy ("hey, this is python app 1", 25, frame.msg_no)
         return
 
     # reply acknoledge
-    channel.send_rpy ("Expected to find different content but found this: " + frame.content, 51 + len (frame.content), frame.msg_no)
+    channel.send_rpy ("Expected to find different content but found this: " + frame.payload, 51 + len (frame.payload), frame.msg_no)
     return
 
 def app_init (_tbc):
@@ -31,9 +33,9 @@ def app_init (_tbc):
     tbc.msg ("Test 13: python-test initialized")
     return True
 
-def application_close ():
+def app_close ():
     pass
 
-def application_reload ():
+def app_reload ():
     pass
 

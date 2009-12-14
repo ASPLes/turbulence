@@ -412,6 +412,13 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	node = axl_doc_get (mod_python_conf, "/mod-python/application");
 	while (node) {
 
+		/* check for initialized applications */
+		if (! PTR_TO_INT (axl_node_annotate_get (node, "app-started", axl_false))) {
+			/* found application already loaded */
+			node = axl_node_get_next_called (node, "application");
+			continue;
+		} /* end if */
+
 		/* find location node */
 		location = axl_node_get_child_called (node, "location");
 		if (location == NULL) {
@@ -511,7 +518,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* get work directory and serverName */
 	const char       * workDir;
-	PyGILState_STATE   state;
+	/* PyGILState_STATE   state; */
 
 	serverName = turbulence_ppath_get_server_name (conn);
 	workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
@@ -525,13 +532,14 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/*** bridge into python ***/
 	/* acquire the GIL */
-	state = PyGILState_Ensure();
+	/* state = PyGILState_Ensure(); */
 
 	/* check and load mod-python config */
 	if (! mod_python_load_config ()) {
 		vortex_mutex_unlock (&mod_python_top_init);
 		/* release the GIL */
-		PyGILState_Release(state);
+		/* PyGILState_Release(state); */
+		PyEval_ReleaseLock ();
 		return axl_false;
 	}
 
@@ -540,13 +548,15 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	if (! mod_python_init_applications (workDir, serverName, conn)) {
 		vortex_mutex_unlock (&mod_python_top_init);
 		/* release the GIL */
-		PyGILState_Release(state);
+		/* PyGILState_Release(state); */
+		PyEval_ReleaseLock ();
 		return axl_false;
 	}
 
 	/* let other threads to enter inside python engine: this must
 	   be the last call: release the GIL */
-	PyGILState_Release(state);
+	/* PyGILState_Release(state); */
+	PyEval_ReleaseLock ();
 
 	msg ("mod-python started..");
 	/* release lock */
