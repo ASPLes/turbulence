@@ -223,6 +223,7 @@ axl_bool mod_python_init_applications (const char * workDir, const char * server
 	PyObject   * module;
 	PyObject   * function;
 	const char * start_file;
+	const char * src;
 
 	/* for each application */
 	node = axl_doc_get (mod_python_conf, "/mod-python/application");
@@ -254,13 +255,26 @@ axl_bool mod_python_init_applications (const char * workDir, const char * server
 			APPLICATION_LOAD_FAILED ("unable to find location configuration for python app name %s", ATTR_VALUE (node, "name"));
 		}
 
+		/* check which src to use */
+		if (HAS_ATTR (location, "src"))
+			src = ATTR_VALUE (location, "src");
+		else
+			src = workDir;
+
+		/* check source lengths */
+		if (src == NULL || strlen (src) == 0) {
+			wrn ("Unable to load python app, source location is not defined and work-dir is empty");
+			node = axl_node_get_next_called (node, "application");
+			continue;
+		} /* end if */
+
 		/* drop a log */
-		msg ("importing code found at: %s%s%s", ATTR_VALUE (location, "src"), VORTEX_FILE_SEPARATOR, ATTR_VALUE (location, "start-file"));
+		msg ("importing code found at: %s%s%s", src, VORTEX_FILE_SEPARATOR, ATTR_VALUE (location, "start-file"));
 
 		/* add module path to complete import operation */
-		if (! mod_python_add_path (ATTR_VALUE (location, "src"))) {
+		if (! mod_python_add_path (src)) {
 			APPLICATION_LOAD_FAILED ("unable to add sys.path %s to load module %s",
-						 ATTR_VALUE (location, "src"), ATTR_VALUE (location, "name"));
+						 src, ATTR_VALUE (location, "name"));
 		} /* end if */
 
 		/* check import code do not end it .py or .pyc */
@@ -277,8 +291,7 @@ axl_bool mod_python_init_applications (const char * workDir, const char * server
 			py_vortex_handle_and_clear_exception (NULL);
 
 			APPLICATION_LOAD_FAILED ("Failed to import module %s located at %s", 
-						 start_file, 
-						 ATTR_VALUE (location, "src"));
+						 start_file, src);
 		} /* end if */
 
 		msg ("module %s (%p) load ok", start_file, module);

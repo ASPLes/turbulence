@@ -2065,7 +2065,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 		return axl_false;
 	} /* end if */
 
-	printf ("Test 12: authentication under domain test-12.server COMPLETE\n");
+	printf ("Test 13: authentication under domain test-13.server COMPLETE\n");
 
 	/* now create a channel (just to check channels provided by other modules) */
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
@@ -2097,6 +2097,148 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 
 	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 1")) {
 		printf ("ERROR (7): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	/* --- TEST: test wrong initialization --- */
+	printf ("Test 13: checking wrong initialization..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.wrong.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (8): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* now create a channel (just to check channels provided by other modules) */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test");
+
+	/* close connection */
+	vortex_connection_close (conn);
+
+	/* --- TEST: check second python app --- */
+	printf ("Test 13: testing second python app..\n");
+	/* now open connection to localhost */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.another-server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (9): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* enable SASL auth for current connection */
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl2", NULL);
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	
+	if (status != VortexOk) {
+		printf ("ERROR (10): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 13: authentication under domain test-13.another-server COMPLETE\n");
+
+	/* now create a channel (just to check channels provided by other modules) */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel == NULL) {
+		printf ("ERROR (11): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* now create a channel registered by python code */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test-2");
+	if (channel == NULL) {
+		printf ("ERROR (12): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+	
+	/* send a message and check result */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "python-check-2", 14, NULL)) {
+		printf ("ERROR (13): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (14): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 2")) {
+		printf ("ERROR (15): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	/* --- TEST: check third python app --- */
+	printf ("Test 13: testing third python app..\n");
+	/* now open connection to localhost */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.third-server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (16): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* enable SASL auth for current connection */
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl-3", NULL);
+	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	
+	if (status != VortexOk) {
+		printf ("ERROR (17): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 13: authentication under domain test-13.third-server COMPLETE\n");
+
+	/* now create a channel (just to check channels provided by other modules) */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
+	if (channel == NULL) {
+		printf ("ERROR (18): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* now create a channel registered by python code */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test-3");
+	if (channel == NULL) {
+		printf ("ERROR (19): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+	
+	/* send a message and check result */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "python-check-3", 14, NULL)) {
+		printf ("ERROR (20): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (21): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 3")) {
+		printf ("ERROR (22): expected to find 'profile path notified' but found '%s'",
 			(const char*) vortex_frame_get_payload (frame));
 		return axl_false;
 	} /* end if */
