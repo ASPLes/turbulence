@@ -473,6 +473,7 @@ static void mod_python_reconf (TurbulenceCtx * _ctx) {
 void mod_python_initialize (void)
 {
 	if (! mod_python_py_init) {
+		msg ("Initializing python engine..");
 		/* initialize python */
 		Py_Initialize ();
 
@@ -487,7 +488,8 @@ void mod_python_initialize (void)
 
 		/* signal python initialized */
 		mod_python_py_init = axl_true;
-
+	} else {
+		msg ("Python engine already initialized..");
 	} /* end if */
 	return;
 }
@@ -515,6 +517,8 @@ axl_bool mod_python_load_config (void) {
 			axl_error_free (error);
 			return axl_false;
 		} /* end if */
+	} else {
+		msg ("mod-python config already loaded..");
 	} /* end if */
 
 	return axl_true;
@@ -531,7 +535,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* get work directory and serverName */
 	const char       * workDir;
-	/* PyGILState_STATE   state; */
+	PyGILState_STATE   state; 
 
 	serverName = turbulence_ppath_get_server_name (conn);
 	workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
@@ -539,37 +543,41 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	/* lock to check and initialize */
 	vortex_mutex_lock (&mod_python_top_init);
 
-	/* initialize python engine and configure it to use with
-	   mod-python */
-	mod_python_initialize ();
+	
+	if (! mod_python_py_init) {
+		/* initialize python engine and configure it to use with
+		   mod-python */
+		mod_python_initialize ();
 
-	/*** bridge into python ***/
+		/* acquire the GIL */
+		PyEval_ReleaseLock ();
+	} /* end if */
+
 	/* acquire the GIL */
-	/* state = PyGILState_Ensure(); */
+	state  = PyGILState_Ensure();
 
 	/* check and load mod-python config */
 	if (! mod_python_load_config ()) {
-		vortex_mutex_unlock (&mod_python_top_init);
 		/* release the GIL */
-		/* PyGILState_Release(state); */
-		PyEval_ReleaseLock ();
+		PyGILState_Release (state); 
+		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
 	}
 
 	/* for each application found, register it and call to
 	 * initialize its function */
 	if (! mod_python_init_applications (workDir, serverName, conn)) {
+		PyGILState_Release (state); 
 		vortex_mutex_unlock (&mod_python_top_init);
-		/* release the GIL */
-		/* PyGILState_Release(state); */
-		PyEval_ReleaseLock ();
 		return axl_false;
 	}
+	msg ("mod-python applications initialized");
 
 	/* let other threads to enter inside python engine: this must
 	   be the last call: release the GIL */
 	/* PyGILState_Release(state); */
-	PyEval_ReleaseLock ();
+	PyGILState_Release(state); 
+	vortex_mutex_unlock (&mod_python_top_init);
 
 	msg ("mod-python started..");
 	/* release lock */
