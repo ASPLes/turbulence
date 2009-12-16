@@ -2282,6 +2282,33 @@ axl_bool test_13 (void) {
 	return axl_true;
 }
 
+axl_bool test_13_a (void) {
+	TurbulenceCtx * tCtx;
+	VortexCtx     * vCtx;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_13a.conf")) 
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("python"), 
+						   vortex_support_build_filename ("test_13_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* call to test common python functions */
+	if (! test_13_common (vCtx, tCtx))
+		return axl_false;
+
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 
 /** 
  * @brief Helper handler that allows to execute the function provided
@@ -2404,9 +2431,11 @@ int main (int argc, char ** argv)
 	
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
 
+	run_test (test_13, "Test 13: Check mod python");
+
  init:
 
-	run_test (test_13, "Test 13: Check mod python (no childs)");
+	run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)");
 
 	printf ("All tests passed OK!\n");
 
