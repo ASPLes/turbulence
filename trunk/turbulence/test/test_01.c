@@ -2036,7 +2036,7 @@ axl_bool test_12a (void) {
 	return test_12_common (vCtx, tCtx, 3, 1, axl_false);
 }
 
-axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
+axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_third_test) {
 	VortexConnection * conn;
 	VortexChannel    * channel; 
 	VortexAsyncQueue * queue;
@@ -2159,6 +2159,8 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 		printf ("ERROR (12): expected to proper channel creation but a failure was found..\n");
 		return axl_false;
 	}
+	/* unref the queue */
+	vortex_async_queue_unref (queue);
 	
 	/* send a message and check result */
 	queue = vortex_async_queue_new ();
@@ -2186,9 +2188,16 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 	/* close the connection */
 	vortex_connection_close (conn);
 
+	/* unref the queue */
+	vortex_async_queue_unref (queue);
+
+	if (skip_third_test)
+		return axl_true;
+
 	/* --- TEST: check third python app --- */
 	printf ("Test 13: testing third python app..\n");
 	/* now open connection to localhost */
+	queue = vortex_async_queue_new ();
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
 					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.third-server"),
 					   NULL, NULL);
@@ -2201,6 +2210,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl-3", NULL);
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
 	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+
 	
 	if (status != VortexOk) {
 		printf ("ERROR (17): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
@@ -2222,6 +2232,8 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx) {
 		printf ("ERROR (19): expected to proper channel creation but a failure was found..\n");
 		return axl_false;
 	}
+	/* unref the queue */
+	vortex_async_queue_unref (queue);
 	
 	/* send a message and check result */
 	queue = vortex_async_queue_new ();
@@ -2272,7 +2284,7 @@ axl_bool test_13 (void) {
 		return axl_false;
 
 	/* call to test common python functions */
-	if (! test_13_common (vCtx, tCtx))
+	if (! test_13_common (vCtx, tCtx, axl_false))
 		return axl_false;
 
 
@@ -2299,7 +2311,7 @@ axl_bool test_13_a (void) {
 		return axl_false;
 
 	/* call to test common python functions */
-	if (! test_13_common (vCtx, tCtx))
+	if (! test_13_common (vCtx, tCtx, axl_true))
 		return axl_false;
 
 
@@ -2394,8 +2406,6 @@ int main (int argc, char ** argv)
 		test_common_enable_debug = axl_true;
 	} /* end if */
 
-	goto init;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -2432,9 +2442,7 @@ int main (int argc, char ** argv)
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
 
 	run_test (test_13, "Test 13: Check mod python");
-
- init:
-
+	
 	run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)");
 
 	printf ("All tests passed OK!\n");
