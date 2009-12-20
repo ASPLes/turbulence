@@ -916,13 +916,13 @@ void common_sasl_apply_max_allowed_tries (TurbulenceCtx    * ctx,
  * @return axl_true if the user was authenticated, otherwise axl_false is
  * returned.
  */
-int  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
-				   VortexConnection * conn,
-				   const char       * auth_id,
-				   const char       * authorization_id,
-				   const char       * password,
-				   const char       * serverName,
-				   VortexMutex      * mutex)
+axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
+					VortexConnection * conn,
+					const char       * auth_id,
+					const char       * authorization_id,
+					const char       * password,
+					const char       * serverName,
+					VortexMutex      * mutex)
 {
 	/* get a reference to the turbulence context */
 	TurbulenceCtx * ctx     = NULL;
