@@ -212,9 +212,12 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	 * operation here because we are in the middle of a signal
 	 * handler execution. By unlocking the listener, the
 	 * turbulence_cleanup is called cleaning the room. */
-	msg ("Unlocking turbulence listener: %p", ctx);
+	msg ("Unlocking turbulence listener: %p child_wait=%p", ctx, ctx ? ctx->child_wait : NULL);
 	if (ctx->child_wait) {
 		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
+	} else {
+		/* unlock the listener (main process) */
+		vortex_listener_unlock (TBC_VORTEX_CTX (ctx));
 	} /* end if */
 
 	return;

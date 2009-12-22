@@ -757,9 +757,15 @@ axl_bool                turbulence_db_list_close_internal  (TurbulenceDbList * l
 	axl_free (list->full_path);
 	vortex_mutex_destroy (&(list->mutex));
 	axl_free (list);
-	
 
 	return axl_true;
+}
+
+void             turbulence_db_list_close_aux (axlPointer _list)
+{
+	/* by default do not save the list content on module close */
+	turbulence_db_list_close_internal (_list, axl_false);
+	return;
 }
 
 /** 
@@ -931,7 +937,7 @@ axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
 
 	/* init global variables */
 	vortex_mutex_create (&ctx->db_list_mutex);
-	ctx->db_list_opened = axl_list_new (turbulence_db_list_equal, (axlDestroyFunc) turbulence_db_list_close_internal);
+	ctx->db_list_opened = axl_list_new (turbulence_db_list_equal, turbulence_db_list_close_aux);
 	msg2 ("Init context list: %p on context: %p..", ctx->db_list_opened, ctx);
 
 	/* init dtd to validate data */
@@ -960,7 +966,7 @@ axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
 void               turbulence_db_list_cleanup (TurbulenceCtx * ctx)
 {
 	/* do not perform any operation if null is received */
-	if (ctx == NULL)
+	if (ctx == NULL && ctx->db_list_opened == NULL)
 		return;
 
 	/* clean mutex */
