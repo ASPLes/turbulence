@@ -12,7 +12,8 @@ configuration_files = \
 	test_12.conf \
 	test_12a.conf \
 	test_13.conf \
-	test_13a.conf
+	test_13a.conf \
+	test_14.conf
 
 SUBDIRS = test_11_module
 
