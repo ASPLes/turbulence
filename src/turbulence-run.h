@@ -53,8 +53,20 @@ void turbulence_run_cleanup   (TurbulenceCtx * ctx);
  * @brief Simple macro that is used to stop Turbulence startup by
  * calling to \ref turbulence_run_check_clean_start in the cases where
  * the main file or module configuration is not properly setup.
+ * @param ctx The context to be checked for clean start.
  */
 #define CLEAN_START(ctx) turbulence_run_check_clean_start(ctx)
+
+/** 
+ * @brief Shutdown and closes the connection.
+ * @param conn The connection to shutdown and close.
+ */
+#define TBC_FAST_CLOSE(conn) do{	                                           \
+	error ("shutdowing connection id=%d..", vortex_connection_get_id (conn));  \
+        vortex_connection_set_close_socket (conn, axl_true);                       \
+	vortex_connection_shutdown (conn);                                         \
+	vortex_connection_close    (conn);                                         \
+	} while (0);
 
 void turbulence_run_check_clean_start (TurbulenceCtx * ctx);
 

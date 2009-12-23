@@ -61,13 +61,17 @@ VortexMutex    mod_python_top_init;
 /* control if python itself was initialized on this process */
 axl_bool       mod_python_py_init = axl_false;
 
-#define APPLICATION_LOAD_FAILED(msg, ...)                         \
-        wrn (msg, ##__VA_ARGS__);                                 \
-        /* clean for clean start activated */                     \
-        CLEAN_START (ctx);                                        \
-                                                                  \
-        /* get next node */                                       \
-        node = axl_node_get_next_called (node, "application");    \
+#define APPLICATION_LOAD_FAILED(msg, ...)                                                      \
+	/* check to close the connection on failure */                                         \
+	if (conn && turbulence_config_is_attr_positive (ctx, node, "close-conn-on-failure")) { \
+	      TBC_FAST_CLOSE(conn);                                                            \
+        }                                                                                      \
+        wrn (msg, ##__VA_ARGS__);                                                              \
+        /* clean for clean start activated */                                                  \
+        CLEAN_START (ctx);                                                                     \
+                                                                                               \
+        /* get next node */                                                                    \
+        node = axl_node_get_next_called (node, "application");                                 \
         continue;                                                 
 
 /** 

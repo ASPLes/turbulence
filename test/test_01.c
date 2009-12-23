@@ -2276,6 +2276,10 @@ axl_bool test_13 (void) {
 		return axl_false;
 
 	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
+						   vortex_support_build_filename ("test_12_module", NULL));
+
+	/* configure test path to locate appropriate sasl.conf files */
 	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("python"), 
 						   vortex_support_build_filename ("test_13_module", NULL));
 
@@ -2321,6 +2325,67 @@ axl_bool test_13_a (void) {
 	return axl_true;
 }
 
+
+axl_bool test_14 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_14.conf")) 
+		return axl_false;
+
+	/* register profile to use */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-14");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* create a connection to the local sever */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-14.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection but found an error..\n");
+		return axl_false;
+	} /* end if */
+
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-14");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* ok, now create a channel with a different serverName */
+	channel = vortex_channel_new_full (conn, 0, "another.server.com", "urn:aspl.es:beep:profiles:reg-test:profile-14", EncodingNone, NULL, 0, 
+					   /* close */
+					   NULL, NULL, 
+					   /* frame received */
+					   NULL, NULL,
+					   /* on channel created */
+					   NULL, NULL);
+	if (channel != NULL) {
+		printf ("ERROR (3): expected to not find proper channel creation but found valid reerence..\n");
+		return axl_false;
+	}
+
+	/* ok, now create a channel without signaling nothing */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-14");
+	if (channel == NULL) {
+		printf ("ERROR (4): expected to find proper channel creation but found an invalid reerence..\n");
+		return axl_false;
+	}
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
 
 /** 
  * @brief Helper handler that allows to execute the function provided
@@ -2444,6 +2509,8 @@ int main (int argc, char ** argv)
 	run_test (test_13, "Test 13: Check mod python");
 	
 	run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)");
+
+	run_test (test_14, "Test 14: Notify different server after profile path selected");
 
 	printf ("All tests passed OK!\n");
 

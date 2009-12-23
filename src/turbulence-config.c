@@ -87,7 +87,7 @@ axl_bool  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 		return axl_false;
 
 	} /* end if */
-	
+
 	/* drop a message */
 	msg ("file %s loaded, ok", config);
 

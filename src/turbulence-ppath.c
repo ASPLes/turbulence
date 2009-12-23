@@ -263,12 +263,13 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		/* profile path matched! */
 
 		/* check if the channel num is defined */
-		if (channel_num > 0  && state->path_selected->serverName != NULL) {
+		if (channel_num > 0  && state->path_selected->serverName != NULL && serverName != NULL && strlen (serverName) > 1) {
 
 			/* check the serverName value provided against
 			 * the configuration */
 			if (! turbulence_expr_match (state->path_selected->serverName, serverName ? serverName : "")) {
-				error ("serverName='%s' doesn't match profile path conf", serverName ? serverName : "");
+				error ("serverName='%s' doesn't match current profile path conf (%s)", serverName ? serverName : "",
+				       turbulence_ppath_get_name (state->path_selected));
 				/* filter the channel creation because
 				 * the serverName provided doesn't
 				 * match */
@@ -512,23 +513,6 @@ axl_bool __turbulence_ppath_handle_connection_match_src (VortexConnection * conn
 	return axl_false;
 }
 
-axl_bool __turbulence_ppath_handle_connection_match_dst (VortexConnection * connection, 
-							 TurbulenceExpr   * expr, 
-							 const char       * dst)
-{
-	/* by default, it no expression is found, it means this match
-	 * pattern must not block the connection  */
-	if (expr == NULL)
-		return axl_true;
-
-	/* try to match the src expression against the connection value */
-	if (turbulence_expr_match (expr, dst)) {
-		return axl_true;
-	} /* end if */
-	
-	return axl_false;
-}
-
 /** 
  * @internal Function that allows to select a profile path for a
  * connection. The variable on_connect signals if the connection
@@ -568,6 +552,8 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 		   still BEEP listener greetings wasn't sent so we can
 		   only select if all profile path references to src=
 		   and dst= */
+		msg ("Profile path selection called with on_connect signled and all_rules_address_based:%d", 
+		     ctx->all_rules_address_based);
 		if (! ctx->all_rules_address_based)  {
 			/* configure a profile mask to select an appropriate ppath state in the next channel
 			   start request where the remote BEEP peer has a chance to select a serverName value */
@@ -612,9 +598,10 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 			break;
 		} else {
 			/* show profile path not mached */
-			msg2 ("profile path do not match: %s, for connection id=%d, src=%s local_addr=%s serverName=%s ", 
+			msg2 ("profile path do not match: %s, for connection id=%d, src=%s local_addr=%s serverName=%s (src_status:%d, dst_status:%d, serverName_status:%d) ", 
 			      def->path_name ? def->path_name : "(no path name defined)",
-			      vortex_connection_get_id (connection), src, dst, serverName ? serverName : "");
+			      vortex_connection_get_id (connection), src, dst, serverName ? serverName : "",
+			      src_status, dst_status, serverName_status);
 		} /* end if */
 
 		/* next profile path definition */
@@ -697,7 +684,9 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
  */
 axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * connection, axlPointer data)
 {
+	TurbulenceCtx * ctx = data;
 	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
+	msg ("Call to select a profile path at connection time, conn-id=%d", vortex_connection_get_id (connection));
 	return __turbulence_ppath_select ((TurbulenceCtx *) data, connection, -1, NULL, NULL, -1, "", NULL, axl_true);
 }
 
@@ -882,8 +871,7 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 			*/
 
 			if ((HAS_ATTR (pdef, "server-name")) && 
-			    (! HAS_ATTR_VALUE (pdef, "server-name", ".*")) && 
-			    (HAS_ATTR (pdef, "src") || HAS_ATTR (pdef, "dst"))) {
+			    (! HAS_ATTR_VALUE (pdef, "server-name", ".*"))) {
 				ctx->all_rules_address_based = axl_false;
 			} /* end if */
 		} /* end if */

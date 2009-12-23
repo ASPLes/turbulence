@@ -229,6 +229,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 	/* (re)initialize here all modules */
 	if (! turbulence_module_notify (ctx, TBC_INIT_HANDLER, NULL, NULL, NULL)) {
+		/* close the connection */
+		TBC_FAST_CLOSE (conn);
+
 		CLEAN_START(ctx); /* check to terminate child if clean start is defined */
 	}
 
@@ -242,6 +245,11 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* now notify profile path selected after dropping
 	   priviledges */
 	if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, conn, NULL)) {
+		/* close the connection */
+		TBC_FAST_CLOSE (conn);
+
+		/* check if clean start is activated to close the
+		 * connection */
 		CLEAN_START(ctx); /* check to terminate child if clean start is defined */
 	}
 
