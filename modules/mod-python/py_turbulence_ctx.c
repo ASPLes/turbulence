@@ -145,10 +145,29 @@ static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args
 	return Py_None;
 }
 
+static PyObject * py_turbulence_ctx_error (PyTurbulenceCtx * self, PyObject * args)
+{
+	char          * message = NULL;
+	TurbulenceCtx * ctx = self->ctx;
+
+	/* parse and check result */
+	if (! PyArg_ParseTuple (args, "z", &message))
+		return NULL;
+
+	/* drop the log */
+	error (message);
+	
+	Py_INCREF (Py_None);
+	return Py_None;
+}
+
 static PyMethodDef py_turbulence_ctx_methods[] = { 
 	/* msg */
 	{"msg", (PyCFunction) py_turbulence_ctx_msg, METH_VARARGS,
 	 "Records a turbulence log message (msg ()). This is sent to the configured log and showed on the console according to the configuration."},
+	/* error */
+	{"error", (PyCFunction) py_turbulence_ctx_error, METH_VARARGS,
+	 "Records a turbulence error message (error ()). This is sent to the configured log and showed on the console according to the configuration."},
  	{NULL, NULL, 0, NULL}  
 }; 
 
