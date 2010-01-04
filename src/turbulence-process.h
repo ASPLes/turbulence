@@ -40,26 +40,54 @@
 
 #include <turbulence.h>
 
-void turbulence_process_init         (TurbulenceCtx * ctx, 
-				      axl_bool        reinit);
+void              turbulence_process_init         (TurbulenceCtx * ctx, 
+						   axl_bool        reinit);
 
-void turbulence_process_create_child (TurbulenceCtx       * ctx, 
-				      VortexConnection    * conn,
-				      TurbulencePPathDef  * def,
-				      axl_bool              handle_start_reply,
-				      int                   channel_num,
-				      const char          * profile,
-				      const char          * profile_content,
-				      VortexEncoding        encoding,
-				      const char          * serverName,
-				      VortexFrame         * frame);
+void              turbulence_process_create_child (TurbulenceCtx       * ctx, 
+						   VortexConnection    * conn,
+						   TurbulencePPathDef  * def,
+						   axl_bool              handle_start_reply,
+						   int                   channel_num,
+						   const char          * profile,
+						   const char          * profile_content,
+						   VortexEncoding        encoding,
+						   const char          * serverName,
+						   VortexFrame         * frame);
 
-void turbulence_process_kill_childs  (TurbulenceCtx * ctx);
+void              turbulence_process_kill_childs  (TurbulenceCtx * ctx);
 
-int      turbulence_process_child_count  (TurbulenceCtx * ctx);
+int               turbulence_process_child_count  (TurbulenceCtx * ctx);
 
-axl_bool turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid);
+axl_bool          turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid);
 
-void turbulence_process_cleanup      (TurbulenceCtx * ctx);
+int               turbulence_process_find_pid_from_ppath_id (TurbulenceCtx * ctx, int pid);
+
+TurbulenceChild * turbulence_process_get_child_from_ppath (TurbulenceCtx      * ctx, 
+							   TurbulencePPathDef * def,
+							   axl_bool             acquire_mutex);
+
+void              turbulence_process_cleanup      (TurbulenceCtx * ctx);
+
+/* internal API */
+char *           turbulence_process_connection_status_string (axl_bool          handle_start_reply,
+							      int               channel_num,
+							      const char      * profile,
+							      const char      * profile_content,
+							      VortexEncoding    encoding,
+							      const char      * serverName,
+							      int               msg_no,
+							      int               seq_no,
+							      int               seq_no_expected);
+
+void             turbulence_process_connection_recover_status (char            * ancillary_data,
+							       axl_bool        * handle_start_reply,
+							       int             * channel_num,
+							       const char     ** profile,
+							       const char     ** profile_content,
+							       VortexEncoding  * encoding,
+							       const char     ** serverName,
+							       int             * msg_no,
+							       int             * seq_no,
+							       int             * seq_no_expected);
 
 #endif

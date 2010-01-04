@@ -196,6 +196,15 @@ AC_ARG_ENABLE(status-dir, [  --status-dir=DIR          Allows to configure the s
 	      statusdir="/var/run")
 AC_SUBST(statusdir)
 
+dnl check for statusdir
+AC_ARG_ENABLE(runtime-data-dir, [  --runtime-data-dir=DIR          Allows to configure the runtime created data directory. 
+                                This directory is used to place some files like unix sockets and temporal files created
+                                during Turbulence function. This is a prefix directory.
+                                Default: /var/lib],
+              runtimedatadir="$enableval",
+	      runtimedatadir="/var/lib")
+AC_SUBST(runtimedatadir)
+
 # support to check some dependencies for exarg library embeded into
 # turbulence core code
 AC_TRY_LINK([#include <stdio.h>], 
@@ -274,6 +283,7 @@ tools/tbc-dblist-mgr/Makefile
 tools/tbc-ctl/Makefile
 test/Makefile
 test/test_11_module/Makefile
+test/test_15_module/Makefile
 turbulence.pc
 turbulence-config
 ])
@@ -283,6 +293,7 @@ echo "--       Turbulence Settings            --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "   Status directory:               [$statusdir]"
+echo "   Runtime data directory:         [$runtimedatadir]"
 echo "   Reg. expression support (pcre): [$pcre_found]"
 if test "$pcre_found" = "no" ; then
 	echo "NOTE: building turbulence without pcre support will"

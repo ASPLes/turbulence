@@ -52,6 +52,8 @@ void turbulence_ppath_change_root    (TurbulenceCtx      * ctx,
 
 TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn);
 
+int                  turbulence_ppath_get_id   (TurbulencePPathDef * ppath_def);
+
 const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def);
 
 const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,

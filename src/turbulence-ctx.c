@@ -83,6 +83,9 @@ TurbulenceCtx * turbulence_ctx_new ()
 	ctx->access_log  = -1;
 	ctx->vortex_log  = -1;
 
+	/* init ppath unique id assigment */
+	ctx->ppath_next_id = 1;
+
 	/* return context created */
 	return ctx;
 }

@@ -508,7 +508,7 @@ axl_bool mod_python_load_config (void) {
 	if (mod_python_conf == NULL) {
 		/* python.conf not loaded */
 		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("python"), 
-							   vortex_support_build_filename (turbulence_sysconfdir (), "turbulence", "python", NULL));
+							   vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "python", NULL));
 
 		/* load configuration file */
 		config           = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "python", "python.conf");

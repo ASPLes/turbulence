@@ -62,6 +62,7 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 {
 	int exit_status = 0;
 	int pid;
+	int ppath_id;
 	if (_signal == SIGHUP) {
 		msg ("received reconf signal, handling..");
 		/* notify */
@@ -80,8 +81,10 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 		     pid, exit_status);
 
 		/* remove pid from list */
+		ppath_id = turbulence_process_find_pid_from_ppath_id (ctx, pid);
 		vortex_mutex_lock (&ctx->child_process_mutex);
-		axl_list_remove (ctx->child_process, INT_TO_PTR (pid));
+		msg ("Found profile path id %d associated to child pid: %d", ppath_id, pid);
+		axl_hash_remove (ctx->child_process, INT_TO_PTR (ppath_id));
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 
 		/* reconfigure signal again */

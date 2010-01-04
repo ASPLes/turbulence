@@ -1227,6 +1227,7 @@ axl_bool test_07 (void) {
 	}while(0)
 
 #define SIMPLE_CHANNEL_CREATE(uri) vortex_channel_new (conn, 0, uri, NULL, NULL, NULL, NULL, NULL, NULL)
+#define SIMPLE_CHANNEL_CREATE_WITH_CONN(conn_to_use, uri) vortex_channel_new (conn_to_use, 0, uri, NULL, NULL, NULL, NULL, NULL, NULL)
 
 axl_bool test_08 (void) {
 	TurbulenceCtx    * tCtx;
@@ -1541,7 +1542,7 @@ axl_bool test_10 (void) {
 	/* check to create profile 2 channel: MUST WORK */
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
 	if (channel == NULL) {
-		printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
 		return axl_false;
 	}
 
@@ -2387,6 +2388,227 @@ axl_bool test_14 (void) {
 	return axl_true;
 }
 
+axl_bool test_15 (void) {
+
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn, * conn2;
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
+	int                messages = 30;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_15.conf")) 
+		return axl_false;
+
+	/* register profile to use */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-15");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* connect to local server */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server"),
+					   NULL, NULL);
+
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection but found an error..\n");
+		return axl_false;
+	} /* end if */
+
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-15");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* send messages */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	while (messages > 0) {
+		vortex_channel_send_msg (channel, "this is a test", 14, NULL);
+		
+		/* wait reply */
+		frame = vortex_channel_get_reply (channel, queue);
+		
+		/* check frame content */
+		if (! axl_cmp (vortex_frame_get_payload (frame), "this is a test")) {
+			printf ("ERROR (3): expected to find frame content 'this is a test' but found '%s'\n", 
+				(const char *) vortex_frame_get_payload (frame));
+			return axl_false;
+		} /* end if */
+		
+		/* clear frame */
+		vortex_frame_unref (frame);
+		messages--;
+	}
+
+	/* now create a second connection with the same serverName to
+	   check that the child process created is reused */
+	/* connect to local server */
+	conn2 = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server"),
+					    NULL, NULL);
+
+	if (! vortex_connection_is_ok (conn2, axl_false)) {
+		printf ("ERROR (4): expected to find proper connection but found an error..\n");
+		return axl_false;
+	} /* end if */
+
+	channel = SIMPLE_CHANNEL_CREATE_WITH_CONN (conn2, "urn:aspl.es:beep:profiles:reg-test:profile-15");
+	if (channel == NULL) {
+		printf ("ERROR (5): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* send a message to check how many connections are handled by
+	   the remote child process */
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	messages = 30;
+	while (messages > 0) {
+		vortex_channel_send_msg (channel, "this is a test", 14, NULL);
+		
+		/* wait reply */
+		frame = vortex_channel_get_reply (channel, queue);
+		
+		/* check frame content */
+		if (! axl_cmp (vortex_frame_get_payload (frame), "this is a test")) {
+			printf ("ERROR (3): expected to find frame content 'this is a test' but found '%s'\n", 
+				(const char *) vortex_frame_get_payload (frame));
+			return axl_false;
+		} /* end if */
+		
+		/* clear frame */
+		vortex_frame_unref (frame);
+		messages--;
+	}
+
+	vortex_channel_send_msg (channel, "connections-count", 17, NULL);
+		
+	/* wait reply */
+	frame = vortex_channel_get_reply (channel, queue);
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "2")) {
+		printf ("ERROR (4): expected to find 2 connections handled on current process, but found: %s\n",
+			(const char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	}
+
+	vortex_frame_unref (frame);
+
+	/* close the second connection */
+	vortex_connection_close (conn2);
+
+	/* unref queue */
+	vortex_async_queue_unref (queue);
+
+	/* close connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+/** 
+ * @brief Checks support for parsing anchillary data used for passing
+ * socket descriptors between processes.
+ */
+axl_bool test_15a (void) {
+	char * conn_status;
+	axl_bool          handle_start_reply;
+	int               channel_num;
+	const char      * profile;
+	const char      * profile_content;
+	VortexEncoding    encoding;
+	const char      * serverName;
+	int               msg_no;
+	int               seq_no;
+	int               seq_no_expected;
+
+	/* build connection status */
+	conn_status = turbulence_process_connection_status_string (axl_true,
+								   3, 
+								   "urn:aspl.es:beep:profiles:reg-test:profile-15",
+								   NULL,
+								   EncodingNone,
+								   "test-15.server",
+								   17, 42301, 1234);
+	turbulence_process_connection_recover_status (conn_status + 1, /* skip initial n used to signal the command */
+						      &handle_start_reply,
+						      &channel_num,
+						      &profile,
+						      &profile_content,
+						      &encoding,
+						      &serverName,
+						      &msg_no,
+						      &seq_no, 
+						      &seq_no_expected);
+	/* check data */
+	if (! handle_start_reply) {
+		printf ("ERROR (1): failed handle_start_reply (%d != %d) data\n", axl_true, handle_start_reply);
+		return axl_false;
+	}
+	if (channel_num != 3) {
+		printf ("ERROR (2): unexpected channel num %d != 3\n", channel_num);
+		return axl_false;
+	}
+	if (! axl_cmp (profile, "urn:aspl.es:beep:profiles:reg-test:profile-15")) {
+		printf ("ERROR (3): unexpected profile %s != urn:aspl.es:beep:profiles:reg-test:profile-15\n", profile);
+		return axl_false;
+	}
+	if (profile_content != NULL) {
+		printf ("ERROR (4): expected profile content pointing to NULL but found pointing to '%s'\n",
+			profile_content);
+		return axl_false;
+	}
+	if (encoding != EncodingNone) {
+		printf ("ERROR (5): unexpected vortex encoding (%d != %d)\n", encoding, EncodingNone);
+		return axl_false;
+	}
+	if (! axl_cmp (serverName, "test-15.server")) {
+		printf ("ERROR (6): unexpected serverName (%s != 'test-15.server'\n", serverName);
+		return axl_false;
+	}
+	if (msg_no != 17) {
+		printf ("ERROR (7): unexpected msg_no value (%d != 17)\n", msg_no);
+		return axl_false;
+	}
+	if (seq_no != 42301) {
+		printf ("ERROR (8): unexpected msg_no value (%d != 42301)\n", seq_no);
+		return axl_false;
+	}
+	if (seq_no_expected != 1234) {
+		printf ("ERROR (9): unexpected msg_no value (%d != 1234)\n", seq_no_expected);
+		return axl_false;
+	}
+
+	axl_free (conn_status);
+	return axl_true;
+}
+
+/** 
+ * @brief Test that a server with a set of connections already handled
+ * by the main process, are closed when a profile path is activated
+ * and a fork operation is done.
+ */
+axl_bool test_16 (void) {
+	return axl_true;
+}
+
+/** 
+ * @brief Test how works current profile path mechanism that allows to
+ * create a child process (separate=yes) and reusing it for
+ * connections to the same profile path (reuse=yes).
+ */
+axl_bool test_17 (void) {
+	return axl_true;
+}
+
 /** 
  * @brief Helper handler that allows to execute the function provided
  * with the message associated.
@@ -2451,6 +2673,8 @@ void terminate_contexts (void) {
  */
 int main (int argc, char ** argv)
 {
+	axl_bool disable_python_tests = axl_false;
+
 	printf ("** test_01: Turbulence BEEP application server regression test\n");
 	printf ("** Copyright (C) 2008 Advanced Software Production Line, S.L.\n**\n");
 	printf ("** Regression tests: turbulence: %s \n",
@@ -2460,15 +2684,19 @@ int main (int argc, char ** argv)
 	printf ("**                   axl:        %s\n**\n",
 		AXL_VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     time ./test_01 [--debug]\n**\n");
+	printf ("**     time ./test_01 [--debug] [--no-python]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01 [--debug]\n**\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
 	/* uncomment the following four lines to get debug */
-	if (argc > 1 && axl_cmp (argv[1], "--debug")) {
-		test_common_enable_debug = axl_true;
+	while (argc > 0) {
+		if (axl_cmp (argv[argc], "--debug")) 
+			test_common_enable_debug = axl_true;
+		if (axl_cmp (argv[argc], "--no-python"))
+			disable_python_tests = axl_true;
+		argc--;
 	} /* end if */
 
 	/* init context to be used on the following tests */
@@ -2503,14 +2731,24 @@ int main (int argc, char ** argv)
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
 
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
-	
+
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
 
-	run_test (test_13, "Test 13: Check mod python");
-	
-	run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)");
+	if (! disable_python_tests) {
+		run_test (test_13, "Test 13: Check mod python");
+		
+		run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)"); 
+	} /* end if */
 
 	run_test (test_14, "Test 14: Notify different server after profile path selected");
+
+	run_test (test_15, "Test 15: Child creation with socket passing support");
+
+	run_test (test_15a, "Test 15-a: anchillary data for socket passing");
+
+	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
+
+	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
 
 	printf ("All tests passed OK!\n");
 
