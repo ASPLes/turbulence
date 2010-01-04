@@ -97,11 +97,12 @@ int  main_init_exarg (int argc, char ** argv)
 
 	/* check for conf-location option */
 	if (exarg_is_defined ("conf-location")) {
-		printf ("VERSION:         %s\n", VERSION);
-		printf ("VORTEX_VERSION:  %s\n", VORTEX_VERSION);
-		printf ("AXL_VERSION:     %s\n", AXL_VERSION);
-		printf ("SYSCONFDIR:      %s\n", turbulence_sysconfdir ());
-		printf ("TBC_DATADIR:     %s\n", turbulence_datadir ());
+		printf ("VERSION:          %s\n", VERSION);
+		printf ("VORTEX_VERSION:   %s\n", VORTEX_VERSION);
+		printf ("AXL_VERSION:      %s\n", AXL_VERSION);
+		printf ("SYSCONFDIR:       %s\n", turbulence_sysconfdir (NULL));
+		printf ("TBC_DATADIR:      %s\n", turbulence_datadir (NULL));
+		printf ("RUNTIME_DATADIR:  %s\n", turbulence_runtime_datadir (NULL));
 		printf ("Default configuration file: %s/turbulence/turbulence.conf", SYSCONFDIR);
 
 		/* terminates exarg */

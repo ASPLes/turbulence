@@ -48,6 +48,11 @@
  */
 
 /** 
+ * @internal Type used by profile path module.
+ */
+typedef struct _TurbulencePPathItem TurbulencePPathItem;
+
+/** 
  * @internal Type that represents all turbulence profile paths
  */
 typedef struct _TurbulencePPath TurbulencePPath;
@@ -66,6 +71,12 @@ typedef struct _TurbulenceLoop TurbulenceLoop;
  * @brief Type that represents a turbulence module.
  */
 typedef struct _TurbulenceModule TurbulenceModule;
+
+/** 
+ * @brief Type representing a child process created. Abstraction used
+ * to store a set of data used around the child.
+ */
+typedef struct _TurbulenceChild  TurbulenceChild;
 
 /** 
  * @brief Set of handlers that are supported by modules. This handler

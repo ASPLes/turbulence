@@ -40,82 +40,6 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-typedef enum {
-	PROFILE_ALLOW, 
-	PROFILE_IF
-} TurbulencePPathItemType;
-
-typedef struct _TurbulencePPathItem TurbulencePPathItem;
-
-struct _TurbulencePPathItem {
-	/* The type of the profile item path  */
-	TurbulencePPathItemType type;
-	
-	/* support for the profile to be matched by this profile item
-	 * path */
-	TurbulenceExpr * profile;
-
-	/* optional expression to match a mark that must have a
-	 * connection holding the profile */
-	char * connmark;
-	
-	/* optional configuration that allows to configure the number
-	   number of channels opened with a particular profile */
-	int    max_per_con;
-
-	/* optional expression to match a pre-mark that must have the
-	 * connection before accepting the profile. */
-	char * preconnmark;
-
-	/* Another list for all profile path item found inside this
-	 * profile path item. This is only used by PROFILE_IF items */
-	TurbulencePPathItem ** ppath_item;
-	
-};
-
-struct _TurbulencePPathDef {
-	/* the name of the profile path group (optional value) */
-	char * path_name;
-
-	/* the server name pattern to be used to match the profile
-	 * path. If turbulence wasn't built with pcre support, it will
-	 * compiled as an string. */
-	TurbulenceExpr * serverName;
-
-	/* source filter pattern. Again, if the library doesn't
-	 * support regular expression, the source is taken as an
-	 * string */
-	TurbulenceExpr * src;
-
-	/* destination filter pattern. Again, if the library doesn't
-	 * support regular expression, the source is taken as an
-	 * string */
-	TurbulenceExpr * dst;
-
-	/* a reference to the list of profile path supported */
-	TurbulencePPathItem ** ppath_item;
-
-#if defined(AXL_OS_UNIX)
-	/* user id to that must be used to run the process */
-	int  user_id;
-
-	/* group id that must be used to run the process */
-	int  group_id;
-#endif
-
-	/* allows to control if turbulence must run the connection
-	 * received in the context of a profile path in a separate
-	 * process */
-	axl_bool separate;
-
-	/* allows to change working directory to the provided value */
-	const char * chroot;	
-
-	/* allows to configure a working directory associated to the
-	 * profile path. */
-	const char * work_dir;
-};
-
 typedef struct _TurbulencePPathState {
 	/* a reference to the profile path selected for the
 	 * connection */
@@ -832,6 +756,10 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		ctx->paths->items[iterator] = axl_new (TurbulencePPathDef, 1);
 		definition                  = ctx->paths->items[iterator];
 
+		/* set unique ppath id */
+		definition->id              = ctx->ppath_next_id;
+		ctx->ppath_next_id++;
+
 		/* catch all data from the profile path def header */
 		if (HAS_ATTR (pdef, "path-name")) {
 			/* catch the ppath name */
@@ -897,6 +825,9 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 
 		/* check for process separation */
 		definition->separate = HAS_ATTR_VALUE (pdef, "separate", "yes");
+
+		/* check for child reuse  */
+		definition->reuse    = HAS_ATTR_VALUE (pdef, "reuse", "yes");
 
 		/* check for chroot value */
 		definition->chroot   = ATTR_VALUE (pdef, "chroot");
@@ -1078,6 +1009,18 @@ TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn)
 	
 	/* return path name */
 	return state->path_selected;
+}
+
+/** 
+ * @brief Allows to get the unique profile path identifier.
+ * @param ppath_def The profile path where the unique identifier will be retrieved.
+ * @return The unique identifier or -1 ir it fails.
+ */
+int                  turbulence_ppath_get_id   (TurbulencePPathDef * ppath_def)
+{
+	if (ppath_def == NULL)
+		return -1;
+	return ppath_def->id;
 }
 
 /** 

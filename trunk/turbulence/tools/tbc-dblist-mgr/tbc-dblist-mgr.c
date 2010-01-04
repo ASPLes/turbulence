@@ -134,7 +134,7 @@ int main (int argc, char ** argv)
 	/* update the search path to make the default installation to
 	 * work at the default location. */
 	vortex_support_init (vortex_ctx);
-	vortex_support_add_domain_search_path (vortex_ctx, "turbulence-data", turbulence_datadir ());
+	vortex_support_add_domain_search_path (vortex_ctx, "turbulence-data", turbulence_datadir (ctx));
 	
 	/* init the turbulence db list */
 	if (! turbulence_db_list_init (ctx)) {

@@ -72,6 +72,7 @@ struct _TurbulenceCtx {
 	axlDtd             * db_list_dtd;
 
 	/*** turbulence ppath module ***/
+	int                  ppath_next_id;
 	TurbulencePPath    * paths;
 	axl_bool             all_rules_address_based;
 
@@ -104,13 +105,107 @@ struct _TurbulenceCtx {
 	axlDtd             * module_dtd;
 
 	/*** turbulence process module ***/
-	axlList                 * child_process;
+	axlHash                 * child_process;
 	VortexMutex               child_process_mutex;
 	VortexAsyncQueue        * child_wait;
 
 	/*** turbulence mediator module ***/
 	axlHash            * mediator_hash;
 	VortexMutex          mediator_hash_mutex;
+};
+
+/** 
+ * @brief Private definition that represents a child process created.
+ */
+struct _TurbulenceChild {
+	int                  pid;
+	TurbulenceCtx      * ctx;
+	TurbulencePPathDef * ppath;
+#if defined(AXL_OS_UNIX)
+	int                  child_connection;
+	char               * socket_control_path;
+	char               * socket_control_pass;
+#endif
+};
+
+typedef enum {
+	PROFILE_ALLOW, 
+	PROFILE_IF
+} TurbulencePPathItemType;
+
+struct _TurbulencePPathItem {
+	/* The type of the profile item path  */
+	TurbulencePPathItemType type;
+	
+	/* support for the profile to be matched by this profile item
+	 * path */
+	TurbulenceExpr * profile;
+
+	/* optional expression to match a mark that must have a
+	 * connection holding the profile */
+	char * connmark;
+	
+	/* optional configuration that allows to configure the number
+	   number of channels opened with a particular profile */
+	int    max_per_con;
+
+	/* optional expression to match a pre-mark that must have the
+	 * connection before accepting the profile. */
+	char * preconnmark;
+
+	/* Another list for all profile path item found inside this
+	 * profile path item. This is only used by PROFILE_IF items */
+	TurbulencePPathItem ** ppath_item;
+	
+};
+
+struct _TurbulencePPathDef {
+	int    id;
+
+	/* the name of the profile path group (optional value) */
+	char * path_name;
+
+	/* the server name pattern to be used to match the profile
+	 * path. If turbulence wasn't built with pcre support, it will
+	 * compiled as an string. */
+	TurbulenceExpr * serverName;
+
+	/* source filter pattern. Again, if the library doesn't
+	 * support regular expression, the source is taken as an
+	 * string */
+	TurbulenceExpr * src;
+
+	/* destination filter pattern. Again, if the library doesn't
+	 * support regular expression, the source is taken as an
+	 * string */
+	TurbulenceExpr * dst;
+
+	/* a reference to the list of profile path supported */
+	TurbulencePPathItem ** ppath_item;
+
+#if defined(AXL_OS_UNIX)
+	/* user id to that must be used to run the process */
+	int  user_id;
+
+	/* group id that must be used to run the process */
+	int  group_id;
+#endif
+
+	/* allows to control if turbulence must run the connection
+	 * received in the context of a profile path in a separate
+	 * process */
+	axl_bool separate;
+
+	/* allows to control if childs created for each profile path
+	   are reused. */
+	axl_bool reuse;
+
+	/* allows to change working directory to the provided value */
+	const char * chroot;	
+
+	/* allows to configure a working directory associated to the
+	 * profile path. */
+	const char * work_dir;
 };
 
 #endif

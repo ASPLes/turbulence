@@ -987,7 +987,34 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 #endif
 }
 
-/**
+/** 
+ * @internal Allows to get current system path configured for the
+ * provided path_name or NULL if it fails.
+ *
+ */
+const char * __turbulence_system_path (TurbulenceCtx * ctx, const char * path_name)
+{
+	axlNode * node;
+	if (ctx == NULL || ctx->config == NULL)
+		return NULL;
+	/* get the first node <path> */
+	node = axl_doc_get (ctx->config, "/turbulence/global-settings/system-paths/path");
+	if (node == NULL)
+		return NULL;
+	while (node != NULL) {
+		/* check if the node has the path name configuration
+		   we are looking */
+		if (HAS_ATTR_VALUE (node, "name", path_name))
+			return ATTR_VALUE (node, "value");
+
+		/* get next node */
+		node = axl_node_get_next_called (node, "path");
+	} /* end while */
+
+	return NULL;
+}
+
+/** 
  * @brief Allows to get the SYSCONFDIR path provided at compilation
  * time. This is configured when the libturbulence.{dll,so} is built,
  * ensuring all pieces uses the same SYSCONFDIR value. See also \ref
@@ -1001,30 +1028,86 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
  * 
  *  - etc/turbulence/turbulence.conf
  *  - etc/turbulence/sasl/sasl.conf
+ *
+ * @param ctx The turbulence ctx with the associated configuration
+ * where we are getting the sysconfdir. If NULL is provided, default
+ * value is returned.
+ *
+ * @return The path currently configured by default or the value
+ * overrided on the configuration.
  */
-const char    * turbulence_sysconfdir     (void)
+const char    * turbulence_sysconfdir     (TurbulenceCtx * ctx)
 {
+	const char * path;
+
 	/* return current configuration */
+	path = __turbulence_system_path (ctx, "sysconfdir");
+	if (path != NULL) 
+		return path;
 	return SYSCONFDIR;
+	
 }
 
 /** 
  * @brief Allows to get the TBC_DATADIR path provided at compilation
  * time. This is configured when the libturbulence.{dll,so} is built,
- * ensuring all pieces uses the same SYSCONFDIR value. See also \ref
- * turbulence_sysconfdir
+ * ensuring all pieces uses the same data dir value. 
  *
  * The TBC_DATADIR points to the base root directory where data files
  * are located (mostly dtd files). Under unix system it is usually:
- * <b>/usr/share/turbulence</b>. On windows system it is usually configured to:
- * <b>../data</b>. Starting from that directory is found the rest of
- * configurations:
+ * <b>/usr/share/turbulence</b>. On windows system it is usually
+ * configured to: <b>../data</b>.
+ *
+ * @param ctx The turbulence ctx with the associated configuration
+ * where we are getting the sysconfdir. If NULL is provided, default
+ * value is returned.
+ *
+ * @return The path currently configured by default or the value
+ * overrided on the configuration.
  */
-const char    * turbulence_datadir        (void)
+const char    * turbulence_datadir        (TurbulenceCtx  * ctx)
 {
+	const char * path;
+
 	/* return current configuration */
+	path = __turbulence_system_path (ctx, "datadir");
+	if (path != NULL) 
+		return path;
 	return TBC_DATADIR;
 }
+
+/** 
+ * @brief Allows to get the TBC_RUNTIME_DATADIR path provided at
+ * compilation time. This is configured when the
+ * libturbulence.{dll,so} is built, ensuring all pieces uses the same
+ * runtime datadir value. 
+ *
+ * The TBC_RUNTIME_DATADIR points to the base directory where runtime data files
+ * are located (for example unix socket files). 
+ * 
+ * Under unix system it is usually: <b>/var/lib</b>. On windows system
+ * it is usually configured to: <b>../run-time</b>. Inside that
+ * directory is found a directory called "turbulence" where runtime
+ * content is found.
+ *
+ * @param ctx The turbulence ctx with the associated configuration
+ * where we are getting the sysconfdir. If NULL is provided, default
+ * value is returned.
+ *
+ * @return The path currently configured by default or the value
+ * overrided on the configuration.
+ */
+const char    * turbulence_runtime_datadir        (TurbulenceCtx * ctx)
+{
+	const char * path;
+
+	/* return current configuration */
+	path = __turbulence_system_path (ctx, "runtime_datadir");
+	if (path != NULL) 
+		return path;
+	return TBC_RUNTIME_DATADIR;
+}
+
 
 /** 
  * @brief Allows to check if the provided value contains a decimal

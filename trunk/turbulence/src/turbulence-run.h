@@ -66,6 +66,7 @@ void turbulence_run_cleanup   (TurbulenceCtx * ctx);
         vortex_connection_set_close_socket (conn, axl_true);                       \
 	vortex_connection_shutdown (conn);                                         \
 	vortex_connection_close    (conn);                                         \
+        conn = NULL;                                                               \
 	} while (0);
 
 void turbulence_run_check_clean_start (TurbulenceCtx * ctx);

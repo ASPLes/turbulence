@@ -218,9 +218,11 @@ typedef enum {
 char *   turbulence_io_get (char * prompt, TurbulenceIoFlags flags);
 
 /* enviroment configuration */
-const char    * turbulence_sysconfdir     (void);
+const char    * turbulence_sysconfdir      (TurbulenceCtx * ctx);
 
-const char    * turbulence_datadir        (void);
+const char    * turbulence_datadir         (TurbulenceCtx * ctx);
+
+const char    * turbulence_runtime_datadir (TurbulenceCtx * ctx);
 
 axl_bool        turbulence_is_num         (const char * value);
 
