@@ -2673,6 +2673,84 @@ axl_bool test_15a (void) {
  * and a fork operation is done.
  */
 axl_bool test_16 (void) {
+	
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn;
+	int                connections = 30;
+	VortexConnection * conns[connections];
+	int                iterator;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_16.conf")) 
+		return axl_false;
+
+	/* register profile to use */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-16");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* connect to local server */
+	iterator = 0;
+	while (iterator < connections) {
+		/* create a connection */
+		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-16.server"),
+						   NULL, NULL);
+		conns[iterator] = conn;
+		
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (1): expected to find proper connection but found an error..\n");
+			return axl_false;
+		} /* end if */
+		
+		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-16");
+		if (channel == NULL) {
+			printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+			return axl_false;
+		}
+
+		/* next iterator */
+		iterator = 0;
+	} /* end while */
+
+	printf ("Test 16: thread handled connections created, now create child process..\n");
+
+	/* now create a connections that will be handled by a child process */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-16.server.child"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection but found an error..\n");
+		return axl_false;
+	} /* end if */
+		
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-16");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	printf ("Test 16: close connection that triggered child process creation..\n");
+
+	/* now close connections created */
+	vortex_connection_close (conn);
+
+	printf ("Test 16: Close rest of connections..\n");
+
+	iterator = 0;
+	while (iterator < connections) {
+		/* close the connection */
+		vortex_connection_close (conns[iterator]);
+		iterator++;
+	} /* end while */
+	
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
 	return axl_true;
 }
 
@@ -2775,6 +2853,8 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
+	goto init;
+
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -2822,7 +2902,11 @@ int main (int argc, char ** argv)
 
 	run_test (test_15a, "Test 15-a: anchillary data for socket passing");
 
+ init:
+
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
+
+	return 0;
 
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
 
