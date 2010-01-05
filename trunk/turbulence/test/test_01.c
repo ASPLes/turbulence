@@ -2388,12 +2388,34 @@ axl_bool test_14 (void) {
 	return axl_true;
 }
 
+axl_bool test_15_test_connection_count (VortexChannel    * channel, 
+					VortexAsyncQueue * queue, 
+					const char       * count_check)	
+{
+	VortexFrame * frame;
+
+	/* send connection count message */
+	vortex_channel_send_msg (channel, "connections-count", 17, NULL);
+		
+	/* wait reply */
+	frame = vortex_channel_get_reply (channel, queue);
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), count_check)) {
+		printf ("ERROR (4): expected to find 2 connections handled on current process, but found: %s\n",
+			(const char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	}
+
+	vortex_frame_unref (frame);
+	return axl_true;
+}
+
 axl_bool test_15 (void) {
 
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexChannel    * channel;
-	VortexConnection * conn, * conn2;
+	VortexConnection * conn, * conn2, * conn3;
 	VortexAsyncQueue * queue;
 	VortexFrame      * frame;
 	int                messages = 30;
@@ -2486,18 +2508,72 @@ axl_bool test_15 (void) {
 		messages--;
 	}
 
-	vortex_channel_send_msg (channel, "connections-count", 17, NULL);
-		
-	/* wait reply */
-	frame = vortex_channel_get_reply (channel, queue);
+	/* check counnection count */
+	if (! test_15_test_connection_count (channel, queue, "2"))
+		return axl_false;
 
-	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "2")) {
-		printf ("ERROR (4): expected to find 2 connections handled on current process, but found: %s\n",
-			(const char *) vortex_frame_get_payload (frame));
+	/* create a third channel */
+	channel = SIMPLE_CHANNEL_CREATE_WITH_CONN (conn2, "urn:aspl.es:beep:profiles:reg-test:profile-15");
+	if (channel == NULL) {
+		printf ("ERROR (5): expected proper channel creation but NULL reference was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* TEST: create a third connection */
+	/* now create a third connection with the same serverName to
+	   check that the child process created is reused */
+	/* connect to local server */
+	conn3 = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server"),
+					    NULL, NULL);
+
+	if (! vortex_connection_is_ok (conn3, axl_false)) {
+		printf ("ERROR (6): expected to find proper connection but found an error..\n");
+		return axl_false;
+	} /* end if */
+
+	channel = SIMPLE_CHANNEL_CREATE_WITH_CONN (conn3, "urn:aspl.es:beep:profiles:reg-test:profile-15");
+	if (channel == NULL) {
+		printf ("ERROR (7): expected to find proper channel creation but a failure was found..\n");
 		return axl_false;
 	}
 
-	vortex_frame_unref (frame);
+	/* send a message to check how many connections are handled by
+	   the remote child process */
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	messages = 30;
+	while (messages > 0) {
+		vortex_channel_send_msg (channel, "this is a test", 14, NULL);
+		
+		/* wait reply */
+		frame = vortex_channel_get_reply (channel, queue);
+		
+		/* check frame content */
+		if (! axl_cmp (vortex_frame_get_payload (frame), "this is a test")) {
+			printf ("ERROR (3): expected to find frame content 'this is a test' but found '%s'\n", 
+				(const char *) vortex_frame_get_payload (frame));
+			return axl_false;
+		} /* end if */
+		
+		/* clear frame */
+		vortex_frame_unref (frame);
+		messages--;
+	}
+
+	/* check counnection count */
+	if (! test_15_test_connection_count (channel, queue, "3"))
+		return axl_false;
+
+	/* create a third channel */
+	channel = SIMPLE_CHANNEL_CREATE_WITH_CONN (conn3, "urn:aspl.es:beep:profiles:reg-test:profile-15");
+	if (channel == NULL) {
+		printf ("ERROR (5): expected proper channel creation but NULL reference was found..\n");
+		return axl_false;
+	} /* end if */
+
+
+	/* close third connection */
+	vortex_connection_close (conn3);
 
 	/* close the second connection */
 	vortex_connection_close (conn2);
