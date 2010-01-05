@@ -4,17 +4,18 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
         -DVERSION=\"$(VERSION)\" 
 
 configuration_files = \
-	test_07.conf \
-	test_08.conf \
-	test_09.conf \
-	test_10.conf \
-	test_11.conf \
-	test_12.conf \
+	test_07.conf  \
+	test_08.conf  \
+	test_09.conf  \
+	test_10.conf  \
+	test_11.conf  \
+	test_12.conf  \
 	test_12a.conf \
-	test_13.conf \
+	test_13.conf  \
 	test_13a.conf \
-	test_14.conf \
-	test_15.conf
+	test_14.conf  \
+	test_15.conf  \
+	test_16.conf
 
 SUBDIRS = test_11_module
 
