@@ -107,7 +107,7 @@ void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
 	vortex_mutex_create (&ctx->registered_modules_mutex);
 
 	/* reinit conn manager: reinit = axl_true */
-	turbulence_conn_mgr_init (ctx, axl_true);
+	/* turbulence_conn_mgr_init (ctx, axl_true); */
 	
 	/* clean child process list: reinit = axl_true */
 	turbulence_process_init (ctx, axl_true);
