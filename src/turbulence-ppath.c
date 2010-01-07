@@ -522,7 +522,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 			break;
 		} else {
 			/* show profile path not mached */
-			msg2 ("profile path do not match: %s, for connection id=%d, src=%s local_addr=%s serverName=%s (src_status:%d, dst_status:%d, serverName_status:%d) ", 
+			msg2 ("profile path do not match: %s, for connection id=%d, src=%s local_addr=%s serverName='%s' (src_status:%d, dst_status:%d, serverName_status:%d) ", 
 			      def->path_name ? def->path_name : "(no path name defined)",
 			      vortex_connection_get_id (connection), src, dst, serverName ? serverName : "",
 			      src_status, dst_status, serverName_status);

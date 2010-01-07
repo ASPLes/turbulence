@@ -50,6 +50,8 @@ TurbulenceCtx * ctx = NULL;
 /* vortex context */
 VortexCtx     * vortex_ctx = NULL;
 
+axl_bool        test_common_enable_debug = axl_false;
+
 #define	INIT_AND_RUN_CONF(conf) do {                            \
 	if (! test_common_init (&vCtx, &tCtx, conf))            \
 		return axl_false;                               \
@@ -338,6 +340,16 @@ axl_bool  test_01 ()
 axl_bool  test_01a () {
 	
 	TurbulenceExpr * expr;
+	TurbulenceCtx  * ctx;
+
+	/* init ctx */
+	ctx = turbulence_ctx_new ();
+	if (test_common_enable_debug) {
+		turbulence_log_enable       (ctx, axl_true);
+		turbulence_color_log_enable (ctx, axl_true);
+		turbulence_log2_enable      (ctx, axl_true);
+		turbulence_log3_enable      (ctx, axl_true);
+	}
 
 	/* compile and match */
 	MATCH_AND_CHECK("192.168.0.*", "192.168.0.10", axl_true);
@@ -360,6 +372,32 @@ axl_bool  test_01a () {
 	/* compile and match */
 	MATCH_AND_CHECK("not 192.168.0.*", "192.168.1.10", axl_true);
 
+	/* compile and match */
+	MATCH_AND_CHECK("test.server", "test.server.child", axl_false);
+
+	/* compile and match */
+	MATCH_AND_CHECK("test.server.*", "test.server.child", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("test.server", "parent.test.server", axl_false);
+
+	/* compile and match */
+	MATCH_AND_CHECK("*.test.server", "parent.test.server", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK(".*", "", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("*", "", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK(".*", "any", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("*", "case", axl_true);
+
+	/* free context */
+	turbulence_ctx_free (ctx);
 
 	return axl_true;
 }
@@ -1055,9 +1093,6 @@ axl_bool test_05 () {
 
 	return axl_true;
 }
-
-axl_bool test_common_enable_debug = axl_false;
-
 
 
 axl_bool test_common_init (VortexCtx     ** vCtx, 
@@ -2667,6 +2702,30 @@ axl_bool test_15a (void) {
 	return axl_true;
 }
 
+void test_16_received (VortexChannel    * channel, 
+		       VortexConnection * connection, 
+		       VortexFrame      * frame, 
+		       axlPointer         user_data)
+{
+	char * result;
+	if (vortex_frame_get_type (frame) == VORTEX_FRAME_TYPE_MSG) {
+		if (axl_cmp (vortex_frame_get_payload (frame), "process-id")) {
+			result = axl_strdup_printf ("%d", getpid ());
+			vortex_channel_send_rpy (channel, result, strlen (result), vortex_frame_get_msgno (frame));
+			axl_free (result);
+			return;
+		}
+		/* do echo */
+		vortex_channel_send_rpy (channel, 
+					 vortex_frame_get_payload (frame), 
+					 vortex_frame_get_payload_size (frame), 
+					 vortex_frame_get_msgno (frame));
+		return;
+	} /* end if */
+
+	return;
+}
+
 /** 
  * @brief Test that a server with a set of connections already handled
  * by the main process, are closed when a profile path is activated
@@ -2681,6 +2740,10 @@ axl_bool test_16 (void) {
 	int                connections = 30;
 	VortexConnection * conns[connections];
 	int                iterator;
+	int                current_pid;
+	int                forked_pid;
+	VortexFrame      * frame;
+	VortexAsyncQueue * queue;
 
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_16.conf")) 
@@ -2688,6 +2751,9 @@ axl_bool test_16 (void) {
 
 	/* register profile to use */
 	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-16");
+
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-16", 
+					      test_16_received, NULL);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -2714,10 +2780,20 @@ axl_bool test_16 (void) {
 		}
 
 		/* next iterator */
-		iterator = 0;
+		iterator++;
 	} /* end while */
 
-	printf ("Test 16: thread handled connections created, now create child process..\n");
+	/* get current pid from process */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	/* send request to get process id from current server */
+	vortex_channel_send_msg (channel, "process-id", 10, NULL);
+	frame = vortex_channel_get_reply (channel, queue);
+	current_pid = atoi ((const char *) vortex_frame_get_payload (frame));
+	vortex_frame_unref (frame);
+
+	printf ("Test 16: thread handled connections created, now create child process (current master process id=%d)..\n",
+		current_pid);
 
 	/* now create a connections that will be handled by a child process */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
@@ -2734,7 +2810,25 @@ axl_bool test_16 (void) {
 		return axl_false;
 	}
 
+	/* check servername process (it should be different) */
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	/* send request to get process id from current server */
+	vortex_channel_send_msg (channel, "process-id", 10, NULL);
+	frame = vortex_channel_get_reply (channel, queue);
+	forked_pid = atoi ((const char *) vortex_frame_get_payload (frame));
+	vortex_frame_unref (frame);
+
+	/* check forked pid value */
+	if (current_pid == forked_pid) {
+		printf ("ERROR: expected to find different pid value for forked child server (%d == %d)..\n",
+			current_pid, forked_pid);
+		return axl_false;
+	}
+
 	printf ("Test 16: close connection that triggered child process creation..\n");
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
 
 	/* now close connections created */
 	vortex_connection_close (conn);
@@ -2905,7 +2999,7 @@ int main (int argc, char ** argv)
  init:
 
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
-
+	
 	return 0;
 
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");

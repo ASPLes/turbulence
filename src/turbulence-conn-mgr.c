@@ -41,11 +41,6 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
-typedef struct _TurbulenceConnMgrState {
-	VortexConnection * conn;
-	TurbulenceCtx    * ctx;
-} TurbulenceConnMgrState;
-
 /** 
  * \defgroup turbulence_conn_mgr Turbulence Connection Manager: a module that controls all connections created under the turbulence execution
  */
@@ -151,17 +146,6 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	return 1;
 }
 
-axl_bool turbulence_conn_mgr_int_foreach (axlPointer key, axlPointer data, axlPointer user_data) 
-{
-	/* TurbulenceConnMgrState * state = (TurbulenceConnMgrState *) data; */
-
-	/* do not close transport */
-	/* vortex_connection_set_close_socket (state->conn, axl_false); */
-
-	/* do not stop foreach process until the last item */
-	return axl_false;
-}
-
 axlDoc * turbulence_conn_mgr_show_connections (const char * line,
 					       axlPointer   user_data, 
 					       axl_bool   * status)
@@ -259,7 +243,6 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 
 	/* check for reinit operation */
 	if (reinit) {
-		axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_int_foreach, ctx);
 		axl_hash_free (ctx->conn_mgr_hash);
 		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 		return;

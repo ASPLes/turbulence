@@ -77,6 +77,16 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 		return axl_true;
 	} /* end if */
 
+	/* check for expressions not started with ^ */
+	if (expression [0] != '^') {
+		*added_size = 1;
+		result = axl_true;
+	}
+	if (expression [expression_size - 1] != '$') {
+		(*added_size) += 1;
+		result = axl_true;
+	}
+
  	/* skip initial white spaces */
  	while (iterator < expression_size && expression[iterator] == ' ')
  		iterator++;
@@ -137,7 +147,7 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 	if (axl_cmp (expression, "*")) {
 		memcpy (result, ".*", 2);
 		return result;
-	}
+	} 
 
  	/* skip initial white spaces */
  	while ((iterator < expression_size) && (expression[iterator] == ' '))
@@ -146,8 +156,15 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 
 	/* iterate over all expression defined */
 	iterator = 0;
+
+	/* check to add ^ */
+	if (expression[iterator2] != '^') {
+		result[0] = '^';
+		iterator++;
+	} /* end if */
+
 	while (iterator2 < expression_size) {
-		if (expression[iterator2] == '*') 
+		if (expression[iterator2] == '*' && (iterator2 == 0)) 
 			goto replace;
 
 		if (iterator2 > 0) {
@@ -161,7 +178,7 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 				continue;
 			}
 			
-			/* check for .* */
+			/* check for \/ */
 			if (expression [iterator2] == '/' && expression [iterator2 - 1] != '\\') {
 				memcpy (result + iterator, "\\/", 2);
 				iterator += 2;
@@ -187,6 +204,11 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 		iterator++;
 		iterator2++;
 	} /* end while */
+	
+	/* check to add ^ */
+	if (expression[iterator2] != '$') {
+		result[iterator] = '$';
+	} /* end if */
 
 	/* return results */
 	return result;

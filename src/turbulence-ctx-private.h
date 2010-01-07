@@ -208,4 +208,12 @@ struct _TurbulencePPathDef {
 	const char * work_dir;
 };
 
+/** 
+ * @internal Connection management done by conn-mgr module.
+ */
+typedef struct _TurbulenceConnMgrState {
+	VortexConnection * conn;
+	TurbulenceCtx    * ctx;
+} TurbulenceConnMgrState;
+
 #endif

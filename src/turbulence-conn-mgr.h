@@ -62,5 +62,9 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 					    VortexPeerRole             role,
 					    const char               * filter);
 
+/* private API */
+void turbulence_conn_mgr_on_close (VortexConnection * conn, 
+				   axlPointer         user_data);
+
 
 #endif 
