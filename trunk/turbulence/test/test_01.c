@@ -2445,7 +2445,7 @@ axl_bool test_15_test_connection_count (VortexChannel    * channel,
 	return axl_true;
 }
 
-axl_bool test_15 (void) {
+axl_bool test_15a (void) {
 
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -2629,7 +2629,7 @@ axl_bool test_15 (void) {
  * @brief Checks support for parsing anchillary data used for passing
  * socket descriptors between processes.
  */
-axl_bool test_15a (void) {
+axl_bool test_15 (void) {
 	char * conn_status;
 	axl_bool          handle_start_reply;
 	int               channel_num;
@@ -2992,13 +2992,13 @@ int main (int argc, char ** argv)
 
 	run_test (test_14, "Test 14: Notify different server after profile path selected");
 
+	run_test (test_15, "Test 15: anchillary data for socket passing");
+
 init:
 
-	run_test (test_15, "Test 15: Child creation with socket passing support");
+	run_test (test_15a, "Test 15-a: Child creation with socket passing support");
 
 	return 0;
-
-	run_test (test_15a, "Test 15-a: anchillary data for socket passing");
 
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
 	

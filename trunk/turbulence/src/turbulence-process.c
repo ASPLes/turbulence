@@ -723,11 +723,17 @@ axl_bool __turbulence_process_release_parent_connections_foreach  (axlPointer ke
 	/* don't close/send the socket that the child must handle */
 	if (vortex_connection_get_id (child_conn) == 
 	    vortex_connection_get_id (state->conn)) {
+		ref_count = vortex_connection_ref_count (state->conn);
 		msg ("NOT Sending connection id=%d to parent (now handled by child) (ref count: %d, pointer: %p, role: %d)", 
 		     vortex_connection_get_id (state->conn),
-		     vortex_connection_ref_count (state->conn),
+		     ref_count,
 		     state->conn, vortex_connection_get_role (state->conn));
-		vortex_connection_unref (state->conn, "child process handled");
+
+		/* reduce reference count */
+		while (ref_count > 1)  {
+			vortex_connection_unref (state->conn, "child process handled");
+			ref_count--;
+		}
 
 		state->conn = NULL;
 		return axl_false;
