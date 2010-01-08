@@ -2992,16 +2992,16 @@ int main (int argc, char ** argv)
 
 	run_test (test_14, "Test 14: Notify different server after profile path selected");
 
+init:
+
 	run_test (test_15, "Test 15: Child creation with socket passing support");
+
+	return 0;
 
 	run_test (test_15a, "Test 15-a: anchillary data for socket passing");
 
- init:
-
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
 	
-	return 0;
-
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
 
 	printf ("All tests passed OK!\n");
