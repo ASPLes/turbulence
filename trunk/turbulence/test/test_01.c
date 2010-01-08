@@ -1802,6 +1802,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	/* SASL status */
 	VortexStatus       status         = VortexError;
 	char             * status_message = NULL;
+	int                tries;
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
@@ -2005,15 +2006,20 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 		vortex_connection_close (conn);
 		printf ("Test 12: connection closed (3)..\n");
 		
-		/* do a microwait to wait for childs to finish */
-		test_common_microwait (1000000);
-		
 		/* check child count here */
-		printf ("Test 12: checking process count list %d..\n", turbulence_process_child_count (tCtx));
-		if (turbulence_process_child_count (tCtx) != 0) {
-			printf ("ERROR (20): expected to find child count 0 but found %d..\n", 
-				turbulence_process_child_count (tCtx));
-			return axl_false;
+		tries = 3;
+		while (axl_true) {
+			printf ("Test 12: checking process count list %d..\n", turbulence_process_child_count (tCtx));
+			if (turbulence_process_child_count (tCtx) != 0 && tries == 0) {
+				printf ("ERROR (20): expected to find child count 0 but found %d..\n", 
+					turbulence_process_child_count (tCtx));
+				return axl_false;
+			} else
+				break;
+			tries--;
+
+			/* do a microwait to wait for childs to finish */
+			test_common_microwait (1000000);
 		}
 	} /* end if */
 
