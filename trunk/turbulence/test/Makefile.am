@@ -1,3 +1,5 @@
+SUBDIRS = test_11_module test_15_module
+
 INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 	$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -Wall -ansi  \
 	-DAXL_VERSION=\"$(AXL_VERSION)\" -DVORTEX_VERSION=\"$(VORTEX_VERSION)\" \
@@ -17,7 +19,7 @@ configuration_files = \
 	test_15.conf  \
 	test_16.conf
 
-SUBDIRS = test_11_module
+
 
 EXTRA_DIST = $(configuration_files) suppressions
 
