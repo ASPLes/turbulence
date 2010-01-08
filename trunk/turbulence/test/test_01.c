@@ -2482,6 +2482,8 @@ axl_bool test_15a (void) {
 		return axl_false;
 	}
 
+	printf ("Test 15-a: sending messages..\n");
+
 	/* send messages */
 	queue = vortex_async_queue_new ();
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
@@ -2502,6 +2504,8 @@ axl_bool test_15a (void) {
 		vortex_frame_unref (frame);
 		messages--;
 	}
+
+	printf ("Test 15-a: messages sent, creating second connection..\n");
 
 	/* now create a second connection with the same serverName to
 	   check that the child process created is reused */
@@ -2947,8 +2951,6 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
-	goto init;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -2994,14 +2996,10 @@ int main (int argc, char ** argv)
 
 	run_test (test_15, "Test 15: anchillary data for socket passing");
 
-init:
-
 	run_test (test_15a, "Test 15-a: Child creation with socket passing support");
 
-	return 0;
-
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
-	
+
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
 
 	printf ("All tests passed OK!\n");

@@ -233,8 +233,7 @@ axlPointer __turbulence_loop_run (TurbulenceLoop * loop)
 	loop->cursor  = axl_list_cursor_new (loop->list);
 	/* force to use always default select(2) based implementation */
 	loop->fileset  = __vortex_io_waiting_default_create (turbulence_ctx_get_vortex_ctx (loop->ctx), READ_OPERATIONS);
-	loop->queue    = vortex_async_queue_new ();
-
+	
 	/* now loop watching content from the list */
 wait_for_first_item:
 	if (! __turbulence_loop_read_first (loop))
@@ -288,8 +287,9 @@ TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx)
 	TurbulenceLoop * loop;
 
 	/* create loop instance */
-	loop      = axl_new (TurbulenceLoop, 1);
-	loop->ctx = ctx;
+	loop        = axl_new (TurbulenceLoop, 1);
+	loop->ctx   = ctx;
+	loop->queue = vortex_async_queue_new ();
 
 	/* crear manager */
 	if (! vortex_thread_create (&loop->thread, 
