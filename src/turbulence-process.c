@@ -221,8 +221,14 @@ axl_bool __turbulence_process_create_parent_connection (TurbulenceChild * child)
 /** 
  * @internal Function used to send the provided socket to the provided
  * child.
+ *
  * @param socket The socket to be send.
+ *
  * @param child The child 
+ *
+ * @param wait_confirmation Signals if the caller that is sending the
+ * socket must wait for confirmation from the receiving side.
+ *
  * @return If the socket was sent.
  */
 axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket, 
@@ -271,7 +277,9 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 	
 	rv = (sendmsg (child->child_connection, &msg, 0) != -1);
 	if (rv)  {
-		msg ("Socket %d sent to child via %d, closing..", socket, child->child_connection);
+		msg ("Socket %d sent to child via %d, closing (status: %d)..", 
+		     socket, child->child_connection, rv);
+		/* close the socket  */
 		vortex_close_socket (socket);
 	} else {
 		error ("Failed to send socket, error was: %s", vortex_errno_get_error (errno));
@@ -344,7 +352,8 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * socket,
 
 	/* set socket received */
 	(*socket) = *(int*)CMSG_DATA(cmsg);
-	
+
+	msg ("Process received socket %d, checking to send received signal...", (*socket));
 	return axl_true;
 }
 
@@ -410,6 +419,8 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 	/* send the socket descriptor to the child to avoid holding a
 	   bucket in the parent */
 	if (! turbulence_process_send_socket (client_socket, child, conn_status, strlen (conn_status))) {
+		error ("Something failed while sending socket (%d) to child already created, error (code %d): %s",
+		       client_socket, errno, vortex_errno_get_last_error ());
 		/* release ancillary data */
 		axl_free (conn_status);
 
@@ -730,17 +741,14 @@ axl_bool __turbulence_process_release_parent_connections_foreach  (axlPointer ke
 		     state->conn, vortex_connection_get_role (state->conn));
 
 		/* reduce reference count */
-		while (ref_count > 1)  {
-			vortex_connection_unref (state->conn, "child process handled");
-			ref_count--;
-		}
+		vortex_connection_unref (state->conn, "child process handled");
 
 		state->conn = NULL;
 		return axl_false;
 	}
 
 	/* send the socket descriptor to the parent to avoid holding a
-	   bucket in the child */
+	   bucket in the child (don't wait) */
 	if (! turbulence_process_send_socket (client_socket, parent, "s", 1)) {
 		error ("Failed to send socket to parent process, error was: %d (%s)", errno, vortex_errno_get_last_error ());
 		return axl_false;
@@ -1021,9 +1029,11 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 						    encoding, serverName,
 						    frame);
 	/* create parent control loop */
+	msg ("CHILD: starting child loop to watch for sockets from parent");
 	control = turbulence_loop_create (ctx);
 	turbulence_loop_watch_descriptor (control, child->child_connection, 
 					  turbulence_process_parent_notify, child, NULL);
+	msg ("CHILD: started socket watch on (%d)", child->child_connection);
 	
 	msg ("child process created...wait for exit");
 	queue = ctx->child_wait;
