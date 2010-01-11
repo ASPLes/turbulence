@@ -3098,6 +3098,8 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
+	goto init;
+
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -3117,7 +3119,11 @@ int main (int argc, char ** argv)
 
 	run_test (test_05, "Test 05: Check mediator API");
 
+init:
+
 	run_test (test_06, "Test 06: Turbulence startup and stop");
+
+	return 0;
 
 	run_test (test_07, "Test 07: Turbulence local connection");
 
