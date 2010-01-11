@@ -17,7 +17,8 @@ configuration_files = \
 	test_13a.conf \
 	test_14.conf  \
 	test_15.conf  \
-	test_16.conf
+	test_16.conf  \
+	test_17.conf
 
 
 

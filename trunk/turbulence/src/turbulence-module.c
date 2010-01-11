@@ -334,6 +334,7 @@ void               turbulence_module_register  (TurbulenceModule * module)
 	} /* end while */
 
 	axl_list_add (ctx->registered_modules, module);
+	msg ("Registered modules (%d, %p)", axl_list_length (ctx->registered_modules), ctx->registered_modules);
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
 	return;
@@ -516,6 +517,7 @@ void               turbulence_module_cleanup   (TurbulenceCtx * ctx)
 		return;
 
 	/* release the list and all modules */
+	msg ("Cleaning up turbulence module..");
 	axl_list_free (ctx->registered_modules);
 	ctx->registered_modules = NULL;
 	vortex_mutex_destroy (&ctx->registered_modules_mutex);

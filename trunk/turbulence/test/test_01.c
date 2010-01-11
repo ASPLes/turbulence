@@ -1631,7 +1631,9 @@ axl_bool test_10 (void) {
 	vortex_connection_close (conn);
 
 	/* do a micro wait */
-	test_common_microwait (2000000);
+	printf ("Test 10: waiting 2 seconds for child to exit..\n");
+	turbulence_sleep (tCtxTest10, 2000000);
+	printf ("Test 10: done..checking child exist..\n");
 
 	/* check child count */
 	if (turbulence_process_child_count (tCtxTest10) != 0) {
@@ -2858,13 +2860,152 @@ axl_bool test_16 (void) {
 	return axl_true;
 }
 
+axl_bool test_17_result = axl_true;
+
+axlPointer test_17_thread (VortexCtx * ctx)
+{
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	int                iterator = 0;
+
+
+	while (iterator < 4) {
+		conn = vortex_connection_new_full (ctx, "127.0.0.1", "44010",
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-17.server"),
+						   NULL, NULL);
+		/* check connection */
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (17.1): expected proper connection creation on iterator=%d\n", iterator);
+			test_17_result = axl_false;
+			return axl_false;
+		}
+		
+		/* open a channel */
+		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-17");
+		if (channel == NULL) {
+			printf ("ERROR (17.2): expected to find proper channel creation but a failure was found..\n");
+			test_17_result = axl_false;
+			return axl_false;
+		}
+		
+		vortex_connection_close (conn);
+
+		/* next position */
+		iterator++;
+	} /* end while */
+
+	return NULL;
+}
+
 /** 
  * @brief Test how works current profile path mechanism that allows to
  * create a child process (separate=yes) and reusing it for
  * connections to the same profile path (reuse=yes).
  */
 axl_bool test_17 (void) {
-	return axl_true;
+
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn;
+	int                connections = 500;
+	VortexConnection * conns[connections];
+	int                iterator;
+	VortexThread       thread, thread2, thread3, thread4;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_17.conf")) 
+		return axl_false;
+
+	/* register profile to use */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-17");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	
+	printf ("Test 17: creating %d connections with an opened channel..\n", connections);
+	iterator = 0;
+	while (iterator < connections) {
+
+		/* open a connection */
+		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-17.server"),
+						   NULL, NULL);
+		/* check connection */
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (1): expected proper connection creation on iterator=%d (%d, %s)\n", iterator,
+				vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+			return axl_false;
+		}
+
+		/* open a channel */
+		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-17");
+		if (channel == NULL) {
+			printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+			return axl_false;
+		}
+
+		/* setup the connection */
+		conns[iterator] = conn;
+		iterator++;
+	} /* end while */
+
+	/* now close all connections */
+	printf ("Test 17: closing them %d connections..\n", connections);
+	iterator = 0;
+	while (iterator < connections) {
+		/* close connection */
+		vortex_connection_shutdown (conns[iterator]);
+		vortex_connection_close (conns[iterator]);
+		iterator++;
+	}
+
+	printf ("Test 17: creating 4 threads each one creating 4 connections with one channel ..\n");
+
+	/* reset status */
+	test_17_result = axl_true;
+
+	/* call to create 4 threads that creates 3 connections */
+	if (! vortex_thread_create (&thread, 
+				    (VortexThreadFunc) test_17_thread, vCtx, VORTEX_THREAD_CONF_END)) {
+		printf ("ERROR (3) Expected to create thread but failure found..\n");
+		return axl_false;
+	} 
+	if (! vortex_thread_create (&thread2, 
+				    (VortexThreadFunc) test_17_thread,
+				    vCtx, VORTEX_THREAD_CONF_END)) {
+		printf ("ERROR (4) Expected to create thread but failure found..\n");
+		return axl_false;
+	}
+	if (! vortex_thread_create (&thread3, 
+				    (VortexThreadFunc) test_17_thread,
+				    vCtx, VORTEX_THREAD_CONF_END)) {
+		printf ("ERROR (5) Expected to create thread but failure found..\n");
+		return axl_false;
+	}
+	if (! vortex_thread_create (&thread4, 
+				    (VortexThreadFunc) test_17_thread,
+				    vCtx, VORTEX_THREAD_CONF_END)) {
+		printf ("ERROR (6) Expected to create thread but failure found..\n");
+		return axl_false;
+	}
+
+	printf ("Test 17: waiting threads to finish..\n");
+
+	/* wait for all threads to finish */
+	vortex_thread_destroy (&thread,  axl_false);
+	vortex_thread_destroy (&thread2, axl_false);
+	vortex_thread_destroy (&thread3, axl_false);
+	vortex_thread_destroy (&thread4, axl_false);
+
+	printf ("Test 17: ok, finishing test..\n");
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+	
+	return test_17_result;
 }
 
 /** 
@@ -2973,7 +3114,7 @@ int main (int argc, char ** argv)
 
 	/* terminate context used by previous tests */
 	terminate_contexts ();
-	
+
 	run_test (test_05, "Test 05: Check mediator API");
 
 	run_test (test_06, "Test 06: Turbulence startup and stop");

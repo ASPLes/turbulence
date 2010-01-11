@@ -1134,17 +1134,37 @@ axl_bool  turbulence_is_num  (const char * value)
 	return axl_true;
 }
 
-#if !defined(getpwuid_r)
-int getpwuid_r (uid_t uid, struct passwd *pwbuf, char *buf, size_t buflen, struct passwd **pwbufp);
-#endif
-#if !defined(getpwnam_r)
-int getpwnam_r (const char *name, struct passwd *pwbuf, char *buf, size_t buflen, struct passwd **pwbufp);
-#endif
-#if !defined(getgrgid_r)
-int getgrgid_r (gid_t gid, struct group *gbuf, char *buf, size_t buflen, struct group **gbufp);
-#endif
-#if !defined(getgrnam_r)
-int getgrnam_r (const char *name, struct group *gbuf, char *buf, size_t buflen, struct group **gbufp);
+#if defined(AXL_OS_UNIX)
+axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * user_id, int * group_id)
+{
+	FILE * fstab;
+	char   line[512];
+	int    iterator;
+
+	fstab = fopen ("/etc/passwd", "r");
+	if (fstab == NULL)
+		return axl_false;
+	
+	/* now read the file */
+	iterator = 0;
+	do {
+		if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {
+			fclose (fstab);
+			return axl_false;
+		}
+		iterator++;
+		if (line[iterator] == ':') {
+			line[iterator] = 0;
+			break;
+		}
+	} while (axl_true);
+	
+	/* check user found */
+	
+	
+	fclose (fstab);
+	return axl_false;
+}
 #endif
 
 /** 
@@ -1166,49 +1186,14 @@ int getgrnam_r (const char *name, struct group *gbuf, char *buf, size_t buflen, 
 int turbulence_get_system_id  (TurbulenceCtx * ctx, const char * value, axl_bool get_user)
 {
 #if defined (AXL_OS_UNIX)
-	axl_bool        result;
-	struct passwd   user_data;
-	struct passwd * user_data_ptr;
-	struct group    group_data;
-	struct group  * group_data_ptr;
-	char            info[1024];
+	int user_id, group_id;
 
-	if (get_user) {
-		msg ("checking user id: %s", value);
-		memset (&user_data, 0, sizeof (struct passwd));
-		if (turbulence_is_num (value)) 
-			result = (getpwuid_r (atoi (value), &user_data, info, 1023, &user_data_ptr) == 0);
-		else 
-			result = (getpwnam_r (value, &user_data, info, 1023, &user_data_ptr) == 0);
+	/* get user and group id associated to the value provided */
+	if (! __turbulence_get_system_id_info (ctx, value, &user_id, &group_id))
+		return -1;
 
-		/* check user */
-		if (! result) {
-			wrn ("Failed to find data associated to user (%s), it seems its missing, errno=%d:%s", value,
-			     errno, vortex_errno_get_last_error ());
-			CLEAN_START(ctx);
-		} /* end if */
-		
-		/* store user id */
-		return (int) user_data.pw_uid;
-	} else {
-		/* check group */
-		msg ("checking group id: %s", value);
-		memset (&group_data, 0, sizeof (struct group));
-		if (turbulence_is_num (value)) 
-			result = (getgrgid_r (atoi (value), &group_data, info, 1023, &group_data_ptr) == 0);
-		else 
-			result = (getgrnam_r (value, &group_data, info, 1023, &group_data_ptr) == 0);
-
-		/* check user */
-		if (! result) {
-			wrn ("Failed to find data associated to group (%s), it seems its missing, errno=%d:%s", value,
-			     errno, vortex_errno_get_last_error ());
-			CLEAN_START(ctx);
-		} /* end if */
-
-		/* store group */
-		return (int) group_data.gr_gid;
-	} /* end if */
+	/* return the user id or group id */
+	return get_user ? user_id : group_id;
 #endif
 	/* nothing defined */
 	return -1;
@@ -1275,6 +1260,30 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
 	return chmod (file_name, value) == 0;
 #endif
 	return axl_true;
+}
+
+/** 
+ * @brief Implements a portable subsecond thread sleep operation. The
+ * caller will be blocked during the provide period.
+ * @param ctx The context used during the operation.
+ * @param milliseconds Amount of time to wait.
+ */
+void            turbulence_sleep           (TurbulenceCtx * ctx,
+					    long int        microseconds)
+{
+#if defined(AXL_OS_UNIX)
+	struct timeval timeout;
+
+	timeout.tv_sec  = 0;
+	timeout.tv_usec = microseconds;
+	
+	/* get current start time */
+	select (0, 0, 0, 0, &timeout);
+	
+#elif defined(AXL_OS_WIN32)
+#error "Add support for win32"
+#endif
+	return;
 }
 
 /* @} */

@@ -518,11 +518,15 @@ void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 {
 	/* shutdown all pending connections */
 	msg ("calling to cleanup registered connections that are still opened: %d", axl_hash_items (ctx->conn_mgr_hash));
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 	axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_shutdown_connections, NULL);
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	/* destroy mutex */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 	axl_hash_free (ctx->conn_mgr_hash);
 	ctx->conn_mgr_hash = NULL;
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	vortex_mutex_destroy (&ctx->conn_mgr_mutex);
 

@@ -56,7 +56,6 @@ void turbulence_process_free_child_data (TurbulenceChild * child)
 		return;
 #if defined(AXL_OS_UNIX)
 	unlink (child->socket_control_path);
-	axl_free (child->socket_control_pass);
 	axl_free (child->socket_control_path);
 	vortex_close_socket (child->child_connection);
 #endif
@@ -89,15 +88,101 @@ void turbulence_process_init         (TurbulenceCtx * ctx, axl_bool reinit)
 	return;
 }
 
-void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
+
+typedef struct _TurbulenceProcessFinished {
+	VortexCtx       * vortex_ctx;
+	TurbulenceChild * child;
+} TurbulenceProcessFinished;
+
+axlPointer __turbulence_process_finished (TurbulenceProcessFinished * data)
 {
-	TurbulenceCtx * ctx = user_data;
+	TurbulenceChild  * child      = data->child;
+	VortexCtx        * vortex_ctx = data->vortex_ctx;
+	TurbulenceCtx    * ctx        = child->ctx;
+	int                delay      = 300000; /* 300ms */
+	int                tries      = 10; 
+
+	/* free pointer received */
+	axl_free (data);
+	
+	while (tries > 0) {
+
+		/* check if the reader has connections watched at this time */
+		if (vortex_reader_connections_watched (vortex_ctx) > 0) {
+			msg2 ("cancelled child process termination because new connections are now handled, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d",
+			      tries, delay, 
+			      vortex_reader_connections_watched (vortex_ctx), 
+			      axl_hash_items (ctx->conn_mgr_hash));
+			return NULL;
+		}
+		
+		/* finish current thread if turbulence is existing */
+		if (ctx->is_existing) {
+			msg2 ("Found turbulence existing, finishing child process termination thread signaled due to vortex reader stop");
+			return NULL;
+		}
+
+		/* reduce tries, wait */
+		msg2 ("delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-existing=%d",
+		      tries, delay,
+		      vortex_reader_connections_watched (vortex_ctx), 
+		      axl_hash_items (ctx->conn_mgr_hash),
+		      ctx->is_existing);
+		tries--;
+		turbulence_sleep (ctx, delay);
+	}
 
 	/* unlock waiting child */
-	msg ("calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p)..",
-	     ctx, ctx->child_wait);
+	error ("calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p)..",
+	       ctx, ctx->child_wait);
 	if (ctx && ctx->child_wait) {
 		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
+	}
+	return NULL;
+}
+
+
+void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
+{
+	VortexThread                thread;
+	TurbulenceProcessFinished * data;
+	TurbulenceChild           * child = user_data;
+	TurbulenceCtx             * ctx   = child->ctx;
+
+	/* do not implement any notification if the turbulence process
+	   is itself finishing */
+	if (ctx->is_existing)
+		return;
+
+	/* check if the child process was configured with a reuse
+	   flag, if not, notify exist right now */
+	if (! child->ppath->reuse) {
+		/* so it is a child process without reuse flag
+		   activated, exit now */
+		if (ctx && ctx->child_wait) {
+			vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
+		} /* end if */
+		return;
+	}
+
+	/* reached this point, the child process has reuse = yes which
+	   means we have to ensure we don't miss any connection which
+	   is already accepted on the parent but still not reached the
+	   child: the following creates a thread to unlock the vortex
+	   reader, so he can listen for new registration while we do
+	   the wait code for new connections... */
+
+	/* build data to be notified */
+	data             = axl_new (TurbulenceProcessFinished, 1);
+	data->vortex_ctx = vortex_ctx;
+	data->child      = user_data;
+	
+	/* create data to be notified */
+	if (! vortex_thread_create (&thread,
+				    (VortexThreadFunc) __turbulence_process_finished,
+				    data, VORTEX_THREAD_CONF_END)) {
+		error ("Failed to create thread to watch reader state and notify process termination (code %d) %s",
+		       errno, vortex_errno_get_last_error ());
 	}
 	return;
 }
@@ -122,8 +207,6 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	struct sockaddr_un   socket_name = {0};
 	int                  tries       = 10;
 	int                  delay       = 100;
-	VortexAsyncQueue   * queue       = NULL;
-	
 
 	/* configure socket name to connect to (or to bind to) */
 	memset (&socket_name, 0, sizeof (struct sockaddr_un));
@@ -141,12 +224,8 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 		while (tries > 0) {
 			if (connect (_socket, (struct sockaddr *)&socket_name, sizeof (socket_name))) {
 				if (errno == 107 || errno == 111 || errno == 2) {
-					/* create the queue if not created */
-					if (queue == NULL)
-						queue = vortex_async_queue_new ();
-
 					/* implement a wait operation */
-					vortex_async_queue_timedpop (queue, delay);
+					turbulence_sleep (ctx, delay);
 				} else {
 					error ("Unexpected error found while creating child control connection: (code: %d) %s", 
 					       errno, vortex_errno_get_last_error ());
@@ -162,9 +241,6 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 			delay = delay * 2;
 
 		} /* end if */
-
-		/* release queue if defined */
-		vortex_async_queue_unref (queue);
 		return _socket;
 	}
 
@@ -313,6 +389,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * socket,
 	TurbulenceCtx  * ctx;
 	
 	v_return_val_if_fail (socket && child, axl_false);
+
 	/* get context reference */
 	ctx = child->ctx;
 	
@@ -335,6 +412,17 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * socket,
 	} /* end if */
 
 	cmsg = CMSG_FIRSTHDR(&msg);
+	if (cmsg == NULL) {
+		error ("Received empty control message from parent, unable to receive socket (code %d): %s",
+		       errno, vortex_errno_get_last_error ());
+		(*socket) = -1;
+		if (ancillary_data)
+			(*ancillary_data) = NULL;
+		if (size)
+			(*size) = 0;
+		return axl_false;
+	}
+
 	if (!cmsg->cmsg_type == SCM_RIGHTS) {
 		error ("Unexpected control message of unknown type %d, failed to receive socket", 
 		       cmsg->cmsg_type);
@@ -685,8 +773,11 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 	}
 
 	/* check content received */
-	if (ancillary_data == NULL || strlen (ancillary_data) == 0 || socket <= 0)
+	if (ancillary_data == NULL || strlen (ancillary_data) == 0 || socket <= 0) {
+		error ("Ancillary data is null (%p) or empty or socket returned is not valid (%d)",
+		       ancillary_data, socket);
 		goto release_content;
+	}
 
 	/* process commands received from the parent */
 	if (ancillary_data[0] == 's') {
@@ -817,8 +908,11 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	int                access_log[2]  = {-1, -1};
 	int                vortex_log[2]  = {-1, -1};
 	TurbulenceLoop   * control;
+	const char       * ppath_name     = turbulence_ppath_get_name (def) ? turbulence_ppath_get_name (def) : "";
 
+	msg2 ("Calling to create child process to handle profile path: %s..", ppath_name);
 	vortex_mutex_lock (&ctx->child_process_mutex);
+	msg2 ("LOCK acquired: calling to create child process to handle profile path: %s..", ppath_name);
 	
 	/* check if child associated to the given profile path is
 	   defined and if reuse flag is enabled */
@@ -858,11 +952,8 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 							"turbulence",
 							VORTEX_FILE_SEPARATOR,
 							random ());
-
-	/* create socket pass */
-	child->socket_control_pass = axl_strdup_printf ("%ld", random ());
 	
-	msg ("Created socket_control_path = '%s' with auth pass: %s", child->socket_control_path, child->socket_control_pass);
+	msg ("Created socket_control_path = '%s'", child->socket_control_path);
 
 	/* call to fork */
 	pid = fork ();
@@ -999,7 +1090,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* set finish handler that will help to finish child process
 	   (or not) */
 	ctx->child_wait = vortex_async_queue_new ();
-	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, ctx);
+	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, child);
 
 	/* (re)start vortex */
 	if (! vortex_init_ctx (vortex_ctx)) {
