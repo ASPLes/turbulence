@@ -46,10 +46,6 @@
 
 
 #if defined(AXL_OS_UNIX)
-/* used by turbulence_get_system_id */
-# include <pwd.h>
-# include <grp.h>
-
 /* used by fchmod */
 # include <sys/types.h>
 # include <sys/stat.h>
@@ -1146,21 +1142,42 @@ axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * valu
 		return axl_false;
 	
 	/* now read the file */
+keep_on_reading:
 	iterator = 0;
 	do {
 		if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {
 			fclose (fstab);
 			return axl_false;
 		}
-		iterator++;
 		if (line[iterator] == ':') {
 			line[iterator] = 0;
 			break;
 		}
+
+		/* next position */
+		iterator++;
 	} while (axl_true);
 	
 	/* check user found */
-	
+	printf ("Found fstab user (iterator=%d): %s\n", iterator, line);
+
+	if (! axl_cmp (line, value)) {
+		/* consume all content until \n is found */
+
+		do {
+			if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {
+				fclose (fstab);
+				return axl_false;
+			}
+			if (line[iterator] == '\n') {
+				goto keep_on_reading;
+				break;
+			} /* end if */
+			
+			/* next position */
+			iterator++;
+		} while (axl_true);
+	} /* end if */
 	
 	fclose (fstab);
 	return axl_false;
