@@ -1150,6 +1150,52 @@ axl_bool test_common_exit (VortexCtx      * vCtx,
 	return axl_false;
 }
 
+axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * system_id, const char * path);
+
+axl_bool test_05_a (void) {
+	int value;
+	TurbulenceCtx * ctx = turbulence_ctx_new ();
+	turbulence_log_enable       (ctx, axl_true);
+	turbulence_color_log_enable (ctx, axl_true);
+
+	/* check to load and check user ids */
+	if (! __turbulence_get_system_id_info (ctx, "libuuid", &value, "test_05_a_passwd"))
+		return axl_false;
+	
+	/* check value returned */
+	if (value != 100) {
+		printf ("ERROR (1): expected to find 100 but found %d for user %s\n",
+			value, "libuuid");
+		return axl_false;
+	}
+
+	/* check to load and check user ids */
+	if (! __turbulence_get_system_id_info (ctx, "backup", &value, "test_05_a_passwd"))
+		return axl_false;
+	
+	/* check value returned */
+	if (value != 34) {
+		printf ("ERROR (2): expected to find 34 but found %d for user %s\n",
+			value, "backup");
+		return axl_false;
+	}
+
+	/* check to load and check user ids */
+	if (! __turbulence_get_system_id_info (ctx, "mysql", &value, "test_05_a_passwd"))
+		return axl_false;
+	
+	/* check value returned */
+	if (value != 109) {
+		printf ("ERROR (3): expected to find 109 but found %d for user %s\n",
+			value, "mysql");
+		return axl_false;
+	}
+
+	turbulence_ctx_free (ctx);
+
+	return axl_true;
+}
+
 axl_bool test_06 (void) {
 	TurbulenceCtx * tCtx;
 	VortexCtx     * vCtx;
@@ -3098,8 +3144,6 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
-	goto init;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -3119,11 +3163,9 @@ int main (int argc, char ** argv)
 
 	run_test (test_05, "Test 05: Check mediator API");
 
-init:
-
+	run_test (test_05_a, "Test 05-a: Check system user/group id resolving..");
+	
 	run_test (test_06, "Test 06: Turbulence startup and stop");
-
-	return 0;
 
 	run_test (test_07, "Test 07: Turbulence local connection");
 
