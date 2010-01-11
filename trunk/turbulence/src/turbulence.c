@@ -1131,39 +1131,47 @@ axl_bool  turbulence_is_num  (const char * value)
 }
 
 #if defined(AXL_OS_UNIX)
-axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * user_id, int * group_id)
+
+#define SYSTEM_ID_CONSUME_UNTIL_ZERO(line, fstab, delimiter)                       \
+	if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {    \
+	      fclose (fstab);                                                      \
+	      return axl_false;                                                    \
+	}                                                                          \
+        if (line[iterator] == delimiter) {                                         \
+	      line[iterator] = 0;                                                  \
+	      break;                                                               \
+	}                                                                          
+
+axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * system_id, const char * path)
 {
 	FILE * fstab;
 	char   line[512];
 	int    iterator;
 
-	fstab = fopen ("/etc/passwd", "r");
-	if (fstab == NULL)
+	/* set invalid value */
+	if (system_id)
+		(*system_id) = -1;
+
+	fstab = fopen (path, "r");
+	if (fstab == NULL) {
+		error ("Failed to open file %s", path);
 		return axl_false;
+	}
 	
 	/* now read the file */
 keep_on_reading:
 	iterator = 0;
 	do {
-		if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {
-			fclose (fstab);
-			return axl_false;
-		}
-		if (line[iterator] == ':') {
-			line[iterator] = 0;
-			break;
-		}
+		SYSTEM_ID_CONSUME_UNTIL_ZERO (line, fstab, ':');
 
 		/* next position */
 		iterator++;
 	} while (axl_true);
 	
 	/* check user found */
-	printf ("Found fstab user (iterator=%d): %s\n", iterator, line);
-
 	if (! axl_cmp (line, value)) {
 		/* consume all content until \n is found */
-
+		iterator = 0;
 		do {
 			if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {
 				fclose (fstab);
@@ -1173,14 +1181,30 @@ keep_on_reading:
 				goto keep_on_reading;
 				break;
 			} /* end if */
-			
-			/* next position */
-			iterator++;
 		} while (axl_true);
 	} /* end if */
+
+	/* found user */
+	iterator = 0;
+	/* get :x: */
+	if ((fread (line, 1, 2, fstab) != 2) || !axl_memcmp (line, "x:", 2)) {
+		fclose (fstab);
+		return axl_false;
+	}
 	
+	/* now get the id */
+	iterator = 0;
+	do {
+		SYSTEM_ID_CONSUME_UNTIL_ZERO (line, fstab, ':');
+
+		/* next position */
+		iterator++;
+	} while (axl_true);
+
+	(*system_id) = atoi (line);
+
 	fclose (fstab);
-	return axl_false;
+	return axl_true;
 }
 #endif
 
@@ -1203,14 +1227,15 @@ keep_on_reading:
 int turbulence_get_system_id  (TurbulenceCtx * ctx, const char * value, axl_bool get_user)
 {
 #if defined (AXL_OS_UNIX)
-	int user_id, group_id;
+	int system_id = -1;
 
 	/* get user and group id associated to the value provided */
-	if (! __turbulence_get_system_id_info (ctx, value, &user_id, &group_id))
+	if (! __turbulence_get_system_id_info (ctx, value, &system_id, get_user ? "/etc/passwd" : "/etc/group"))
 		return -1;
 
 	/* return the user id or group id */
-	return get_user ? user_id : group_id;
+	msg ("Resolved %s:%s to system id %d", get_user ? "user" : "group", value, system_id);
+	return system_id;
 #endif
 	/* nothing defined */
 	return -1;
