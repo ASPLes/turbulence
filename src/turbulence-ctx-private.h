@@ -59,7 +59,7 @@ struct _TurbulenceCtx {
 	int                  pid;
 	
 	/* some variables used to terminate turbulence. */
-	int                  is_existing;
+	axl_bool             is_existing;
 	VortexMutex          exit_mutex;
 	
 	/* Mutex to protect the list of db list opened. */
@@ -124,7 +124,6 @@ struct _TurbulenceChild {
 #if defined(AXL_OS_UNIX)
 	int                  child_connection;
 	char               * socket_control_path;
-	char               * socket_control_pass;
 #endif
 };
 

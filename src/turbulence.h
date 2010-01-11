@@ -239,6 +239,9 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
 					    const char    * file_name,
 					    const char    * mode);
 
+void            turbulence_sleep           (TurbulenceCtx * ctx,
+					    long int        microseconds);
+
 #endif
 
 /* @} */
