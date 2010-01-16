@@ -556,6 +556,15 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		return;
 	}
 
+	/* check if the connection was received during on connect
+	   phase (vortex_listener_set_on_accept_handler) or because a
+	   channel start */
+	if (! handle_start_reply) {
+		/* set the connection to still finish BEEP greetings
+		   negotiation phase */
+		vortex_connection_set_data (conn, "initial_accept", INT_TO_PTR (axl_true));
+	}
+
 	/* now finish and register the connection */
 	vortex_connection_set_close_socket (conn, axl_true);
 	vortex_reader_watch_connection (TBC_VORTEX_CTX (ctx), conn);
@@ -1114,6 +1123,8 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	turbulence_ppath_change_user_id (ctx, def);
 
 	/* perfom common tasks for new connection acceptance */
+	msg ("CHILD: handling new connection (first) at child connection process, handle_start_reply=%d, frame=%p",
+	     handle_start_reply, frame);
 	__turbulence_process_common_new_connection (ctx, conn, def, 
 						    handle_start_reply, channel_num, 
 						    profile, profile_content,

@@ -3188,8 +3188,6 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
-	goto init;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -3242,8 +3240,6 @@ int main (int argc, char ** argv)
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
 
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
-
- init:
 
 	run_test (test_18, "Test 18: check child process creation that do not accept the connection..")
 
