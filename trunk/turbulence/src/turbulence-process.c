@@ -588,8 +588,9 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 			channel0 = vortex_connection_get_channel (conn, 0);
 			if (channel0 != NULL) 
 				vortex_channel_block_until_replies_are_sent (channel0, 1000);
+		} else {
+			msg ("Channel start accepted on child..");
 		}
-		msg ("Channel start accepted on child..");
 	} /* end if */
 
 	/* unref connection since it is registered */
@@ -778,7 +779,7 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 	/* receive socket */
 	if (! turbulence_process_receive_socket (&socket, child, &ancillary_data, &size)) {
 		error ("Failed to received socket from parent..");
-		goto release_content;
+		return axl_false; /* close parent notification socket */
 	}
 
 	/* check content received */
@@ -1155,7 +1156,6 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	turbulence_exit (ctx, axl_false, axl_false);
 
 	/* free context (the very last operation) */
-	turbulence_ctx_free (ctx);
 	vortex_ctx_free (vortex_ctx);
 
 	/* unref the queue here to avoid vortex finish handler to
@@ -1163,6 +1163,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	vortex_async_queue_unref (queue);
 
 	/* finish process */
+	turbulence_ctx_free (ctx);
 	exit (0);
 	
 	return;

@@ -3083,6 +3083,50 @@ axl_bool test_18 (void) {
 	} /* end if */
 
 	/* ok, now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-18");
+	if (channel != NULL) {
+		printf ("ERROR (2): expected to NOT find proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+
+	/* ok, now close the connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+	
+	return axl_true;
+}
+
+/** 
+ * @brief Test the case when a child process is created for a
+ * connection (due to profile path configuration) but at the end the
+ * channel requested is not accepted.
+ */
+axl_bool test_19 (void) {
+
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_19.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* now connect to local host and open a channel */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+		return axl_false;
+	} /* end if */
+
+	/* ok, now create a channel */
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-17");
 	if (channel != NULL) {
 		printf ("ERROR (2): expected to NOT find proper channel creation but a failure was found..\n");
@@ -3241,7 +3285,9 @@ int main (int argc, char ** argv)
 
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
 
-	run_test (test_18, "Test 18: check child process creation that do not accept the connection..")
+	run_test (test_18, "Test 18: check child process creation that do not accept the connection..");
+
+	run_test (test_19, "Test 19: check child process creation that do not accept the connection (II)..")
 
 	printf ("All tests passed OK!\n");
 
