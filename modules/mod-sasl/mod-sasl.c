@@ -135,7 +135,7 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 			if (! result) 
 				wrn ("Found no serverName defined and there is no default SASL database for current backend loaded..");
 			vortex_mutex_unlock (&sasl_top_mutex);
-			return result;
+			return axl_true;
 		} /* end if */
 
 		/* ok, database already loaded, check if it supports
@@ -150,7 +150,7 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 		result = common_sasl_load_serverName (ctx, sasl_backend, serverName, &sasl_db_mutex);
 		msg ("SASL database load for serverName=%s status=%d", serverName, result);
 		vortex_mutex_unlock (&sasl_top_mutex);
-		return result;
+		return axl_true;
 	}
 
 	/* load configuration file and populate backend with the
