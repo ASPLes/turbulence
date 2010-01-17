@@ -77,7 +77,8 @@ char *           turbulence_process_connection_status_string (axl_bool          
 							      const char      * serverName,
 							      int               msg_no,
 							      int               seq_no,
-							      int               seq_no_expected);
+							      int               seq_no_expected,
+							      int               ppath_id);
 
 void             turbulence_process_connection_recover_status (char            * ancillary_data,
 							       axl_bool        * handle_start_reply,
@@ -88,6 +89,7 @@ void             turbulence_process_connection_recover_status (char            *
 							       const char     ** serverName,
 							       int             * msg_no,
 							       int             * seq_no,
-							       int             * seq_no_expected);
+							       int             * seq_no_expected,
+							       int             * ppath_id);
 
 #endif

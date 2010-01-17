@@ -52,6 +52,9 @@ void turbulence_ppath_change_root    (TurbulenceCtx      * ctx,
 
 TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn);
 
+TurbulencePPathDef * turbulence_ppath_find_by_id (TurbulenceCtx * ctx, 
+						  int             ppath_id);
+
 int                  turbulence_ppath_get_id   (TurbulencePPathDef * ppath_def);
 
 const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def);
@@ -60,6 +63,7 @@ const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,
 						       TurbulencePPathDef * ppath_def);
 
 const char         * turbulence_ppath_get_server_name (VortexConnection * conn);
+
 
 axl_bool __turbulence_ppath_select   (TurbulenceCtx      * ctx, 
 				      VortexConnection   * connection, 
@@ -70,5 +74,10 @@ axl_bool __turbulence_ppath_select   (TurbulenceCtx      * ctx,
 				      const char         * serverName, 
 				      VortexFrame        * frame,
 				      axl_bool             on_connect);
+
+void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx, 
+				     VortexConnection * conn, 
+				     int                ppath_id,
+				     const char       * requested_serverName);
 
 #endif /* end __TURBULENCE_PPATH_H__ */
