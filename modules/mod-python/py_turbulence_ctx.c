@@ -46,6 +46,9 @@ struct _PyTurbulenceCtx {
 
 	/* pointer to the turbulence context */
 	TurbulenceCtx * ctx;
+
+	/* pointer to the PyVortexCtx */
+	PyObject      * py_vortex_ctx;
 };
 
 static int py_turbulence_ctx_init_type (PyTurbulenceCtx *self, PyObject *args, PyObject *kwds)
@@ -74,6 +77,10 @@ static PyObject * py_turbulence_ctx_new (PyTypeObject *type, PyObject *args, PyO
  */
 static void py_turbulence_ctx_dealloc (PyTurbulenceCtx* self)
 {
+	/* decrease vortex.Ctx reference */
+	Py_XDECREF (self->py_vortex_ctx);
+	self->py_vortex_ctx = NULL;
+
 	/* free the node it self */
 	self->ob_type->tp_free ((PyObject*)self);
 
@@ -99,7 +106,8 @@ PyObject * py_turbulence_ctx_get_attr (PyObject *o, PyObject *attr_name) {
 
 	if (axl_cmp (attr, "vortex_ctx")) {
 		/* returns to return PyVortexCtx associated */
-		return py_vortex_ctx_create (turbulence_ctx_get_vortex_ctx (self->ctx));
+		Py_INCREF (self->py_vortex_ctx);
+		return self->py_vortex_ctx;
 	} /* end if */
 
 	/* first implement generic attr already defined */
@@ -271,6 +279,10 @@ PyObject * py_turbulence_ctx_create   (TurbulenceCtx * ctx)
 
 	/* configure context reference */
 	obj->ctx = ctx;
+
+	/* now create vortex.Ctx reference and associated it to this
+	   instance. */
+	obj->py_vortex_ctx = py_vortex_ctx_create (TBC_VORTEX_CTX (ctx));
 	
 	/* return reference created */
 	return __PY_OBJECT (obj);
@@ -284,4 +296,5 @@ void init_turbulence_ctx (PyObject * module)
 	
 	Py_INCREF (&PyTurbulenceCtxType);
 	PyModule_AddObject(module, "Ctx", (PyObject *)&PyTurbulenceCtxType);
+	return;
 }
