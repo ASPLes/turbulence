@@ -168,7 +168,7 @@ finish:
  * @brief Function used to get inside the python application code
  * calling the init function.
  */ 
-axl_bool mod_python_init_app (PyObject * init_function)
+axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function)
 {
 	/* init function has one parameter: PyTurbulencCtx */
 	PyObject * py_tbc_ctx;
@@ -183,6 +183,7 @@ axl_bool mod_python_init_app (PyObject * init_function)
 		return axl_false;
 	}
 
+	/* wrap and create turbulence.Ctx object */
 	py_tbc_ctx = py_turbulence_ctx_create (ctx);
 
 	/* not required to acquire the GIL we are calling from the
@@ -193,6 +194,7 @@ axl_bool mod_python_init_app (PyObject * init_function)
 	PyTuple_SetItem (args, 0, py_tbc_ctx);
 
 	/* now call to the function */
+	msg ("calling python app init function: %p (tbc ref: %p:%d)", init_function, py_tbc_ctx, py_tbc_ctx->ob_refcnt);
 	result = PyObject_Call (init_function, args, NULL);
 
 	/* handle exceptions */
@@ -220,7 +222,10 @@ axl_bool mod_python_init_app (PyObject * init_function)
  * configuration file. The function returns axl_true if the module can
  * continue signaling its proper startup.
  */
-axl_bool mod_python_init_applications (const char * workDir, const char * serverName, VortexConnection * conn)
+axl_bool mod_python_init_applications (TurbulenceCtx     * ctx, 
+				       const char        * workDir, 
+				       const char        * serverName, 
+				       VortexConnection  * conn)
 {
 	axlNode    * node;
 	axlNode    * location;
@@ -311,7 +316,7 @@ axl_bool mod_python_init_applications (const char * workDir, const char * server
 		msg ("app-init %s (%p) entry point found", ATTR_VALUE (location, "app-init"), function);
 
 		/* call to activate module */
-		if (! mod_python_init_app (function)) {
+		if (! mod_python_init_app (ctx, function)) {
 
 			/* remove path */
 			if (! mod_python_remove_first_path ()) {
@@ -455,10 +460,12 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	axl_doc_free (mod_python_conf);
 	mod_python_conf = NULL;
 
-	/* finish python */
+	/* now defer python finalize call to avoid calling to py
+	   finalize having references setup inside turbulence and
+	   vortex structures. This will ensure this finalize is called
+	   as late as possible. */
 	Py_Finalize ();
 
-	vortex_mutex_destroy (&mod_python_top_init);
 
 	/* not required to release the GIL */
 	return;
@@ -570,7 +577,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* for each application found, register it and call to
 	 * initialize its function */
-	if (! mod_python_init_applications (workDir, serverName, conn)) {
+	if (! mod_python_init_applications (ctx, workDir, serverName, conn)) {
 		PyGILState_Release (state); 
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;

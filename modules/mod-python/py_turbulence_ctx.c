@@ -74,8 +74,6 @@ static PyObject * py_turbulence_ctx_new (PyTypeObject *type, PyObject *args, PyO
  */
 static void py_turbulence_ctx_dealloc (PyTurbulenceCtx* self)
 {
-	py_vortex_log (PY_VORTEX_DEBUG, "collecting turbulence.Ctx ref: %p (self->ctx: %p)", self, self->ctx);
-
 	/* free the node it self */
 	self->ob_type->tp_free ((PyObject*)self);
 
