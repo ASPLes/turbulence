@@ -20,7 +20,8 @@ configuration_files = \
 	test_16.conf  \
 	test_17.conf  \
 	test_18.conf  \
-	test_19.conf
+	test_19.conf  \
+	test_20.conf
 
 
 

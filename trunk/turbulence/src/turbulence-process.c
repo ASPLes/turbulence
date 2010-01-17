@@ -458,15 +458,17 @@ char * turbulence_process_connection_status_string (axl_bool          handle_sta
 						    const char      * serverName,
 						    int               msg_no,
 						    int               seq_no,
-						    int               seq_no_expected)
+						    int               seq_no_expected,
+						    int               ppath_id)
 {
-	return axl_strdup_printf ("n%d;-;%d;-;%s;-;%s;-;%d;-;%s;-;%d;-;%d;-;%d",
+	return axl_strdup_printf ("n%d;-;%d;-;%s;-;%s;-;%d;-;%s;-;%d;-;%d;-;%d;-;%d",
 				  handle_start_reply,
 				  channel_num,
 				  profile ? profile : "",
 				  profile_content ? profile_content : "",
 				  encoding,
 				  serverName ? serverName : "",
+				  ppath_id,
 				  msg_no,
 				  seq_no,
 				  seq_no_expected);
@@ -483,18 +485,23 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 						  const char       * serverName, 
 						  VortexFrame      * frame)
 {
-	VORTEX_SOCKET   client_socket;
-	VortexChannel * channel0    = vortex_connection_get_channel (conn, 0);
-	char          * conn_status = turbulence_process_connection_status_string (handle_start_reply, 
-										   channel_num,
-										   profile,
-										   profile_content,
-										   encoding,
-										   serverName,
-										   vortex_frame_get_msgno (frame),
-										   vortex_channel_get_next_seq_no (channel0),
-										   vortex_channel_get_next_expected_seq_no (channel0));
+	VORTEX_SOCKET        client_socket;
+	VortexChannel      * channel0    = vortex_connection_get_channel (conn, 0);
+	TurbulencePPathDef * ppath       = turbulence_ppath_selected (conn);
+	char               * conn_status;
 
+	/* build connection status string */
+	conn_status = turbulence_process_connection_status_string (handle_start_reply, 
+								   channel_num,
+								   profile,
+								   profile_content,
+								   encoding,
+								   serverName,
+								   vortex_frame_get_msgno (frame),
+								   vortex_channel_get_next_seq_no (channel0),
+								   vortex_channel_get_next_expected_seq_no (channel0),
+								   turbulence_ppath_get_id (ppath));
+	
 	msg ("Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, strlen (conn_status));
 	/* unwatch the connection from the parent to avoid receiving
 	   more content which now handled by the child and unregister
@@ -635,7 +642,8 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 						       const char     ** serverName,
 						       int             * msg_no,
 						       int             * seq_no,
-						       int             * seq_no_expected)
+						       int             * seq_no_expected,
+						       int             * ppath_id)
 {
 	int iterator = 0;
 	int next;
@@ -678,6 +686,11 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 	/* get next position */
 	iterator           = next;
 	next               = __get_next_field (conn_status, iterator);
+	(*ppath_id) = atoi (conn_status + iterator);
+
+	/* get next position */
+	iterator           = next;
+	next               = __get_next_field (conn_status, iterator);
 	(*msg_no) = atoi (conn_status + iterator);
 
 	/* get next position */
@@ -709,6 +722,7 @@ axl_bool turbulence_handle_connection_received (TurbulenceCtx      * ctx,
 	int                msg_no             = -1;
 	int                seq_no             = -1;
 	int                seq_no_expected    = -1;
+	int                ppath_id           = -1;
 	VortexFrame      * frame              = NULL;
 	VortexChannel    * channel0;
 
@@ -723,19 +737,24 @@ axl_bool turbulence_handle_connection_received (TurbulenceCtx      * ctx,
 						      &serverName,
 						      &msg_no,
 						      &seq_no,
-						      &seq_no_expected);
+						      &seq_no_expected,
+						      &ppath_id);
 
-	msg ("Received ancillary data: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d",
+	msg ("Received ancillary data: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d",
 	     handle_start_reply, channel_num, 
 	     profile ? profile : "", 
 	     profile_content ? profile_content : "", encoding, 
 	     serverName ? serverName : "",
 	     msg_no,
-	     seq_no);
+	     seq_no,
+	     ppath_id);
 
 	/* create a connection and register it on local vortex
 	   reader */
 	conn = vortex_connection_new_empty (TBC_VORTEX_CTX (ctx), socket, VortexRoleListener);
+
+	/* set profile path state */
+	__turbulence_ppath_set_state (ctx, conn, ppath_id, serverName);
 
 	if (handle_start_reply) {
 		/* build a fake frame to simulate the frame received from the

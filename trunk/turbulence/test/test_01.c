@@ -2698,6 +2698,7 @@ axl_bool test_15 (void) {
 	int               msg_no;
 	int               seq_no;
 	int               seq_no_expected;
+	int               ppath_id;
 
 	/* build connection status */
 	conn_status = turbulence_process_connection_status_string (axl_true,
@@ -2706,7 +2707,7 @@ axl_bool test_15 (void) {
 								   NULL,
 								   EncodingNone,
 								   "test-15.server",
-								   17, 42301, 1234);
+								   17, 42301, 1234, 37);
 	turbulence_process_connection_recover_status (conn_status + 1, /* skip initial n used to signal the command */
 						      &handle_start_reply,
 						      &channel_num,
@@ -2716,7 +2717,8 @@ axl_bool test_15 (void) {
 						      &serverName,
 						      &msg_no,
 						      &seq_no, 
-						      &seq_no_expected);
+						      &seq_no_expected, 
+						      &ppath_id);
 	/* check data */
 	if (! handle_start_reply) {
 		printf ("ERROR (1): failed handle_start_reply (%d != %d) data\n", axl_true, handle_start_reply);
@@ -2753,6 +2755,11 @@ axl_bool test_15 (void) {
 	}
 	if (seq_no_expected != 1234) {
 		printf ("ERROR (9): unexpected msg_no value (%d != 1234)\n", seq_no_expected);
+		return axl_false;
+	}
+
+	if (ppath_id != 37) {
+		printf ("ERROR (10): unexpected profile path id value (%d != 37)\n", ppath_id);
 		return axl_false;
 	}
 
@@ -3142,6 +3149,156 @@ axl_bool test_19 (void) {
 	return axl_true;
 }
 
+axl_bool test_20_check_child_profile_path (TurbulenceCtx * tCtx, VortexCtx * vCtx, VortexChannel * channel)
+{
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
+
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	vortex_channel_send_msg (channel, "get-profile-path-name", 21, NULL);
+	frame = vortex_channel_get_reply (channel, queue);
+
+	/* check frame content */
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "test 20 profile path")) {
+		printf ("ERROR (5): Expected to find profile path name %s but found %s\n",
+			"test 20 profile path", (const char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+	
+	/* now, release content */
+	vortex_frame_unref (frame);
+	vortex_async_queue_unref (queue);
+
+	return axl_true;
+}
+
+void test_20_frame_received (VortexChannel    * channel, 
+			     VortexConnection * conn,
+			     VortexFrame      * frame,
+			     axlPointer         user_data)
+{
+	const char         * profile_path;
+	TurbulencePPathDef * ppath;
+	if (axl_cmp ((const char *) vortex_frame_get_payload (frame),
+		     "get-profile-path-name")) {
+		/* get profile path */
+		ppath = turbulence_ppath_selected (conn);
+		if (ppath == NULL) {
+			vortex_channel_send_rpy (channel, "no profile path selected!!!", 27, vortex_frame_get_msgno (frame));
+			return;
+		} /* end if */
+
+		/* get profile path name */
+		profile_path = turbulence_ppath_get_name (ppath);
+		if (profile_path == NULL) {
+			vortex_channel_send_rpy (channel, "no profile path name defined", 28, vortex_frame_get_msgno (frame));
+			return;
+		}
+
+		/* set profile path name */
+		vortex_channel_send_rpy (channel, profile_path, strlen (profile_path), vortex_frame_get_msgno (frame));
+		return;
+	}
+
+	return;
+}
+			     
+
+axl_bool test_20 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn2;
+	VortexConnection * conn;
+	
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_20.conf")) 
+		return axl_false;
+
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:1");
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-20:1",
+					      test_20_frame_received, NULL);
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:2");
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:3");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* FIRST: open a connection to force the second connection to be passed to an already created child. */ 
+	/* now connect to local host and open a channel */
+	conn2 = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server"),
+					    NULL, NULL);
+	if (! vortex_connection_is_ok (conn2, axl_false)) {
+		printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+			vortex_connection_get_status (conn2), vortex_connection_get_message (conn2));
+		return axl_false;
+	} /* end if */
+
+	/* ok, now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE_WITH_CONN (conn2, "urn:aspl.es:beep:profiles:reg-test:profile-20:1");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* SECOND: no create the second connection (reusing child) */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (3): expected proper connection creation (%d, %s)\n", 
+			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+		return axl_false;
+	} /* end if */
+
+	/* ok, now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-20:1");
+	if (channel == NULL) {
+		printf ("ERROR (4): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check we have a profile path defined */
+	if (! test_20_check_child_profile_path (tCtx, vCtx, channel))
+		return axl_false;
+
+	/* now check to create second profile channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-20:3");
+	if (channel != NULL) {
+		printf ("ERROR (5): expected to NOT find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+
+	/* ok, now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-20:2");
+	if (channel == NULL) {
+		printf ("ERROR (6): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+
+	/* ok, now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-20:3");
+	if (channel == NULL) {
+		printf ("ERROR (7): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* ok, now close the connection */
+	vortex_connection_close (conn);
+	vortex_connection_close (conn2);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 /** 
  * @brief Helper handler that allows to execute the function provided
  * with the message associated.
@@ -3287,7 +3444,9 @@ int main (int argc, char ** argv)
 
 	run_test (test_18, "Test 18: check child process creation that do not accept the connection..");
 
-	run_test (test_19, "Test 19: check child process creation that do not accept the connection (II)..")
+	run_test (test_19, "Test 19: check child process creation that do not accept the connection (II)..");
+
+	run_test (test_20, "Test 20: check profile path state also applies to childs (with reuse=yes)..")
 
 	printf ("All tests passed OK!\n");
 

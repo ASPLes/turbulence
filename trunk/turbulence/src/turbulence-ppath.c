@@ -583,7 +583,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 						 channel_num,
 						 uri, profile_content, encoding, serverName, 
 						 frame);
-		msg ("finished turbulence_process_create_child..");
+		msg ("finished turbulence_process_create_child (parent view)..");
 	} else {
 
 		/* notify profile path selected in the case no child
@@ -595,6 +595,44 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	} /* end if */
 	
 	return axl_true;
+}
+
+/** 
+ * @internal Function used to set connection profile path state to the
+ * provided values. This is currently used after a fork operation to
+ * restore connection state.
+ */
+void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx, 
+				     VortexConnection * conn, 
+				     int                ppath_id,
+				     const char       * requested_serverName)
+{
+	TurbulencePPathState * state;
+	TurbulencePPathDef   * def;
+
+	/* get profile path */
+	def = turbulence_ppath_find_by_id (ctx, ppath_id);
+	if (def == NULL) {
+		error ("Unable to set profile path state, ppath id %d do not return a valid profile path reference",
+		       ppath_id);
+		return;
+	} /* end if */
+
+	/* create and store */
+	state                       = axl_new (TurbulencePPathState, 1);
+	state->path_selected        = def;
+	state->ctx                  = ctx;
+	state->requested_serverName = requested_serverName ? axl_strdup (requested_serverName) : NULL;
+	vortex_connection_set_data_full (conn, 
+					 /* the key and its associated value */
+					 TURBULENCE_PPATH_STATE, state,
+					 /* destroy functions */
+					 NULL, __turbulence_ppath_state_free);
+	
+	/* now configure the profile path mask to handle how channels
+	 * and profiles are accepted */
+	vortex_connection_set_profile_mask (conn, __turbulence_ppath_mask, state);
+	return;
 }
 
 /** 
@@ -1009,6 +1047,31 @@ TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn)
 	
 	/* return path name */
 	return state->path_selected;
+}
+
+/** 
+ * @internal Function used to find a profile path definition given its
+ * unique identifier.
+ */ 
+TurbulencePPathDef * turbulence_ppath_find_by_id (TurbulenceCtx * ctx, int ppath_id)
+{
+	int iterator;
+
+	if (ctx == NULL)
+		return NULL;
+
+	/* for each profile path item iterator */
+	iterator = 0;
+	while (ctx->paths->items[iterator] != NULL) {
+		/* check profile path id */
+		if (ctx->paths->items[iterator]->id == ppath_id)
+			return ctx->paths->items[iterator];
+
+		/* next position */
+		iterator++;
+	}
+
+	return NULL;
 }
 
 /** 

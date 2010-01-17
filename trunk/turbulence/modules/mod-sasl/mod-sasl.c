@@ -121,7 +121,7 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 	serverName = turbulence_ppath_get_server_name (conn);
 	workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
 
-	msg ("Notified profile path selected, ppath serverName: %s (conn id=%d), workdir: %s", 
+	msg ("(mod-sasl) notified profile path selected, ppath serverName: '%s' (conn id=%d), workdir: %s", 
 	     serverName ? serverName : "", 
 	     vortex_connection_get_id (conn),
 	     workDir ? workDir : "");
@@ -132,6 +132,8 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 		/* check for default database */
 		if (serverName == NULL) {
 			result = common_sasl_has_default (sasl_backend, NULL, &sasl_db_mutex);
+			if (! result) 
+				wrn ("Found no serverName defined and there is no default SASL database for current backend loaded..");
 			vortex_mutex_unlock (&sasl_top_mutex);
 			return result;
 		} /* end if */
