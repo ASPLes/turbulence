@@ -133,8 +133,8 @@ axlPointer __turbulence_process_finished (TurbulenceProcessFinished * data)
 	}
 
 	/* unlock waiting child */
-	error ("calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p)..",
-	       ctx, ctx->child_wait);
+	msg2 ("calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p)..",
+	      ctx, ctx->child_wait);
 	if (ctx && ctx->child_wait) {
 		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
 	}
