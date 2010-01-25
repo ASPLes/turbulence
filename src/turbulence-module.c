@@ -418,8 +418,8 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 {
 	/* get turbulence context */
 	TurbulenceModule * module;
+	int                iterator = 0;
 
-	int iterator = 0;
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
 	while (iterator < axl_list_length (ctx->registered_modules)) {
 		/* get the module */
@@ -436,26 +436,31 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 			/* notify if defined reconf function */
 			if (module->def->close != NULL) {
 				msg ("closing module: %s", module->def->mod_name);
+				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				module->def->close (ctx);
+				vortex_mutex_lock (&ctx->registered_modules_mutex);
 			}
 			break;
 		case TBC_RELOAD_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->reconf != NULL) {
 				msg ("reloading module: %s", module->def->mod_name);
+				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				module->def->reconf (ctx);
+				vortex_mutex_lock (&ctx->registered_modules_mutex);
 			}
 			break;
 		case TBC_INIT_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->init != NULL) {
 				msg ("initializing module: %s", module->def->mod_name);
+				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				if (! module->def->init (ctx)) {
 					/* init failed */
 					wrn ("failed to initialized module: %s, it returned initialization failure", module->def->mod_name);
-					vortex_mutex_unlock (&ctx->registered_modules_mutex);
 					return axl_false;
 				}
+				vortex_mutex_lock (&ctx->registered_modules_mutex);
 					
 			}
 			break;
@@ -463,12 +468,13 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 			/* notify if defined reconf function */
 			if (module->def->ppath_selected != NULL) {
 				msg ("notifying profile path selected on module: %s", module->def->mod_name);
+				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				if (! module->def->ppath_selected (ctx, data, data2))  {
 					/* init failed */
 					wrn ("profile path selection for module: %s returned failure", module->def->mod_name);
-					vortex_mutex_unlock (&ctx->registered_modules_mutex);
 					return axl_false;
 				} /* end if */
+				vortex_mutex_lock (&ctx->registered_modules_mutex);
 			}
 			break;
 		}
