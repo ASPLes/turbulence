@@ -486,6 +486,42 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 }
 
 /** 
+ * @brief Allows to get a reference to the registered connection with
+ * the provided id. The function will return a reference to a
+ * VortexConnection owned by the turbulence connection
+ * manager. 
+ *
+ * @param ctx The turbulence conext where the connection reference will be looked up.
+ * @param conn_id The connection id to lookup.
+ *
+ * @return A VortexConnection reference or NULL value it if fails.
+ */
+VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
+						   int             conn_id)
+{
+	VortexConnection       * conn = NULL;
+	TurbulenceConnMgrState * state;
+
+	v_return_val_if_fail (ctx, NULL);
+
+	/* lock and send */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+	
+	/* get the connection */
+	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (conn_id));
+	
+	/* set conection */
+	if (state)
+		conn = state->conn;
+
+	/* unlock */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+	/* return list */
+	return conn;
+}
+
+/** 
  * @internal Ensure we close all active connections before existing...
  */
 axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer data, axlPointer user_data) 
