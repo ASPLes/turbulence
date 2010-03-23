@@ -911,6 +911,7 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 	struct termios new_set;
 	int input;
 	int output;
+	int write_result;
 
 	/* buffer declaration */
 	char   buffer[1024];
@@ -928,7 +929,7 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 	/* print the prompt if defined */
 	if (prompt != NULL) {
 		/* write the prompt */
-		write (output, prompt, strlen (prompt));
+		write_result = write (output, prompt, strlen (prompt));
 		fsync (output);
 	}
 

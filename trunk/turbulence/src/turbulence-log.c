@@ -75,7 +75,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_child_called (node, "general-log");
 	/* check permission access */
 
-	ctx->general_log = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY);
+	ctx->general_log = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY, 600);
 	if (ctx->general_log == -1) {
 		abort_error ("unable to open general log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
@@ -86,7 +86,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 
 	/* open error logs */
 	node      = axl_node_get_child_called (node, "error-log");
-	ctx->error_log = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY);
+	ctx->error_log = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY, 600);
 	if (ctx->error_log == -1) {
 		abort_error ("unable to open error log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
@@ -97,7 +97,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 
 	/* open access log */
 	node      = axl_node_get_child_called (node, "access-log");
-	ctx->access_log  = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY);
+	ctx->access_log  = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY, 600);
 	if (ctx->access_log == -1) {
 		abort_error ("unable to open access log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
@@ -107,7 +107,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 	node      = axl_node_get_parent (node);
 
 	node      = axl_node_get_child_called (node, "vortex-log");
-	ctx->vortex_log  = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY);
+	ctx->vortex_log  = open (ATTR_VALUE (node, "file"), O_CREAT | O_APPEND | O_WRONLY, 600);
 	if (ctx->vortex_log == -1) {
 		abort_error ("unable to open vortex log: %s", ATTR_VALUE (node, "file"));
 		CLEAN_START (ctx);
@@ -273,6 +273,7 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 	int                length;
 	int                length2;
 	int                total;
+	int                write_result;
 
 	/* do not report if log description is not defined */
 	if (log < 0)
@@ -301,7 +302,7 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 	
 	/* write content: do it in a single operation to avoid mixing
 	 * content from different logs at the log file. */
-	write (log, result, total);
+	write_result = write (log, result, total);
 	
 	/* release memory used */
 	axl_free (result);

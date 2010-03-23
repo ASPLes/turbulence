@@ -288,6 +288,9 @@ turbulence.pc
 turbulence-config
 ])
 
+dnl Ensure turbulence-config is executable
+chmod +x turbulence-config
+
 echo "------------------------------------------"
 echo "--       Turbulence Settings            --"
 echo "------------------------------------------"

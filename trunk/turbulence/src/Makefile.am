@@ -14,26 +14,28 @@ if ENABLE_TERMIOS
 INCLUDE_TERMIOS=-DENABLE_TERMIOS
 endif
 
-INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__ $(EXARG_FLAGS) \
+INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__  \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" -DVORTEX_VERSION=\"$(VORTEX_VERSION)\" -DAXL_VERSION=\"$(AXL_VERSION)\" \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" -DDEFINE_CHROOT_PROTO -DDEFINE_KILL_PROTO \
 	   -DPIDFILE=\""$(statusdir)/turbulence.pid"\" \
 	   -DTBC_RUNTIME_DATADIR=\""$(runtimedatadir)"\" \
 	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
-	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -Werror -Wstrict-prototypes  -ansi
+	   $(AXL_CFLAGS) $(VORTEX_CFLAGS)  -g -Wall -Werror -Wstrict-prototypes  -ansi
 
 bin_PROGRAMS = turbulence
 
+
 turbulence_SOURCES = \
-	main-common.c main-common.h main.c 
+	main-common.c main-common.h main.c
 
 turbulence_LDFLAGS = -Wl,-export-dynamic -ldl
 
-turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) $(EXARG_LIBS) libturbulence.la
+turbulence_LDADD = $(AXL_LIBS) $(VORTEX_LIBS) libturbulence.la
 
 lib_LTLIBRARIES  = libturbulence.la
 
 libturbulenceinclude_HEADERS    = \
+	exarg.h \
 	turbulence-types.h \
 	turbulence-expr.h \
 	turbulence-moddef.h \
@@ -71,7 +73,7 @@ libturbulence_la_SOURCES = \
 	turbulence-mediator.c
 
 libturbulence_la_LIBADD = $(AXL_LIBS) $(VORTEX_LIBS) $(PCRE_LIBS)
-libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence).*'
+libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbols-regex '^(turbulence|__turbulence|exarg).*'
 
 libturbulenceincludedir = $(includedir)/turbulence
 
