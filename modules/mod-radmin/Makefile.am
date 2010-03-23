@@ -11,7 +11,7 @@ mod_radmin_la_SOURCES  = mod_radmin.c  mod_radmin.h
 mod_radmin_la_LDFLAGS  = -module -ldl
 
 # reconfigure module installation directory
-libdir = `turbulence-config --mod-dir`
+libdir = `../../turbulence-config --mod-dir`
 
 # configure site module installation
 modconfdir   = `turbulence-config --mod-xml`

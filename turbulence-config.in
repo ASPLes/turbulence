@@ -1,8 +1,8 @@
 #!/bin/sh
 
-if [ $# == 0 ]; then
+if [ "$#" = "0" ]; then
     echo "turbulence-config @TURBULENCE_VERSION@: default turbulence installation settings"
-    echo "Copyright (C) 2007 Advanced Software Production Line, S.L."
+    echo "Copyright (C) 2010 Advanced Software Production Line, S.L."
     echo
     echo "The tool allows to get several configurations:";
     echo " --mod-dir: returns module directory installation";
@@ -12,19 +12,19 @@ if [ $# == 0 ]; then
 fi
 
 # return module directory installation
-if [ $1 == "--mod-dir" ]; then
+if [ "$1" = "--mod-dir" ]; then
         echo -n "@prefix@/lib/turbulence/modules";
 	exit 0;
 fi
 
 # return module xml pointer directory installation
-if [ $1 == "--mod-xml" ]; then
+if [ "$1" = "--mod-xml" ]; then
         echo -n "@sysconfdir@/turbulence/mods-available";
 	exit 0;
 fi
 
 # return turbulence default configuration dir
-if [ $1 == "--base-dir" ]; then
+if [ "$1" = "--base-dir" ]; then
         echo -n "@sysconfdir@/turbulence";
 	exit 0;
 fi

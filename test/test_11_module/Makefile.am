@@ -11,10 +11,10 @@ mod_test_11_la_SOURCES  = mod_test_11.c
 mod_test_11_la_LDFLAGS  = -module -ldl
 
 # reconfigure module installation directory
-libdir = `turbulence-config --mod-dir`
+libdir = `../../turbulence-config --mod-dir`
 
 # configure site module installation
-modconfdir   = `turbulence-config --mod-xml`
+modconfdir   = `../../turbulence-config --mod-xml`
 modconf_DATA = mod_test_11.xml mod_test_11.win32.xml
 
 mod_test_11.xml mod_test_11.win32.xml:
