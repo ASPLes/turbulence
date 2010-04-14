@@ -752,6 +752,8 @@ axl_bool turbulence_handle_connection_received (TurbulenceCtx      * ctx,
 	/* create a connection and register it on local vortex
 	   reader */
 	conn = vortex_connection_new_empty (TBC_VORTEX_CTX (ctx), socket, VortexRoleListener);
+	msg ("New connection id=%d (%s:%s) accepted on child pid=%d", 
+	     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn), getpid ());
 
 	/* set profile path state */
 	__turbulence_ppath_set_state (ctx, conn, ppath_id, serverName);

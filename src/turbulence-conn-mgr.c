@@ -275,7 +275,7 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 void turbulence_conn_mgr_register (TurbulenceCtx * ctx, VortexConnection * conn)
 {
 	/* simulate event */
-	msg ("Registering connection and child process (%d) conn id: %d, refs: %d", 
+	msg ("Registering connection at child process (%d) conn id: %d, refs: %d", 
 	     getpid (), vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
 	turbulence_conn_mgr_notify (TBC_VORTEX_CTX (ctx), conn, NULL, CONNECTION_STAGE_POST_CREATED, ctx);
 	msg ("After register, connections are: %d", axl_hash_items (ctx->conn_mgr_hash));
