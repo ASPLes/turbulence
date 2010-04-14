@@ -511,6 +511,7 @@ VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (conn_id));
 	
 	/* set conection */
+	msg ("Connection find_by_id for conn id=%d returned pointer %p (conn: %p)", conn_id, state, state ? state->conn : NULL);
 	if (state)
 		conn = state->conn;
 
