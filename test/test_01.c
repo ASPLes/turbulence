@@ -3206,6 +3206,7 @@ void test_20_frame_received (VortexChannel    * channel,
 			     
 
 axl_bool test_20 (void) {
+
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexChannel    * channel;
@@ -3296,6 +3297,104 @@ axl_bool test_20 (void) {
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
 
+	return axl_true;
+}
+
+void test_21_frame_received (VortexChannel    * channel,
+			     VortexConnection * conn,
+			     VortexFrame      * frame,
+			     axlPointer         user_data)
+{
+	char * conn_id = axl_strdup_printf ("%d", vortex_connection_get_id (conn));
+	vortex_channel_send_rpy (channel, conn_id, strlen (conn_id), vortex_frame_get_msgno (frame));
+	axl_free (conn_id);
+	return;
+}
+
+axl_bool test_21 (void) {
+
+	VortexAsyncQueue * queue = NULL;
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexConnection * conn[10];
+	int                iterator;
+	VortexFrame      * frame;
+	int                conn_id;
+	int                previous_conn_id  = -1;
+
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_20.conf")) 
+		return axl_false;
+
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:1");
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-20:1",
+					      test_21_frame_received, NULL);
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* create connections and channels */
+	iterator = 0;
+	while (iterator < 10) {
+		conn[iterator] = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server"),
+						   NULL, NULL);
+		if (! vortex_connection_is_ok (conn[iterator], axl_false)) {
+			printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+				vortex_connection_get_status (conn[iterator]), vortex_connection_get_message (conn[iterator]));
+			return axl_false;
+		} /* end if */
+		
+		/* ok, now create a channel */
+		channel = SIMPLE_CHANNEL_CREATE_WITH_CONN (conn[iterator], "urn:aspl.es:beep:profiles:reg-test:profile-20:1");
+		if (channel == NULL) {
+			printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+			return axl_false;
+		} /* end if */
+
+		/* init queue */
+		if (queue == NULL)
+			queue = vortex_async_queue_new ();
+
+		/* send request to get connection id */
+		vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+		vortex_channel_send_msg (channel, "send-msg", 8, NULL);
+		
+		/* get reply */
+		frame = vortex_channel_get_reply (channel, queue);
+		conn_id = atoi ((const char *) vortex_frame_get_payload (frame));
+		vortex_frame_unref (frame);
+		
+		printf ("Test 21: connection ID from remote host: %d\n", conn_id);
+
+		if (previous_conn_id >= conn_id) {
+			printf ("ERROR: expected to find different connection ID (and bigger) but found next value: previous-conn-id:(%d) >= conn-id:(%d)\n",
+				previous_conn_id, conn_id);
+			return axl_false;
+		} /* end if */
+
+		/* update connection id */
+		previous_conn_id = conn_id;
+
+		iterator++;
+	} /* end if */
+
+	iterator = 0;
+	while (iterator < 10) {
+		vortex_connection_shutdown (conn[iterator]);
+		vortex_connection_close (conn[iterator]);
+		iterator++;
+	}
+
+	/* unref queue */
+	vortex_async_queue_unref (queue);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+	
 	return axl_true;
 }
 
@@ -3446,7 +3545,9 @@ int main (int argc, char ** argv)
 
 	run_test (test_19, "Test 19: check child process creation that do not accept the connection (II)..");
 
-	run_test (test_20, "Test 20: check profile path state also applies to childs (with reuse=yes)..")
+	run_test (test_20, "Test 20: check profile path state also applies to childs (with reuse=yes)..");
+
+	run_test (test_21, "Test 21: check connection id on child reuse (with reuse=yes)..");
 
 	printf ("All tests passed OK!\n");
 

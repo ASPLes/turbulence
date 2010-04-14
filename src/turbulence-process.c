@@ -960,6 +960,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 		return;
 	}
+	msg ("Not reusing child processes (reuse=no flag)");
 
 	if (turbulence_log_is_enabled (ctx)) {
 		if (pipe (general_log) != 0)
