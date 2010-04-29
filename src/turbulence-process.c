@@ -47,7 +47,7 @@
 #include <sys/un.h>
 
 #if !defined(random)
-long int random (void);
+long random (void);
 #endif
 
 void turbulence_process_free_child_data (TurbulenceChild * child)

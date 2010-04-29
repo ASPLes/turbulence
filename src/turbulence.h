@@ -203,7 +203,7 @@ int      turbulence_create_dir          (const char * path);
 
 axl_bool turbulence_unlink              (const char * path);
 
-long int turbulence_last_modification   (const char * file);
+long     turbulence_last_modification   (const char * file);
 
 int      turbulence_file_is_fullpath    (const char * file);
 
@@ -240,7 +240,7 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
 					    const char    * mode);
 
 void            turbulence_sleep           (TurbulenceCtx * ctx,
-					    long int        microseconds);
+					    long            microseconds);
 
 #endif
 

@@ -1128,7 +1128,7 @@ axl_bool test_common_init (VortexCtx     ** vCtx,
 	return axl_true;
 }
 
-void     test_common_microwait (long int microseconds)
+void     test_common_microwait (long microseconds)
 {
 	VortexAsyncQueue * queue;
 	queue = vortex_async_queue_new ();
