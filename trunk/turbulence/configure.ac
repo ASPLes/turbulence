@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://fact.aspl.es
 dnl
 
-AC_INIT(turbulence,0.3.2.b4280.g4285)
+AC_INIT(turbulence,0.3.2.b4332.g4333)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
@@ -57,7 +57,7 @@ AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.5.5) 
+PKG_CHECK_MODULES(AXL, axl >= 0.6.2) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
@@ -66,7 +66,7 @@ AXL_VERSION=`pkg-config --modversion axl`
 AC_SUBST(AXL_VERSION)
 
 dnl external dependencies
-PKG_CHECK_MODULES(VORTEX, vortex-1.1 >= 1.1.0) 
+PKG_CHECK_MODULES(VORTEX, vortex-1.1 >= 1.1.4) 
 
 dnl external dependency: check for base vortex 
 AC_SUBST(VORTEX_CFLAGS)
@@ -75,28 +75,28 @@ VORTEX_VERSION=`pkg-config --modversion vortex-1.1`
 AC_SUBST(VORTEX_VERSION)
 
 dnl external dependencies: vortex-tunnel
-PKG_CHECK_MODULES(VORTEX_TUNNEL, vortex-tunnel-1.1 >= 1.1.0) 
+PKG_CHECK_MODULES(VORTEX_TUNNEL, vortex-tunnel-1.1 >= 1.1.4) 
 AC_SUBST(VORTEX_TUNNEL_CFLAGS)
 AC_SUBST(VORTEX_TUNNEL_LIBS)
 VORTEX_TUNNEL_VERSION=`pkg-config --modversion vortex-tunnel-1.1`
 AC_SUBST(VORTEX_TUNNEL_VERSION)
 
 dnl external dependencies: vortex-xml-rpc
-PKG_CHECK_MODULES(VORTEX_XML_RPC, vortex-xml-rpc-1.1 >= 1.1.0) 
+PKG_CHECK_MODULES(VORTEX_XML_RPC, vortex-xml-rpc-1.1 >= 1.1.4) 
 AC_SUBST(VORTEX_XML_RPC_CFLAGS)
 AC_SUBST(VORTEX_XML_RPC_LIBS)
 VORTEX_XML_RPC_VERSION=`pkg-config --modversion vortex-xml-rpc-1.1`
 AC_SUBST(VORTEX_XML_RPC_VERSION)
 
 dnl external dependencies: vortex-sasl
-PKG_CHECK_MODULES(VORTEX_SASL, vortex-sasl-1.1 >= 1.1.0) 
+PKG_CHECK_MODULES(VORTEX_SASL, vortex-sasl-1.1 >= 1.1.4) 
 AC_SUBST(VORTEX_SASL_CFLAGS)
 AC_SUBST(VORTEX_SASL_LIBS)
 VORTEX_SASL_VERSION=`pkg-config --modversion vortex-sasl-1.1`
 AC_SUBST(VORTEX_SASL_VERSION)
 
 dnl external dependencies: vortex-sasl
-PKG_CHECK_MODULES(VORTEX_TLS, vortex-tls-1.1 >= 1.1.0) 
+PKG_CHECK_MODULES(VORTEX_TLS, vortex-tls-1.1 >= 1.1.4) 
 AC_SUBST(VORTEX_TLS_CFLAGS)
 AC_SUBST(VORTEX_TLS_LIBS)
 VORTEX_TLS_VERSION=`pkg-config --modversion vortex-tls-1.1`

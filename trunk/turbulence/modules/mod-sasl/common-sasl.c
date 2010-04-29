@@ -103,7 +103,7 @@ struct _SaslAuthDb {
 	/** 
 	 * @brief Time record the last modification for the document.
 	 */
-	long int            db_time;
+	long                db_time;
 
 	/** 
 	 * @brief Used to signal if the backend db implemenation must

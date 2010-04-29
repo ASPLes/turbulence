@@ -791,7 +791,7 @@ axl_bool turbulence_unlink              (const char * path)
  * @return The last modification time for the file provided. The
  * function return -1 if it fails.
  */
-long int turbulence_last_modification (const char * file)
+long turbulence_last_modification (const char * file)
 {
 	struct stat status;
 
@@ -801,7 +801,7 @@ long int turbulence_last_modification (const char * file)
 
 	/* get stat */
 	if (stat (file, &status) == 0)
-		return (long int) status.st_mtime;
+		return (long) status.st_mtime;
 	
 	/* failed to get stats */
 	return -1;
@@ -1308,11 +1308,15 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
 /** 
  * @brief Implements a portable subsecond thread sleep operation. The
  * caller will be blocked during the provide period.
+ *
  * @param ctx The context used during the operation.
- * @param milliseconds Amount of time to wait.
+ *
+ * @param microseconds Amount of time to wait.
+ *
+ * 
  */
 void            turbulence_sleep           (TurbulenceCtx * ctx,
-					    long int        microseconds)
+					    long            microseconds)
 {
 #if defined(AXL_OS_UNIX)
 	struct timeval timeout;

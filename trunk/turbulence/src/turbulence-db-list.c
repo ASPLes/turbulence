@@ -56,7 +56,7 @@ struct _TurbulenceDbList {
 	axlDoc        * doc;
 	axlNode       * first;
 	char          * full_path;
-	long int        last_modification;
+	long            last_modification;
 	VortexMutex     mutex;
 
 	/* context that loaded the list */
