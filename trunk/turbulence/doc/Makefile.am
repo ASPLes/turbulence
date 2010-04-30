@@ -8,7 +8,8 @@ tmp_xml_examples = \
 	path-def.xml.tmp \
 	path-def-conf.xml.tmp \
 	path-def-example.xml.tmp \
-	template.xml.tmp 
+	template.xml.tmp \
+	turbulence.python.xml.tmp
 
 xml_examples = \
 	global-settings.xml \
@@ -19,7 +20,8 @@ xml_examples = \
 	module-conf.xml \
 	path-def.xml \
 	path-def-conf.xml \
-	path-def-example.xml
+	path-def-example.xml \
+	turbulence.python.xml
 
 drafts_and_docs = \
 	draft-brosnan-beep-limit-close.txt \

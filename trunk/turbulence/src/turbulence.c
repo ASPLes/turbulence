@@ -1,5 +1,5 @@
-/*  Turbulence:  BEEP application server
- *  Copyright (C) 2008 Advanced Software Production Line, S.L.
+/*  Turbulence BEEP application server
+ *  Copyright (C) 2010 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -17,13 +17,12 @@
  *  02111-1307 USA
  *  
  *  You may find a copy of the license under this software is released
- *  at COPYING file. This is LGPL software: you are wellcome to
- *  develop propietary applications using this library withtout any
- *  royalty or fee but returning back any change, improvement or
- *  addition in the form of source code, project image, documentation
- *  patches, etc.
+ *  at COPYING file. This is LGPL software: you are welcome to develop
+ *  proprietary applications using this library without any royalty or
+ *  fee but returning back any change, improvement or addition in the
+ *  form of source code, project image, documentation patches, etc.
  *
- *  For comercial support on build BEEP enabled solutions, supporting
+ *  For commercial support on build BEEP enabled solutions, supporting
  *  turbulence based solutions, etc, contact us:
  *          
  *      Postal address:
@@ -1397,6 +1396,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref turbulence_modules_configuration
  *   - \ref turbulence_mod_sasl
  *   - \ref turbulence_mod_tunnel
+ *   - \ref turbulence_mod_python
  *
  * <b>Section 4: BEEP profile management</b>
  *
@@ -1769,11 +1769,15 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
 /** 
  * \page turbulence_developer_manual Turbulence Developer manual
  *
- * <b>Section 1: Creating turbulence modules</b>
+ * <b>Section 1: Creating turbulence modules (C language)</b>
  *
  *   - \ref turbulence_developer_manual_creating_modules
  *   - \ref turbulence_developer_manual_creating_modules_manually
  *   - \ref turbulence_developer_manual_using_tbc_mod_gen
+ *
+ * <b>Section 2: Creating python apps (mod-python enabled)</b>
+ *
+ *  - \ref  turbulence_mod_python_writing_apps
  *
  * \section turbulence_developer_manual_creating_modules How Turbulence module works
  *

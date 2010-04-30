@@ -1,0 +1,18 @@
+<mod-python>
+   <!-- test application -->
+   <application name="test app" serverName="fork-test">
+      <location src="/home/work/programas/fork-test" 
+                start-file="fork_test" 
+                app-init="application_init" 
+                app-close="application_close" 
+                app-reload="application_reload"/>
+   </application>
+   <!-- core-admin application load -->
+   <application name="core admin" serverName="core-admin" close-conn-on-failure="yes">
+      <location src="/home/work/programas/core-admin/server-component" 
+                start-file="core_admin_main" 
+                app-init="application_init" 
+                app-close="application_close" 
+                app-reload="application_reload"/>
+   </application>
+</mod-python>
