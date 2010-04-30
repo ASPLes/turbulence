@@ -1,5 +1,5 @@
-/*
- *  Copyright (C) 2009 Advanced Software Production Line, S.L.
+/*  Turbulence BEEP application server
+ *  Copyright (C) 2010 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -17,13 +17,12 @@
  *  02111-1307 USA
  *  
  *  You may find a copy of the license under this software is released
- *  at COPYING file. This is LGPL software: you are wellcome to
- *  develop propietary applications using this library withtout any
- *  royalty or fee but returning back any change, improvement or
- *  addition in the form of source code, project image, documentation
- *  patches, etc.
+ *  at COPYING file. This is LGPL software: you are welcome to develop
+ *  proprietary applications using this library without any royalty or
+ *  fee but returning back any change, improvement or addition in the
+ *  form of source code, project image, documentation patches, etc.
  *
- *  For comercial support on build BEEP enabled solutions, supporting
+ *  For commercial support on build BEEP enabled solutions, supporting
  *  turbulence based solutions, etc, contact us:
  *          
  *      Postal address:
@@ -220,7 +219,7 @@ axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function)
 /** 
  * @brief Loads all python applications defined the mod-python
  * configuration file. The function returns axl_true if the module can
- * continue signaling its proper startup.
+ * continue signaling its proper start up.
  */
 axl_bool mod_python_init_applications (TurbulenceCtx     * ctx, 
 				       const char        * workDir, 
@@ -289,7 +288,7 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 		/* check import code do not end it .py or .pyc */
 		start_file = ATTR_VALUE (location, "start-file");
 		if (axl_cmp (start_file + strlen (start_file) - 3, ".py")) {
-			wrn ("Start file cannot be ended with .py. This will fail. Try to leave start file without extention");
+			wrn ("Start file cannot be ended with .py. This will fail. Try to leave start file without extension");
 		}
 
 		/* now load python source */
@@ -488,7 +487,7 @@ void mod_python_initialize (void)
 		/* initialize python */
 		Py_Initialize ();
 
-		/* call to initilize threading API and to acquire the lock */
+		/* call to initialize threading API and to acquire the lock */
 		PyEval_InitThreads();
 
 		/* call to init py-turbulence */
@@ -609,3 +608,146 @@ TurbulenceModDef module_def = {
 
 END_C_DECLS
 
+/** 
+ * \page turbulence_mod_python mod-python: Turbulence python language support
+ *
+ * \section turbulence_mod_python_intro Introduction
+ *
+ * Turbulence's mod-python is a module extension that allows writing
+ * server side BEEP enabled python applications to handle/implement
+ * profiles. It allows writing dynamic applications that loads at run
+ * time, saving the compile-install cycle required by usual C modules.
+ *
+ * \section turbulence_mod_python_configuring Configuring mod-python
+ *
+ * Assuming you have a python app that works with Turbulence
+ * mod-python, you must configure it under python.conf file. This is
+ * usually found at:
+ *
+ * \code
+ * /etc/turbulence/python/python.conf
+ * \endcode
+ *
+ * If you don't find the file, try running the following to find base
+ * directory where to find config files:
+ *
+ * \code
+ * >> turbulence --conf-location
+ * \endcode
+ *
+ * Inside that applications it is placed one declaration for each
+ * application installed/recognized by Turbulence. It should look like:
+ *
+ * \htmlinclude turbulence.python.xml.tmp
+ * 
+ * In this example we have two applications: "test app" and "core
+ * admin" which are located the directories configured by <b>"src"</b>
+ * attribute and started by the python entry file defined by
+ * <b>"start-file"</b> attribute.
+ *
+ * \note To know more about writing mod-python applications see \ref turbulence_mod_python_writing_apps
+ *
+ * Note that each application has a <b>"serverName"</b>
+ * configured. This lets to know mod-python to only start that
+ * applications if a BEEP connection is bound to that serverName value
+ * (virtual hosting) by creating the first channel accepted requesting
+ * such serverName.
+ *
+ * See following section for all details. 
+ *
+ * \section turbulence_mod_python_configuration_reference Configuration reference
+ *
+ * To declare an application, add a <application> node with the
+ * following attributes:
+ *
+ *   - <b>name</b>: application name to better track it in logs.
+ *
+ *   - <b>serverName</b>: optional serverName under which the
+ *       application will be served. If this value is not provided,
+ *       the application will be started on turbulence start and will
+ *       be available to all connections. See also \ref "execution
+ *       notes" for clarifications about this. If the value is
+ *       provided, python app will only be started if and only if a
+ *       connection with a channel under the provided serverName is
+ *       started.
+ *
+ *   - <b>close-conn-on-failure</b>: [yes|no] default [no]. While
+ *       writing BEEP python apps it may be desirable to shutdown the
+ *       connection in case mod-python fails to initialize some
+ *       application that matches rather waiting for the first request
+ *       to arrive. This is particularly useful if you are creating a
+ *       web application.
+ *
+ * Now, inside an <application> declared it is required a <location>
+ * node to configure where to find startup files and other
+ * settings. Attributes supported by <location> node are:
+ *
+ *   - <b>src</b>: this is the application work directory. This path
+ *       will be added to python sys.path. This path must be the
+ *       directory that holds the start up file defined on
+ *       <b>start-file</b> attribute.
+ *
+ *   - <b>start-file</b>: This is the python file that implements the
+ *       set of handlers to start the application, handle reload and
+ *       close the application when turbulence signal this. Note: do
+ *       no place .py to this value. Avoid using "-" as part of the
+ *       start file. Use "_" instead.
+ *
+ *   - <b>app-init</b>: handler name defined inside the <b>start-file</b> that handle python app init.
+ *
+ *   - <b>app-close</b>: handler name defined inside the <b>start-file</b> that handle python app close.
+ *
+ *   - <b>app-reload</b>: handler name defined inside the <b>start-file</b> that handle python app reload.
+ *
+ * \section turbulence_mod_python_execution_notes Notes about security and application isolation
+ *
+ * Due to python global interpreter nature, all apps started inside
+ * the same process shares and access to the same data and
+ * context. Obviously this has advantages and security
+ * disadvantages. Knowing this, keep in mind the following
+ * recommendations:
+ *
+ * - <b>For Personal or intranet application</b>: you can safely share
+ *   application contexts without any expecial consideration
+ *   (obviously you have to properly configure your profile path and
+ *   protect your python app profiles with SASL and TLS).
+ *
+ * - <b>For several python applications</b>: were it is a concern to share
+ *   context: then you have to use profile path separate=yes combined
+ *   with proper serverName configuration to ensure a separate child
+ *   is created for each python app. With this, each python context
+ *   will run in a separted process. In this context you may also be
+ *   interested in profile path chroot attribute to improve isolation levels.
+ *
+ * - <b>For application with state</b>: in this case, you will require share
+ *   state between BEEP clients so all of them access to the same
+ *   python context. This is the default behavior but, if it is
+ *   required to share application state but with application
+ *   separation, you must look into reuse=yes profile path
+ *   attribute. This attribute will require separate=yes and may be
+ *   mixed with chroot profile path attribute.
+ *
+ * 
+ * 
+ */
+
+/** 
+ * \page turbulence_mod_python_writing_apps Writing Turbulence's mod-python applications
+ * 
+ * \section turbulence_mod_python_writing_apps_intro Introduction
+ *
+ * Writing a python application using mod-python module involves the
+ * following steps:
+ *
+ *  -# Writing an startup application that fulfills a python interface (specially <b>start-file</b> attribute)
+ *  -# Add some configuration to your turbulence server to detect your application (see \ref turbulence_mod_python "mod-python configuration")
+ *  -# Use PyVortex and PyTurbulence API to handle and issue BEEP messages.
+ *
+ * Knowing this general terms, the following is a tutorial to develop
+ * BEEP echo profile like using mod-python.
+ *
+ * \section turbulence_mod_python_writing_apps_skel A mod-python application skel
+ *
+ * 
+ * 
+ */

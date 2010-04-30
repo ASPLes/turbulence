@@ -1,5 +1,5 @@
-/*  Turbulence:  BEEP application server
- *  Copyright (C) 2008 Advanced Software Production Line, S.L.
+/*  Turbulence BEEP application server
+ *  Copyright (C) 2010 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -17,13 +17,12 @@
  *  02111-1307 USA
  *  
  *  You may find a copy of the license under this software is released
- *  at COPYING file. This is LGPL software: you are wellcome to
- *  develop propietary applications using this library withtout any
- *  royalty or fee but returning back any change, improvement or
- *  addition in the form of source code, project image, documentation
- *  patches, etc.
+ *  at COPYING file. This is LGPL software: you are welcome to develop
+ *  proprietary applications using this library without any royalty or
+ *  fee but returning back any change, improvement or addition in the
+ *  form of source code, project image, documentation patches, etc.
  *
- *  For comercial support on build BEEP enabled solutions, supporting
+ *  For commercial support on build BEEP enabled solutions, supporting
  *  turbulence based solutions, etc, contact us:
  *          
  *      Postal address:
