@@ -100,3 +100,5 @@ exarg.h exarg.c:
 	test -e exarg.h || cp ../../libexarg/src/exarg.h .
 	test -e exarg.c || cp ../../libexarg/src/exarg.c .
 
+update-exarg:
+	cp ../../libexarg/src/exarg.[ch] .
