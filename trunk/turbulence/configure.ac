@@ -206,12 +206,13 @@ AC_ARG_ENABLE(runtime-data-dir, [  --runtime-data-dir=DIR          Allows to con
 AC_SUBST(runtimedatadir)
 
 # support to check some dependencies for exarg library embeded into
-# turbulence core code
-AC_TRY_LINK([#include <stdio.h>], 
+AC_TRY_LINK([#define _GNU_SOURCE
+#include <stdio.h>], 
 [
-  char * result = NULL;
-  vasprintf (&result, "This is a test: %d", 10);
+  char * result;
+  return vasprintf (&result, "This is a test: %d", NULL);
 ], [have_vasprintf=yes],[have_vasprintf=no])
+echo "Checking vasprintf support: $have_vasprintf"
 
 dnl support for vasprintf
 case $have_vasprintf in
