@@ -19,7 +19,7 @@ INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__  \
 	   -DSYSCONFDIR=\""$(sysconfdir)"\" -DDEFINE_CHROOT_PROTO -DDEFINE_KILL_PROTO \
 	   -DPIDFILE=\""$(statusdir)/turbulence.pid"\" \
 	   -DTBC_RUNTIME_DATADIR=\""$(runtimedatadir)"\" \
-	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS)\
+	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS) $(EXARG_FLAGS) \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS)  -g -Wall -Werror -Wstrict-prototypes  -ansi
 
 bin_PROGRAMS = turbulence

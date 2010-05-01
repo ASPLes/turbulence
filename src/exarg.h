@@ -38,12 +38,12 @@
 #ifndef __EXARG_H__
 #define __EXARG_H__
 
-/**
+/** 
  * \addtogroup exarg
  * @{
  */
 
-/**
+/** 
  * @brief Enum type which defines how a argument must be interpreted.
  * 
  * This enumeration is used to figure out what type of argument is been installed.

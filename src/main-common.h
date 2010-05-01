@@ -42,7 +42,7 @@
 #include <exarg.h>
 
 #define HELP_HEADER "Turbulence: BEEP application server\n\
-Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
+Copyright (C) 2010  Advanced Software Production Line, S.L.\n\n"
 
 #define POST_HEADER "\n\
 If you have question, bugs to report, patches, you can reach us\n\
