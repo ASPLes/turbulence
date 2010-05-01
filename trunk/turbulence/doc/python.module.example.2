@@ -1,0 +1,36 @@
+# import beep services
+import vortex
+import vortex.tls
+import vortex.sasl
+
+# not required to import tbc module, implicitly included
+
+def app_init (_tbc):
+    # register profile urn:aspl.es:beep:profiles:echo and handle
+    # all received messages at my_app_received
+    vortex.register_profile ("urn:aspl.es:beep:profiles:echo",
+                             frame_received=my_app_received)
+    
+    # return initialization ok
+    tbc.msg ("My python module initialized")
+    return True
+
+def my_app_received (conn, channel, frame, data):
+    
+    if frame.type == "MSG":
+        # received request, just echo
+        channel.send_rpy (frame.content, frame.content_size, frame.msg_no)
+        
+    return
+
+def app_close ():
+    """
+    Function called when Turbulence is closing.
+    """
+    return
+
+def app_reload ():
+    """
+    Function called when Turbulence received a command reload.
+    """
+    return

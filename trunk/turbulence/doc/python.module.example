@@ -1,0 +1,27 @@
+# import beep services
+import vortex
+import vortex.tls
+import vortex.sasl
+
+# not required to import tbc module, implicitly included
+
+def app_init (_tbc):
+    """
+    Function called to initialize the module. It must return True to signal
+    initialization was ok, otherwise False must be returned.
+    """ 
+    # return initialization ok
+    tbc.msg ("My python module initialized")
+    return True
+
+def app_close ():
+    """
+    Function called when Turbulence is closing.
+    """
+    return
+
+def app_reload ():
+    """
+    Function called when Turbulence received a command reload.
+    """
+    return

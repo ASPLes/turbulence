@@ -9,7 +9,9 @@ tmp_xml_examples = \
 	path-def-conf.xml.tmp \
 	path-def-example.xml.tmp \
 	template.xml.tmp \
-	turbulence.python.xml.tmp
+	turbulence.python.xml.tmp \
+	python.module.example.3.xml.tmp \
+	python.module.example.4.xml.tmp
 
 xml_examples = \
 	global-settings.xml \
@@ -21,7 +23,9 @@ xml_examples = \
 	path-def.xml \
 	path-def-conf.xml \
 	path-def-example.xml \
-	turbulence.python.xml
+	turbulence.python.xml \
+	python.module.example.3.xml \
+	python.module.example.4.xml
 
 drafts_and_docs = \
 	draft-brosnan-beep-limit-close.txt \
@@ -37,6 +41,7 @@ EXTRA_DIST = turbulence-doc.doxygen \
 	aspl-logo-header.png \
 	draft-brosnan-beep-servername-feature.xml draft-brosnan-beep-servername-feature.txt \
 	draft-brosnan-beep-limit-close.txt draft-brosnan-beep-limit-close.xml \
+	python.module.example python.module.example.2 \
 	turbulence2.css $(xml_examples) $(tmp_xml_examples) $(drafts_and_docs)
 
 bin_SCRIPTS = initial_build_doc
