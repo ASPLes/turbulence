@@ -741,13 +741,47 @@ END_C_DECLS
  *
  *  -# Writing an startup application that fulfills a python interface (specially <b>start-file</b> attribute)
  *  -# Add some configuration to your turbulence server to detect your application (see \ref turbulence_mod_python "mod-python configuration")
- *  -# Use PyVortex and PyTurbulence API to handle and issue BEEP messages.
+ *  -# Use PyVortex (http://www.aspl.es/vortex/py-vortex/html/) and PyTurbulence (http://www.aspl.es/turbulence/py-turbulence/html/) API to handle and issue BEEP messages.
  *
  * Knowing this general terms, the following is a tutorial to develop
  * BEEP echo profile like using mod-python.
  *
  * \section turbulence_mod_python_writing_apps_skel A mod-python application skel
  *
+ * <ol>
+ *  <li>First, we have to create the start up file that will initialize
+ *  your python application. The following is a basic skel (save content into __init__.py):
+ *
+ * \include python.module.example
+ *  </li>
+ *
+ * <li>Now we have to place some initialization code to register our echo
+ * profile. For that, extend app_init function to include the following:
+ *
+ * \include python.module.example.2
+ * </li>
+ *
+ * <li>Ok, now we have our BEEP profile that echoes all content received
+ * over a channel running <i>"urn:aspl.es:beep:profiles:echo"</i>, we need to
+ * tell Turbulence to load it. This is done by adding the following
+ * content into python.conf file. See \ref turbulence_mod_python
+ * "mod-python administration reference" for more details.
+ *
+ * \htmlinclude python.module.example.3.xml.tmp
  * 
- * 
+ * </li>
+ *
+ * <li>Now Turbulence will load our application once at the first
+ * connection received, registering profile and frame received handler
+ * associated. One thing remains: we have to update our \ref profile_path_configuration "profile path policy"
+ * to allow our profile to be reachable.  For example,
+ * we could use the following to allow executing our profile only if
+ * BEEP client connects from our local network (assuming
+ * 192.168.0.0/24): 
+ *
+ * \htmlinclude python.module.example.4.xml.tmp 
+ *
+ * </li>
+ *
+ * </ol>
  */
