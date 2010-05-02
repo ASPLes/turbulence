@@ -277,6 +277,8 @@ modules/mod-sasl/Makefile
 modules/mod-sasl/mod-sasl.xml
 modules/mod-sasl/sasl-radmin.pc
 modules/mod-python/Makefile
+modules/mod-python/doc/Makefile
+modules/mod-python/doc/conf.py
 modules/mod-radmin/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile

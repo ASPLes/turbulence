@@ -39,6 +39,15 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
+/** 
+ * \defgroup turbulence_ppath Turbulence Profile Path: API for handling and retrieving information associated to a profile path policy
+ */
+
+/** 
+ * \addtogroup turbulence_ppath
+ * @{
+ */
+
 typedef struct _TurbulencePPathState {
 	/* a reference to the profile path selected for the
 	 * connection */
@@ -1024,7 +1033,7 @@ void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
 }
 
 /** 
- * @internal Allows to get the current selected profile path on the
+ * @brief Allows to get the current selected profile path on the
  * provided connection.
  *
  * @param conn The connection where the Profile path configured is requested.
@@ -1049,7 +1058,7 @@ TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn)
 }
 
 /** 
- * @internal Function used to find a profile path definition given its
+ * @brief Function used to find a profile path definition given its
  * unique identifier.
  */ 
 TurbulencePPathDef * turbulence_ppath_find_by_id (TurbulenceCtx * ctx, int ppath_id)
@@ -1102,6 +1111,8 @@ const char         * turbulence_ppath_get_name (TurbulencePPathDef * ppath_def)
 /** 
  * @brief Allows to get the profile path working directory.
  *
+ * @param ctx The Turbulence context.
+ *
  * @param ppath_def The profile path definition where the work
  * directory is retrieved.
  *
@@ -1131,20 +1142,21 @@ const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,
 
 /** 
  * @brief Allows to get the serverName requested for the profile path
- * selected. This value represents the serverName sent on channel
- * start request and was used, along with other datas, to select
- * current profile path. This value may be NULL since serverName is
- * optional.
+ * selected. This value represents the serverName sent on first
+ * channel start request and was used, along with other data, to
+ * select current profile path. This value may be NULL since
+ * serverName is optional.
  *
- * @param ppath_def The profile path selected where the serverName
- * requested will be returned.
+ * @param conn The connection with a profile path already configured.
  *
  * @return A reference to the serverName value or NULL if it fails.
  *
- * <b>NOTE: this is NOT the serverName. In many cases they are the
- * same value, but it must be considered as a requested value, until
- * the first channel with serverName is accepted. Then a call to
- * vortex_connection_get_server_name can be done. </b>
+ * <i><b>NOTE</b>: this is NOT the serverName but the value requested
+ * by remote BEEP peer. It must be considered as a requested value,
+ * until the first channel with serverName is accepted. Then a call to
+ * vortex_connection_get_server_name can be done. This API is
+ * specially useful when a module wants to load serverName specific
+ * environment in case the channel is accepted.</i>
  */
 const char         * turbulence_ppath_get_server_name (VortexConnection * conn)
 {
@@ -1187,3 +1199,7 @@ void turbulence_ppath_change_root    (TurbulenceCtx      * ctx,
 	msg ("change root dir to: %s", ppath_def->chroot);
 	return;
 }
+
+/** 
+ * @}
+ */
