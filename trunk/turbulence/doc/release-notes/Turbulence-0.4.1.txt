@@ -1,0 +1,668 @@
+                     -= Turbulence 0.4.1 =-
+                      "Future proof release"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce the
+  Turbulence 0.4.1 "Future proof" release: an open source BEEP
+  application server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules and allows to
+  implement server side profiles that are used and combined later with
+  other profiles through run time configuration.
+
+  Turbulence is written to make easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://www.sf.net/projects/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  Added support for mod-python, a module that allows to write server
+  side python apps that implements BEEP profiles. 
+
+  Added support to create child processes that can handle a particular
+  set of connections for a profile path. Support includes reusing
+  childs created for later connections received that matches child's
+  profile path handle. Also added support to run master server and
+  child processes under selected uid and gid.
+
+  Added chroot support for master process and child process through
+  particular profile paths.
+
+  Added support to notify a module when a profile path was selected,
+  including when that selected was done because serverName request so
+  the module can load appropriate databases and settings associated to
+  that serverName. 
+
+  Many bugs were fixed and many regression tests were added. Added lot
+  of documentation.
+
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.3.2
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] fixed turbulence log reporting. It wasn't enabled at the proper
+  place causing some troubles. Added clean-start checks to ensure all
+  logs configured are opened and usable.
+
+* [new] Added support for --disable-sigint option which disables
+  turbulence SIGINt signal handling which is helpful for debugging.
+
+* [fix] Fixed amd64 bug located at logging code.
+
+* [fix] Making turbulence to abort in the case the pid file can't be
+  opened.
+
+* [new] Added new functions that allows to check for positive or
+  negative values inside configuration strings. API added:
+
+   - turbulence_config_is_attr_positive
+   - turbulence_config_is_attr_negative
+
+* [new] Added first fully working mod-python module. This new module
+  will allow to execute server side python, allowing to create python
+  BEEP server side applications that takes advantage of Turbulence.
+
+* [fix] Fixed bug inside turbulence_log_report which causes a segfault
+  on linux amd64 platforms.
+
+* [new] Updated turbulence module API to include new functions to
+  check module existance or its name. Updated module loading code to
+  avoid loading the same module twice or different modules with the
+  same name. API added:
+
+   - turbulence_module_name
+   - turbulence_module_exists
+
+* [fix] Fixed wrong path configuration for mod-python exposed by
+  settings not having turbulence-config installed.
+
+* [fix] Fixed naming issue with mod python load files..
+
+* [fix] Making mod-sasl to now drop an error message while loading
+  remote administration list if the feature is disabled.
+
+* [fix] Making the module to detect start-file configuration not ended
+  by .py.  General cleanups around handling start_file value.
+
+* [fix] Fixed GIL code to properly acquire/release the GIL once the
+  module it initialized and terminated.
+
+* [new] Added initial working support to produce a child process that
+  will handle a particular request according to turbulence.conf
+  allowing to process separation increasing turbulence security. Also
+  updated code to allow changing user id and group id of child process
+  created. NICE!
+
+* [new] General update to reorganize signal handling so it can be used
+  by main turbulence process and childs created.  Updated turbulence
+  signal API to provide a common handling.  API added:
+
+   - TurbulenceSignalHandler
+   - turbulence_signal_install
+   - turbulence_signal_received
+
+* [new] Added support to change process root dir after a child process
+  creation.
+
+* [new] Updated turbulence db-list api to include functions to unload
+  a list without dumping content back to the disk. API added:
+  
+   - turbulence_db_list_unload
+
+* [new] Added support to configure if turbulence must terminate its
+  child processes or leave them as is once turbulence main process is
+  finished (kill-childs-on-exit).
+
+* [new] Added support to let the user to configure which modules must
+  be unloaded from memory after fork operation allowing. Updated
+  turbulence module API to include a function that unloads the module
+  notifying the module to do so. API added:
+  
+   - turbulence_module_unload
+
+* [new] Updated turbulence module definition to include a new function
+  called "unload" which can be used by the module to terminate its
+  function in a context that the module may still be loaded in the
+  main process.  This can be used to not do hard disk operations but
+  to only release memory.
+
+* [fix] Updated tbc-mod-gen to produce module templates that also
+  includes unload function.
+
+* [fix] Updated mod-sasl to use unload method to close and clean
+  memory used without trying to flush back to the disk.
+
+* [fix] Fixed log handling for turbulence child process which was
+  causing to not catch logs produced.
+
+* [fix] Fixed profile path dst selector.
+
+* [new] Added support to configure a list of modules to be not loaded
+  by turbulence even having them placed at directories configured.
+  Added support to make this filter to detect module file name and
+  module internal configured name. Updated DTD and added documentation
+  to configuration example file.
+
+* [fix] Committing missing updates.
+
+* [fix] Added RTLD_GLOBAL to dlopen function (fixes mod-python
+  problem).
+
+* [new] Added new module to implement I/O file descriptor
+  notifications.  Module added turbulence-loop. Updated turbulence-log
+  module to use this new API to implement log handling from child
+  processes.  API added:
+
+   - TurbulenceLoopOnRead (handler)
+   - turbulence_loop_create
+   - turbulence_loop_set_read_handler
+   - turbulence_loop_watch_descriptor
+   - turbulence_loop_close
+
+* [new] Added initial implementation to support local turbulence
+  management (connection to running process). This will allow to issue
+  commands and check status for the current local turbulence process.
+
+* [fix] Fixed child pid removal once the child process has finished to
+  avoid killing such process on parent process termination.
+
+* [new] Updated turbulence main API to include new support functions.
+  API added:
+
+   - turbulence_is_num (string check)
+   - turbulence_get_system_id (user and group id)
+   - turbulence_change_fd_owner (file system owner)
+   - turbulence_change_fd_perms (file system permissions)
+
+* [fix] Fixed memory leak at turbulence run module while checking
+  modules to be skipped (<no-load /> directive).
+   
+* [new] Adding new module, turbulence mediator to allow creating plugs
+  that can produce events which are observable by other components
+  (subscribe).  The intention is to use this to implement radmin
+  component as a module.  Still more work is required. API added:
+
+   - TurbulenceMediatorHandler (handler)
+   - TurbulenceMediatorObject (type)
+   - TurbulenceMediatorAttr (enum)
+   - turbulence_mediator_object_get
+   - turbulence_mediator_create_plug
+   - turbulence_mediator_subscribe
+   - turbulence_mediator_remove_plug
+   - turbulence_mediator_push_event
+
+* [new] Added regression test to check turbulence mediator api.  Fixed
+  regression test to check SASL serverName support. Updated turbulence
+  mediator API to include API call support and other support
+  functions. API added:
+   
+    - turbulence_mediator_object_set_result
+    - turbulence_mediator_plug_num
+    - turbulence_mediator_plug_exits
+    - turbulence_mediator_call_api
+    - turbulence_mediator_create_api
+
+* [new] Added initial code to implement tbc-ctl, a command line tool
+  to manage a running turbulence.  Added initial code to implement
+  mod-radmin, a module that will handle remote administration and
+  status check requests (for now used by tbc-ctl).
+
+* [fix] Added initial implementation to get user and password after
+  channel creation failure to activate SASL. Check how to restore
+  console stdout.
+
+* [fix] Finished initial tbc-ctl version that downloads all commands
+  available from connected server. Added support to auto-complete
+  available commands. General memory cleanup.
+
+* [fix] General mod-radmin updates. Still more work required. Added
+  general command handling, using a common format that will help
+  receiving the content at clients connected using different formats.
+
+* [fix] Added fourth event data reference to turbulence mediator
+  object.
+
+* [fix] Updated turbulence conn mgr module to check for mod-radmin
+  module startup event to install its commands.
+
+* [fix] General update to integrate all turbulence documentation into
+  doxygen system.
+
+* [fix] Moved API types to turbulence-types.h
+
+* [new] Added support to allow starting turbulence without having
+  registered any profile. Configurable via
+  <allow-start-without-profiles> directive.
+
+* [fix] Fixed plug API regression test.
+
+* [new] Updated turbulence conn mgr module to include a function that
+  allows listing all connections registered, selected by a role and a
+  string expression.
+
+* [fix] Adding missing configuration file for regression test.
+
+* [fix] Added new regression test to check basic profile path
+  filtering (test_08).
+
+* [fix] Making <connections/max-connections> directive to be optional
+  since under some circumstances it is not allowed by non
+  administrator users.
+
+* [fix] Making turbulence log module cleanup to don't call to close on
+  unopened file descriptors.
+
+* [fix] Fixed memory wrong access caused by a race condition between
+  on close detection and module cleanup from conn mgr module. Detected
+  and fixed by reg tests..
+
+* [fix] Fixed configure.ac which wasn't properly setting
+  VORTEX_SASL_VERSION and VORTEX_TLS_VERSION.
+
+* [fix] Updated regression test to check profile path in the case no
+  profile def can be applied to a connection. Check the connection is
+  rejected.
+
+* [fix] Documentation updates. Integrated administration manual into
+  turbulence documentation.
+
+* [fix] More documentation updates: integrated db-list and mod-sasl
+  documentation into doxygen main documentation..
+
+* [fix] Integrated mod-sasl documentation into turbulence's main
+  documentation.
+
+* [fix] Integrating mod-tunnel documentation into turbulence's doc
+  center.
+
+* [fix] Added initial documentation to move turbulence module
+  documentation.
+
+* [fix] Fixed mod_radmin and tbc-ctl commands available download. More
+  work is required.
+
+* [fix] Fixed documentation. Added initial changes to support "profile
+  provided by module" feature.
+
+* [fix] Fixed reg. exp detection bugs. Added regression test to check
+  expressions supported.
+
+* [fix] Added regression test to check support for profile path
+  serverName detection.
+
+* [fix] Added initial work to fix and check child process creation..
+
+* [fix] Making profile path selection to close the connection if no
+  profile path was selected after first channel start...
+
+* [fix] Updated turbulence child process creation to unwatch the
+  connection from the reader at the parent process.
+
+* [fix] More profile path updates..
+
+* [fix] Fixed profile path serverName handling with process separation
+  is activated. Added reg test (test_01) to check its function.  Still
+  more work required.
+
+* [fix] Fixed turbulence_ctx_reinit to update current process pid.
+
+* [fix] Making profile path selection to defer the decision until a
+  first channel start is received, in the case current profile path
+  configuration is not only address based (uses serverName).
+
+* [new] Updated turbulence process API to include:
+
+   - turbulence_process_child_exits
+   - turbulence_process_child_count
+
+* [fix] More updates to check profile path support using serverName
+  and child processes. Fixed bug at child process creating which was
+  causing connections handled to be configured to not close its
+  socket. Added some delay handling to ensure wrong replies reaches
+  remote BEEP peer when a channel is not accepted (because profile
+  path denies it).
+
+* [fix] More updates to reg test_10. Making server separation to not
+  close the connection if the channel start request fails.
+
+* [fix] Adding initial reg test for <load> directive...
+
+* [fix] Updated tbc-mod-gen to include ppath-selected handler.
+
+* [fix] Added initial code to implement test_11 reg test that will
+  check profile path selected module notification.
+
+* [new] Updated profile path module to include a function that returns
+  profile path identification. API added:
+
+  - turbulence_ppath_get_name
+
+* [new] Updated turbulence module definition to include a new handler
+  which is called each time a profile path is selected. API added:
+
+  - ModPPathSelected
+
+* [fix] Added some minor fixings to mod-python code..
+
+* [fix] Committing missing reg test 11 updates.
+
+* [fix] Committing missing conf file for test_11
+
+* [new] Added support for to notify modules when a profile path has
+  been selected for a connection. This will allow modules to implement
+  particular behaviours according to serverName, etc..Added reg test
+  to check initial support (test_11).
+
+* [new] Updated module API to include a general function that
+  implements handler notification. Updated
+  turbulence_module_notify_close and turbulence_module_notify_reload
+  to use this new function. API added:
+
+   - turbulence_module_notify
+   - TurbulenceModHandler (enum)
+
+* [fix] Making turbulence run to check module pointer file to be ended
+  with .xml
+
+* [fix] Making some updates to mod-sasl (still more work required) to
+  use new profile path selected notification.
+
+* [fix] Updated mod-sasl to use common auth API. Updated code to
+  detect serverName requested in the case connection serverName is not
+  defined.  Fixed memory deallocation bug when no default SASL
+  database is found.
+
+* [fix] General regression test cleanups. 
+
+* [fix] More updates on regression tests and general fixings to
+  properly run them. Still more work is required.
+
+* [fix] Added initial support to notify requested serverName so
+  modules at profile path selected notification can react loading
+  serverName appropriate settings. API added:
+   
+   - turbulence_ppath_get_server_name
+
+* [fix] Committing missing test files..
+
+* [fix] Finished initial working support for mod-sasl to only load
+  database associated to serverName defined. Updated regression test..
+
+* [fix] Committing example files..
+
+* [new] Added support for work-dir attribute at profile path
+  definition, allowing modules and turbulence itself to implement user
+  defined functions by using content located at such location. Updated
+  turbulence ppath API to include a function to retrieve such value:
+
+  - turbulence_ppath_get_work_dir
+
+* [new] Added initial support to make mod-sasl to load user defined 
+  databases located at work-dir (if defined).
+
+* [fix] Making turbulence_module_notify to return boolean status in
+  the case some init or profile path selected handler fails. Updated
+  child process creation to check these values to stop or continue
+  according to clean start value.
+
+* [fix] Updated mod-sasl support to load user defined databases.
+
+* [fix] Finished initial working reg test_12 checking SASL with
+  process separation, different serverNames and user defined SASL
+  databases..
+
+* [fix] Committing some fixes to properly run regression tests associated
+  to SASL function.
+
+* [fix] Finished mod-sasl upgrade to support on demand serverName auth
+  databases. Added reg test test_12-a to check SASL support when no
+  child is created.
+
+* [fix] Updated mod-python implementation to support profile path
+  notification so the module can load especific applications according
+  to serverName defined.
+
+* [fix] Fixed mod-python wrong module load handling. Added initial
+  regression test to check its function (test_13).
+
+* [fix] Completed first tests for mod-python after its code update to
+  support profile path.
+
+* [fix] Completed first working reg test for mod-python. Helped to fix
+  some bugs. Added support to python apps defined to use src location
+  and work-dir from profile path to load its sources.
+
+* [fix] Added initial implementation for reg test test_13-a to check
+  mod-python without child creation. Still more work is required.
+
+* [fix] Committing .def updates and version components..
+
+* [fix] Finished regression tests that checks mod-python without child
+  process creation.
+
+* [fix] Fixed wrong cleanup handling while closing db-list at
+  turbulence exit.
+
+* [fix] Fixed turbulence main process lock on exit.
+
+* [fix] Fixed wrong profile selection when only the serverName value
+  was configured. Added regression test to check this new function:
+  test_14.
+
+* [new] Added new macro to shutdown and release a connection
+  reference.  Used to terminate connection references at child process
+  creation when applications hosted have initialization failures. API
+  added:
+
+   - TBC_FAST_CLOSE (macro)
+
+* [new] Updated mod-python code to allow configuring if the connection
+  must be closed in the case a python application associated fails to
+  iniatialize. This is used to signal client peer that an application
+  failure had happen...Option added to python.conf.
+
+   - close-conn-on-failure (option)
+  
+* [new] Updated mod-python to include tbc.error API.
+
+* [new] Finished initial working version that allows child process
+  reuse for new connections that matches the profile path of the
+  child. NICE!!  This is done by detecting if a turbulence child is
+  already handling the profile path detected for a connection,
+  transferring the connection to that child. Added regression test_15
+  and test_15a. Added skells test_16 and test_17. Updated turbulence
+  accepted configuration for profile path definitions to attend
+  reuse=yes conf. Still some work required.
+
+* [new] Added support to Turbulence to configure default directories
+  used by its function. XML paths added:
+
+   - /global-settings/system-paths/path 
+     (datadir, sysconfdir, runtime_datadir)
+
+* [fix] Reorganized child process creation to be stored associated to
+  a profile path and represented with a TurbulenceChild structure.
+
+* [new] Updated profile path module to make each profile path
+  definition to be identified with a single id. Updated profile path
+  module API:
+
+   - turbulence_ppath_get_id
+
+* [fix] Making TBC_FAST_CLOSE to nullify conn reference to avoid the
+  caller using that closed reference futher.
+
+* [fix] Making common_sasl_load_config (mod-sasl) to nullify callers
+  backend reference when a load configuration failure is found.
+
+* [fix] More updates on reg test test_15 to check child process
+  connection reuse. No bug found. Nice!
+
+* [fix] Regexp support (some cases where failing). Updated regression
+  test to check those cases and its match status.
+
+* [fix] General update to make child process created to release all
+  sockets and connections that are handled by the parent. Now those
+  connections won't be accesible from childs and they won't waste
+  available socket espace.  Added regression test (test_16).
+
+* [fix] Some updates on makefiles..
+
+* [fix] Committing some changes..
+
+* [fix] Fixed race condition while creating a TurbulenceLoop object
+  that was causing to miss initial descriptors to be watched.
+
+* [fix] Improved reg test 12 to support delay conditions..
+
+* [fix] Added new regression test (test_17) to check concurrent random
+  connections accessing to the same profile path configured to create
+  a child and reuse connections.
+
+* [fix] Started turbulence_get_system_id rewrite due to anoying leaks
+  reported by valgrind by getpwnam_r and getgrgid_r.
+
+* [new] Added new function to implement microwaits on the current
+  thread.. API added:
+
+    - turbulence_sleep 
+
+* [fix] Added code to delay turbulence child finalization when vortex
+  reader reports no more connections watched to ensure there are no
+  connections in transit from the parent to the child in case of reuse
+  configurations.
+
+* [fix] Fixed wrong memory access inside
+  turbulence_process_receive_socket under cases where parent control
+  connection was closed.
+
+* [fix] Updated turbulence conn mgr module to cleanup its resources
+  but acquiring its internal locks.
+
+* [fix] More updates to turbulence_get_system_id..Still more work
+  required.
+
+* [fix] Added __turbulence_get_system_id_info to implement system
+  user/group id resolution. Added regression test 05-a to check
+  function.
+
+* [fix] Added missing test configuration file (test_17.conf).
+
+* [fix] Added initial test to check how turbulence behave with
+  channels not accepted once a child process is created to handle it.
+
+* [fix] Fixed child connection handling for profile paths activated on
+  connection phase (still no BEEP greetings took place). Added
+  regression test (test_18) to reproduce and check the issue.
+
+* [fix] Updatedm mod-python to include some debug comments.
+
+* [fix] Added reg test (test_19) to check channel not accepted at
+  profile path selection and child process creation.
+
+* [fix] Making child code that watches parent control connection to
+  stop and close such link in case of failures.
+
+* [fix] Updated mod-python turbulence.Ctx type to include an internal
+  reference to the vortex.Ctx that is used. Updated code to reuse this
+  reference rather creating a new one.
+
+* [fix] Fixed bug which was causing to not transfer profile path state
+  to connections passed to child process already created causing
+  policy to be not applied. Added reg test to reproduce and check fix
+  introduced (test_20).
+
+* [fix] Making mod-sasl to not return wrong initialization at profile
+  path select notification in the case a backend is already loaded but
+  no backend was available for the serverName notified or the profile
+  path notified.
+
+* [fix] Updated turbulence_module_notify to release and acquire the
+  lock for each handler notification (to support chained
+  notifications).
+
+* [new] Updated turbulence conn mgr module to include an API to find a
+  particular connection id. API added:
+
+   - turbulence_conn_mgr_find_by_id
+
+  Also updated PyTurbulence API to include an API to provide a binding
+  to this function. API added:
+
+   - turbulence.Ctx.find_conn_by_id 
+
+* [fix] Fixed autogen.sh compile preparation issue (due to some GNU
+  extensions detected). Added -Wno-portability to fix the problem for
+  now...
+
+* [fix] modules/mod-radmin/Makefile.am: full path calling
+  turbulence-config.
+
+* [fix] configure.ac: changed turbulence-config permissions to set it
+  as executable.
+
+* [fix] tools/tbc-mod-gen/support.c: assign function return value to
+  variable (now is an error).
+
+* [fix] src/Makefile.am: changes to fix error linking with exarg.
+
+* [fix] src/turbulence.c, tools/tbc-mod-gen/support.c, src/exarg.c,
+  src/turbulence-log.c: assign function return value to variable (now
+  is an error) printf can't now receive directly a char * variable
+  open with O_CREAT must receive a 3th argument
+
+* [fix] Adding some additional debug to track connections passed to
+  childs
+
+* [fix] Added regression test (test_21) to check connection ids
+  retention on child process created when reuse is enabled. Bug found
+  in vortex.
+
+About Us
+~~~~~~~~
+
+  ASPL (Advanced Software Production Line) is a Spanish company that
+  provides services and support to introduce open source products into
+  organizations.
+
+  It has more than 8 years of experience and its main development line
+  is to provide software development and support to install GNU/Linux
+  enterprise servers.
+
+  Contact us, English or Spanish, to get commercial support and/or
+  BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+3th feb 2009, Madrid (Spain)
+  
+

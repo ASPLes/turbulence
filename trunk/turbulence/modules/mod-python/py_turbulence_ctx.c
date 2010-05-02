@@ -198,7 +198,7 @@ static PyMethodDef py_turbulence_ctx_methods[] = {
 	 "Records a turbulence error message (error ()). This is sent to the configured log and showed on the console according to the configuration."},
 	/*** conn-mgr module ***/
 	{"find_conn_by_id", (PyCFunction) py_turbulence_ctx_find_conn_by_id, METH_VARARGS,
-	 "Allows to find a connection registered on the turbulence connection manager with the provided id. The method returns the connection (vortex.Connection) or None in case of failure. This python method provides access to turbulence_conn_mgr_find_by_id"},
+	 "Allows to find a connection registered on the turbulence connection manager with the provided connection id. The method returns the connection (vortex.Connection) or None in case of failure. This python method provides access to turbulence_conn_mgr_find_by_id"},
  	{NULL, NULL, 0, NULL}  
 }; 
 

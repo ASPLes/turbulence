@@ -114,6 +114,35 @@ static void test_reconf (TurbulenceCtx * ctx) {
 }
 
 /** 
+ * @brief The ppath_selected function is used by turbulence to signal
+ * modules that a connection was finally configured under the provided
+ * profile path. This is important because a profile path defines how
+ * the connection will be limited and configured to accept profiles,
+ * configuring process permission and so on. 
+ *
+ * It is also useful because at the time a profile path is selected,
+ * serverName name is available, allowing the module to take especial
+ * actions.
+ *
+ * @param ctx The \ref TurbulenceCtx where the profile path was selected.
+ *
+ * @param ppath_selected Reference to the object representing the profile path selected. See \ref turbulence_ppath.
+ *
+ * @param conn The VortexConnection object that was configured with the provided profile path.
+ *
+ * @return axl_true to accept or not the connection. Keep in mind
+ * returning axl_false may also terminate current child process
+ * (according to \ref turbulence_clean_start "clean start" configuration).
+ */
+static axl_bool test_ppath_selected (TurbulenceCtx * ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {
+	msg ("Turbulence configured ppath %s to connection id %d",
+	     turbulence_ppath_get_name (ppath_selected), 
+	     vortex_connection_get_id (conn));
+
+	return axl_true;
+}
+
+/** 
  * @brief Public entry point for the module to be loaded. This is the
  * symbol the turbulence will lookup to load the rest of items.
  */
@@ -122,7 +151,9 @@ TurbulenceModDef module_def = {
 	"Turbulence BEEP server, test module",
 	test_init,
 	test_close,
-	test_reconf
+	test_reconf,
+	NULL,
+	test_ppath_selected
 };
 
 END_C_DECLS

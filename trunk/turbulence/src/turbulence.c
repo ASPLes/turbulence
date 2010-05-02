@@ -1344,35 +1344,24 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * <h2>Turbulence manuals</h2>
  *
+ * The following manual includes information on how to deploy and
+ * configure Turbulence (no code development):
+ * 
  * - \ref turbulence_administrator_manual
+ *
+ * The following manual includes information on how to develop modules
+ * and how to extend Turbulence:
+ *
  * - \ref turbulence_developer_manual
  *
- * <h2>Vortex API </h2>
+ * <h2>Contact us</h2>
  *
- *  Because Turbulence extends and it is built on top of Vortex
- *  Library 1.1, it is required to keep in mind and use Vortex
- *  API. Here is the reference:
+ * You can reach us at the Vortex mailing list: at <a
+ * href="http://lists.aspl.es/cgi-bin/mailman/listinfo/vortex">vortex
+ * users</a> for any question and patches.
  *
- *  - <a class="el" href="http://fact.aspl.es/files/af-arch/vortex-1.1/html/index.html">Vortex Library 1.1 Documentation Center</a>
- *
- * <h2>Turbulence API</h2>
- *
- *  The following is the API exposed to turbulence modules and
- *  tools. This is only useful for turbulence developers.
- *
- *  - \ref turbulence
- *  - \ref turbulence_moddef
- *  - \ref turbulence_config
- *  - \ref turbulence_db_list
- *  - \ref turbulence_conn_mgr
- *  - \ref turbulence_handlers
- *  - \ref turbulence_types
- *  - \ref turbulence_ctx
- *  - \ref turbulence_run
- *  - \ref turbulence_expr
- *  - \ref turbulence_loop
- *  - \ref turbulence_mediator
- *  - \ref turbulence_module
+ * If you are interested on getting commercial support, you can also
+ * contact us at: info@aspl.es. You can also see: http://www.aspl.es/turbulence/commercial.html
  */
 
 /** 
@@ -1391,18 +1380,17 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref turbulence_configuring_log_files
  *   - \ref turbulence_db_list_management
  *
- * <b>Section 3: Turbulence module management</b> 
+ * <b>Section 3: BEEP profile management</b>
+ *
+ *   - \ref profile_path_configuration
+ *   - \ref profile_path_flags_supported_by_allow_and_if_sucess
+ *
+ * <b>Section 4: Turbulence module management</b> 
  *
  *   - \ref turbulence_modules_configuration
  *   - \ref turbulence_mod_sasl
  *   - \ref turbulence_mod_tunnel
  *   - \ref turbulence_mod_python
- *
- * <b>Section 4: BEEP profile management</b>
- *
- *   - \ref profile_path_configuration
- *   - \ref profile_path_flags_supported_by_allow_and_if_sucess
- * 
  * 
  *
  * \section installing_turbulence Installing Turbulence:
@@ -1643,10 +1631,10 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * run-time.
  * 
  * Let's see some examples to initially clarify the profile path
- * support. A usual configuration around BEEP is to provide SASL
+ * concept. A usual configuration around BEEP is to provide SASL
  * authentication and then allow using a profile which do useful
- * work. The intention is to enforce a successful SASL negotiation, to
- * later provide a protected resource. 
+ * work. The intention is to enforce a successful SASL negotiation to
+ * then provide a protected resource. 
  *
  * With profile path this can be configured as:
  * 
@@ -1679,17 +1667,50 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Every <b>&lt;path-def></b> supports the following matching configurations:
  *
  * <ol> 
- * <li><p><b>server-name</b>: a perl expression defining the serverName
+ * <li><b>server-name</b>: a perl expression defining the serverName
  * to match for the connection. This can be used to only provide
- * services based on a virtual hosting.</p></li>
+ * services based on a virtual hosting.</li>
  *
- * <li><p><b>src</b>: a perl expression defining the source of the
+ * <li><b>src</b>: a perl expression defining the source of the
  * connection. This can be used to only provide critical services to
- * local administrators.</p></li>
+ * local administrators.</li>
  *
- * <li><p><b>path-name</b>: an administrative flag that will help to
+ * <li><b>dst</b>: a perl expression defining the destination of the
+ * connection. This can be used to provide services on a particular local IP.</li>
+ *
+ * <li><b>path-name</b>: an administrative flag that will help to
  * recognize the connection in future process (log
- * reporting).</p></li>
+ * reporting).</li>
+ *
+ * <li><b>work-dir</b>: defines a working directory for the profile
+ * path. This value is used by several modules to load user site
+ * especific files (database configuration, etc). </li>
+ *
+ * <li><b>chroot</b>: Defines a file system path used to make the
+ * current process to chroot to that directory. Note in most cases
+ * this should be used in conjunction with separate flag because once
+ * the current process chroots, will not be able to do it again for
+ * new connections. </li>
+ *
+ * <li><b>separate</b>: [yes|no] Default no. Allows to configure
+ * Turbulence to create a child process to handle the connection that
+ * matches current profile path. A new child process will be created
+ * for each connection received. </li>
+ *
+ * <li><b>reuse</b>: [yes|no] Default no. Requires
+ * separate="yes". Once a child process is created for the first
+ * connection associated to a profile path, next connections are sent
+ * to that child rather creating a new child process.</li>
+ *
+ * <li><b>run-as-user</b>: [user name| user id]. Makes current process to change its
+ * executing user to the provided value. Requires Turbulence startup
+ * user to have permissions to run this system operation. Note this
+ * configuration may require to use separate (and/or reuse) flag.</li>
+ *
+ * <li><b>run-as-group</b>: [group name| group id]. Makes current process to change its
+ * executing group to the provided value. Requires Turbulence startup
+ * user to have permissions to run this system operation. Note this
+ * configuration may require to use separate (and/or reuse) flag.</li>
  * 
  * </ol> 
  * 
@@ -1779,31 +1800,54 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  *  - \ref  turbulence_mod_python_writing_apps
  *
+ * <b>Section 3: Vortex 1.1 API</b>
+ *
+ *  Because Turbulence extends and it is built on top of Vortex
+ *  Library 1.1, it is required to keep in mind and use Vortex
+ *  API. Here is the reference:
+ *
+ *  - <a class="el" href="http://fact.aspl.es/files/af-arch/vortex-1.1/html/index.html">Vortex Library 1.1 Documentation Center</a>
+ *
+ * <b>Section 4: Turbulence API</b>
+ *
+ *  The following is the API exposed to turbulence modules and
+ *  tools. This is only useful for turbulence developers.
+ *
+ *  - \ref turbulence
+ *  - \ref turbulence_moddef
+ *  - \ref turbulence_config
+ *  - \ref turbulence_db_list
+ *  - \ref turbulence_conn_mgr
+ *  - \ref turbulence_handlers
+ *  - \ref turbulence_types
+ *  - \ref turbulence_ctx
+ *  - \ref turbulence_run
+ *  - \ref turbulence_expr
+ *  - \ref turbulence_loop
+ *  - \ref turbulence_mediator
+ *  - \ref turbulence_module
+ *  - \ref turbulence_ppath
+ *
  * \section turbulence_developer_manual_creating_modules How Turbulence module works
  *
- * Turbulence, from a simple point of view, is a listener application
- * built on top of <a href="http://www.aspl.es/vortex">Vortex
- * Library</a>, which reads a set of \ref configuring_turbulence
- * "configuration files" to start at some selected ports, etc, and
- * then load all modules installed to implement useful BEEP based
- * things.
+ * Turbulence is a listener application built on top of <a
+ * href="http://www.aspl.es/vortex">Vortex Library</a>, which reads a
+ * set of \ref configuring_turbulence "configuration files" to start
+ * at some selected ports, etc, and then load all modules installed.
  *
  * These modules could implement new BEEP profiles or features that
- * extend Turbulence internal function (not necessarily a new BEEP
- * profile). This is because module structure is really simple (and
- * this is intentional).
+ * extend Turbulence internal function. 
  *
  * Turbulence core is really small. The rest of features are added as
  * modules. For example, Turbulence SASL support is a module which is
  * configurable to use a particular user database and, with the help
- * of some tools (<b>tbc-sasl-conf</b>), you can manage users that can
- * connect to Turbulence.
+ * of some tools (<b>tbc-sasl-conf</b>), you can manage users that are allowed.
  *
- * In fact, Turbulence doesn't known anything about SASL. \ref
- * turbulence_mod_sasl "Turbulence SASL module" is implemented to
- * install and configure the SASL profiles provided by Vortex, and
- * using \ref profile_path_configuration "Profile Path" (a Turbulence
- * core feature), the security provisioning is meet.
+ * In fact, Turbulence know anything about SASL because this is delegated to mod-sasl. \ref
+ * turbulence_mod_sasl "Turbulence SASL module" installs and
+ * configures SASL profiles provided by Vortex, and using \ref
+ * profile_path_configuration "Profile Path" (a Turbulence core
+ * feature), the security provisioning is meet.
  *
  * Turbulence module form is fairly simple. It contains the following handlers (defined at \ref TurbulenceModDef):
  * <ol>
@@ -1820,16 +1864,17 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *  received. This is a notification that the module should reload its
  *  configuration files and start to behave as they propose.</li>
  *
+ *  <li>Profile path selected (\ref ModPPathSelected): Called by Turbulence when the profile path for a connection was selected.</li>
+ *
  * </ol>
  *
  * \section turbulence_developer_manual_creating_modules_manually Creating a module from the scratch (dirty way)
  *
  * Maybe the easiest way to start writing a Turbulence Module is to
- * take a look into mod-test source code. This module doesn't do
- * anything but is maintained across releases to contain all handlers
- * required and a brief help. You can use it as an official
- * reference. A module is at minimum composed by the following tree
- * files:
+ * take a look into mod-test source code. This module does anything
+ * but is maintained across releases to contain all handlers required
+ * and a brief help. You can use it as an official reference. A module
+ * is at minimum composed by the following tree files:
  *
  * - <b>mod-test.c</b>: base module source code: \ref turbulence_mod_test_c "mod-test.c" | <a href="https://dolphin.aspl.es/svn/publico/af-arch/trunk/turbulence/modules/mod-test/mod-test.c"><b>[TXT]</b></a>
  * - <b>Makefile.am</b>: optional automake file used to build the module: <a href="https://dolphin.aspl.es/svn/publico/af-arch/trunk/turbulence/modules/mod-test/Makefile.am"><b>[TXT]</b></a>
