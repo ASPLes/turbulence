@@ -1,5 +1,6 @@
 # Module definition
-EXTRA_DIST = mod-python-def.xml
+EXTRA_DIST = mod-python-def.xml python.example.conf
+SUBDIRS = doc
 
 INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \

@@ -43,7 +43,7 @@ EXTRA_DIST = turbulence-doc.doxygen \
 	aspl-logo-header.png \
 	draft-brosnan-beep-servername-feature.xml draft-brosnan-beep-servername-feature.txt \
 	draft-brosnan-beep-limit-close.txt draft-brosnan-beep-limit-close.xml \
-	python.module.example python.module.example.2 \
+	python.module.example python.module.example.2 bg.gif aspl-alt-compat-logo.png \
 	turbulence2.css $(xml_examples) $(tmp_xml_examples) $(drafts_and_docs)
 
 bin_SCRIPTS = initial_build_doc
@@ -70,7 +70,7 @@ build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
-	cp ../web/images/bg.gif html/
+	cp bg.gif html/
 # cp ../web/turbulence.css html/
 	cp turbulence2.css html/
 	@test -d html/images || mkdir html/images
@@ -79,7 +79,7 @@ build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_
 # 	cp ../web/images/url.png html/images/
 # 	cp ../web/images/valid-html401.png html/images/
 # 	cp body_back.gif html/
-	cp ../web/images/aspl-alt-compat-logo.png html/
+	cp aspl-alt-compat-logo.png html/
 	cp aspl-logo-header.png html/
 
 turbulence-config-location.txt:

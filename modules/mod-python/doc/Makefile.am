@@ -12,7 +12,7 @@ PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d _build/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 
 EXTRA_DIST = py-turbulence-doc.css conf.py conf.py.in \
-	index.rst  
+	ctx.rst  
 
 .PHONY: help clean html dirhtml pickle json htmlhelp qthelp latex changes linkcheck doctest
 
