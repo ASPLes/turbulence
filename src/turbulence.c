@@ -1554,12 +1554,8 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * \section turbulence_configuring_log_files Configuring turbulence log files
  *
- * Turbulence, its base library (libturbulence), modules and the tools
- * associated (using previous library) have two destinations where
- * logs are sent. The first default destination for log produced by
- * the turbulence server and its modules are sent to a set of files
- * that are configured at the at the <b>&lt;global-settings></b>
- * section:
+ * Turbulence logs is sent to a set of files that are configured at
+ * the <b>&lt;global-settings></b> section:
  *
  * \htmlinclude log-reporting.xml.tmp
  *
@@ -1620,6 +1616,31 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * 
  * Each module have its own configuration file, which should use XML
  * as default configuration format. 
+ *
+ * \section turbulence_execution_model Turbulence execution model (process security)
+ *
+ * It is posible to configure Turbulence, through profile path
+ * configuration, to handle connections in the same master process or
+ * using child processes. Here is a detailed list:
+ *
+ * - <b>Single master process: </b> by default if no <b>separate=yes</b> flag
+ *     is used at any profile path then all connections will be
+ *     handled by the same single process.
+ *
+ * - <b>Handling at independent childs: </b> if <b>separate=yes</b> is
+ *     configured on a profile path, once a connection matches it, a
+ *     child process is created to handle it. In this context it is
+ *     possible to configure running user (uid) or chroot to improve
+ *     application separation.
+ *
+ * - <b>Handling at same childs: </b> because creating one child for
+ *     each connection received may be resource expensive, <b>reuse=yes</b>
+ *     flag is provided so connections matching same profile path are
+ *     handled by the same child process. 
+ *
+ * By default, when Turbulence is stopped, all created childs are
+ * killed. This is configured with <kill-childs-on-exit value="yes" />
+ * inside <global-settings> node.
  * 
  * \section profile_path_configuration Profile path configuration
  *
