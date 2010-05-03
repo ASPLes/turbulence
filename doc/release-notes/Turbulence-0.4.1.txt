@@ -4,15 +4,15 @@
 Release note
 ~~~~~~~~~~~~
 
-  Advanced Software Production Line is proud to announce the
-  Turbulence 0.4.1 "Future proof" release: an open source BEEP
-  application server, written on top of Vortex Library 1.1.
+  Advanced Software Production Line is proud to announce Turbulence
+  0.4.1 "Future proof" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
 
   Turbulence is a BEEP server extensible through modules and allows to
   implement server side profiles that are used and combined later with
   other profiles through run time configuration.
 
-  Turbulence is written to make easy to develop and deploy BEEP
+  Turbulence is written to make it easy to develop and deploy BEEP
   profiles, allowing developers to provide a convenient configuration
   interface to site administrators and end users.
 
@@ -37,21 +37,23 @@ The release in short
 ~~~~~~~~~~~~~~~~~~~~
 
   Added support for mod-python, a module that allows to write server
-  side python apps that implements BEEP profiles. 
+  side python apps that implements BEEP profiles. See documentation
+  for details.
 
   Added support to create child processes that can handle a particular
-  set of connections for a profile path. Support includes reusing
-  children created for later connections received that matches child's
-  profile path handle. Also added support to run master server and
-  child processes under selected uid and gid.
+  set of connections associated to a particular profile path.  Support
+  includes reusing child process created for later connections
+  received that matches child's profile path handler.  Also added
+  support to run master server and child processes under selected uid
+  and gid.
 
   Added chroot support for master process and child process through
   particular profile paths.
 
   Added support to notify a module when a profile path was selected,
-  including when that selected was done because serverName request so
+  including when that selection was done because serverName request so
   the module can load appropriate databases and settings associated to
-  that serverName. 
+  that serverName.
 
   Many bugs were fixed and many regression tests were added. Added lot
   of documentation.
