@@ -1,5 +1,5 @@
 # Module definition
-EXTRA_DIST = mod-radmin-def.xml mod_radmin.win32.xml
+EXTRA_DIST = mod_radmin.win32.xml
 
 INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
