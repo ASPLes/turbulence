@@ -1384,10 +1384,13 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  *   - \ref profile_path_configuration
  *   - \ref profile_path_flags_supported_by_allow_and_if_sucess
+ *   - \ref turbulence_execution_model
+ *   - \ref turbulence_starting_without_profiles
  *
  * <b>Section 4: Turbulence module management</b> 
  *
  *   - \ref turbulence_modules_configuration
+ *   - \ref turbulence_modules_filtering
  *   - \ref turbulence_mod_sasl
  *   - \ref turbulence_mod_tunnel
  *   - \ref turbulence_mod_python
@@ -1617,31 +1620,14 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Each module have its own configuration file, which should use XML
  * as default configuration format. 
  *
- * \section turbulence_execution_model Turbulence execution model (process security)
+ * \section turbulence_modules_filtering Turbulence module filtering
  *
- * It is posible to configure Turbulence, through profile path
- * configuration, to handle connections in the same master process or
- * using child processes. Here is a detailed list:
+ * It is possible to configure Turbulence to skip some module so it is
+ * not loaded. This is done by adding a <b><no-load /></b> declaration
+ * with the set of modules to be skipped. This is done inside <b><modules /></b> section:
  *
- * - <b>Single master process: </b> by default if no <b>separate=yes</b> flag
- *     is used at any profile path then all connections will be
- *     handled by the same single process.
+ * \htmlinclude module-skip.xml.tmp
  *
- * - <b>Handling at independent childs: </b> if <b>separate=yes</b> is
- *     configured on a profile path, once a connection matches it, a
- *     child process is created to handle it. In this context it is
- *     possible to configure running user (uid) or chroot to improve
- *     application separation.
- *
- * - <b>Handling at same childs: </b> because creating one child for
- *     each connection received may be resource expensive, <b>reuse=yes</b>
- *     flag is provided so connections matching same profile path are
- *     handled by the same child process. 
- *
- * By default, when Turbulence is stopped, all created childs are
- * killed. This is configured with <kill-childs-on-exit value="yes" />
- * inside <global-settings> node.
- * 
  * \section profile_path_configuration Profile path configuration
  *
  * Profile Path is a feature that allows to configure which profiles
@@ -1806,6 +1792,41 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * connection as authenticated using the provided flag:
  * "sasl:is:authenticated".</p>
  *
+ * \section turbulence_execution_model Turbulence execution model (process security)
+ *
+ * It is posible to configure Turbulence, through profile path
+ * configuration, to handle connections in the same master process or
+ * using child processes. Here is a detailed list:
+ *
+ * - <b>Single master process: </b> by default if no <b>separate=yes</b> flag
+ *     is used at any profile path then all connections will be
+ *     handled by the same single process.
+ *
+ * - <b>Handling at independent childs: </b> if <b>separate=yes</b> is
+ *     configured on a profile path, once a connection matches it, a
+ *     child process is created to handle it. In this context it is
+ *     possible to configure running user (uid) or chroot to improve
+ *     application separation.
+ *
+ * - <b>Handling at same childs: </b> because creating one child for
+ *     each connection received may be resource expensive, <b>reuse=yes</b>
+ *     flag is provided so connections matching same profile path are
+ *     handled by the same child process. 
+ *
+ * By default, when Turbulence is stopped, all created childs are
+ * killed. This is configured with <b><kill-childs-on-exit value="yes" /></b>
+ * inside <global-settings> node.
+ *
+ * \section turbulence_starting_without_profiles Making turbulence to start without profiles defined
+ *
+ * By default Turbulence checks after module start up (init method) if
+ * there are at least one profile to serve. It is found that no
+ * profile is still defined, Turbulence will refuse to continue. This
+ * is done to prevent starting Turbulence with a wrong configuration. 
+ *
+ * To control or change this behaviour check
+ * <b><allow-start-without-profiles value="yes or no" /></b> inside
+ * <global-settings> node.
  */
 
 /** 

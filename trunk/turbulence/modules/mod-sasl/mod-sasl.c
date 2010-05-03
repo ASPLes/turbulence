@@ -256,6 +256,14 @@ TurbulenceModDef module_def = {
 /** 
  * \page turbulence_mod_sasl mod-sasl: SASL support for Turbulence
  *
+ * \section turbulence_mod_sasl_index Index
+ *
+ * - \ref turbulence_mod_sasl_intro
+ * - \ref turbulence_mod_sasl_configuration
+ * - \ref turbulence_mod_sasl_work_dir
+ * - \ref turbulence_mod_sasl_cli
+ * - \ref turbulence_mod_sasl_ramdin
+ *
  * \section turbulence_mod_sasl_intro Introduction
  *
  * <b>mod-sasl</b> module provides user authentication to Turbulence. Inside
@@ -325,6 +333,17 @@ TurbulenceModDef module_def = {
  *  auth-db for all auth operations.</li>
  *
  * </ol>
+ *
+ * \section turbulence_mod_sasl_work_dir Per profile path sasl configuration
+ *
+ * In the case the profile path under which the connection is during
+ * have <b>work-dir</b> attribute defined, then mod-sasl will try to
+ * load sasl.conf from that work-dir. If not found, system sasl.conf
+ * file will be loaded.
+ *
+ * The idea is to allow a user with access to a working directory (and
+ * a configured profile path poiting to it) to manage its own
+ * database.
  *
  * \section turbulence_mod_sasl_cli Command line interface to the mod-sasl: tbc-sasl-conf
  *
