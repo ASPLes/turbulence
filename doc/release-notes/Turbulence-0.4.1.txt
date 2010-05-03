@@ -41,7 +41,7 @@ The release in short
 
   Added support to create child processes that can handle a particular
   set of connections for a profile path. Support includes reusing
-  childs created for later connections received that matches child's
+  children created for later connections received that matches child's
   profile path handle. Also added support to run master server and
   child processes under selected uid and gid.
 
@@ -90,7 +90,7 @@ Changes since the 0.3.2
   on linux amd64 platforms.
 
 * [new] Updated turbulence module API to include new functions to
-  check module existance or its name. Updated module loading code to
+  check module existence or its name. Updated module loading code to
   avoid loading the same module twice or different modules with the
   same name. API added:
 
@@ -118,7 +118,7 @@ Changes since the 0.3.2
   created. NICE!
 
 * [new] General update to reorganize signal handling so it can be used
-  by main turbulence process and childs created.  Updated turbulence
+  by main turbulence process and children created.  Updated turbulence
   signal API to provide a common handling.  API added:
 
    - TurbulenceSignalHandler
@@ -128,7 +128,7 @@ Changes since the 0.3.2
 * [new] Added support to change process root dir after a child process
   creation.
 
-* [new] Updated turbulence db-list api to include functions to unload
+* [new] Updated turbulence db-list API to include functions to unload
   a list without dumping content back to the disk. API added:
   
    - turbulence_db_list_unload
@@ -396,7 +396,7 @@ Changes since the 0.3.2
   defined.  Fixed memory deallocation bug when no default SASL
   database is found.
 
-* [fix] General regression test cleanups. 
+* [fix] General regression test cleanups.
 
 * [fix] More updates on regression tests and general fixings to
   properly run them. Still more work is required.
@@ -482,7 +482,7 @@ Changes since the 0.3.2
 
 * [new] Updated mod-python code to allow configuring if the connection
   must be closed in the case a python application associated fails to
-  iniatialize. This is used to signal client peer that an application
+  initialize. This is used to signal client peer that an application
   failure had happen...Option added to python.conf.
 
    - close-conn-on-failure (option)
@@ -514,7 +514,7 @@ Changes since the 0.3.2
    - turbulence_ppath_get_id
 
 * [fix] Making TBC_FAST_CLOSE to nullify conn reference to avoid the
-  caller using that closed reference futher.
+  caller using that closed reference further.
 
 * [fix] Making common_sasl_load_config (mod-sasl) to nullify callers
   backend reference when a load configuration failure is found.
@@ -527,8 +527,8 @@ Changes since the 0.3.2
 
 * [fix] General update to make child process created to release all
   sockets and connections that are handled by the parent. Now those
-  connections won't be accesible from childs and they won't waste
-  available socket espace.  Added regression test (test_16).
+  connections won't be accessible from childs and they won't waste
+  available socket space.  Added regression test (test_16).
 
 * [fix] Some updates on makefiles..
 
@@ -543,7 +543,7 @@ Changes since the 0.3.2
   connections accessing to the same profile path configured to create
   a child and reuse connections.
 
-* [fix] Started turbulence_get_system_id rewrite due to anoying leaks
+* [fix] Started turbulence_get_system_id rewrite due to annoying leaks
   reported by valgrind by getpwnam_r and getgrgid_r.
 
 * [new] Added new function to implement microwaits on the current
@@ -579,7 +579,7 @@ Changes since the 0.3.2
   connection phase (still no BEEP greetings took place). Added
   regression test (test_18) to reproduce and check the issue.
 
-* [fix] Updatedm mod-python to include some debug comments.
+* [fix] Update mod-python to include some debug comments.
 
 * [fix] Added reg test (test_19) to check channel not accepted at
   profile path selection and child process creation.
@@ -663,6 +663,6 @@ About Us
 --
 Francis Brosnan Blázquez           - francis@aspl.es
 Advanced Software Production Line  - http://www.aspl.es
-3th feb 2009, Madrid (Spain)
+3th may 2010, Madrid (Spain)
   
 

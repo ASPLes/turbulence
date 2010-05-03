@@ -11,7 +11,8 @@ tmp_xml_examples = \
 	template.xml.tmp \
 	turbulence.python.xml.tmp \
 	python.module.example.3.xml.tmp \
-	python.module.example.4.xml.tmp
+	python.module.example.4.xml.tmp \
+	module-skip.xml.tmp
 
 xml_examples = \
 	global-settings.xml \
@@ -25,7 +26,8 @@ xml_examples = \
 	path-def-example.xml \
 	turbulence.python.xml \
 	python.module.example.3.xml \
-	python.module.example.4.xml
+	python.module.example.4.xml \
+	module-skip.xml
 
 drafts_and_docs = \
 	draft-brosnan-beep-limit-close.txt \
