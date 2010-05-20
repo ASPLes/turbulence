@@ -1,0 +1,7 @@
+<modules>
+  <directory src="/etc/turbulence/mods-enabled" />
+  <no-load>
+     <!-- do not load a module called mod-skipped -->
+     <module name="mod-skipped" />
+  </no-load>
+</modules>
