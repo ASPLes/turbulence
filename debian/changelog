@@ -1,3 +1,9 @@
+turbulence (0.4.1-lenny1) stable; urgency=low
+
+  * Fixing missing directory creation.
+
+ -- Francis Brosnan <francis@aspl.es>  Thu, 20 May 2010 11:57:51 +0200
+
 turbulence (0.4.1-lenny0) stable; urgency=low
 
   * New upstream release.
