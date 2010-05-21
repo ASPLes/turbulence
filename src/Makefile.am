@@ -93,7 +93,6 @@ turbulence-db-list.dtd.h: ../data/turbulence-db-list.dtd
 	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
 
 
-
 # copy exarg dependency to not force people to download a library with
 # two files
 exarg.h exarg.c: 
@@ -102,3 +101,8 @@ exarg.h exarg.c:
 
 update-exarg:
 	cp ../../libexarg/src/exarg.[ch] .
+
+# create directory and set permissions
+install-exec-hook:
+	@echo "Creating shared dir ${DESTDIR}${runtimedatadir}/turbulence.."
+	install -d -m 700 ${DESTDIR}${runtimedatadir}/turbulence
