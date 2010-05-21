@@ -56,11 +56,11 @@ VortexCtx       * vortex_ctx   = NULL;
 
 void tbc_sasl_add_user ()
 {
-	const char  * serverName   = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
-	const char  * new_user_id  = exarg_get_string ("add-user");
-	const char  * password     = NULL;
-	const char  * password2    = NULL;
-	int           dealloc      = false;
+	const char  * serverName      = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
+	const char  * new_user_id     = exarg_get_string ("add-user");
+	const char  * password        = NULL;
+	const char  * password2       = NULL;
+	axl_bool      dealloc         = axl_false;
 
 	/* check if the user already exists */
 	if (common_sasl_user_exists (sasl_backend,
@@ -68,13 +68,19 @@ void tbc_sasl_add_user ()
 				     serverName,
 				     NULL,
 				     NULL)) {
+		if (exarg_is_defined ("change-password")) {
+			/* call to change password */
+			
+			goto change_password;
+		}
+
 		msg ("user %s already exists..", new_user_id);
 		return;
 	} /* end if */
 				     
-				     
 	/* user doesn't exist, ask for the password */
 	msg ("adding user: %s..", new_user_id);
+change_password:
 	if (exarg_is_defined ("password")) 
 		password = exarg_get_string ("password");
 	else {
@@ -92,16 +98,23 @@ void tbc_sasl_add_user ()
 		} else {
 			axl_free ((char*) password2);
 		}
-		dealloc = true;
+		dealloc = axl_true;
 	}
 
-
-	/* add the user */
-	if (! common_sasl_user_add (sasl_backend, new_user_id, password, serverName, NULL))
-		error ("failed to dump SASL auth db..");
-	else
-		msg ("user %s added!", new_user_id);
-
+	/* check to change password */
+	if (exarg_is_defined ("change-password")) {
+		if (! common_sasl_user_password_change (sasl_backend, new_user_id, password, serverName, NULL))
+			error ("failed to dump SASL auth db while changing user password..");
+		else
+			msg ("user %s password changed!", new_user_id);
+	} else {
+		/* add the user */
+		if (! common_sasl_user_add (sasl_backend, new_user_id, password, serverName, NULL))
+			error ("failed to dump SASL auth db while adding user..");
+		else
+			msg ("user %s added!", new_user_id);
+	} /* end if */
+		
 	if (dealloc)
 		axl_free ((char*) password);
 
@@ -191,6 +204,8 @@ int main (int argc, char ** argv)
 			   "Adds a new users to the sasl database.");
 	exarg_install_arg ("password", "p", EXARG_STRING,
 			   "Configures the password for the operation. Optionally used by --add-user");
+	exarg_install_arg ("change-password", "w", EXARG_NONE,
+			   "Option used to change password to an existing user. Use -a USER_TO_CHANGE -w (optionally -p to provide password in command line).");
 
 	/* install exarg options */
 	exarg_install_arg ("disable-user", "e", EXARG_STRING, 
@@ -213,6 +228,9 @@ int main (int argc, char ** argv)
 
 	exarg_install_arg ("color-debug", "c", EXARG_NONE,
 			   "Makes console log to be colorified.");
+
+	exarg_install_arg ("alt-location", "t", EXARG_STRING,
+			   "Allows to configure a directory that contains the sasl.conf that will be updated or a direct path to a sasl.conf file");
 
 	/* do not accept free arguments */
 	exarg_accept_free_args (0);
@@ -249,7 +267,7 @@ int main (int argc, char ** argv)
 	}
 
 	/* load sasl module configuration */
-	if (! common_sasl_load_config (ctx, &sasl_backend, NULL, exarg_get_string ("serverName"), NULL))
+	if (! common_sasl_load_config (ctx, &sasl_backend, exarg_get_string ("alt-location"), exarg_get_string ("serverName"), NULL))
 		goto finish;
 
 	msg2 ("sasl auth-db loaded..");
@@ -265,7 +283,6 @@ int main (int argc, char ** argv)
 
 	/* check if the user want to add a new user */
 	if (exarg_is_defined ("add-user")) {
-
 		/* add a user */
 		tbc_sasl_add_user ();
 	} else if (exarg_is_defined ("disable-user")) {

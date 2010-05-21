@@ -411,8 +411,14 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 		/* find and load the file */
 		result->sasl_conf_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "sasl.conf");
 	} else {
-		/* find sasl.conf path using provided alt location. */
-		result->sasl_conf_path  = common_sasl_find_alt_file (ctx, alt_location, "sasl.conf");
+		/* check the the alt_location is a directory or a file */
+		if (vortex_support_file_test (alt_location, FILE_IS_REGULAR)) {
+			/* use file directly */
+			result->sasl_conf_path = axl_strdup (alt_location);
+		} else {
+			/* find sasl.conf path using provided alt location. */
+			result->sasl_conf_path  = common_sasl_find_alt_file (ctx, alt_location, "sasl.conf");
+		}
 	} /* end if */
 
 	/* check if the path provided is valid */
