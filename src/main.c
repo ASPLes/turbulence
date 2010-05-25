@@ -41,6 +41,9 @@
 /* include common definitions */
 #include <main-common.h>
 
+/* local private header */
+#include <turbulence-ctx-private.h>
+
 /* global instance created */
 TurbulenceCtx * ctx;
 
@@ -306,6 +309,8 @@ int main (int argc, char ** argv)
 
 	/* drop a log */
 	msg ("Turbulence STARTED OK (pid: %d)", getpid ());
+	/* flag that the server started ok */
+	ctx->started = axl_true;
 
 	/* look main thread until finished */
 	vortex_listener_wait (vortex_ctx);

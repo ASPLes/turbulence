@@ -724,6 +724,7 @@ void turbulence_mediator_cleanup      (TurbulenceCtx * ctx)
 
 	/* finish hash */
 	axl_hash_free (ctx->mediator_hash);
+	ctx->mediator_hash = NULL;
 
 	/* clear mutex */
 	vortex_mutex_destroy (&ctx->mediator_hash_mutex);

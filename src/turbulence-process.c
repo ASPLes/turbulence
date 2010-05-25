@@ -56,6 +56,7 @@ void turbulence_process_free_child_data (TurbulenceChild * child)
 #if defined(AXL_OS_UNIX)
 	unlink (child->socket_control_path);
 	axl_free (child->socket_control_path);
+	child->socket_control_path = NULL;
 	vortex_close_socket (child->child_connection);
 #endif
 
@@ -1159,10 +1160,17 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 					  turbulence_process_parent_notify, child, NULL);
 	msg ("CHILD: started socket watch on (%d)", child->child_connection);
 	
-	msg ("child process created...wait for exit");
+	msg ("CHILD: process created OK...wait for requests");
 	queue = ctx->child_wait;
+
+	/* flag that the server started ok */
+	ctx->started = axl_true;
+
 	vortex_async_queue_pop (ctx->child_wait);
 	msg ("finishing process...");
+
+	/* call to uninstall finish watcher */
+	vortex_ctx_set_on_finish (vortex_ctx, NULL, NULL);
 
 	/* terminate parent loop */
 	turbulence_loop_close (control, axl_true);
