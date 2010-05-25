@@ -98,7 +98,9 @@ struct _TurbulenceCtx {
 	VortexMutex          data_mutex;
 
 	/* turbulence run  module */
-	int                  clean_start;
+	axl_bool             clean_start;
+	axl_bool             started;
+
 	/* DTd used by the turbulence-run module to validate module
 	 * pointers */
 	axlDtd             * module_dtd;

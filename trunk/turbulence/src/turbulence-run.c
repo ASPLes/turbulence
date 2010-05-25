@@ -63,6 +63,12 @@ void turbulence_run_check_clean_start (TurbulenceCtx * ctx)
 		return;
 
 	if (ctx->clean_start) {
+		/* check to implement clean start only when we start, not after working */
+		if (ctx->started) {
+			wrn ("Clean start activated but server is already running, skipping server close");
+			return;
+		} /* end if */
+
 		error ("Clean start activated, stopping turbulence due to a startup failure found"); 
 		turbulence_exit (ctx, axl_true, axl_true);
 		exit (-1);

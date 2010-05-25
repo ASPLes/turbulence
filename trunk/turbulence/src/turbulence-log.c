@@ -394,6 +394,7 @@ void turbulence_log_cleanup (TurbulenceCtx * ctx)
 
 	/* now finish log manager */
 	turbulence_loop_close (ctx->log_manager, axl_true);
+	ctx->log_manager = NULL;
 
 	return;
 }
