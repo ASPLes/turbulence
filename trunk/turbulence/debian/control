@@ -13,7 +13,8 @@ Section: libs
 Package: libturbulence
 Section: libs
 Architecture: any
-Depends: libc6, libaxl1 (>= 0.5.6), libvortex-1.1 (>= 1.1.4)
+Depends: libc6, libaxl1 (>= 0.5.6), libvortex-1.1 (>= 1.1.4),
+  libpcre3
 Description: BEEP application server built on top of Vortex Library
   Turbulence is an extensible and configurable general purpose 
   BEEP application server built on top of Vortex Library. 
