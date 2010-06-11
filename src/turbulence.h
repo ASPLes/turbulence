@@ -195,7 +195,7 @@ void     turbulence_exit                (TurbulenceCtx * ctx,
 
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value);
 
-int      turbulence_file_test_v         (const char * format, 
+axl_bool turbulence_file_test_v         (const char * format, 
 					 VortexFileTest test, ...);
 
 int      turbulence_create_dir          (const char * path);
