@@ -118,6 +118,24 @@ PyObject * py_turbulence_ctx_get_attr (PyObject *o, PyObject *attr_name) {
 	return NULL;
 }
 
+void py_turbulence_ctx_sanitize (char * message)
+{
+	int        iterator = 0;
+
+	/* replace all %. by #. in the case it is not %% */
+	while (message[iterator] && message[iterator + 1]) {
+		/* check for scapable characters */
+		if (message[iterator] == '%' && message[iterator + 1] != '%') {
+			message[iterator] = '#';
+		} /* end if */
+
+		/* check next position */
+		iterator++;
+	} /* end while */
+
+	return;
+}
+
 /** 
  * @brief Implements attribute set operation.
  */
@@ -145,6 +163,9 @@ static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args
 		return NULL;
 
 	if (message) {
+		/* prepare message */
+		py_turbulence_ctx_sanitize (message);
+
 		/* drop the log */
 		msg (message);
 	} /* end if */
@@ -163,6 +184,9 @@ static PyObject * py_turbulence_ctx_error (PyTurbulenceCtx * self, PyObject * ar
 		return NULL;
 
 	if (message) {
+		/* prepare message */
+		py_turbulence_ctx_sanitize (message);
+
 		/* drop the log */
 		error (message);
 	} /* end if */
