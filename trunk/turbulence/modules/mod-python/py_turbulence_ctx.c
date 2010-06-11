@@ -144,8 +144,10 @@ static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args
 	if (! PyArg_ParseTuple (args, "z", &message))
 		return NULL;
 
-	/* drop the log */
-	msg (message);
+	if (message) {
+		/* drop the log */
+		msg (message);
+	} /* end if */
 	
 	Py_INCREF (Py_None);
 	return Py_None;
@@ -160,8 +162,10 @@ static PyObject * py_turbulence_ctx_error (PyTurbulenceCtx * self, PyObject * ar
 	if (! PyArg_ParseTuple (args, "z", &message))
 		return NULL;
 
-	/* drop the log */
-	error (message);
+	if (message) {
+		/* drop the log */
+		error (message);
+	} /* end if */
 	
 	Py_INCREF (Py_None);
 	return Py_None;

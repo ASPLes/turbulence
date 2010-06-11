@@ -290,6 +290,10 @@ void turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * 
 {
 	/* get turbulence context */
 	va_list            args;
+
+	/* do not print if NULL is received */
+	if (format == NULL)
+		return;
 	
 	/* check extended console log */
 	if (ctx->console_debug3 || ignore_debug) {
@@ -307,7 +311,7 @@ void turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * 
 #endif
 			CONSOLE (stderr, "E: ");
 	} /* end if */
-	
+
 	va_start (args, format);
 
 	/* report to the console */
@@ -480,6 +484,10 @@ void turbulence_msg (TurbulenceCtx * ctx, const char * file, int line, const cha
 	va_list            args;
 	axl_bool           ignore_debug = axl_false;
 
+	/* do not print if NULL is received */
+	if (format == NULL)
+		return;
+
 	/* check extended console log */
 	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
@@ -526,6 +534,10 @@ void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, con
 	va_list            args;
 	axl_bool           ignore_debug = axl_false;
 
+	/* do not print if NULL is received */
+	if (format == NULL)
+		return;
+
 	/* check extended console log */
 	if (ctx->console_debug3) {
 #if defined(AXL_OS_UNIX)	
@@ -571,6 +583,10 @@ void turbulence_msg2 (TurbulenceCtx * ctx, const char * file, int line, const ch
 	/* get turbulence context */
 	va_list            args;
 	axl_bool           ignore_debug = axl_false;
+
+	/* do not print if NULL is received */
+	if (format == NULL)
+		return;
 
 	/* check second level debug */
 	if (! ctx->console_debug2)
@@ -620,6 +636,10 @@ void turbulence_wrn (TurbulenceCtx * ctx, const char * file, int line, const cha
 	/* get turbulence context */
 	va_list            args;
 	axl_bool           ignore_debug = axl_false;
+
+	/* do not print if NULL is received */
+	if (format == NULL)
+		return;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
@@ -670,6 +690,10 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
 	/* get turbulence context */
 	va_list            args;
 	axl_bool           ignore_debug = axl_false;
+
+	/* do not print if NULL is received */
+	if (format == NULL)
+		return;
 	
 	/* check extended console log */
 	if (ctx->console_debug3) {
@@ -712,13 +736,18 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
  * @param format The path to be checked.
  * @param test The test to be performed. 
  * 
- * @return axl_true if all test returns axl_true. Otherwise axl_false is returned.
+ * @return axl_true if all test returns axl_true. Otherwise axl_false
+ * is returned. Note that if format is NULL, the function will always
+ * return axl_false.
  */
-int  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
+axl_bool  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 {
 	va_list   args;
 	char    * path;
 	int       result;
+
+	if (format == NULL)
+		return axl_false;
 
 	/* open arguments */
 	va_start (args, test);
