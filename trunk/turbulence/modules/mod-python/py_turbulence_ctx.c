@@ -122,12 +122,12 @@ void py_turbulence_ctx_sanitize (char * message)
 {
 	int        iterator = 0;
 
-	/* replace all %. by #. in the case it is not %% */
-	while (message[iterator] && message[iterator + 1]) {
+	/* replace all % by # to avoid printf functions to interpret
+	   arguments that are not available */
+	while (message[iterator]) {
 		/* check for scapable characters */
-		if (message[iterator] == '%' && message[iterator + 1] != '%') {
+		if (message[iterator] == '%') 
 			message[iterator] = '#';
-		} /* end if */
 
 		/* check next position */
 		iterator++;
