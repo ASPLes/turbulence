@@ -227,6 +227,7 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 				       VortexConnection  * conn)
 {
 	axlNode    * node;
+	axlNode    * aux;
 	axlNode    * location;
 	PyObject   * module;
 	PyObject   * function;
@@ -285,6 +286,20 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 						 src, ATTR_VALUE (location, "name"));
 		} /* end if */
 
+		/* check if <location> node has add-path childs  */
+		aux = axl_node_get_child_called (location, "add-path");
+		while (aux) {
+			/* add python path */
+			if (! mod_python_add_path (ATTR_VALUE (aux, "value"))) {
+				APPLICATION_LOAD_FAILED ("unable to add sys.path %s to load module %s",
+							 ATTR_VALUE (aux, "value"), ATTR_VALUE (location, "name"));
+			}
+			msg ("added python path: %s", ATTR_VALUE (aux, "value"));
+
+			/* go to the next add-path declaration */
+			aux = axl_node_get_next_called (aux, "add-path");
+		} /* end while */
+
 		/* check import code do not end it .py or .pyc */
 		start_file = ATTR_VALUE (location, "start-file");
 		if (axl_cmp (start_file + strlen (start_file) - 3, ".py")) {
@@ -333,10 +348,12 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 		axl_node_annotate_data (node, "module", module);
 		msg ("stored module reference %p (%s)", module, ATTR_VALUE (node, "name"));
 
-		/* remove path */
-		if (! mod_python_remove_first_path ()) {
-			APPLICATION_LOAD_FAILED ("Failed to remove path from sys.path after python app initialization",
-						 start_file, ATTR_VALUE (location, "app-init"));
+		/* remove path only if kee-path is not set to yes */
+		if (! HAS_ATTR_VALUE (node, "keep-path", "yes")) {
+			if (! mod_python_remove_first_path ()) {
+				APPLICATION_LOAD_FAILED ("Failed to remove path from sys.path after python app initialization",
+							 start_file, ATTR_VALUE (location, "app-init"));
+			} /* end if */
 		} /* end if */
 
 		/* get close method here */
