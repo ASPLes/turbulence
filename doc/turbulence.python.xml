@@ -13,6 +13,10 @@
                 start-file="core_admin_main" 
                 app-init="application_init" 
                 app-close="application_close" 
-                app-reload="application_reload"/>
+                app-reload="application_reload">
+         <!-- temporal pah during development or because the module is not
+              installed on the system -->
+         <add-path value="/home/work/programas/core-admin" />
+      </location>
    </application>
 </mod-python>
