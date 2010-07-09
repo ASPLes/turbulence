@@ -1,5 +1,15 @@
 #! /bin/sh
 
+### BEGIN INIT INFO
+# Provides:          turbulence
+# Required-Start:    $local_fs $remote_fs $syslog $named $network $time
+# Required-Stop:     $local_fs $remote_fs $syslog $named $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6  
+# Short-Description: start and stop the turbulence server
+# Description:       start and stop the turbulence server
+### END INIT INFO
+
 # default configuration
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="BEEP application server"
