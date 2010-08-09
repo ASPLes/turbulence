@@ -526,10 +526,19 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 	/* after returning, check if the have already loaded one
 	 * database */
 	if (result->default_db == NULL && axl_hash_items (result->dbs) == 0) {
-		error ("No usable auth-db database found, unable to start SASL backend");
+		/* no database or default database was loaded */
 		common_sasl_free (result);
 		(*sasl_backend) = NULL; /* undef caller reference */
-                return axl_false;
+
+		if (serverName == NULL) {
+			error ("No usable auth-db database found for any domain or default domain, unable to start SASL backend.");
+			return axl_false;
+		} /* end if */
+
+		wrn ("No usable auth-db database found associated to serverName=%s. Unable to start SASL backed.",
+		     serverName);
+		/* return started */
+                return axl_true;
 	}
 
 	msg ("SASL configuration %s loaded OK", result->sasl_conf_path);
