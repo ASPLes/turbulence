@@ -64,6 +64,9 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 						   int             conn_id);
 
+axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
+						       VortexConnection * conn);
+
 /* private API */
 void turbulence_conn_mgr_on_close (VortexConnection * conn, 
 				   axlPointer         user_data);

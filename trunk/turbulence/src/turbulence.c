@@ -342,7 +342,7 @@ void turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * 
  * 
  * @return axl_true if activated, otherwise axl_false is returned.
  */
-int  turbulence_log_enabled (TurbulenceCtx * ctx)
+axl_bool  turbulence_log_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	v_return_val_if_fail (ctx, axl_false);
@@ -380,7 +380,7 @@ void turbulence_log_enable       (TurbulenceCtx * ctx,
  * 
  * @return axl_true if activated, otherwise axl_false is returned.
  */
-int  turbulence_log2_enabled (TurbulenceCtx * ctx)
+axl_bool  turbulence_log2_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	v_return_val_if_fail (ctx, axl_false);
@@ -420,7 +420,7 @@ void turbulence_log2_enable      (TurbulenceCtx * ctx,
  * 
  * @return axl_true if activated, otherwise axl_false is returned.
  */
-int  turbulence_log3_enabled (TurbulenceCtx * ctx)
+axl_bool  turbulence_log3_enabled (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
 	v_return_val_if_fail (ctx, axl_false);
@@ -775,7 +775,7 @@ axl_bool  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
  * @return axl_true if the directory was created, otherwise axl_false is
  * returned.
  */
-int      turbulence_create_dir  (const char * path)
+axl_bool   turbulence_create_dir  (const char * path)
 {
 	/* check the reference */
 	if (path == NULL)
@@ -844,7 +844,7 @@ long turbulence_last_modification (const char * file)
  * @return axl_true if the file is a full path, otherwise axl_false is
  * returned.
  */
-int      turbulence_file_is_fullpath (const char * file)
+axl_bool      turbulence_file_is_fullpath (const char * file)
 {
 	/* check the value received */
 	if (file == NULL)
@@ -1407,7 +1407,8 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref turbulence_ports
  *   - \ref turbulence_clean_start
  *   - \ref turbulence_configuring_log_files
- *   - \ref turbulence_db_list_management
+ *   - \ref turbulence_db_list_management "2.6 Turbulence Db-List management"
+ *   - \ref turbulence_configure_system_paths
  *
  * <b>Section 3: BEEP profile management</b>
  *
@@ -1420,12 +1421,12 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  *   - \ref turbulence_modules_configuration
  *   - \ref turbulence_modules_filtering
- *   - \ref turbulence_mod_sasl
- *   - \ref turbulence_mod_tunnel
- *   - \ref turbulence_mod_python
- * 
+ *   - \ref turbulence_mod_sasl   "4.3 mod-sasl: SASL support for Turbulence (auth services)"
+ *   - \ref turbulence_mod_tunnel "4.4 mod-tunnel: TUNNEL support for Turbulence (BEEP proxy services)"
+ *   - \ref turbulence_mod_python "4.5 mod-python: python language support for Turbulence"
+ *   - \ref turbulence_mod_tls    "4.6 mod-tls: TLS support for Turbulence (secure connections)"
  *
- * \section installing_turbulence Installing Turbulence:
+ * \section installing_turbulence 1.1 Installing Turbulence
  *
  * <b>Turbulence dependencies</b>
  * 
@@ -1454,13 +1455,12 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre </li>
  *
  *  <li><b>OpenSSL:</b> a library that provides TLS support. If not
- *  provided the BEEP TLS profile won't be available. This dependency
- *  is required by Vortex Library not by Turbulence.
+ *  provided mod-tls won't be available. 
  *
  *  The software is available at: http://www.openssl.org </li>
  *  
  * <li><b>GNU SASL:</b> a library that provides SASL support. If not
- * provided the BEEP SASL family of profiles won't be available.
+ * provided  won't be available.
  *
  * The software is available at: ftp://alpha.gnu.org/pub/gnu/gsasl </li>
  *
@@ -1493,9 +1493,9 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Now you must configure your Turbulence installation. Check the
  * following section.
  * 
- * \section configuring_turbulence Turbulence configuration
+ * \section configuring_turbulence 2.1 Turbulence configuration
  * 
- * \section turbulence_config_location How turbulence is configured (configuration file location)
+ * \section turbulence_config_location 2.2 How turbulence is configured (configuration file location)
  *   
  * Turbulence is configured through XML 1.0 files. The intention is
  * provide an easy and extensible way to configure turbulence,
@@ -1539,7 +1539,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * </ol>
  *
- * \section turbulence_ports Turbulence addresses and ports used
+ * \section turbulence_ports 2.3 Turbulence addresses and ports used
  *
  * Ports and addresses used by Turbulence to listen are configured at
  * the <b>&lt;global-settings></b> section. Here is an example:
@@ -1557,7 +1557,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * href="beep-applications-and-ports.html">Building wrong port
  * oriented network applications</a>). 
  *
- * \section turbulence_clean_start Debugging turbulence and clean start
+ * \section turbulence_clean_start 2.4 Debugging turbulence and clean start
  *
  * During turbulence configuration you can use the <b>clean-start</b>
  * feature to ensure your turbulence configuration loads a server with
@@ -1584,7 +1584,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * <b>"ignore"</b>.
  *
  *
- * \section turbulence_configuring_log_files Configuring turbulence log files
+ * \section turbulence_configuring_log_files 2.5 Configuring turbulence log files
  *
  * Turbulence logs is sent to a set of files that are configured at
  * the <b>&lt;global-settings></b> section:
@@ -1633,7 +1633,29 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * the appropriate file but also will send the same log to the
  * console.
  *
- * \section turbulence_modules_configuration Turbulence modules configuration
+ * \section turbulence_configure_system_paths 2.7 Alter default turbulence base system paths
+ *
+ * By default Turbulence has 3 built-in system paths used to locate
+ * configuration files (<b>sysconfdir</b>), find data files (<b>datadir</b>) and directories used at run
+ * time (<b>runtime datadir</b>) to implement internal functions.
+ *
+ * To show default values configured on your turbulence use:
+ * \code
+ * >> turbulence --conf-location
+ * \endcode
+ *
+ * However, these three system paths can also be overrided by a
+ * configuration placed at the global section. Here is an example:
+ *
+ * \htmlinclude override-system-paths.xml.tmp
+ *
+ * Currently, accepted system paths are:
+ *
+ * - <b>sysconfdir</b>: base dir where turbulence.conf file will be located (${sysconfdir}/turbulence/turbulence.conf).
+ * - <b>datadir</b>: base dir where static turbulence data files are located (${datadir}/turbulence).
+ * - <b>runtime_datadir</b>: base directory where run time files are created (${runtime_datadir}/turbulence).
+ *
+ * \section turbulence_modules_configuration 4.1 Turbulence modules configuration
  * 
  * Modules loaded by turbulence are found at the directories
  * configured in the <b>&lt;modules></b> section. Here is an
@@ -1649,7 +1671,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Each module have its own configuration file, which should use XML
  * as default configuration format. 
  *
- * \section turbulence_modules_filtering Turbulence module filtering
+ * \section turbulence_modules_filtering 4.2 Turbulence module filtering
  *
  * It is possible to configure Turbulence to skip some module so it is
  * not loaded. This is done by adding a <b><no-load /></b> declaration
@@ -1657,7 +1679,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * \htmlinclude module-skip.xml.tmp
  *
- * \section profile_path_configuration Profile path configuration
+ * \section profile_path_configuration 3.1 Profile path configuration
  *
  * Profile Path is a feature that allows to configure which profiles
  * can be used by remote peers, according to several run time
@@ -1784,7 +1806,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * the connection in other to allow the connection to accept a profile
  * or the content of the following profiles.
  *
- * \section profile_path_flags_supported_by_allow_and_if_sucess Profile path configuration: flags supported by <allow> and <if-success>
+ * \section profile_path_flags_supported_by_allow_and_if_sucess 3.2 Profile path configuration: flags supported by <allow> and <if-success>
  *
  * The following are the flags supported by <b>&lt;allow></b> and
  * <b>&lt;if-success></b>:
@@ -1821,7 +1843,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * connection as authenticated using the provided flag:
  * "sasl:is:authenticated".</p>
  *
- * \section turbulence_execution_model Turbulence execution model (process security)
+ * \section turbulence_execution_model 3.3 Turbulence execution model (process security)
  *
  * It is posible to configure Turbulence, through profile path
  * configuration, to handle connections in the same master process or
@@ -1838,7 +1860,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *     application separation.
  *
  * - <b>Handling at same childs: </b> because creating one child for
- *     each connection received may be resource expensive, <b>reuse=yes</b>
+ *     each connection received may be resource expensive or it is required to share the same context (process) across connections to the same profile path, <b>reuse=yes</b>
  *     flag is provided so connections matching same profile path are
  *     handled by the same child process. 
  *
@@ -1846,7 +1868,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * killed. This is configured with <b><kill-childs-on-exit value="yes" /></b>
  * inside <global-settings> node.
  *
- * \section turbulence_starting_without_profiles Making turbulence to start without profiles defined
+ * \section turbulence_starting_without_profiles 3.4 Making turbulence to start without profiles defined
  *
  * By default Turbulence checks after module start up (init method) if
  * there are at least one profile to serve. It is found that no

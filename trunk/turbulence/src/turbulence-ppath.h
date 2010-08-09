@@ -63,6 +63,12 @@ const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,
 
 const char         * turbulence_ppath_get_server_name (VortexConnection * conn);
 
+void                 __turbulence_ppath_set_selected (VortexConnection   * conn,
+						      TurbulencePPathDef * ppath_def);
+
+void                 turbulence_ppath_add_profile_attr_alias (TurbulenceCtx * ctx,
+							      const char    * profile,
+							      const char    * conn_attr);
 
 axl_bool __turbulence_ppath_select   (TurbulenceCtx      * ctx, 
 				      VortexConnection   * connection, 

@@ -50,6 +50,7 @@
 struct _TurbulenceExpr {
 	pcre * expr;
 	int    negative;
+	char * string_expression;
 };
 
 /** 
@@ -285,6 +286,9 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 	/* create the turbulence expression node */
 	expr = axl_new (TurbulenceExpr, 1);
 
+	/* copy the raw expression */
+	expr->string_expression = axl_strdup (expression);
+
 	/* check if the expression is negative */
 	msg ("checking negative expression: %s", expression);
 	expression = turbulence_expr_check_negative_expr (expression, &expr->negative);
@@ -348,7 +352,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
  * @return The function return axl_true in the case the expression (expr)
  * match the string provided (subject).
  */
-int  turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
+axl_bool  turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
 {
 	/* return axl_false if either values received are null */
 	if (subject == NULL || expr == NULL)
@@ -364,6 +368,25 @@ int  turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
 }
 
 /** 
+ * @brief Allows to get the string expression this compiled
+ * TurbulenceExpr runs.
+ *
+ * @param expr The turbulence expression to get string expression from.
+ *
+ * @return A reference to the string expression that was used to build
+ * this \ref TurbulenceExpr or NULL if it fails.
+ */
+const char     * turbulence_expr_get_expression (TurbulenceExpr * expr)
+{
+	/* check the NULL value to avoid accesing cuenca */
+	if (expr == NULL)
+		return NULL;
+	/* return string expression used to build this turbulence
+	 * expression */
+	return expr->string_expression;
+}
+
+/** 
  * @brief Terminate the regular expression compiled by \ref
  * turbulence_expr_compile.
  */
@@ -373,6 +396,7 @@ void turbulence_expr_free (TurbulenceExpr * expr)
 		return;
 
 	/* free the expression and then the node itself */
+	axl_free (expr->string_expression);
 	pcre_free (expr->expr);
 	axl_free (expr);
 	

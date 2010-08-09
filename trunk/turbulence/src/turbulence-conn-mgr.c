@@ -70,6 +70,7 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
+
 	return;
 }
 
@@ -82,6 +83,10 @@ void turbulence_conn_mgr_unref (axlPointer data)
 
 	/* check connection status */
 	if (state->conn) {
+		/* remove installed handlers */
+		vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_ADD_HANDLER, state->added_channel_id);
+		vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_REMOVE_HANDLER, state->removed_channel_id);
+
 		/* uninstall on close full handler to avoid race conditions */
 		vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state);
 		
@@ -90,10 +95,76 @@ void turbulence_conn_mgr_unref (axlPointer data)
 		vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
 	} /* end if */
 
+	/* finish profiles running hash */
+	axl_hash_free (state->profiles_running);
+
 	/* nullify and free */
-	state->conn = NULL;
-	state->ctx  = NULL;
+	memset (state, 0, sizeof (TurbulenceConnMgrState));
 	axl_free (state);
+
+	return;
+}
+
+void turbulence_conn_mgr_added_handler (VortexChannel * channel, axlPointer user_data)
+{
+	TurbulenceConnMgrState * state           = user_data;
+	TurbulenceCtx          * ctx             = state->ctx;
+	/* copy running_profile to avoid having a reference inside the
+	 * hash to a pointer that may be lost when the channel is
+	 * closed by still other channels with the same profile are
+	 * running in the connection. */
+	char                   * running_profile = axl_strdup (vortex_channel_get_profile (channel));
+	int                      count;
+
+	/* get the lock */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+	
+	/* get channel count for the profile */
+	count = PTR_TO_INT (axl_hash_get (state->profiles_running, (axlPointer) running_profile));
+	count++;
+	msg ("updating channels runnning %d profile %s", count, running_profile);
+	axl_hash_insert_full (state->profiles_running, (axlPointer) running_profile, axl_free, INT_TO_PTR (count), NULL);
+
+	/* release the lock */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+	return;
+}
+
+void turbulence_conn_mgr_removed_handler (VortexChannel * channel, axlPointer user_data)
+{
+	TurbulenceConnMgrState * state           = user_data;
+	TurbulenceCtx          * ctx             = state->ctx;
+	const char             * running_profile = vortex_channel_get_profile (channel);
+	int                      count;
+
+	/* get the lock */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+	
+	/* get channel count for the profile */
+	count = PTR_TO_INT (axl_hash_get (state->profiles_running, (axlPointer) running_profile));
+	count--;
+
+	/* if reached 0 count, remove the key */
+	if (count <= 0) {
+		axl_hash_remove (state->profiles_running, (axlPointer) running_profile);
+
+		/* release the lock */
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);		
+		return;
+	} /* end if */
+
+	/* copy running_profile to avoid having a reference inside the
+	 * hash to a pointer that may be lost when the channel is
+	 * closed by still other channels with the same profile are
+	 * running in the connection. */
+	running_profile = axl_strdup (running_profile);
+
+	/* update count */
+	axl_hash_insert_full (state->profiles_running, (axlPointer) running_profile, axl_free, INT_TO_PTR (count), NULL);
+
+	/* release the lock */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	return;
 }
@@ -126,8 +197,8 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	state->ctx  = ctx;
 
 	/* store in the hash */
-	msg ("Registering connection: %d (%p, refs: %d)", vortex_connection_get_id (conn), conn, 
-	     vortex_connection_ref_count (conn));
+	msg ("Registering connection: %d (%p, refs: %d, channels: %d)", vortex_connection_get_id (conn), conn, 
+	     vortex_connection_ref_count (conn), vortex_connection_channels_count (conn));
 	axl_hash_insert_full (ctx->conn_mgr_hash, 
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,
@@ -136,6 +207,12 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 
 	/* configure on close */
 	vortex_connection_set_on_close_full (conn, turbulence_conn_mgr_on_close, state);
+
+	/* init profiles running hash */
+	msg ("Setting added/removed channel handlers for conn-id=%d", vortex_connection_get_id (conn));
+	state->profiles_running   = axl_hash_new (axl_hash_string, axl_hash_equal_string);
+	state->added_channel_id   = vortex_connection_set_channel_added_handler (conn, turbulence_conn_mgr_added_handler, state);
+	state->removed_channel_id = vortex_connection_set_channel_removed_handler (conn, turbulence_conn_mgr_removed_handler, state);
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
@@ -256,7 +333,6 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 		vortex_connection_set_connection_actions (vortex_ctx,
 							  CONNECTION_STAGE_POST_CREATED,
 							  turbulence_conn_mgr_notify, ctx);
-		
 	} /* end if */
 
 	/* register on load module to install radmin connection
@@ -522,6 +598,52 @@ VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 }
 
 /** 
+ * @brief Allows to get a newly created hash cursor pointing to opened
+ * profiles on this connection (key), containing how many channels
+ * runs that profile (value), stored in a hash.
+ *
+ * @param ctx The TurbulenceCtx object where the operation will be applied.
+ * @param conn The connection where it is required to get profile stats.
+ *
+ * @return A newly created cursor or NULL if it fails. The function
+ * will only fail if ctx or conn are NULL or because not enough memory
+ * to hold the cursor.
+ */
+axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
+						       VortexConnection * conn)
+{
+	TurbulenceConnMgrState * state;
+	axlHashCursor          * cursor;
+
+	v_return_val_if_fail (ctx && conn, NULL);
+	
+	/* new connection created: configure it */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+
+	/* get state */
+	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
+	if (state == NULL) {
+		error ("Failed to find connection manager internal state associated to connection id=%d, failed to return stats..",
+		       vortex_connection_get_id (conn));
+		/* unlock the mutex */
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+		return NULL;
+	}
+
+	msg ("Getting profiles stats for conn-id: %d (running profiles: %d, channels: %d)", 
+	     vortex_connection_get_id (conn), axl_hash_items (state->profiles_running),
+	     vortex_connection_channels_count (conn));
+	
+	/* create the cursor */
+	cursor = axl_hash_cursor_new (state->profiles_running);
+
+	/* unlock the mutex */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+	return cursor;
+}
+
+/** 
  * @internal Ensure we close all active connections before existing...
  */
 axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer data, axlPointer user_data) 
@@ -529,6 +651,10 @@ axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer da
 	TurbulenceConnMgrState * state = data;
 	TurbulenceCtx          * ctx   = state->ctx;
 	VortexConnection       * conn  = state->conn;
+
+	/* remove installed handlers */
+	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_ADD_HANDLER, state->added_channel_id);
+	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_REMOVE_HANDLER, state->removed_channel_id);
 
 	/* nullify conn reference on state */
 	state->conn = NULL;

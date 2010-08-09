@@ -77,6 +77,20 @@ typedef axl_bool  (*ModInitFunc)  (TurbulenceCtx * ctx);
 typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
 
 /** 
+ * @brief A reference to the unload method that must implement all
+ * unload code required in the case turbulence ask the module
+ * to stop its function.
+ * 
+ * Unload function is only called in the context of child process
+ * created by turbulence to isolate some requests (modules and
+ * profiles) to be handled by a low permissions user.
+ *
+ * @param ctx The turbulence context where the close operation is
+ * taking place.
+ */
+typedef void (*ModUnloadFunc) (TurbulenceCtx * ctx);
+
+/** 
  * @brief Public definition for the reconfiguration function that must
  * be implemented to receive notification if the turbulence server
  * configuration is reloaded (either because a signal was received or
@@ -91,20 +105,74 @@ typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
  * @brief Allows to notify the module that a profile path was selected
  * for a connection.
  *
- * @param ctx The turbulence context where the profile path is being selected.
- * @param ppath_selected The profile path selected.
- * @param conn The connection where the profile path was selected.
+ * The ppath_selected function is used by turbulence to signal modules
+ * that a connection was finally configured under the provided profile
+ * path. This is important because a profile path defines how the
+ * connection will be limited and configured to accept profiles,
+ * configuring process permission and so on.
+ *
+ * It is also useful because at the time a profile path is selected,
+ * serverName name is available, allowing the module to take especial
+ * actions.
+ *
+ * This module function is called just after a profile path is
+ * selected for a connection, on first channel request received,
+ * (according to serverName, src connection, etc). In the case the
+ * profile path request a child process to handle the connection, the
+ * module function is called after creating the child process and
+ * after the child process implements optional chroot and optional
+ * user:group change.
+ *
+ * In the case the profile path do not request to create a child
+ * process, the handler is called on first channel request received on
+ * a connection.
+ *
+ * Note that, unlike \ref ModInitFunc "init", this method is called
+ * for each connection received for which a profile path is selected. 
+ *
+ * <b>Security: Important note about serverName</b>
+ *
+ * When a profile path is selected it is done according to preliminary
+ * data provided by remote peer. In this context the module programmer
+ * must see the serverName as a requested value but still not the
+ * final serverName accepted. 
+ *
+ * The serverName will only be definitive only if all profile path
+ * handlers accept it and a channel with that serverName is created.
+ *
+ * In this context, to get the serverName requested by remote peer you can use:
+ * \code
+ * serverName = turbulence_ppath_get_server_name (conn);
+ * \endcode
+ *
+ *
+ *
+ * @param ctx The turbulence context where the profile path is being
+ * selected.
+ *
+ * @param ppath_selected The profile path selected. Reference to the
+ * object representing the profile path selected. See \ref
+ * turbulence_ppath.
+ *
+ * @param conn The connection where the profile path was selected. The
+ * VortexConnection object that was configured with the provided
+ * profile path.
  *
  * @return Like \ref ModInitFunc "init" function, if this handler
- * returns axl_false the connection is closed.
+ * returns axl_false the connection is closed. Keep in mind returning
+ * axl_false may also terminate current child process (according to
+ * \ref turbulence_clean_start "clean start" configuration).
  */
 typedef axl_bool (*ModPPathSelected) (TurbulenceCtx * ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn);
 
 
 /** 
  * @brief Public definition for the main entry point for all modules
- * developed for turbulence.
- * 
+ * developed for turbulence. 
+ *
+ * This structure contains pointers to all functions that may
+ * implement a turbulence module.
+ *
  * See <a class="el" href="http://www.aspl.es/turbulence/extending.html">how to create Turbulence modules</a>.
  */
 typedef struct _TurbulenceModDef {
@@ -132,50 +200,20 @@ typedef struct _TurbulenceModDef {
 	ModCloseFunc   close;
 	
 	/** 
-	 * @brief A reference to the reconf function that must be
-	 * implemented to get notifications about turbulence server
-	 * configuration changes.
+	 * @brief A reference to the reconf function associated to the
+	 * module.
 	 */
 	ModReconfFunc  reconf;
 
 	/** 
-	 * @brief A reference to the unload function that must
-	 * implement all unload code required in the case turbulence
-	 * function ask the module to stop its function for a
-	 * particular process (which means the module may be working
-	 * in another module). 
-	 * 
-	 * The difference between close and reload is that close can
-	 * consider alls its actions as definitive because turbulence
-	 * main process is stopping.
-	 *
-	 * However, unload function is only called in the context of
-	 * child process created by turbulence to isolate some
-	 * requests (modules and profiles) to be handled by a low
-	 * permissions user.
+	 * @brief A reference to the unload function associated to the
+	 * module.
 	 */
-	ModCloseFunc  unload;
+	ModUnloadFunc  unload;
 
 	/** 
-	 * @brief The ppath_selected function is used by turbulence to signal
-	 * modules that a connection was finally configured under the provided
-	 * profile path. This is important because a profile path defines how
-	 * the connection will be limited and configured to accept profiles,
-	 * configuring process permission and so on. 
-	 *
-	 * It is also useful because at the time a profile path is selected,
-	 * serverName name is available, allowing the module to take especial
-	 * actions.
-	 *
-	 * @param ctx The \ref TurbulenceCtx where the profile path was selected.
-	 *
-	 * @param ppath_selected Reference to the object representing the profile path selected. See \ref turbulence_ppath.
-	 *
-	 * @param conn The VortexConnection object that was configured with the provided profile path.
-	 *
-	 * @return axl_true to accept or not the connection. Keep in mind
-	 * returning axl_false may also terminate current child process
-	 * (according to \ref turbulence_clean_start "clean start" configuration).
+	 * @brief A reference to the profile path selected function
+	 * associated to the module.
 	 */
 	ModPPathSelected ppath_selected;
 } TurbulenceModDef;

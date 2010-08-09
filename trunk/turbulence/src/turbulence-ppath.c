@@ -123,12 +123,12 @@ TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode 
 	/* parse here childs inside <if-success> node */
 	if (result->type == PROFILE_IF) {
 		/* parse child nodes */
-		result->ppath_item = axl_new (TurbulencePPathItem *, axl_node_get_child_num (node) + 1);
-		child              = axl_node_get_first_child (node);
-		iterator           = 0;
+		result->ppath_items = axl_new (TurbulencePPathItem *, axl_node_get_child_num (node) + 1);
+		child               = axl_node_get_first_child (node);
+		iterator            = 0;
 		while (child != NULL) {
 			/* get the first definition */
-			result->ppath_item[iterator] = __turbulence_ppath_get_item (ctx, child);
+			result->ppath_items[iterator] = __turbulence_ppath_get_item (ctx, child);
 			
 			/* next profile path item */
 			child = axl_node_get_next (child);
@@ -150,15 +150,38 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 				    const char           * serverName,
 				    int                    channel_num,
 				    VortexConnection     * connection,
-				    const char           * profile_content)
+				    const char           * profile_content, 
+				    int                    level)
 {
 	int                   iterator;
 	TurbulencePPathItem * item;
-	axlList             * profiles;
-	int                   iterator2;
+	axlHashCursor       * profiles;
 	char                * uri2;
-	VortexCtx           * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
+	/** 
+	 * NOTE: about profile filtering
+	 *
+	 * In order to apply profile path filtering, first, a profile
+	 * path is selected and once done, this function is called to
+	 * apply policy defined in such profile path.
+	 *
+	 * This function does two checks: the first part tries to
+	 * check if an <allow> or <if-success> directive allows to
+	 * create the profile requested at the 0 level. The 0 level is
+	 * just the set of profiles that are listed as direct childs
+	 * of the profile path, that is, the profiles that are
+	 * available directly to peers once the profile path is
+	 * selected.
+	 *
+	 * In the case no <allow> or <if-sucess> directive allows the
+	 * profile requested (uri parameter), then the second part is
+	 * called, which tries to find <if-sucesss> declaration that
+	 * may contain another <allow> or <if-success> directives that
+	 * might allow the requested profile. To perform that task,
+	 * the function calls recursively to itself.
+	 */
+	
+	/* FIRST PART: first check all <allow> and <if-success> nodes on this first level. */
 	iterator = 0;
 	while (ppath_items[iterator]) {
 		/* item from the profile path */
@@ -170,6 +193,12 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 			iterator++;
 			continue;
 		} /* end if */
+
+		/* now reached this code, we have found a directive
+		 * that allows the profile requested. But, before
+		 * accepting it, we have to check additional
+		 * attributes that may be defined by the
+		 * administrator. */
 
 		/* now check its optional pre-mark */
 		if (item->preconnmark != NULL) {
@@ -213,7 +242,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		return axl_false;
 	} /* end if */
 
-	/* now check for second level profile path configurations,
+	/* SECOND PART: now check for second level profile path configurations,
 	 * based on <if-success> */
 	iterator = 0;
 	while (ppath_items[iterator]) {
@@ -226,48 +255,65 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		 * the connection. If the connection have the profile,
 		 * check all <allow> and <if-success> nodes inside. */
 		if (item->type == PROFILE_IF) {
-			/* try to find a profile that matches the expression found */
-			profiles = vortex_profiles_get_actual_list_ref (vortex_ctx);
-			iterator2 = 0;
-			while (iterator2 < axl_list_length (profiles)) {
+
+			/* check if we have a profile attr alias before continue */
+			if (axl_hash_exists (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile))) {
+				/* found alias for expression, check attribute */
+				if (PTR_TO_INT (vortex_connection_get_data (connection, 
+									    /* get the alias */
+									    axl_hash_get (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile)))) > 0) {
+					profiles = NULL;
+					goto match_by_alias;
+				}
+			}
+			
+
+			/* get current profiles running on the connection */
+			profiles = turbulence_conn_mgr_profiles_stats (ctx, connection);
+			axl_hash_cursor_first (profiles);
+
+			/* for each profile running on the connection,
+			 * check if the current <if-success>
+			 * expression matches it, to check its
+			 * childs */
+			while (axl_hash_cursor_has_item (profiles)) {
 
 				/* get the uri value */
-				uri2 = axl_list_get_nth (profiles, iterator2);
-				
+				uri2 = axl_hash_cursor_get_key (profiles);
+
 				/* try to match the profile expression against
 				   a concrete profile value */
 				if ( turbulence_expr_match (item->profile, uri2)) {
 
-					/* found, now check if the profile is running on the
-					 * conection */
-					if (vortex_connection_get_channel_by_uri (connection, uri2)) {
-
-						/* now check its optional mark */
-						if (item->connmark != NULL) {
-							if (! vortex_connection_get_data (connection, item->connmark)) {
-								/* the mark doesn't match the connection */
-								iterator2++;
-								continue; 
-							} /* end if */
+					/* now check its optional mark */
+					if (item->connmark != NULL) {
+						if (! vortex_connection_get_data (connection, item->connmark)) {
+							/* the mark doesn't match the connection */
+							axl_hash_cursor_next (profiles);
+							continue; 
 						} /* end if */
-
-						/* check if the profile provided is found in the allow
-						 * configuration */
-						if (! __turbulence_ppath_mask_items (ctx, 
-										     item->ppath_item, 
-										     state, uri, serverName, channel_num, connection, profile_content)) {
-							/* profile allowed, do not filter */
-							return axl_false;
-						} /* end if */
-
 					} /* end if */
-
+					
+					/* check if the profile provided is found in the allow
+					 * configuration */
+				match_by_alias:
+					if (! __turbulence_ppath_mask_items (ctx, 
+									     item->ppath_items, 
+									     state, uri, serverName, channel_num, connection, profile_content, level + 1)) {
+						/* profile allowed, do not filter */
+						axl_hash_cursor_free (profiles);
+						return axl_false;
+					} /* end if */
+					
 				} /* end if */
 
 				/* go to the next item */
-				iterator2++;
+				axl_hash_cursor_next (profiles);
 
 			} /* end while */
+
+			/* free cursor */
+			axl_hash_cursor_free (profiles);
 
 		} /* end if */
 
@@ -310,8 +356,8 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 	/* check if the profile provided is found in the <allow> or
 	 * <if-success> configuration */
 	if (! __turbulence_ppath_mask_items (ctx, 
-					     state->path_selected->ppath_item, 
-					     state, uri, serverName, channel_num, connection, profile_content)) {
+					     state->path_selected->ppath_items, 
+					     state, uri, serverName, channel_num, connection, profile_content, 1)) {
 
 		/* only drop a message if the channel number have a
 		 * valid value. Profile mask is also executed at
@@ -381,8 +427,8 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 	state = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
 	ctx   = state->ctx;
 
-	msg ("Called to temporal profile mask on %s phase, for connection id=%d", 
-	     channel_num == -1 ? "greetings" : "channel creation", vortex_connection_get_id (connection));
+	msg ("Called to temporal profile mask on %s phase, for connection id=%d (state %p, profile path selected: %p)", 
+	     channel_num == -1 ? "greetings" : "channel creation", vortex_connection_get_id (connection), state, state->path_selected);
 	
 	/* check if the state has a profile path selected */
 	if (state->path_selected == NULL) {
@@ -443,6 +489,31 @@ axl_bool __turbulence_ppath_handle_connection_match_src (VortexConnection * conn
 	} /* end if */
 	
 	return axl_false;
+}
+
+/** 
+ * @brief Allows to add a profile path attribute alias on the provided
+ * turbulence ctx.
+ *
+ * @param ctx The turbulence context where the profile path alias will be added.
+ *
+ * @param profile The profile string to be aliased.
+ *
+ * @param conn_attr The connection attribute that must be checked
+ * instead of the profile string.
+ *
+ */
+void                 turbulence_ppath_add_profile_attr_alias (TurbulenceCtx * ctx,
+							      const char    * profile,
+							      const char    * conn_attr)
+{
+	v_return_if_fail (ctx && profile && conn_attr);
+
+	/* insert the alias */
+	axl_hash_insert_full (ctx->profile_attr_alias, 
+			      axl_strdup (profile), axl_free,
+			      axl_strdup (conn_attr), axl_free);
+	return;
 }
 
 /** 
@@ -775,6 +846,9 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 
 	/* check turbulence context received */
 	v_return_val_if_fail (ctx, axl_false);
+
+	/* init profile path attr alias hash */
+	ctx->profile_attr_alias = axl_hash_new (axl_hash_string, axl_hash_equal_string);
 	
 	/* parse all profile path configurations */
 	pdef = axl_doc_get (turbulence_config_get (ctx), "/turbulence/profile-path-configuration/path-def");
@@ -886,12 +960,12 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		 * expression found is an <if-success>, it is managed
 		 * as an <allow> node, but providing more content if
 		 * the profile negotiation success.  */
-		node                   = axl_node_get_first_child (pdef);
-		iterator2              = 0;
-		definition->ppath_item = axl_new (TurbulencePPathItem *, axl_node_get_child_num (pdef) + 1);
+		node                    = axl_node_get_first_child (pdef);
+		iterator2               = 0;
+		definition->ppath_items = axl_new (TurbulencePPathItem *, axl_node_get_child_num (pdef) + 1);
 		while (node != NULL) {
 			/* get the first definition */
-			definition->ppath_item[iterator2] = __turbulence_ppath_get_item (ctx, node);
+			definition->ppath_items[iterator2] = __turbulence_ppath_get_item (ctx, node);
 			
 			/* next profile path item */
 			node = axl_node_get_next (node);
@@ -931,16 +1005,16 @@ void __turbulence_ppath_free_item (TurbulencePPathItem * item)
 	axl_free (item->preconnmark);
 
 	iterator = 0;
-	while (item->ppath_item != NULL && item->ppath_item[iterator]) {
+	while (item->ppath_items != NULL && item->ppath_items[iterator]) {
 		/* free the profile path */
-		__turbulence_ppath_free_item (item->ppath_item[iterator]);
+		__turbulence_ppath_free_item (item->ppath_items[iterator]);
 
 		/* next profile path item */
 		iterator++;
 	} /* end if */
 
 	/* free the array */
-	axl_free (item->ppath_item);
+	axl_free (item->ppath_items);
 
 	/* free the item */
 	axl_free (item);
@@ -974,17 +1048,17 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 			turbulence_expr_free (def->dst);
 
 			iterator2 = 0;
-			while (def->ppath_item[iterator2] != NULL) {
+			while (def->ppath_items[iterator2] != NULL) {
 				
 				/* free the item */
-				__turbulence_ppath_free_item (def->ppath_item[iterator2]);
+				__turbulence_ppath_free_item (def->ppath_items[iterator2]);
 
 				/* next iterator */
 				iterator2++;
 			} /* end while */
 
 			/* free the definition itself and its items */
-			axl_free (def->ppath_item);
+			axl_free (def->ppath_items);
 			axl_free (def);
 			
 			/* next profile path def */
@@ -996,6 +1070,10 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 		axl_free (ctx->paths);
 		ctx->paths = NULL;
 	} /* end if */
+
+	/* free profile attr alias hash */
+	axl_hash_free (ctx->profile_attr_alias);
+	ctx->profile_attr_alias = NULL;
 
 	return;
 }
@@ -1174,6 +1252,25 @@ const char         * turbulence_ppath_get_server_name (VortexConnection * conn)
 	ctx   = state->ctx;
 	msg ("returing serverName on state %p, %p", state, state->requested_serverName);
 	return state->requested_serverName;
+}
+
+/** 
+ * @internal Function that allows setting a profile path on a
+ * connection.
+ *
+ */
+void                 __turbulence_ppath_set_selected (VortexConnection   * conn,
+						      TurbulencePPathDef * ppath_def)
+{
+	TurbulencePPathState * state;
+
+	if (conn == NULL || ppath_def == NULL)
+		return;
+
+	/* get current state and replace profile path */
+	state     = vortex_connection_get_data (conn, TURBULENCE_PPATH_STATE);
+	state->path_selected = ppath_def;
+	return;
 }
 
 #if defined(DEFINE_CHROOT_PROTO)

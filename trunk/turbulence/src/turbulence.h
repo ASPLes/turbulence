@@ -71,23 +71,23 @@
  * @{
  */
 
-int  turbulence_log_enabled      (TurbulenceCtx * ctx);
+axl_bool  turbulence_log_enabled      (TurbulenceCtx * ctx);
 
-void turbulence_log_enable       (TurbulenceCtx * ctx, 
-				  int  value);
+void      turbulence_log_enable       (TurbulenceCtx * ctx, 
+				       int  value);
 
-int  turbulence_log2_enabled     (TurbulenceCtx * ctx);
+axl_bool  turbulence_log2_enabled     (TurbulenceCtx * ctx);
 
-void turbulence_log2_enable      (TurbulenceCtx * ctx,
-				  int  value);
+void      turbulence_log2_enable      (TurbulenceCtx * ctx,
+				       int  value);
 
-int  turbulence_log3_enabled     (TurbulenceCtx * ctx);
+axl_bool  turbulence_log3_enabled     (TurbulenceCtx * ctx);
 
-void turbulence_log3_enable      (TurbulenceCtx * ctx,
-				  int  value);
+void      turbulence_log3_enable      (TurbulenceCtx * ctx,
+				       int  value);
 
-void turbulence_color_log_enable (TurbulenceCtx * ctx,
-				  int             value);
+void      turbulence_color_log_enable (TurbulenceCtx * ctx,
+				       int             value);
 
 /** 
  * Drop an error msg to the console stderr.
@@ -198,13 +198,13 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value);
 axl_bool turbulence_file_test_v         (const char * format, 
 					 VortexFileTest test, ...);
 
-int      turbulence_create_dir          (const char * path);
+axl_bool turbulence_create_dir          (const char * path);
 
 axl_bool turbulence_unlink              (const char * path);
 
 long     turbulence_last_modification   (const char * file);
 
-int      turbulence_file_is_fullpath    (const char * file);
+axl_bool turbulence_file_is_fullpath    (const char * file);
 
 char   * turbulence_base_dir            (const char * path);
 

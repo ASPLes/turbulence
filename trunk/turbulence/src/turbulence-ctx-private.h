@@ -74,6 +74,16 @@ struct _TurbulenceCtx {
 	int                  ppath_next_id;
 	TurbulencePPath    * paths;
 	axl_bool             all_rules_address_based;
+	/* profile_attr_alias: this hash allows to establish a set of
+	 * alias that is used by profile path module to check for a
+	 * particular attribute found on the connection instead of the
+	 * particular profile requested. This is useful for TLS case
+	 * (and other tuning profiles) that reset the connection,
+	 * causing the channel that represents it to disapear (RFC
+	 * 3080, page 30, all channels closed) making the profile path
+	 * configuration to not detect the channel after tuning have
+	 * been completed. */
+	axlHash            * profile_attr_alias;
 
 	/*** turbulence log module ***/
 	int                  general_log;
@@ -155,7 +165,7 @@ struct _TurbulencePPathItem {
 
 	/* Another list for all profile path item found inside this
 	 * profile path item. This is only used by PROFILE_IF items */
-	TurbulencePPathItem ** ppath_item;
+	TurbulencePPathItem ** ppath_items;
 	
 };
 
@@ -163,25 +173,26 @@ struct _TurbulencePPathDef {
 	int    id;
 
 	/* the name of the profile path group (optional value) */
-	char * path_name;
+	char                 * path_name;
 
 	/* the server name pattern to be used to match the profile
 	 * path. If turbulence wasn't built with pcre support, it will
 	 * compiled as an string. */
-	TurbulenceExpr * serverName;
+	TurbulenceExpr       * serverName;
 
 	/* source filter pattern. Again, if the library doesn't
 	 * support regular expression, the source is taken as an
 	 * string */
-	TurbulenceExpr * src;
+	TurbulenceExpr       * src;
 
 	/* destination filter pattern. Again, if the library doesn't
 	 * support regular expression, the source is taken as an
 	 * string */
-	TurbulenceExpr * dst;
+	TurbulenceExpr       * dst;
 
-	/* a reference to the list of profile path supported */
-	TurbulencePPathItem ** ppath_item;
+	/* a reference to the list of profile path supported (first
+	 * xml level of <allow> and <if-sucess> nodes). */
+	TurbulencePPathItem ** ppath_items;
 
 #if defined(AXL_OS_UNIX)
 	/* user id to that must be used to run the process */
@@ -206,6 +217,7 @@ struct _TurbulencePPathDef {
 	/* allows to configure a working directory associated to the
 	 * profile path. */
 	const char * work_dir;
+
 };
 
 /** 
@@ -214,6 +226,14 @@ struct _TurbulencePPathDef {
 typedef struct _TurbulenceConnMgrState {
 	VortexConnection * conn;
 	TurbulenceCtx    * ctx;
+
+	/* a hash that contains the set of profiles running on this
+	 * connection and how many times */
+	axlHash          * profiles_running;
+
+	/* reference to handler ids to be removed */
+	axlPointer         added_channel_id;
+	axlPointer         removed_channel_id;
 } TurbulenceConnMgrState;
 
 #endif
