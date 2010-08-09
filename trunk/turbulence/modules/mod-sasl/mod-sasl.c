@@ -161,6 +161,18 @@ static axl_bool mod_sasl_ppath_selected (TurbulenceCtx      * ctx,
 		return axl_false;
 	} /* end if */
 
+	/* check if the sasl_backend is null to return now. When
+	 * sasl_backend is null and common_sasl_load_config returns
+	 * axl_true means that all SASL databases are right but no
+	 * database can server the serverName requested. To avoid
+	 * returning axl_false, causing this profile path to be not
+	 * accepted, we stop here and return axl_true. No SASL service
+	 * will be available but the profile path will function. */
+	if (sasl_backend == NULL) {
+		vortex_mutex_unlock (&sasl_top_mutex);
+		return axl_true;
+	} /* end if */
+
 	/* check for sasl methods to be activated */
 	if (common_sasl_method_allowed (sasl_backend, "plain", &sasl_db_mutex)) {
 		
