@@ -12,7 +12,11 @@ tmp_xml_examples = \
 	turbulence.python.xml.tmp \
 	python.module.example.3.xml.tmp \
 	python.module.example.4.xml.tmp \
-	module-skip.xml.tmp
+	module-skip.xml.tmp \
+	override-system-paths.xml.tmp \
+	tls-example.xml.tmp \
+	tls-sasl-example.xml.tmp
+
 
 xml_examples = \
 	global-settings.xml \
@@ -27,7 +31,10 @@ xml_examples = \
 	turbulence.python.xml \
 	python.module.example.3.xml \
 	python.module.example.4.xml \
-	module-skip.xml
+	module-skip.xml \
+	override-system-paths.xml \
+	tls-example.xml \
+	tls-sasl-example.xml 
 
 drafts_and_docs = \
 	draft-brosnan-beep-limit-close.txt \

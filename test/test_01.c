@@ -1876,7 +1876,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	/* now create a channel */
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
 	if (channel == NULL) {
-		printf ("ERROR (2): expected to proper channel creation but a failure was found..\n");
+		printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
 		return axl_false;
 	}
 	
@@ -3398,6 +3398,241 @@ axl_bool test_21 (void) {
 	return axl_true;
 }
 
+void test_22_frame_received (VortexChannel    * channel,
+			     VortexConnection * conn,
+			     VortexFrame      * frame,
+			     axlPointer         user_data)
+{
+	const char * payload = (const char *) vortex_frame_get_payload (frame);
+
+	if (axl_cmp (payload, "getServerName")) {
+		/* get servername or empty string */
+		payload = vortex_connection_get_server_name (conn);
+		if (payload == NULL)
+			payload = "";
+		vortex_channel_send_rpy (channel, payload, strlen (payload), vortex_frame_get_msgno (frame));
+		return;
+	} /* end if */
+
+	/* send rpy */
+	vortex_channel_send_rpy (channel, vortex_frame_get_payload (frame), vortex_frame_get_payload_size (frame), vortex_frame_get_msgno (frame));
+	return;
+}
+
+axl_bool test_22_operations (VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue, axl_bool do_sasl_before) {
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	VortexFrame      * frame;
+	VortexStatus       status;
+	char             * status_message = NULL;
+
+	/* connect and enable TLS */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName),
+					   NULL, NULL);
+
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+		return axl_false;
+	} /* end if */
+	
+	/* enable TLS */
+	conn = vortex_tls_start_negotiation_sync (conn, serverName, &status, &status_message);
+	if (status != VortexOk) {
+		printf ("ERROR (2): expected to find proper TLS activation but found a failure: %s\n",
+			status_message);
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 22: TLS activation finished: serverName %s..\n", serverName);
+	if (! vortex_connection_is_tlsficated (conn)) {
+		printf ("ERROR (2.1): expected to find proper TLS activation..\n");
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 22: Creating channel to test TLS: serverName %s..\n", serverName);
+
+	if (do_sasl_before) {
+		/* check that the channel is not available withtout SASL */
+		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+		if (channel != NULL) {
+			printf ("ERROR (2.2): expected to NOT find proper channel creation but a proper reference was found..\n");
+			return axl_false;
+		} /* end if */
+
+		/* ok, do sasl */
+		/* enable SASL auth for current connection */
+		vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
+		vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
+		vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+		
+		if (status != VortexOk) {
+			printf ("ERROR (2.3): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+			return axl_false;
+		} /* end if */
+	} /* end if */
+
+	/* now create a channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+	if (channel == NULL) {
+		printf ("ERROR (3): expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* send request to get connection id */
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	vortex_channel_send_msg (channel, "send-msg", 8, NULL);
+	
+	/* get reply */
+	frame = vortex_channel_get_reply (channel, queue);
+	
+	if (! axl_cmp (vortex_frame_get_payload (frame), "send-msg")) {
+		printf ("ERROR (4): expected to find 'send-msg' as content but found: %s\n",
+			(char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	vortex_frame_unref (frame);
+
+	/* check the servername that has the connection on remote side */
+	vortex_channel_send_msg (channel, "getServerName", 13, NULL);
+	
+	/* get reply */
+	frame = vortex_channel_get_reply (channel, queue);
+	
+	if (! axl_cmp (vortex_frame_get_payload (frame), serverName)) {
+		printf ("ERROR (5): expected to find serverName %s but found: %s\n",
+			serverName, (char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+	printf ("Test 22: found remote serverName: %s..\n", (const char *) vortex_frame_get_payload (frame));
+
+	vortex_frame_unref (frame);
+
+	/* check local servername */
+	if (! axl_cmp (vortex_connection_get_server_name (conn), serverName)) {
+		printf ("ERROR (6): expected to find local serverName configured (%s) but found %s\n",
+			serverName, vortex_connection_get_server_name (conn));
+		return axl_false;
+	} /* end if */
+	printf ("Test 22: found local serverName: %s..\n", vortex_connection_get_server_name (conn));
+	
+	/* close connection */
+	vortex_connection_close (conn);
+
+	return axl_true;
+}
+
+axl_bool test_22_unfinished (VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue) {
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* connect and enable TLS */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName),
+					   NULL, NULL);
+
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+		return axl_false;
+	} /* end if */
+
+	/* now open a channel */
+	channel = vortex_channel_new_full (conn, /* the connection */
+					   0,          /* the channel vortex chose */
+					   serverName, /* the serverName value (no matter if it is NULL) */
+					   /* the TLS profile identifier */
+					   VORTEX_TLS_PROFILE_URI,
+					   /* content encoding */
+					   EncodingNone,
+					   /* initial content or piggyback and its size */
+					   "<ready />", 9,
+					   /* close channel notification: we don't set it. */
+					   NULL, NULL,
+					   /* frame received notification: we don't set it. */
+					   NULL, NULL,
+					   /* on channel crated notification: we don't set it.
+					    * It is not needed, we are working on a separated
+					    * thread. */
+					   NULL, NULL);
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to create TLS channel but failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* now try to open unauthorized channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+	if (channel != NULL) {
+		printf ("ERROR (3): SECURITY ERROR: expected to find proper channel creation but a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	return axl_true;
+}
+
+axl_bool test_22 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_22.conf")) 
+		return axl_false;
+
+	/* add a search path to allow reg test to find tls.conf file */
+	vortex_support_add_domain_search_path (vCtx, "tls", "test_22_datadir");
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path (vCtx, "sasl", "test_12_module");
+
+	/* register a profile for testing */
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+
+	/* register a frame received handler */
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-22:1",
+					      test_22_frame_received, NULL);
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* call to test against test-22.server */
+	if (! test_22_operations (vCtx, "test-22.server", queue, axl_false)) 
+		return axl_false;  
+
+	/* call to test against test-22.server.nochild */
+	if (! test_22_operations (vCtx, "test-22.server.nochild", queue, axl_false)) 
+		return axl_false;
+
+	/* call to test against test-22.server.sasl ( */
+	if (! test_22_operations (vCtx, "test-22.server.sasl", queue, axl_true)) 
+		return axl_false;
+
+	/* call to test against test-22.server.sasl.nochild */
+	if (! test_22_operations (vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
+		return axl_false;
+
+	/* check unfinished tls */
+	if (! test_22_unfinished (vCtx, "test-22.server", queue))
+		return axl_false;
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+	
+	return axl_true;
+}
+
 /** 
  * @brief Helper handler that allows to execute the function provided
  * with the message associated.
@@ -3548,6 +3783,8 @@ int main (int argc, char ** argv)
 	run_test (test_20, "Test 20: check profile path state also applies to childs (with reuse=yes)..");
 
 	run_test (test_21, "Test 21: check connection id on child reuse (with reuse=yes)..");
+
+	run_test (test_22, "Test 22: check TLS module.."); 
 
 	printf ("All tests passed OK!\n");
 

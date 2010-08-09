@@ -1,0 +1,6 @@
+    <!-- allow connections from localhost, first TLS, the custom profile -->
+    <path-def src="127.*" path-name="Connections from localhost" >
+      <if-success profile="http://iana.org/beep/TLS">
+	<allow profile="urn:aspl.es:beep:profiles:custom:1" />
+      </if-success>
+    </path-def>

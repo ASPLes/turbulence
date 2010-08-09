@@ -1,0 +1,14 @@
+    <!-- profile path to test tls+sasl with child creation -->
+    <path-def server-name="tls+sasl.example.com" src="127.*" path-name="(TLS+SASL)" >
+      <!-- first require TLS -->
+      <if-success profile="http://iana.org/beep/TLS">
+
+	<!-- then require SASL -->
+	<if-success profile="http://iana.org/beep/SASL/.*" connmark="sasl:is:authenticated" >
+
+	  <!-- then allow only profile-22:1 -->
+	  <allow profile="urn:aspl.es:beep:profiles:custom:1" />
+
+	</if-success><!-- SASL -->
+      </if-success><!-- TLS -->
+    </path-def>
