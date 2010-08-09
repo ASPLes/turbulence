@@ -848,6 +848,10 @@ axl_bool __turbulence_process_release_parent_connections_foreach  (axlPointer ke
 	if (state->conn == NULL)
 		return axl_false;
 
+	/* remove installed handlers (channel added and channel removed) */
+	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_ADD_HANDLER, state->added_channel_id);
+	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_REMOVE_HANDLER, state->removed_channel_id);
+
 	/* remove previous on close (defined in the parent context no
 	   matter if the connection is handled by the parent or the
 	   current child) */
@@ -902,6 +906,26 @@ axl_bool __turbulence_process_release_parent_connections_foreach  (axlPointer ke
 	return axl_false;
 }
 
+/** 
+ * @internal This function ensures that all connections that the
+ * parent handles but the child must't are closed properly so the
+ * child process only have access to connections associated to its
+ * profile path.
+ *
+ * The idea is that the parent (main process) may have a number of
+ * running connections serving certain profile paths...but when it is
+ * required to create a child, a fork is done (unix) and all sockets
+ * associated running at the parent, are available and the child so it
+ * is required to release all this stuff.
+ *
+ * The function has two steps: first check all connections in the
+ * connection manager hash closing all of them but skipping the
+ * connection that must handle the child (that is, the connection that
+ * triggered the fork) and the second step to initialize the
+ * connection manager hash. Later the connection that must handle the
+ * child is added to the newly initialized connection manager hash by
+ * issuing a turbulence_conn_mgr_register.
+ */
 void __turbulence_process_release_parent_connections (TurbulenceCtx * ctx, TurbulenceChild * parent, VortexConnection * child_conn)
 {
 	/* clear the hash */
@@ -932,6 +956,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	TurbulenceChild  * child;
 	int                client_socket;
 	VortexAsyncQueue * queue;
+	char             * temp_dir;
 
 	/* pipes to communicate logs from child to parent */
 	int                general_log[2] = {-1, -1};
@@ -984,8 +1009,23 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 							"turbulence",
 							VORTEX_FILE_SEPARATOR,
 							random ());
+	/* check base dir exists */
+	temp_dir = turbulence_base_dir (child->socket_control_path);
+	if (temp_dir && ! vortex_support_file_test (temp_dir, FILE_EXISTS)) {
+		/* base directory having child socket control do not exists */
+		wrn ("run time directory %s do not exists, creating..", temp_dir);
+		if (! turbulence_create_dir (temp_dir)) {
+			error ("Unable to create directory to hold child socket connection, unable to create child process..");
+			axl_free (temp_dir);
+			vortex_mutex_unlock (&ctx->child_process_mutex);
+			return;
+		} /* end if */
+	} /* end if */
+	/* free temporal directory */
+	axl_free (temp_dir);
+
 	
-	msg ("Created socket_control_path = '%s'", child->socket_control_path);
+	msg ("Creating socket_control_path = '%s'", child->socket_control_path);
 
 	/* call to fork */
 	pid = fork ();

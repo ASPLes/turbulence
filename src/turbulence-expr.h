@@ -58,6 +58,8 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 axl_bool         turbulence_expr_match   (TurbulenceExpr * expr, 
 					  const char     * subject);
 
+const char     * turbulence_expr_get_expression (TurbulenceExpr * expr);
+
 void             turbulence_expr_free    (TurbulenceExpr * expr);
 
 #endif /* __TURBULENCE_EXPR_H__ */

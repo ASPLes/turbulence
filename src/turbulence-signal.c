@@ -122,7 +122,7 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 		signal (SIGCHLD, signal_handler);
 
 #if defined(AXL_OS_UNIX)
-	signal (SIGKILL, signal_handler);
+/*	signal (SIGKILL, signal_handler); */
 	signal (SIGQUIT, signal_handler);
 
 	/* check for sighup */
