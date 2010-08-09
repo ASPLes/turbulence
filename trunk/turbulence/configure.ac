@@ -280,6 +280,7 @@ modules/mod-python/Makefile
 modules/mod-python/doc/Makefile
 modules/mod-python/doc/conf.py
 modules/mod-radmin/Makefile
+modules/mod-tls/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile

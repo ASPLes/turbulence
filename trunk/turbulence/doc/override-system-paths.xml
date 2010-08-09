@@ -1,0 +1,9 @@
+<global-settings>
+  <!-- more settings -->
+  <system-paths>
+    <!-- override runtime-datadir configuration -->
+    <path name="runtime_datadir" value="path/to/runtime-datadir" />
+    <path name="sysconfdir" value="path/to/sysconfdir" />
+    <path name="datadir" value="path/to/datadir" />
+  </system-paths>
+</global-settings>
