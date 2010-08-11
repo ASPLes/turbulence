@@ -335,6 +335,13 @@ END_C_DECLS
  * <b>serverName="*"</b> which means that, if no previous stanza
  * matches the requested serverName, then this will be used. 
  *
+ * Here is an example to create a private key and an unsigned public
+ * certificate associated:
+ * \code
+ * >> openssl genrsa 1024 > test-private.key
+ * >> openssl req -new -x509 -nodes -sha1 -days 3650 -key test-private.key > test-certificate.crt
+ * \endcode
+ *
  * \section turbulence_mod_tls_paths How paths are handled to find certificates and private keys provided
  *
  * The safest way to provide the right location to your certificates
