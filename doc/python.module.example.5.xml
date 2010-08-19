@@ -1,0 +1,10 @@
+   <!--  my echo profile  -->
+   <application name="My echo profile" >
+      <location app-reload="app_reload" 
+                app-close="app_close" 
+                app-init="app_init" 
+                start-file="__init__" 
+                src="/directory/path/to/start-file">
+	<add-path value="/path/to/python/modules" />
+      </location>
+   </application>
