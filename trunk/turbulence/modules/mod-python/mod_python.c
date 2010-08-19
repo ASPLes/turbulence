@@ -745,6 +745,13 @@ END_C_DECLS
  *   mixed with chroot profile path attribute.
  *
  * 
+ * \section turbulence_mod_python_add_path Adding path to python application
+ *
+ * It may be useful to allow including additional path from which to
+ * load python code that complete your python application. For that,
+ * you can use:
+ * 
+ * \htmlinclude python.module.example.5.xml.tmp
  * 
  */
 
@@ -799,6 +806,6 @@ END_C_DECLS
  * \htmlinclude python.module.example.4.xml.tmp 
  *
  * </li>
- *
  * </ol>
+ *
  */
