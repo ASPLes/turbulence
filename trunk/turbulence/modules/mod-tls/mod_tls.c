@@ -96,6 +96,10 @@ axl_bool mod_tls_accept_query (VortexConnection * conn,
 axlNode * mod_tls_find_certificate_node (VortexConnection * conn, const char * serverName)
 {
 	axlNode * node = axl_doc_get (mod_tls_conf, "/mod-tls/certificate-select");
+
+	msg ("Finding certificate/key material for serverName=%s conn-id=%d",
+	     serverName ? serverName : "N/A", vortex_connection_get_id (conn));
+
 	while (node) {
 
 		/* check serverName value */
@@ -109,6 +113,11 @@ axlNode * mod_tls_find_certificate_node (VortexConnection * conn, const char * s
 		/* get next node called "certificate-select" */
 		node = axl_node_get_next_called (node, "certificate-select");
 	} /* end node */
+
+	if (node == NULL) {
+		error ("Unable to find <certificate-select> node declaration that matches serverName=%s on conn-id=%d",
+		       serverName ? serverName : "N/A", vortex_connection_get_id (conn));
+	} /* end if */
 
 	return node;
 }
