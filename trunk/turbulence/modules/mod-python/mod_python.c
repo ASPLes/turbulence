@@ -655,7 +655,7 @@ END_C_DECLS
  * Inside that applications it is placed one declaration for each
  * application installed/recognized by Turbulence. It should look like:
  *
- * \htmlinclude turbulence.python.xml.tmp
+ * \htmlinclude turbulence.python.xml-tmp
  * 
  * In this example we have two applications: "test app" and "core
  * admin" which are located the directories configured by <b>"src"</b>
@@ -751,7 +751,7 @@ END_C_DECLS
  * load python code that complete your python application. For that,
  * you can use:
  * 
- * \htmlinclude python.module.example.5.xml.tmp
+ * \htmlinclude python.module.example.5.xml-tmp
  * 
  */
 
@@ -791,7 +791,7 @@ END_C_DECLS
  * content into python.conf file. See \ref turbulence_mod_python
  * "mod-python administration reference" for more details.
  *
- * \htmlinclude python.module.example.3.xml.tmp
+ * \htmlinclude python.module.example.3.xml-tmp
  * 
  * </li>
  *
@@ -803,7 +803,7 @@ END_C_DECLS
  * BEEP client connects from our local network (assuming
  * 192.168.0.0/24): 
  *
- * \htmlinclude python.module.example.4.xml.tmp 
+ * \htmlinclude python.module.example.4.xml-tmp 
  *
  * </li>
  * </ol>

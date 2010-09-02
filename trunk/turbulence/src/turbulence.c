@@ -1544,7 +1544,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Ports and addresses used by Turbulence to listen are configured at
  * the <b>&lt;global-settings></b> section. Here is an example:
  * 
- * \htmlinclude global-settings.xml.tmp
+ * \htmlinclude global-settings.xml-tmp
  *
  * Previous example will make Turbulence to listen on ports 3206 and
  * 44010 for all addresses that are known for the server hosting
@@ -1567,7 +1567,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * This is configured inside the <b>global-settings</b> section:
  *
- * \htmlinclude clean-start.xml.tmp
+ * \htmlinclude clean-start.xml-tmp
  *
  * 
  * Alternatively, during development or when it is found a turbulence
@@ -1575,7 +1575,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * crash (bad signal received). This is done by configuring the
  * following:
  *
- * \htmlinclude on-bad-signal.xml.tmp
+ * \htmlinclude on-bad-signal.xml-tmp
  *
  * The <b>"hold"</b> option is really useful for real time debugging
  * because it hangs right after the signal is received. This allows to
@@ -1589,7 +1589,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Turbulence logs is sent to a set of files that are configured at
  * the <b>&lt;global-settings></b> section:
  *
- * \htmlinclude log-reporting.xml.tmp
+ * \htmlinclude log-reporting.xml-tmp
  *
  * These files hold logs for general information
  *  (<b>&lt;general-log></b>), error information
@@ -1647,7 +1647,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * However, these three system paths can also be overrided by a
  * configuration placed at the global section. Here is an example:
  *
- * \htmlinclude override-system-paths.xml.tmp
+ * \htmlinclude override-system-paths.xml-tmp
  *
  * Currently, accepted system paths are:
  *
@@ -1661,12 +1661,12 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * configured in the <b>&lt;modules></b> section. Here is an
  * example:
  *
- * \htmlinclude tbc-modules.xml.tmp
+ * \htmlinclude tbc-modules.xml-tmp
  * 
  * Every directory configured contains turbulence xml module pointers
  * having the following content: 
  *
- * \htmlinclude module-conf.xml.tmp
+ * \htmlinclude module-conf.xml-tmp
  * 
  * Each module have its own configuration file, which should use XML
  * as default configuration format. 
@@ -1677,7 +1677,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * not loaded. This is done by adding a <b><no-load /></b> declaration
  * with the set of modules to be skipped. This is done inside <b><modules /></b> section:
  *
- * \htmlinclude module-skip.xml.tmp
+ * \htmlinclude module-skip.xml-tmp
  *
  * \section profile_path_configuration 3.1 Profile path configuration
  *
@@ -1696,7 +1696,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * With profile path this can be configured as:
  * 
- * \htmlinclude path-def.xml.tmp
+ * \htmlinclude path-def.xml-tmp
  *
  * Previous example instruct Turbulence to apply a profile path called
  * "not local-parts" if the source of the connection comes <i>"not
@@ -1716,7 +1716,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * As the previous image shows, the turbulence profile path
  * configuration is composed by several profile path definitions: 
  * 
- * \htmlinclude path-def-conf.xml.tmp
+ * \htmlinclude path-def-conf.xml-tmp
  * 
  * Once a connection is received, a path-def is selected and the
  * configuration inside it is applied. If no path-def is selected, the
@@ -1793,7 +1793,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * Let's see an example to show how it works:
  * 
- * \htmlinclude path-def-example.xml.tmp
+ * \htmlinclude path-def-example.xml-tmp
  *
  * Previous example have configured a particular profile path as
  * follows: 
@@ -1998,7 +1998,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * and its description. Do not change the content of init, close and
  * reconf nodes for now:
  *
- * \htmlinclude template.xml.tmp
+ * \htmlinclude template.xml-tmp
  *
  * Now, do the following to compile the content and produce a module
  * that is compatible with the Turbulence interface, and it is full
