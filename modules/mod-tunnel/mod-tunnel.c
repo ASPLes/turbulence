@@ -263,6 +263,6 @@ TurbulenceModDef module_def = {
  * "abstract request" to particular endpoint addresses. Here is an
  * example:
  * 
- * \htmlinclude resolver.xml.tmp
+ * \htmlinclude resolver.xml-tmp
  *
  */

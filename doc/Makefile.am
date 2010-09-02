@@ -1,22 +1,22 @@
 tmp_xml_examples = \
-	global-settings.xml.tmp \
-	clean-start.xml.tmp \
-	on-bad-signal.xml.tmp \
-	log-reporting.xml.tmp \
-	tbc-modules.xml.tmp \
-	module-conf.xml.tmp \
-	path-def.xml.tmp \
-	path-def-conf.xml.tmp \
-	path-def-example.xml.tmp \
-	template.xml.tmp \
-	turbulence.python.xml.tmp \
-	python.module.example.3.xml.tmp \
-	python.module.example.4.xml.tmp \
-	python.module.example.5.xml.tmp \
-	module-skip.xml.tmp \
-	override-system-paths.xml.tmp \
-	tls-example.xml.tmp \
-	tls-sasl-example.xml.tmp 
+	global-settings.xml-tmp \
+	clean-start.xml-tmp \
+	on-bad-signal.xml-tmp \
+	log-reporting.xml-tmp \
+	tbc-modules.xml-tmp \
+	module-conf.xml-tmp \
+	path-def.xml-tmp \
+	path-def-conf.xml-tmp \
+	path-def-example.xml-tmp \
+	template.xml-tmp \
+	turbulence.python.xml-tmp \
+	python.module.example.3.xml-tmp \
+	python.module.example.4.xml-tmp \
+	python.module.example.5.xml-tmp \
+	module-skip.xml-tmp \
+	override-system-paths.xml-tmp \
+	tls-example.xml-tmp \
+	tls-sasl-example.xml-tmp 
 
 
 xml_examples = \
@@ -66,8 +66,9 @@ help:
 	@echo
 
 # build drafts and xml rfcs
-%.txt: %.xml
+.xml.txt: 
 	xml2rfc $<
+
 
 initial_build_doc: 
 	@echo "checking documenation stamp..";
@@ -75,7 +76,7 @@ initial_build_doc:
 	@test -e doc.stamp || make build_doc
 	@test -e doc.stamp || touch doc.stamp
 
-build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_examples) $(drafts_and_docs)
+build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_examples)
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
@@ -95,7 +96,7 @@ turbulence-config-location.txt:
 	echo ">> turbulence --conf-location" > $@
 	../src/turbulence --conf-location >> $@
 
-%.xml.tmp: %.xml 
+.xml.xml-tmp:
 	axl-knife -i $< -o $@ -e -p fragment
 
 clean_template:

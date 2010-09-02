@@ -366,7 +366,7 @@ END_C_DECLS
  * allow your profiles. Here is an example to be placed inside
  * <b>profile-path-configuration</b> node:
  *
- * \htmlinclude tls-example.xml.tmp
+ * \htmlinclude tls-example.xml-tmp
  * 
  * In previous example first we "require" to enable TLS to serve any
  * profile. Only when TLS is properly enabled, the custom profile
@@ -382,5 +382,5 @@ END_C_DECLS
  * TLS, then require proper SASL authentication, and the provide
  * application profiles. This is done like follows:
  *
- * \htmlinclude tls-sasl-example.xml.tmp
+ * \htmlinclude tls-sasl-example.xml-tmp
  */
