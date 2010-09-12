@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://fact.aspl.es
 dnl
 
-AC_INIT(turbulence,0.4.1.b4428.g4434)
+AC_INIT(turbulence,0.4.1.b4469.g4474)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
@@ -57,7 +57,7 @@ AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
 dnl external dependencies
-PKG_CHECK_MODULES(AXL, axl >= 0.6.2) 
+PKG_CHECK_MODULES(AXL, axl >= 0.6.3) 
 
 dnl general libries subsitution
 AC_SUBST(AXL_CFLAGS)
@@ -66,7 +66,7 @@ AXL_VERSION=`pkg-config --modversion axl`
 AC_SUBST(AXL_VERSION)
 
 dnl external dependencies
-PKG_CHECK_MODULES(VORTEX, vortex-1.1 >= 1.1.4) 
+PKG_CHECK_MODULES(VORTEX, vortex-1.1 >= 1.1.5) 
 
 dnl external dependency: check for base vortex 
 AC_SUBST(VORTEX_CFLAGS)

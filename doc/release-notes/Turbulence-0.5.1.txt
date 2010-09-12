@@ -1,0 +1,170 @@
+                     -= Turbulence 0.5.1 =-
+                     "Profile jump release"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce Turbulence
+  0.5.1 "Profile jump" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules which allows
+  to implement server side profiles that are used and combined later
+  with other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://www.sf.net/projects/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  
+
+  Many bugs were fixed and many regression tests were added. Added lot
+  of documentation.
+
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.4.1
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [new] Updated tbc-sasl-conf tool to allow loading databases from
+  different locations than default. This allows users to implement
+  SASL databases inside they working directories.
+
+* [new] Updated tbc-sasl-conf tool to allow changing passwords to
+  existing users.
+
+* [fix] Fixed log creation with wrong permissions.
+
+* [fix] Making configure process to create directory used to transfer
+  socket connections between process and to set the right permissions
+  (/var/lib/turbulence).
+
+* [fix] Updated clean start code to detect if the server was started
+  or not, to avoid killing the server when it was working.
+
+* [fix] Adding some checks to turbulence_msg, error, wrn and error to
+  avoid printing NULL values. Updated mod-python module to also check
+  values received from Python space (especially None).
+
+* [fix] Updating mod-python to sanitize strings received on
+  tbc.{msg,error} API avoiding passing uncomplete %s format to C API.
+
+* [fix] Updating mod-python turbulence.Ctx.msg/error/wrn method to
+  replace all % by # to avoid printf functions inside C API to handle
+  such characters..
+
+* [new] Updated mod-python to allow administrator to define python
+  paths that will be included before loading a python app.  XML path:
+  <mod-python/application/location/add-path>
+
+* [fix] Updated mod-python location support to allow keeping the path
+  defined to load the python start file after module was completely
+  loaded.
+
+* [fix] Updated python.conf.xml example to include add-path
+  references.
+
+* [fix] Committing init script.
+
+* [new] Added new fully working mod-tls to support TLS profile inside
+  turbulence. The module allows to configure a set of certificates to
+  be used according to serverNames provided by connecting peer. Added
+  initial module documentation.
+
+* [fix] Making mod-sasl to not return a critical error on profile path
+  selected in the case no database is found associated to the
+  serverName provided.
+
+* [fix] Improved profile path filtering code to gather information
+  from turbulence connection manager module to search and apply
+  restrictions instead of checking all profiles registered
+  globally. For example, now all operations are done against opened
+  profiles on a connection (not channels) which improve operations
+  where 1000 channels may be opened but only 3 profiles are running.
+
+* [fix] Updated turbulence profile path module to allow application
+  layer to install a profile alias that causes to check a certain
+  attribute on a connection instead of the profile itself. This is
+  useful for TLS profile because once it finishes, there is no TLS
+  channel to check.  API added:
+
+   - turbulence_ppath_add_profile_attr_alias
+
+* [new] Updated turbulence expressions module to also record the
+  expression that was used to build the object. Now it is possible to
+  check this string by using:
+
+   - turbulence_expr_get_expression
+
+* [new] Updated turbulence documentation to explain how to use and
+  configure system paths.
+
+* [fix] Updated turbulence process module to check if exists the run
+  time directory used to create the child control socket. The module
+  creates it in the case it is not available.
+
+* [new] Added new function that allows getting profile stats on a
+  particular connection. API added:
+
+   - turbulence_conn_mgr_profiles_stats
+
+* [new] Updated regression test to check new mod-tls added. Added
+  additional checks to ensure the module properly interacts with other
+  modules, especially mod-sasl (test 22).
+
+* [fix] Updated mod-tls documentation to include examples to create a
+  key and a certificate.
+
+* [fix] Adding documentation to explain how to include additional
+  paths to mod-python loaded applications.
+
+* [fix] Updating error reporting at mod-tls.
+
+* [fix] Fixed documentation building warning to avoid using
+  gnu-extensions. 
+
+About Us
+~~~~~~~~
+
+  Advanced Software Production Line provides GNU/Linux support and
+  consulting services to help organizations to introduce GNU/Linux
+  inside its process.
+
+  Contact us, using English or Spanish, to get commercial support
+  and/or BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  Enjoy Turbulence!  
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+12th sep 2010, Madrid (Spain)
+  
+
