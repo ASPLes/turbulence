@@ -346,11 +346,11 @@ TurbulenceModDef module_def = {
  *
  * </ol>
  *
- * \section turbulence_mod_sasl_work_dir Per profile path sasl configuration
+ * \section turbulence_mod_sasl_work_dir Using work-dir attribute to set an user defined SASL database
  *
- * In the case the profile path under which the connection is during
+ * In the case the profile path under which the connection is running
  * have <b>work-dir</b> attribute defined, then mod-sasl will try to
- * load sasl.conf from that work-dir. If not found, system sasl.conf
+ * load <b>sasl.conf</b> from that work-dir. If not found, system sasl.conf
  * file will be loaded.
  *
  * The idea is to allow a user with access to a working directory (and

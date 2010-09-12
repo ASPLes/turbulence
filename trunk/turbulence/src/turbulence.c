@@ -1366,21 +1366,45 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
 /** 
  * \mainpage 
  *
- * \section intro Turbulence Documentation
+ * \section intro Turbulence Introduction
  *
- * The following is the Turbulence API documentation, manuals and
- * other documents comming from modules and tools. 
+ * Turbulence is a general BEEP application server that allows to
+ * develop and easily deploy BEEP enabled server applications. This
+ * means you focus on adding features to your server side application,
+ * letting Turbulence to help you with (to name some of them):
  *
- * <h2>Turbulence manuals</h2>
+ * - The profile security (\ref profile_path_configuration "by using profile path"), that is, to ensure your
+ *      profile is used in the exact combination sequence required.
  *
- * The following manual includes information on how to deploy and
- * configure Turbulence (no code development):
- * 
+ * - To enable application authentication (\ref turbulence_mod_sasl "by using SASL profiles"), that
+ *     is, you can use already tested and integrated SASL framework to
+ *     add auth to your server side applications.
+ *
+ * - To secure connection transmissions in a transparent way from your
+ *     application (\ref turbulence_mod_tls "by using TLS profile").
+ *
+ * - The \ref turbulence_execution_model "execution model" required by your application, that is, you
+ *     can choose to handle your incoming requests with a single new
+ *     process each time (like HTTP servers), or handling
+ *     a set of logically related connections by the
+ *     same child process allowing (usually required but not found) security
+ *     configurations like chroot, changing executing user and group,
+ *     etc.
+ *
+ * Turbulence is written on top of Vortex Library and it is extended
+ * by modules written in C or python (for now) and can be accessed by
+ * available BEEP toolkits like Vortex Library
+ * (http://www.aspl.es/vortex) or jsVortex
+ * (http://www.aspl.es/jsVortex).
+ *
+ * \section documentation Turbulence Documentation
+ *
+ * Turbulence documentation is separated into two sections:
+ * administrators manuals (used by people that want to deploy and
+ * maintain Turbulence and its applications) and the develop manual
+ * which includes information on how to extend turbulence:
+ *
  * - \ref turbulence_administrator_manual
- *
- * The following manual includes information on how to develop modules
- * and how to extend Turbulence:
- *
  * - \ref turbulence_developer_manual
  *
  * <h2>Contact us</h2>
@@ -1389,8 +1413,9 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * href="http://lists.aspl.es/cgi-bin/mailman/listinfo/vortex">vortex
  * users</a> for any question and patches.
  *
- * If you are interested on getting commercial support, you can also
- * contact us at: info@aspl.es. You can also see: http://www.aspl.es/turbulence/commercial.html
+ * If you are interested in getting commercial support, you can
+ * contact us at: <a href="mailto:info@aspl.es?subject=Turbulence+Vortex support">info@aspl.es</a>. For more information see:
+ * http://www.aspl.es/turbulence/commercial.html
  */
 
 /** 
@@ -1684,7 +1709,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * Profile Path is a feature that allows to configure which profiles
  * can be used by remote peers, according to several run time
  * configurations. It is designed to make it easy to develop BEEP
- * profile, that are later mixed with other profiles in many ways
+ * profiles, that are later mixed with other profiles in many ways
  * making them more useful through the combinations created at
  * run-time.
  * 
@@ -1694,7 +1719,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * work. The intention is to enforce a successful SASL negotiation to
  * then provide a protected resource. 
  *
- * With profile path this can be configured as:
+ * With profile path this can be done as follows:
  * 
  * \htmlinclude path-def.xml-tmp
  *
@@ -1702,13 +1727,13 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * "not local-parts" if the source of the connection comes <i>"not
  * from 192.168.0.X"</i>. It also teaches Turbulence to only provide
  * SASL profiles available and only once initiated properly (and
- * authenticated), the remote client peer can use the TUNNEL
+ * authenticated), the remote peer can use the TUNNEL
  * profile. 
  *
  * Profile path is applied as a chain, composed by a set of
  * <b>&lt;path-def></b> declarations. Once a <b>&lt;path-def></b>
- * match the target, the profile path configuration found on it is
- * applied to the peer, discarding the rest of <b>&lt;path-def></b>
+ * match the target, the profile path configuration found inside it is
+ * applied to the peer, discarding the rest of <b>&lt;path-def></b> nodes
  * defined.  
  * 
  * \image html profile-path-chain.png "Profile path chain"
