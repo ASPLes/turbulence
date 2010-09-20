@@ -137,6 +137,14 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 	return;
 }
 
+#define CHECK_AND_REPORT_MAIL_TO(subject, body, file) do{		           \
+	if (HAS_ATTR (node, "mail-to")) {				           \
+		turbulence_support_simple_smtp_send (ctx,		           \
+						     ATTR_VALUE (node, "mail-to"), \
+						     subject, body, file);         \
+	} /* end if */							           \
+} while (0)
+
 /** 
  * @internal Terminates the turbulence excution, returing the exit signal
  * provided as first parameter. This function is used to notify a
@@ -194,12 +202,20 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 		doc  = turbulence_config_get (ctx);
 		node = axl_doc_get (doc, "/turbulence/global-settings/on-bad-signal");
 		if (HAS_ATTR_VALUE (node, "action", "ignore")) {
+			/* do notify if enabled */
+			CHECK_AND_REPORT_MAIL_TO ("Bad signal received at turbulence process, default action: ignore",
+						  "Received termination signal but it was ignored.",
+						  NULL);
+
 			/* ignore the signal emision */
 			return;
 		} else if (HAS_ATTR_VALUE (node, "action", "hold")) {
 			/* lock the process */
 			error ("Bad signal found, locking process, now you can attach or terminate pid: %d", 
 			       getpid ());
+			CHECK_AND_REPORT_MAIL_TO ("Bad signal received a turbulence process, default action: hold",
+						  "Received termination signal and the process was hold for examination",
+						  NULL);
 			queue = vortex_async_queue_new ();
 			vortex_async_queue_pop (queue);
 			return;
@@ -213,13 +229,8 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 				error ("..backtrace created at: %s", backtrace_file);
 
 			/* check if we have to do a mail notification */
-			if (HAS_ATTR (node, "mail-to")) {
-				msg ("doing mail notification to smtp configuration: %s", ATTR_VALUE (node, "mail-to"));
-				turbulence_support_simple_smtp_send (ctx, 
-								     ATTR_VALUE (node, "mail-to"),
-								     "Bad signal received at turbulence process",
-								     NULL, backtrace_file);
-			} /* end if */
+			CHECK_AND_REPORT_MAIL_TO ("Bad signal received a turbulence process, default action: backtrace",
+						  NULL, backtrace_file);
 			/* release backtrace */
 			axl_free (backtrace_file);
 		}

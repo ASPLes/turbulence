@@ -461,7 +461,6 @@ axl_bool        turbulence_support_simple_smtp_send (TurbulenceCtx * ctx,
 	/* find smtp mail notification conf */
 	node         = axl_doc_get (turbulence_config_get (ctx), "/turbulence/global-settings/notify-failures/smtp-server");
 	default_node = NULL;
-	msg ("Found first node for smtp servers: %p (ctx: %p)", node, ctx);
 	while (node) {
 		/* check for declaration with the smtp conf requested */
 		if (HAS_ATTR_VALUE (node, "id", smtp_conf_id))
