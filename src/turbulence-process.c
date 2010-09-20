@@ -810,6 +810,8 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 		goto release_content;
 	}
 
+	msg ("Received socket %d, and ancillary_data[0]='%c'", socket, ancillary_data[0]);
+
 	/* process commands received from the parent */
 	if (ancillary_data[0] == 's') {
 		/* close the connection received. This command signals

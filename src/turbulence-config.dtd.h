@@ -17,6 +17,7 @@
       connections,                                                                        \
                     kill-childs-on-exit?,                                                 \
                     system-paths?,                                                        \
+                    notify-failures?,                                                     \
                     allow-start-without-profiles?)>                                       \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
@@ -41,7 +42,8 @@
 <!ATTLIST tls-support enabled (yes|no) #REQUIRED>                                         \
                                                                                           \
 <!ELEMENT on-bad-signal       EMPTY>                                                      \
-<!ATTLIST on-bad-signal action (hold|ignore|quit|exit) #REQUIRED>                         \
+<!ATTLIST on-bad-signal action (hold|ignore|backtrace|quit|exit) #REQUIRED>               \
+<!ATTLIST on-bad-signal mail-to CDATA #IMPLIED>                                           \
                                                                                           \
 <!ELEMENT clean-start       EMPTY>                                                        \
 <!ATTLIST clean-start   value  (yes|no) #REQUIRED>                                        \
@@ -54,6 +56,15 @@
 <!ELEMENT path        EMPTY>                                                              \
 <!ATTLIST path        name  CDATA #REQUIRED                                               \
                       value CDATA #REQUIRED>                                              \
+                                                                                          \
+<!ELEMENT notify-failures   (smtp-server*)>                                               \
+<!ELEMENT smtp-server        EMPTY>                                                       \
+<!ATTLIST smtp-server        id         CDATA #REQUIRED                                   \
+                             server     CDATA #REQUIRED                                   \
+                             port       CDATA #REQUIRED                                   \
+                             is-default CDATA #IMPLIED                                    \
+                             mail-from  CDATA #IMPLIED                                    \
+                             mail-to    CDATA #REQUIRED>                                  \
                                                                                           \
 <!ELEMENT allow-start-without-profiles   EMPTY>                                           \
 <!ATTLIST allow-start-without-profiles   value  (yes|no) #REQUIRED>                       \

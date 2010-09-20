@@ -16,7 +16,7 @@ endif
 
 INCLUDES = -DCOMPILATION_DATE=`date +%s` -D__COMPILING_TURBULENCE__  \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" -DVORTEX_VERSION=\"$(VORTEX_VERSION)\" -DAXL_VERSION=\"$(AXL_VERSION)\" \
-	   -DSYSCONFDIR=\""$(sysconfdir)"\" -DDEFINE_CHROOT_PROTO -DDEFINE_KILL_PROTO \
+	   -DSYSCONFDIR=\""$(sysconfdir)"\" -DDEFINE_CHROOT_PROTO -DDEFINE_KILL_PROTO -DDEFINE_MKSTEMP_PROTO \
 	   -DPIDFILE=\""$(statusdir)/turbulence.pid"\" \
 	   -DTBC_RUNTIME_DATADIR=\""$(runtimedatadir)"\" \
 	   -DTBC_DATADIR=\""$(datadir)"\" $(INCLUDE_PCRE_SUPPORT) $(PCRE_CFLAGS) $(INCLUDE_TERMIOS) $(EXARG_FLAGS) \
@@ -39,6 +39,7 @@ libturbulenceinclude_HEADERS    = \
 	turbulence-types.h \
 	turbulence-expr.h \
 	turbulence-moddef.h \
+	turbulence-support.h \
 	turbulence.h \
 	turbulence-ctx.h \
 	turbulence-ctx-private.h \
@@ -61,6 +62,7 @@ libturbulence_la_SOURCES = \
 	turbulence-ctx.c \
 	turbulence-config.c \
 	turbulence-run.c \
+	turbulence-support.c \
 	turbulence-module.c \
 	turbulence-log.c \
 	turbulence-ppath.c \

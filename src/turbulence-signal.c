@@ -38,6 +38,7 @@
 #include <turbulence-ctx-private.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <stdlib.h>
 
 /** 
  * \defgroup turbulence_signal Turbulence Signal : signal handling support for turbulence
@@ -150,6 +151,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	axlDoc           * doc;
 	axlNode          * node;
 	VortexAsyncQueue * queue;
+	char             * backtrace_file;
 
 	/* lock the mutex and check */
 	vortex_mutex_lock (&ctx->exit_mutex);
@@ -201,6 +203,25 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 			queue = vortex_async_queue_new ();
 			vortex_async_queue_pop (queue);
 			return;
+		} else if (HAS_ATTR_VALUE (node, "action", "backtrace")) {
+			/* create temporal file */
+			error ("Bad signal found, creating backtrace for current process: %d", getpid ());
+			backtrace_file = turbulence_support_get_backtrace (ctx, getpid ());
+			if (backtrace_file == NULL)
+				error ("..backtrace error, unable to produce backtrace..");
+			else
+				error ("..backtrace created at: %s", backtrace_file);
+
+			/* check if we have to do a mail notification */
+			if (HAS_ATTR (node, "mail-to")) {
+				msg ("doing mail notification to smtp configuration: %s", ATTR_VALUE (node, "mail-to"));
+				turbulence_support_simple_smtp_send (ctx, 
+								     ATTR_VALUE (node, "mail-to"),
+								     "Bad signal received at turbulence process",
+								     NULL, backtrace_file);
+			} /* end if */
+			/* release backtrace */
+			axl_free (backtrace_file);
 		}
 		
 		/* let turbulence to exit */
