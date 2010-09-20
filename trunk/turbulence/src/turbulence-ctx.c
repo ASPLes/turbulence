@@ -111,6 +111,9 @@ void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
 	/* clean child process list: reinit = axl_true */
 	turbulence_process_init (ctx, axl_true);
 
+	/* flag as we are in a child process */
+	ctx->is_main_process = axl_false; /* not a child */
+
 	return;
 }
 

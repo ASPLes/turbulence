@@ -56,6 +56,7 @@ struct _TurbulenceCtx {
 
 	/* Turbulence current pid (process identifier) */
 	int                  pid;
+	axl_bool             is_main_process;
 	
 	/* some variables used to terminate turbulence. */
 	axl_bool             is_existing;

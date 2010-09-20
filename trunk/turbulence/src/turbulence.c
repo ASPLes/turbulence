@@ -91,6 +91,7 @@ int  turbulence_init (TurbulenceCtx * ctx,
 
 	/* get current process id */
 	ctx->pid = getpid ();
+	ctx->is_main_process = axl_true; /* not a child */
 
 	/* init turbulence internals */
 	vortex_mutex_create (&ctx->exit_mutex);
@@ -292,7 +293,7 @@ void turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * 
 	va_list            args;
 
 	/* do not print if NULL is received */
-	if (format == NULL)
+	if (format == NULL || ctx == NULL)
 		return;
 	
 	/* check extended console log */
@@ -485,7 +486,7 @@ void turbulence_msg (TurbulenceCtx * ctx, const char * file, int line, const cha
 	axl_bool           ignore_debug = axl_false;
 
 	/* do not print if NULL is received */
-	if (format == NULL)
+	if (format == NULL || ctx == NULL)
 		return;
 
 	/* check extended console log */
@@ -535,7 +536,7 @@ void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, con
 	axl_bool           ignore_debug = axl_false;
 
 	/* do not print if NULL is received */
-	if (format == NULL)
+	if (format == NULL || ctx == NULL)
 		return;
 
 	/* check extended console log */
@@ -585,7 +586,7 @@ void turbulence_msg2 (TurbulenceCtx * ctx, const char * file, int line, const ch
 	axl_bool           ignore_debug = axl_false;
 
 	/* do not print if NULL is received */
-	if (format == NULL)
+	if (format == NULL || ctx == NULL)
 		return;
 
 	/* check second level debug */
@@ -638,7 +639,7 @@ void turbulence_wrn (TurbulenceCtx * ctx, const char * file, int line, const cha
 	axl_bool           ignore_debug = axl_false;
 
 	/* do not print if NULL is received */
-	if (format == NULL)
+	if (format == NULL || ctx == NULL)
 		return;
 	
 	/* check extended console log */
@@ -692,7 +693,7 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
 	axl_bool           ignore_debug = axl_false;
 
 	/* do not print if NULL is received */
-	if (format == NULL)
+	if (format == NULL || ctx == NULL)
 		return;
 	
 	/* check extended console log */
@@ -1945,6 +1946,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *  - \ref turbulence_mediator
  *  - \ref turbulence_module
  *  - \ref turbulence_ppath
+ *  - \ref turbulence_support
  *
  * \section turbulence_developer_manual_creating_modules How Turbulence module works
  *

@@ -64,6 +64,61 @@ axl_bool        test_common_enable_debug = axl_false;
 	} /* end if */                                          \
 } while (0);
 
+axl_bool test_common_init (VortexCtx     ** vCtx, 
+			   TurbulenceCtx ** tCtx, 
+			   const char     * config)
+{
+	/* init vortex context and support module */
+	(*vCtx) = vortex_ctx_new ();
+
+	/* init vortex support */
+	vortex_support_init ((*vCtx));
+
+	/* create turbulence context */
+	(*tCtx) = turbulence_ctx_new ();
+	turbulence_ctx_set_vortex_ctx ((*tCtx), (*vCtx));
+
+	if (test_common_enable_debug) {
+		turbulence_log_enable       ((*tCtx), axl_true);
+		turbulence_color_log_enable ((*tCtx), axl_true);
+		turbulence_log2_enable      ((*tCtx), axl_true);
+		turbulence_log3_enable      ((*tCtx), axl_true);
+	}
+
+	/* init libraries */
+	if (! turbulence_init ((*tCtx), (*vCtx), config)) {
+
+		/* free turbulence ctx */
+		turbulence_ctx_free ((*tCtx));
+		return axl_false;
+	} /* end if */
+
+	/* init ok */
+	return axl_true;
+}
+
+void     test_common_microwait (long microseconds)
+{
+	VortexAsyncQueue * queue;
+	queue = vortex_async_queue_new ();
+	vortex_async_queue_timedpop (queue, microseconds);
+	vortex_async_queue_unref (queue);
+	return;
+}
+
+axl_bool test_common_exit (VortexCtx      * vCtx,
+			   TurbulenceCtx  * tCtx)
+{
+	/* terminate turbulence execution */
+	turbulence_exit (tCtx, axl_false, axl_false);
+
+	/* free context (the very last operation) */
+	turbulence_ctx_free (tCtx);
+	vortex_ctx_free (vCtx);
+
+	return axl_false;
+}
+
 int  test_01_remove_all (const char * item_stored, axlPointer user_data)
 {
 	/* just remove dude! */
@@ -398,6 +453,60 @@ axl_bool  test_01a () {
 
 	/* free context */
 	turbulence_ctx_free (ctx);
+
+	return axl_true;
+}
+
+/** 
+ * Check SMTP sending is working
+ */
+axl_bool  test_01b () {
+	
+	TurbulenceCtx * tCtx;
+	VortexCtx     * vCtx;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_01-b.conf"))
+		return axl_false;
+
+	/* send test mail */
+	if (! turbulence_support_smtp_send (tCtx,
+					    "test@aspl.es",
+					    "test2@aspl.es",
+					    "This is a test from test01-b regtest",
+					    "This is a body content",
+					    NULL,
+					    NULL, NULL)) {
+		printf ("ERROR (1): found failure while sending SMTP message\n");
+		return axl_false;
+	} /* end if */
+
+	/* send test mail */
+	if (! turbulence_support_smtp_send (tCtx,
+					    "test@aspl.es",
+					    "test2@aspl.es",
+					    "This is a test from test01-b regtest",
+					    "This is a body content",
+					    NULL, 
+					    "localhost", "25")) {
+		printf ("ERROR (2): found failure while sending SMTP message\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to send file content */
+	if (! turbulence_support_smtp_send (tCtx,
+					    "test@aspl.es",
+					    "test@aspl.es",
+					    "This is a test from test01-b regtest",
+					    NULL,
+					    "test_01-b.conf",
+					    "localhost", "25")) {
+		printf ("ERROR (3): found failure while sending SMTP message from file\n");
+		return axl_false;
+	} /* end if */
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
 
 	return axl_true;
 }
@@ -1095,61 +1204,6 @@ axl_bool test_05 () {
 }
 
 
-axl_bool test_common_init (VortexCtx     ** vCtx, 
-			   TurbulenceCtx ** tCtx, 
-			   const char     * config)
-{
-	/* init vortex context and support module */
-	(*vCtx) = vortex_ctx_new ();
-
-	/* init vortex support */
-	vortex_support_init ((*vCtx));
-
-	/* create turbulence context */
-	(*tCtx) = turbulence_ctx_new ();
-	turbulence_ctx_set_vortex_ctx ((*tCtx), (*vCtx));
-
-	if (test_common_enable_debug) {
-		turbulence_log_enable       ((*tCtx), axl_true);
-		turbulence_color_log_enable ((*tCtx), axl_true);
-		turbulence_log2_enable      ((*tCtx), axl_true);
-		turbulence_log3_enable      ((*tCtx), axl_true);
-	}
-
-	/* init libraries */
-	if (! turbulence_init ((*tCtx), (*vCtx), config)) {
-
-		/* free turbulence ctx */
-		turbulence_ctx_free ((*tCtx));
-		return axl_false;
-	} /* end if */
-
-	/* init ok */
-	return axl_true;
-}
-
-void     test_common_microwait (long microseconds)
-{
-	VortexAsyncQueue * queue;
-	queue = vortex_async_queue_new ();
-	vortex_async_queue_timedpop (queue, microseconds);
-	vortex_async_queue_unref (queue);
-	return;
-}
-
-axl_bool test_common_exit (VortexCtx      * vCtx,
-			   TurbulenceCtx  * tCtx)
-{
-	/* terminate turbulence execution */
-	turbulence_exit (tCtx, axl_false, axl_false);
-
-	/* free context (the very last operation) */
-	turbulence_ctx_free (tCtx);
-	vortex_ctx_free (vCtx);
-
-	return axl_false;
-}
-
 axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * system_id, const char * path);
 
 axl_bool test_05_a (void) {
@@ -1543,6 +1597,7 @@ axl_bool test_09 (void) {
 }
 
 TurbulenceCtx    * tCtxTest10 = NULL;
+TurbulenceCtx    * tCtxTest10a = NULL;
 
 void test_10_received (VortexChannel    * channel, 
 		       VortexConnection * connection, 
@@ -1570,6 +1625,12 @@ void test_10_signal_handler (int _signal)
 {
 	/* marshal signal */
 	turbulence_signal_received (tCtxTest10, _signal);
+}
+
+void test_10_a_signal_handler (int _signal)
+{
+	/* marshal signal */
+	turbulence_signal_received (tCtxTest10a, _signal);
 }
 
 axl_bool test_10 (void) {
@@ -1751,6 +1812,118 @@ axl_bool test_10 (void) {
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtxTest10);
+
+	return axl_true;
+}
+typedef struct _FailStructure  {
+	char * value;
+} FailStructure;
+
+void test_10_a_received (VortexChannel    * channel, 
+			 VortexConnection * connection, 
+			 VortexFrame      * frame, 
+			 axlPointer         user_data)
+{
+	FailStructure * structure = user_data;
+
+	/*** begin: FORCED SEG FAULT ACCESS ***/
+	printf ("This will fail: %s\n", structure->value);
+	/*** end: FORCED SEG FAULT ACCESS ***/
+
+	return;
+}
+
+axl_bool test_10_a (void) {
+
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtxTest10a, "test_10-a.conf"))
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+
+	/* register a frame received for the remote side (child process) */
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-1", 
+					      test_10_a_received, NULL);
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtxTest10a)) 
+		return axl_false;
+
+	/* install signal handling */
+	turbulence_signal_install (tCtxTest10a, axl_false, axl_false, axl_true, test_10_a_signal_handler);
+
+	/* create connection to local server */
+	printf ("Test 10-a: creating connection..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel: MUST WORK */
+	printf ("Test 10-a: opening channel...\n");
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+		return axl_false;
+	}
+
+	/* check connection after created it */
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (4): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* ask for remote pid and compare it to the current value */
+	printf ("Test 10-a: send message to break child...\n");
+	if (! vortex_channel_send_msg (channel, "wrong access", 12, NULL)) {
+		printf ("ERROR (6): expected to find remote pid request message sent successfully but found an error..\n");
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 10-a: now wait to create another connection..\n");
+	test_common_microwait (300000);
+
+	/* close connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	printf ("Test 10-a: creating (AGAIN) the connection..\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel: MUST WORK */
+	printf ("Test 10-a: opening channel...\n");
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+		return axl_false;
+	}
+
+	/* check connection after created it */
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (4): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* close the connection and check child process */
+	printf ("Test 10: closing connection and checking childs..\n");
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtxTest10a);
 
 	return axl_true;
 }
@@ -3731,6 +3904,8 @@ int main (int argc, char ** argv)
 
 	run_test (test_01a, "Test 01-a: Regular expressions");
 
+	run_test (test_01b, "Test 01-b: smtp notificaitons");
+
 	run_test (test_02, "Test 02: Turbulence misc functions");
 
 	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl, tbc-sasl-conf)");
@@ -3753,6 +3928,8 @@ int main (int argc, char ** argv)
 	run_test (test_09, "Test 09: Turbulence profile path filtering (serverName)");
 
 	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
+
+	run_test (test_10_a, "Test 10-a: Recover from child with failures...");
 
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
 

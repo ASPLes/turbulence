@@ -6,10 +6,12 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
         -DVERSION=\"$(VERSION)\" 
 
 configuration_files = \
+	test_01-b.conf \
 	test_07.conf  \
 	test_08.conf  \
 	test_09.conf  \
 	test_10.conf  \
+	test_10-a.conf \
 	test_11.conf  \
 	test_12.conf  \
 	test_12a.conf \

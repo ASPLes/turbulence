@@ -53,6 +53,7 @@
 #include <turbulence-ctx.h>
 #include <turbulence-handlers.h>
 #include <turbulence-expr.h>
+#include <turbulence-support.h>
 #include <turbulence-signal.h>
 #include <turbulence-moddef.h>
 #include <turbulence-config.h>
