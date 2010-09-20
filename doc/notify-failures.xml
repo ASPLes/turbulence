@@ -1,0 +1,3 @@
+<notify-failures>
+  <smtp-server id="default" server="localhost" port="25" mail-from="turbulence@aspl.es" mail-to="test@example.com" is-default="yes"/>
+</notify-failures>

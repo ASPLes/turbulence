@@ -1,12 +1,19 @@
 <global-settings>
    <!--  ....more settings ....  -->
-   <!--  crash settings 
+   <!--  crash settings: allowed values for action attribute.
        [*] hold:   lock the current instance so a developer can attach to the
                    process  to debug what's happening.
 
        [*] ignore: just ignore the signal, and try to keep running.
 
        [*] quit,exit: terminates turbulence execution.
+
+       [*] backtrace: creates a backtrace report of the current faulted process. 
+                      this backtrace report is saved into a file for later use and
+                      then the process is finished.
+
+       Use mail-to attribute to configure the default smtp notification to
+       be used when a bad signal is received. mail-to attribute is optional.
      -->
-   <on-bad-signal action="hold" />
+   <on-bad-signal action="hold" mail-to="default"/>
 </global-settings>

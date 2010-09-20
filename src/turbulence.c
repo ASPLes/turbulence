@@ -1381,14 +1381,14 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *     is, you can use already tested and integrated SASL framework to
  *     add auth to your server side applications.
  *
- * - To secure connection transmissions in a transparent way from your
+ * - To secure connection transmissions in a transparent way for your
  *     application (\ref turbulence_mod_tls "by using TLS profile").
  *
- * - The \ref turbulence_execution_model "execution model" required by your application, that is, you
- *     can choose to handle your incoming requests with a single new
- *     process each time (like HTTP servers), or handling
- *     a set of logically related connections by the
- *     same child process allowing (usually required but not found) security
+ * - The \ref turbulence_execution_model "execution model" required by
+ *     your application, that is, you can choose to handle your
+ *     incoming requests with a single new process each time (like
+ *     HTTP servers), or handling a set of logically related
+ *     connections by the same child process, allowing security
  *     configurations like chroot, changing executing user and group,
  *     etc.
  *
@@ -1402,8 +1402,8 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * Turbulence documentation is separated into two sections:
  * administrators manuals (used by people that want to deploy and
- * maintain Turbulence and its applications) and the develop manual
- * which includes information on how to extend turbulence:
+ * maintain Turbulence and its applications) and the developer manual
+ * which includes information on how to extend Turbulence:
  *
  * - \ref turbulence_administrator_manual
  * - \ref turbulence_developer_manual
@@ -1432,8 +1432,9 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref turbulence_config_location
  *   - \ref turbulence_ports
  *   - \ref turbulence_clean_start
+ *   - \ref turbulence_smtp_notifications
  *   - \ref turbulence_configuring_log_files
- *   - \ref turbulence_db_list_management "2.6 Turbulence Db-List management"
+ *   - \ref turbulence_db_list_management "2.7 Turbulence Db-List management"
  *   - \ref turbulence_configure_system_paths
  *
  * <b>Section 3: BEEP profile management</b>
@@ -1606,11 +1607,33 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * The <b>"hold"</b> option is really useful for real time debugging
  * because it hangs right after the signal is received. This allows to
  * launch the debugger and attach to the process to see what's
- * happening. Inside production environment it is recommended
- * <b>"ignore"</b>.
+ * happening. 
  *
+ * Another useful option is <b>"backtrace"</b> which produces a
+ * backtrace report (of the current process) saving it into a
+ * file. This allows to save some error evidences and then let the
+ * process to finish. This option combined with mail-to attribute is a
+ * powerful debug option.
  *
- * \section turbulence_configuring_log_files 2.5 Configuring turbulence log files
+ * Inside production environment it is recommended <b>"ignore"</b>.
+ *
+ * \section turbulence_smtp_notifications 2.5 Receiving SMTP notification on failures and error conditions
+ *
+ * Turbulence includes a small SMTP client that allows to report
+ * critical or interesting conditions. For example, this is used to
+ * report backtraces on critical signal received. 
+ *
+ * This configuration is found and declarted at the <b><global-settings></b>
+ * section. Here is an example:
+ *
+ * \htmlinclude notify-failures.xml-tmp
+ *
+ * It is possible to have more than one <b><smtp-server></b>
+ * declared. They are later used/referenced either through <b>id</b>
+ * attribute or because the declaration is flagged with an
+ * <b>is-default=yes</b>. 
+ *
+ * \section turbulence_configuring_log_files 2.6 Configuring turbulence log files
  *
  * Turbulence logs is sent to a set of files that are configured at
  * the <b>&lt;global-settings></b> section:
@@ -1659,7 +1682,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * the appropriate file but also will send the same log to the
  * console.
  *
- * \section turbulence_configure_system_paths 2.7 Alter default turbulence base system paths
+ * \section turbulence_configure_system_paths 2.8 Alter default turbulence base system paths
  *
  * By default Turbulence has 3 built-in system paths used to locate
  * configuration files (<b>sysconfdir</b>), find data files (<b>datadir</b>) and directories used at run
