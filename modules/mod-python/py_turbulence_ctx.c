@@ -216,6 +216,31 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
 	return py_vortex_connection_find_reference (conn, self->py_vortex_ctx);
 }
 
+
+static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObject * args)
+{
+	TurbulenceCtx    * ctx = self->ctx;
+	const char       * message = NULL;
+	int                size    = 0;
+	const char       * profile = NULL;
+
+	/* parse and check result */
+	if (! PyArg_ParseTuple (args, "zis", &message, &size, &profile))
+		return NULL;
+
+
+	
+	/* get the connection */
+	if (! turbulence_conn_mgr_broadcast_msg (ctx, message, size, profile, NULL, NULL)) {
+		Py_INCREF (Py_False);
+		return Py_False;
+	}
+
+	/* return proper result */
+	Py_INCREF (Py_True);
+	return Py_True;
+}
+
 static PyMethodDef py_turbulence_ctx_methods[] = { 
 	/*** base module ***/
 	/* msg */
@@ -225,8 +250,12 @@ static PyMethodDef py_turbulence_ctx_methods[] = {
 	{"error", (PyCFunction) py_turbulence_ctx_error, METH_VARARGS,
 	 "Records a turbulence error message (error ()). This is sent to the configured log and showed on the console according to the configuration."},
 	/*** conn-mgr module ***/
+	/* find_conn_by_id */
 	{"find_conn_by_id", (PyCFunction) py_turbulence_ctx_find_conn_by_id, METH_VARARGS,
 	 "Allows to find a connection registered on the turbulence connection manager with the provided connection id. The method returns the connection (vortex.Connection) or None in case of failure. This python method provides access to turbulence_conn_mgr_find_by_id"},
+	/* broadcast_msg */
+	{"broadcast_msg", (PyCFunction) py_turbulence_ctx_broadcast_msg, METH_VARARGS,
+	 "Allows to broadcast the provided message on all registered connections matching the provided profile and optionally connections not filtered by the provided filter method. This python method provides access to turbulence_conn_mgr_broadcast_msg."},
  	{NULL, NULL, 0, NULL}  
 }; 
 

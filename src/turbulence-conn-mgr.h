@@ -50,12 +50,12 @@ void turbulence_conn_mgr_unregister    (TurbulenceCtx    * ctx,
 void turbulence_conn_mgr_cleanup       (TurbulenceCtx * ctx);
 
 /* public API */
-int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
-					const void               * message,
-					int                        message_size,
-					const char               * profile,
-					TurbulenceConnMgrFilter    filter_conn,
-					axlPointer                 filter_data);
+axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
+					     const void               * message,
+					     int                        message_size,
+					     const char               * profile,
+					     TurbulenceConnMgrFilter    filter_conn,
+					     axlPointer                 filter_data);
 
 axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx, 
 					    VortexPeerRole             role,
