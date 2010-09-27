@@ -399,30 +399,33 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
  * 
  * @param ctx Turbulence context where the operation will take place.
  * 
- * @param message The message that is being broadcasted.
+ * @param message The message that is being broadcasted. This
+ * parameter is not optional. For empty messages use "" instead of
+ * NULL.
  *
- * @param message_size The message size to broadcast.
+ * @param message_size The message size to broadcast. This parameter
+ * is not optional. For empty messages use 0.
  *
  * @param profile The profile to search for in all connections
  * registered. If a channel is found running this profile, then a
- * message is sent.
+ * message is sent. This attribute is not optional.
  *
  * @param filter_conn Connection filtering function. If it returns
- * axl_true, the connection is filter.
+ * axl_true, the connection is filter. Optional parameter.
  *
  * @param filter_data User defined data provided to the filter
- * function.
+ * function. Optional parameter.
  * 
  * @return axl_true if the broadcast message was sent to all
  * connections. The function could return axl_false but it has no support
  * to notify which was the connection(s) or channel(s) that failed.
  */
-int  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
-					const void               * message,
-					int                        message_size,
-					const char               * profile,
-					TurbulenceConnMgrFilter    filter_conn,
-					axlPointer                 filter_data)
+axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
+					     const void               * message,
+					     int                        message_size,
+					     const char               * profile,
+					     TurbulenceConnMgrFilter    filter_conn,
+					     axlPointer                 filter_data)
 {
 
 	/* get turbulence context */

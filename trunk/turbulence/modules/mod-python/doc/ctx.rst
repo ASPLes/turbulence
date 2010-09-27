@@ -39,8 +39,20 @@ Module API
 
       :rtype: Returns vortex.Connection or None if fails.
 
+   .. method:: broadcast_msg (message, size, profile)
+   
+      This method is binding of turbulence_conn_mgr_broadcast_msg. See C API documentation for more info. The method allows to broadcast a message over all channels running the profile provided over all registered connections.
 
-      (Read only attribute) (Number) returns the channel number.
+      :param message: The message to broadcast.
+      :type  message: String
+
+      :param size: Message size to broadcast
+      :type  size: Int
+
+      :param profile: The BEEP profile to use to select channels on registered connections.
+      :type  message: String
+
+      :rtype: Returns True in case or success, otherwise False is returned.
 
    .. attribute:: vortex_ctx
 
