@@ -50,6 +50,17 @@ int mkstemp(char *template);
  * @{
  */
 
+
+#define write_and_check(str, len) do {					\
+	if (write (temp_file, str, len) != len) {			\
+		error ("Unable to write expected string: %s", str);     \
+		close (temp_file);					\
+		axl_free (temp_name);					\
+		axl_free (str_pid);					\
+		return NULL;						\
+	}								\
+} while (0)
+
 /** 
  * @brief Allows to get process backtrace (including all threads) of
  * the given process id.
@@ -87,12 +98,16 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	}
 	
 	/* write personalized gdb commands */
-	write (temp_file, "attach ", 7);
-	write (temp_file, str_pid, strlen (str_pid));
-	write (temp_file, "\n", 1);
-	write (temp_file, "set pagination 0\n", 17);
-	write (temp_file, "thread apply all bt\n", 20);
-	write (temp_file, "quit\n", 5);
+	write_and_check ("attach ", 7);
+	write_and_check (str_pid, strlen (str_pid));
+
+	axl_free (str_pid);
+	str_pid = NULL;
+
+	write_and_check ("\n", 1);
+	write_and_check ("set pagination 0\n", 17);
+	write_and_check ("thread apply all bt\n", 20);
+	write_and_check ("quit\n", 5);
 	
 	/* close temp file */
 	close (temp_file);
@@ -128,7 +143,6 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	unlink (temp_name);
 	axl_free (temp_name);
 	axl_free (command);
-	axl_free (str_pid);
 
 	/* return backtrace file created */
 	return backtrace_file;
