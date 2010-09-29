@@ -163,7 +163,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 
 	/* lock the mutex and check */
 	vortex_mutex_lock (&ctx->exit_mutex);
-	if (ctx->is_existing) {
+	if (ctx->is_exiting) {
 		msg ("process already existing, doing nothing...");
 
 		/* other thread is already cleaning */
@@ -175,7 +175,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 
 	/* flag that turbulence is existing and do all cleanup
 	 * operations */
-	ctx->is_existing = axl_true;
+	ctx->is_exiting = axl_true;
 	vortex_mutex_unlock (&ctx->exit_mutex);
 	
 	switch (_signal) {

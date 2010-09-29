@@ -117,7 +117,7 @@ axlPointer __turbulence_process_finished (TurbulenceProcessFinished * data)
 		}
 		
 		/* finish current thread if turbulence is existing */
-		if (ctx->is_existing) {
+		if (ctx->is_exiting) {
 			msg2 ("Found turbulence existing, finishing child process termination thread signaled due to vortex reader stop");
 			return NULL;
 		}
@@ -127,7 +127,7 @@ axlPointer __turbulence_process_finished (TurbulenceProcessFinished * data)
 		      tries, delay,
 		      vortex_reader_connections_watched (vortex_ctx), 
 		      axl_hash_items (ctx->conn_mgr_hash),
-		      ctx->is_existing);
+		      ctx->is_exiting);
 		tries--;
 		turbulence_sleep (ctx, delay);
 	}
@@ -151,7 +151,7 @@ void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
 
 	/* do not implement any notification if the turbulence process
 	   is itself finishing */
-	if (ctx->is_existing)
+	if (ctx->is_exiting)
 		return;
 
 	/* check if the child process was configured with a reuse

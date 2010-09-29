@@ -460,6 +460,12 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 		conn    = state->conn;
 
 		msg ("Check for broadcast on connection id=%d", conn_id);
+		/* check if connection is nullified */
+		if (conn == NULL) {
+			/* connection filtered */
+			axl_hash_cursor_next (cursor);
+			continue;
+		} /* end if */
 
 		/* check filter function */
 		if (filter_conn != NULL && filter_conn (conn, filter_data)) {
@@ -661,13 +667,20 @@ axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer da
 
 	/* nullify conn reference on state */
 	state->conn = NULL;
-	
+
 	/* uninstall on close full handler to avoid race conditions */
 	vortex_connection_remove_on_close_full (conn, turbulence_conn_mgr_on_close, state);
+
+	/* release mutex for a moment now we could jump into the user
+	   code due to the next shutdown */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
 	msg ("shutting down connection id %d", vortex_connection_get_id (conn));
 	vortex_connection_shutdown (conn);
 	msg ("..socket status after shutdown: %d..", vortex_connection_get_socket (conn));
+
+	/* unlock mutex */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* now unref */
 	vortex_connection_unref (conn, "turbulence-conn-mgr shutdown");
