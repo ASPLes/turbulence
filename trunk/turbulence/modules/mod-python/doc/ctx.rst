@@ -30,7 +30,7 @@ Module API
       :param content: The error message to record
       :type  content: String
 
-   .. method:: find_con_by_id (conn_id)
+   .. method:: find_conn_by_id (conn_id)
    
       Allows to find a connection registered on the turbulence connection manager with the provided connection id. The method returns the connection (vortex.Connection) or None in case of failure. This python method provides access to turbulence_conn_mgr_find_by_id.
 
