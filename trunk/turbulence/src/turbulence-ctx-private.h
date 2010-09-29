@@ -59,7 +59,7 @@ struct _TurbulenceCtx {
 	axl_bool             is_main_process;
 	
 	/* some variables used to terminate turbulence. */
-	axl_bool             is_existing;
+	axl_bool             is_exiting;
 	VortexMutex          exit_mutex;
 	
 	/* Mutex to protect the list of db list opened. */
