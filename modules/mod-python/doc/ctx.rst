@@ -8,6 +8,8 @@
 Intro
 =====
 
+The following is a set of functions that provides a python interface
+to the Turbulence C API.
 
 
 ==========
@@ -37,7 +39,15 @@ Module API
       :param conn_id: The connection unique identifer
       :type  conn_id: Int
 
-      :rtype: Returns vortex.Connection or None if fails.
+      :rtype: Returns vortex.Connection or None if fails
+
+      The following example shows how to get a connection reference by id::
+
+          conn = tbc.find_conn_by_id (id)
+          if conn is None:
+              print "Connection with id: " + str (id) + ", not found.."
+	      return
+          print "Connection with id: " + str (conn.id)"				
 
    .. method:: broadcast_msg (message, size, profile)
    
