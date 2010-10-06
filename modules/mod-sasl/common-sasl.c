@@ -780,16 +780,20 @@ int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
  * were not found or they are incorrect. -1 in the case the account is
  * disabled.
  */
-int common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
-			      SaslAuthDb      * db, 
-			      const char      * auth_id, 
-			      const char      * authorization_id, 
-			      const char      * password)
+axl_bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
+				  SaslAuthDb      * db, 
+				  const char      * auth_id, 
+				  const char      * authorization_id, 
+				  const char      * password)
 {
 	axlNode     * node;
 	axlDoc      * doc;
 	const char  * user_id;
 	const char  * db_password;
+
+	/* check file modification */
+	if (! common_sasl_load_users_db (ctx, db, NULL))
+		return axl_false;
 
 	/* look up for the user and its password */
 	doc  = (axlDoc *) db->db;
@@ -2193,13 +2197,13 @@ int       common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 }
 
 /** 
- * @internal Loads the xml users database into memory.
+ * @internal (Re)Loads the xml users database into memory.
  * 
  * @return axl_true if the db was properly loaded.
  */
-int  common_sasl_load_users_db (TurbulenceCtx  * ctx, 
-				SaslAuthDb     * db, 
-				VortexMutex    * mutex)
+axl_bool  common_sasl_load_users_db (TurbulenceCtx  * ctx, 
+				     SaslAuthDb     * db, 
+				     VortexMutex    * mutex)
 {
 	axlError * error;
 	
@@ -2210,18 +2214,18 @@ int  common_sasl_load_users_db (TurbulenceCtx  * ctx,
 	/* lock the mutex */
 	LOCK;
 
-	/* nullify the document */
-	db->db = NULL;
-
 	/* check file modification */
 	if (turbulence_last_modification (db->db_path) == db->db_time) {
-		
 		/* unlock the mutex */
 		UNLOCK;
-
 		return axl_true;
 	} /* end if */
 
+	/* free the document if defined */
+	if (db->db) {
+		wrn ("Reloading SASL xml database due to file modification update");
+		axl_doc_free (db->db);
+	}
 
 	/* find the file to load */
 	db->db       = axl_doc_parse_from_file (db->db_path, &error);
