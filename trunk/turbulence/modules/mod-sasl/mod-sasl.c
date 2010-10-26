@@ -72,6 +72,36 @@ axlPointer      mod_sasl_validation  (VortexConnection * connection,
         return INT_TO_PTR (axl_false);
 }
 
+axl_bool mod_sasl_load_extension_modules (TurbulenceCtx * ctx)
+{
+	axlDoc     * modules;
+	axlError   * error = NULL;
+	char       * path  = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "sasl", "extension.modules", NULL);
+
+	if (! vortex_support_file_test (path, FILE_EXISTS)) {
+		msg ("No SASL extension modules found at %s, skipping..", path);
+		axl_free (path);
+		return axl_true;
+	} /* end if */
+
+	/* open extension modules */
+	modules = axl_doc_parse_from_file (path, &error);
+	if (modules == NULL) {
+		error ("Failed to open SASL extension modules %s, error was: %s", path, axl_error_get (error));
+		axl_free (path);
+		axl_error_free (error);
+		return axl_true;
+	} /* end if */
+
+	/* now iterate over all registered modules calling to
+	   initialize it */
+
+	/* free resources */
+	axl_doc_free (modules);
+	axl_free (path);
+
+	return axl_true;
+}
 
 /** 
  * @brief Init function, perform all the necessary code to register
@@ -96,7 +126,12 @@ static int  mod_sasl_init (TurbulenceCtx * _ctx)
 
 
 	/* initialize backends */
-	
+	if (! mod_sasl_load_extension_modules (ctx)) {
+		error ("Unable to load SASL extension modules, init function failed");
+		/* call to check clean start */
+		CLEAN_START(ctx);
+		return axl_false;
+	} /* end if */
 
 	/* init mutex */
 	vortex_mutex_create (&sasl_db_mutex);
