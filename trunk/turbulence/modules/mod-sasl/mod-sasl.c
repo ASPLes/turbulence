@@ -74,9 +74,10 @@ axlPointer      mod_sasl_validation  (VortexConnection * connection,
 
 axl_bool mod_sasl_load_extension_modules (TurbulenceCtx * ctx)
 {
-	axlDoc     * modules;
-	axlError   * error = NULL;
-	char       * path  = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "sasl", "extension.modules", NULL);
+	axlDoc           * modules;
+	axlNode          * node;
+	axlError         * error = NULL;
+	char             * path  = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "sasl", "extension.modules", NULL);
 
 	if (! vortex_support_file_test (path, FILE_EXISTS)) {
 		msg ("No SASL extension modules found at %s, skipping..", path);
@@ -95,6 +96,14 @@ axl_bool mod_sasl_load_extension_modules (TurbulenceCtx * ctx)
 
 	/* now iterate over all registered modules calling to
 	   initialize it */
+	node = axl_doc_get (modules, "/extensions/ext");
+	while (node) {
+		/* call to load module if possible */
+		turbulence_module_open_and_register (ctx, ATTR_VALUE (node, "location"));
+
+		/* get next extension */
+		node = axl_node_get_next_called (node, "ext");
+	} /* end while */
 
 	/* free resources */
 	axl_doc_free (modules);

@@ -366,6 +366,75 @@ void               turbulence_module_unregister  (TurbulenceModule * module)
 }
 
 /** 
+ * @brief High level function that opens the module located at the
+ * provided location, checking if the module was registered, calling
+ * to init it, and then registering it if the init did not fail.
+ *
+ * @param ctx The context where the load operation will take place.
+ * @param location The location where the module is found.
+ *
+ * @return A reference to the module loaded (\ref TurbulenceModule) or NULL if it fails.
+ */
+TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx * ctx, const char * location)
+{
+	TurbulenceModule * module;
+	ModInitFunc        init;
+
+	if (ctx == NULL || location == NULL)
+		return NULL;
+
+	/* load the module man!!! */
+	module = turbulence_module_open (ctx, location);
+	if (module == NULL) {
+		wrn ("unable to open module: %s", location);
+		return NULL;
+	} /* end if */
+
+	/* check module name */
+	if (! turbulence_run_check_no_load_module (ctx, turbulence_module_name (module))) {
+		wrn ("module %s skipped by plugin name", turbulence_module_name (module));
+		turbulence_module_free (module);
+		return NULL; /* skipping a module *is* a failure, that is, the module was not loaded. */
+	}
+
+	/* check if module exists */
+	if (turbulence_module_exists (module)) {
+		wrn ("unable to load module: %s, another module is already loaded with the same name",
+		     turbulence_module_name (module));
+
+		/* close the module */
+		turbulence_module_free (module);
+		return NULL;
+	}
+
+	/* init the module */
+	init = turbulence_module_get_init (module);
+		
+	/* check init */
+	if (! init (ctx)) {
+		wrn ("init module: %s have failed, skiping", location);
+		CLEAN_START(ctx);
+		
+		/* close the module */
+		turbulence_module_free (module);
+		
+		return NULL;
+		
+	} else {
+		msg ("init ok, registering module: %s", location);
+	}
+
+	/* register the module to be loaded */
+	turbulence_module_register (module);
+
+	/* now the module is registered, publish this is done */
+	turbulence_mediator_push_event (ctx, "turbulence", "module-registered", 
+					/* publish name added */
+					(axlPointer) turbulence_module_name (module), NULL, NULL, NULL);
+	return module;
+}
+
+/** 
  * @brief Closes and free the module reference.
  * 
  * @param module The module reference to free and close.
