@@ -146,7 +146,7 @@ int  tbc_mod_gen_template_create ()
 	axl_node_set_comment (node, "ppath_selected method, called once a profile path has been selected for a connection.", -1);
 	nodeAux = axl_node_create ("ppath-selected");
 	axl_node_set_child (node, nodeAux);
-	axl_node_set_cdata_content (nodeAux, "/* Place here the code to implement all provisioning that was deferred because non enough data was available at init method (connection and profile path selected) */", -1);
+	axl_node_set_cdata_content (nodeAux, "/* Place here the code to implement all provisioning that was deferred because non enough data was available at init method (connection and profile path selected) */\nreturn axl_true;", -1);
 
 	/* dump the xml document */
 	support_dump_file (ctx, doc, 3, "%stemplate.xml", get_out_dir ());
@@ -288,7 +288,7 @@ int  tbc_mod_gen_compile ()
 
 	/* ppath_selected handler */
 	write ("/* %s ppath-selected handler */\n", mod_name);
-	write ("static void %s_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {\n", tolower);
+	write ("static axl_bool %s_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {\n", tolower);
 	node = axl_doc_get (doc, "/mod-def/source-code/ppath-selected");
 	if (axl_node_get_content (node, NULL)) {
 		/* write the content defined */
