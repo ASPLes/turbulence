@@ -70,6 +70,9 @@ void turbulence_run_cleanup   (TurbulenceCtx * ctx);
 
 void turbulence_run_check_clean_start (TurbulenceCtx * ctx);
 
+axl_bool turbulence_run_check_no_load_module (TurbulenceCtx * ctx, 
+					      const char    * module_to_check);
+
 /** 
  * @}
  */

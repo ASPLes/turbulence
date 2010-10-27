@@ -59,6 +59,9 @@ void               turbulence_module_register    (TurbulenceModule * module);
 
 void               turbulence_module_unregister  (TurbulenceModule * module);
 
+TurbulenceModule * turbulence_module_open_and_register (TurbulenceCtx * ctx, 
+							const char * location);
+
 void               turbulence_module_free        (TurbulenceModule  * module);
 
 axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx, 

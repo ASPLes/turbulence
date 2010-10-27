@@ -133,8 +133,6 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 	const char       * location;
 	axlDoc           * doc;
 	axlError         * error;
-	TurbulenceModule * module;
-	ModInitFunc        init;
 	char             * temp;
 				      
 
@@ -193,52 +191,8 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		axl_free (temp);
 
 		/* load the module man!!! */
-		module = turbulence_module_open (ctx, location);
-		if (module == NULL) {
-			wrn ("unable to open module: %s", location);
-			goto next;
-		} /* end if */
+		turbulence_module_open_and_register (ctx, location);
 
-		/* check module name */
-		if (! turbulence_run_check_no_load_module (ctx, turbulence_module_name (module))) {
-			wrn ("module %s skipped by plugin name", turbulence_module_name (module));
-			goto next;
-		}
-
-		/* check if module exists */
-		if (turbulence_module_exists (module)) {
-			wrn ("unable to load module: %s, another module is already loaded with the same name",
-			     turbulence_module_name (module));
-
-			/* close the module */
-			turbulence_module_free (module);
-			goto next;
-		}
-
-		/* init the module */
-		init = turbulence_module_get_init (module);
-		
-		/* check init */
-		if (! init (ctx)) {
-			wrn ("init module: %s have failed, skiping", ATTR_VALUE (axl_doc_get_root (doc), "location"));
-			CLEAN_START(ctx);
-
-			/* close the module */
-			turbulence_module_free (module);
-
-			goto next;
-
-		} else {
-			msg ("init ok, registering module: %s", ATTR_VALUE (axl_doc_get_root (doc), "location"));
-		}
-
-		/* register the module to be loaded */
-		turbulence_module_register (module);
-
-		/* now the module is registered, publish this is done */
-		turbulence_mediator_push_event (ctx, "turbulence", "module-registered", 
-						/* publish name added */
-						(axlPointer) turbulence_module_name (module), NULL, NULL, NULL);
 	next:
 		/* free the document */
 		axl_doc_free (doc);
