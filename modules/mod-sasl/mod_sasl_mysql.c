@@ -1,6 +1,9 @@
 /* mod_sasl_mysql implementation */
 #include <turbulence.h>
 
+/* mysql flags */
+#include <mysql.h>
+
 /* use this declarations to avoid c++ compilers to mangle exported
  * names. */
 BEGIN_C_DECLS
@@ -12,8 +15,10 @@ TurbulenceCtx * ctx = NULL;
 static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
+
+	/* install here all support to handle "mysql" databases */
 	
-	/* Place here your mod init code. This will be called once turbulence decides to include the module. */
+
 	return axl_true;
 } /* end mod_sasl_mysql_init */
 

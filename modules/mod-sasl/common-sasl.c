@@ -224,6 +224,43 @@ TurbulenceCtx * common_sasl_get_context (SaslAuthBackend * backend)
 	return backend->ctx;
 }
 
+/** 
+ * @brief Allows to register a new database format that will be
+ * supported by common sasl (tools and module) that is associated to
+ * the provided turbulence context. The handler provided will
+ * implement all operations required by common-sasl.
+ *
+ * @param ctx The turbulence context where the format will be
+ * registered. Cannot be NULL.
+ *
+ * @param format The format that will be registered. Cannot be NULL or empty (length > 0).
+ *
+ * @param op_handler The handler to install that will manage requests
+ * for this new format. If NULL is provided, the format handler will
+ * be uninstalled.
+ *
+ * @return axl_true in the case the format is registered. If a format
+ * was previously registered with the same name, it will replaced with
+ * the new one. The function returns axl_false in the case ctx or format parameters are NULL.
+ */
+axl_bool        common_sasl_register_format (TurbulenceCtx        * ctx,
+					     const char           * format,
+					     ModSaslFormatHandler   op_handler)
+{
+	char * str_format;
+	
+	if (ctx == NULL || format == NULL || strlen (format) == 0)
+		return axl_false;
+	/* build format string */
+	str_format = axl_strdup_printf ("common-sasl:format:%s", format);
+
+	/* register */
+	turbulence_ctx_set_data_full (ctx, str_format, op_handler, axl_free, NULL);
+
+	/* handler installed */
+	return axl_true;
+}
+
 void common_sasl_free_common (SaslAuthBackend * backend, axl_bool dump_content)
 {
 	axlHashCursor * cursor;
@@ -633,10 +670,10 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
  * @return axl_true if the auth-db was properly loaded, otherwise axl_false is
  * returned.
  */
-int  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
-				   axlNode         * node,
-				   const char      * alt_location,
-				   VortexMutex     * mutex)
+axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
+					axlNode         * node,
+					const char      * alt_location,
+					VortexMutex     * mutex)
 {
 	/* get a reference to the turbulence context */
 	TurbulenceCtx * ctx = sasl_backend->ctx;

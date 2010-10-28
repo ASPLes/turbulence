@@ -262,6 +262,22 @@ PKG_CHECK_MODULES(PY_VORTEX, py-vortex >= 0.3.8 py-vortex-sasl >= 0.3.8 py-vorte
 AC_SUBST(PY_VORTEX_CFLAGS)
 AC_SUBST(PY_VORTEX_LIBS)
 
+dnl mod-sasl-mysql flags
+MYSQL_CFLAGS=`mysql_config --cflags 2>/dev/null`
+MYSQL_LIBS=`mysql_config --libs 2>/dev/null`
+AC_SUBST(MYSQL_CFLAGS)
+AC_SUBST(MYSQL_LIBS)
+AC_TRY_COMPILE([#include <mysql/mysql.h>
+#include <stdlib.h>],
+  [mysql_init(NULL);],
+  mysql_devel_found=yes,
+  mysql_devel_found=no)
+AC_MSG_RESULT([MySQL development headers status: $mysql_devel_found])
+if test "x$mysql_devel_found" = "xno"; then
+   AC_MSG_WARN([Cannot find mysql.h header or current MySQL development environment do not compile symbols required. On debian try to install libmysqlclient15-dev package.])
+fi
+AM_CONDITIONAL(ENABLE_MYSQL_SUPPORT, test "x$mysql_devel_found" = "xyes")
+
 AC_OUTPUT([
 Makefile
 data/Makefile
@@ -312,6 +328,13 @@ echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
 echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"
 echo "   Build tbc-ctl:                  [$enable_tbc_ctl]"
 echo "   Build mod-python:               [$python_devel_found]"
+if test "x$python_devel_found" = "xyes"; then
+echo "         (flags: $PYTHON_CFLAGS, libs: $PYTHON_LIBS)"
+fi
+echo "   Build with MySQL support:       [$mysql_devel_found]"
+if test "x$mysql_devel_found" = "xyes"; then
+echo "         (flags: $MYSQL_CFLAGS, libs: $MYSQL_LIBS)"
+fi
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"
 echo "--            Let it BEEP!              --"

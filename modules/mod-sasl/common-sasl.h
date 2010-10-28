@@ -146,6 +146,26 @@ axl_bool        common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 
 TurbulenceCtx * common_sasl_get_context    (SaslAuthBackend * backend);
 
+typedef enum {
+	MOD_SASL_OP_TYPE_AUTH = 1,
+} ModSaslOpType;
+
+
+typedef axlPointer (*ModSaslFormatHandler) (TurbulenceCtx    * ctx,
+					    SaslAuthBackend  * sasl_backend,
+					    ModSaslOpType      op_type,
+					    const char       * auth_id,
+					    const char       * authorization_id,
+					    const char       * password,
+					    const char       * serverName,
+					    const char       * sasl_method,
+					    axlError        ** err,
+					    VortexMutex      * mutex);
+
+axl_bool        common_sasl_register_format (TurbulenceCtx        * ctx,
+					     const char           * format,
+					     ModSaslFormatHandler   op_handler);
+
 void            common_sasl_free_common    (SaslAuthBackend * backend, axl_bool dump_content);
 void            common_sasl_free           (SaslAuthBackend  * backend);
 
@@ -168,13 +188,13 @@ char * common_sasl_find_alt_file  (TurbulenceCtx * ctx,
 				   const char    * alt_location, 
 				   const char    * file);
 
-int  common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
-				   axlNode          * node,
-				   const char       * alt_location,
-				   VortexMutex      * mutex);
+axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
+					axlNode          * node,
+					const char       * alt_location,
+					VortexMutex      * mutex);
 				   
-int  common_sasl_load_users_db    (TurbulenceCtx    * ctx,
-				   SaslAuthDb       * db,
-				   VortexMutex      * mutex);
+axl_bool  common_sasl_load_users_db    (TurbulenceCtx    * ctx,
+					SaslAuthDb       * db,
+					VortexMutex      * mutex);
 
 #endif

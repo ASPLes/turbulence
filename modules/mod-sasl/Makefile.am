@@ -12,17 +12,22 @@ EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h \
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
-	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_XML_RPC_CFLAGS) $(VORTEX_SASL_CFLAGS)
+	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_XML_RPC_CFLAGS) $(VORTEX_SASL_CFLAGS) $(MYSQL_CFLAGS)
 
-lib_LTLIBRARIES   = mod-sasl.la mod-sasl-mysql.la
+if ENABLE_MYSQL_SUPPORT
+BUILD_MOD_SASL_MYSQL = mod-sasl-mysql.la
+endif
+lib_LTLIBRARIES   = mod-sasl.la $(BUILD_MOD_SASL_MYSQL)
 
 # mod-sasl.so
 mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h common.sasl.dtd.h $(sasl_radmin_files)
 mod_sasl_la_LDFLAGS  = -module -ldl $(VORTEX_XML_RPC_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_TLS_LIBS)
 
 # mod-sasl-mysql.so
-mod_sasl_mysql_la_SOURCES  = mod_sasl_mysql.c common-sasl.c common-sasl.h common.sasl.dtd.h
-mod_sasl_mysql_la_LDFLAGS  = -module -ldl 
+if ENABLE_MYSQL_SUPPORT
+mod_sasl_mysql_la_SOURCES   = mod_sasl_mysql.c common-sasl.c common-sasl.h common.sasl.dtd.h
+mod_sasl_mysql_la_LDFLAGS   = -module -ldl $(MYSQL_LIBS)
+endif
 
 # reconfigure module installation directory
 oldlibdir = $(libdir)
