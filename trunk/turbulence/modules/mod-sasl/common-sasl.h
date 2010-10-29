@@ -146,13 +146,29 @@ axl_bool        common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 
 TurbulenceCtx * common_sasl_get_context    (SaslAuthBackend * backend);
 
+/** 
+ * @internal Set of operations that can implement a SASL backend format
+ * handler.
+ */
 typedef enum {
+	/** 
+	 * @internal Request to auth a user with the provided credential.
+	 */
 	MOD_SASL_OP_TYPE_AUTH = 1,
+	/** 
+	 * @internal Request to load a particular auth db.
+	 */
+	MOD_SASL_OP_TYPE_LOAD_AUTH_DB = 2,
 } ModSaslOpType;
 
 
+/** 
+ * @internal Handler that represents the set of functions that implements
+ * SASL database formats.
+ */
 typedef axlPointer (*ModSaslFormatHandler) (TurbulenceCtx    * ctx,
 					    SaslAuthBackend  * sasl_backend,
+					    axlNode          * auth_db_node_conf,
 					    ModSaslOpType      op_type,
 					    const char       * auth_id,
 					    const char       * authorization_id,
@@ -165,6 +181,13 @@ typedef axlPointer (*ModSaslFormatHandler) (TurbulenceCtx    * ctx,
 axl_bool        common_sasl_register_format (TurbulenceCtx        * ctx,
 					     const char           * format,
 					     ModSaslFormatHandler   op_handler);
+
+axl_bool        common_sasl_format_registered (TurbulenceCtx  * ctx,
+					       const char     * format);
+
+axl_bool        common_sasl_format_load_db    (TurbulenceCtx  * ctx,
+					       axlNode        * node,
+					       VortexMutex    * mutex);
 
 void            common_sasl_free_common    (SaslAuthBackend * backend, axl_bool dump_content);
 void            common_sasl_free           (SaslAuthBackend  * backend);

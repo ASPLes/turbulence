@@ -4,6 +4,9 @@
 /* mysql flags */
 #include <mysql.h>
 
+/* include support for common-sasl */
+#include <common-sasl.h>
+
 /* use this declarations to avoid c++ compilers to mangle exported
  * names. */
 BEGIN_C_DECLS
@@ -11,15 +14,46 @@ BEGIN_C_DECLS
 /* global turbulence context reference */
 TurbulenceCtx * ctx = NULL;
 
+
+
+axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
+					  SaslAuthBackend  * sasl_backend,
+					  axlNode          * auth_db_node_conf,
+					  ModSaslOpType      op_type,
+					  const char       * auth_id,
+					  const char       * authorization_id,
+					  const char       * password,
+					  const char       * serverName,
+					  const char       * sasl_method,
+					  axlError        ** err,
+					  VortexMutex      * mutex)
+{
+	MYSQL * conn;
+
+	switch (op_type) {
+	case MOD_SASL_OP_TYPE_AUTH:
+		/* request to auth user */
+		break;
+	case MOD_SASL_OP_TYPE_LOAD_AUTH_DB:
+		/* request to load msyql database */
+		
+		/* connect */
+		
+		conn = mysql_init (NULL);
+		mysql_close(conn);
+
+		break;
+	}
+	return NULL;
+}
+
 /* mod_sasl_mysql init handler */
 static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
 
 	/* install here all support to handle "mysql" databases */
-	
-
-	return axl_true;
+	return common_sasl_register_format (_ctx, "mysql", mod_sasl_mysql_format_handler);
 } /* end mod_sasl_mysql_init */
 
 /* mod_sasl_mysql close handler */

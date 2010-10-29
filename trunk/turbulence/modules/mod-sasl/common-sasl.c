@@ -261,6 +261,96 @@ axl_bool        common_sasl_register_format (TurbulenceCtx        * ctx,
 	return axl_true;
 }
 
+/** 
+ * @internal Function used to get the handler registered on the
+ * provided turbulence context associated to the provided format.
+ *
+ * @param ctx The turbulence context where the format handler was registered.
+ * @param format The format as a key to retrieve the format handler associated.
+ *
+ * @return NULL if no format handler was registered, otherwise a
+ * reference to the format handler is returned.
+ */
+ModSaslFormatHandler common_sasl_format_get_handler (TurbulenceCtx * ctx,
+						     const char    * format)
+{
+	char                  * str_format;
+	ModSaslFormatHandler    op_handler;
+	
+	if (ctx == NULL || format == NULL || strlen (format) == 0)
+		return axl_false;
+	/* build format string */
+	str_format = axl_strdup_printf ("common-sasl:format:%s", format);
+
+	/* get handler defined */
+	op_handler = turbulence_ctx_get_data (ctx, str_format);
+
+	/* free string format */
+	axl_free (str_format);
+	
+	/* axl_true if the handler is defined */
+	return op_handler;
+}
+
+/** 
+ * @internal Allows to check if the provided format has a handler
+ * installed on the provided turbulence context.
+ *
+ * @param ctx The turbulence context where the format handler was registered.
+ * @param format The format to check for handler registered.
+ *
+ * @return axl_true in the case a format handler is registered,
+ * otherwise axl_false is returned.
+ */
+axl_bool        common_sasl_format_registered (TurbulenceCtx  * ctx,
+					       const char     * format)
+{
+	ModSaslFormatHandler    op_handler;
+	
+	/* get handler defined */
+	op_handler = common_sasl_format_get_handler (ctx, format);
+	
+	/* axl_true if the handler is defined */
+	return (op_handler != NULL);
+}
+
+/** 
+ * @internal Allows to load an auth database represented in the provided
+ * xml node (axlNode).
+ */
+axl_bool        common_sasl_format_load_db    (TurbulenceCtx  * ctx,
+					       axlNode        * node,
+					       VortexMutex    * mutex)
+{
+	ModSaslFormatHandler    op_handler;
+	axlPointer              result;
+	axlError              * err = NULL;
+	
+	/* get handler defined */
+	op_handler = common_sasl_format_get_handler (ctx, ATTR_VALUE (node, "type"));
+
+	if (op_handler == NULL) {
+		error ("failed to load auth-db with format %s, handler is not defined", ATTR_VALUE (node, "type"));
+		return axl_false;
+	} /* end if */
+
+	/* call to load auth db */
+	result = op_handler (ctx, NULL, node, MOD_SASL_OP_TYPE_LOAD_AUTH_DB, 
+			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
+			     NULL, NULL, NULL, NULL, NULL, &err, mutex);
+
+	/* check error returned */
+	if (PTR_TO_INT(result) == 0) {
+		error ("failed to load auth-db with format %s, handler reported failure. Error code: %d, report: %s",
+		       ATTR_VALUE (node, "type"), axl_error_get_code (err), axl_error_get (err));
+		axl_error_free (err);
+		return axl_false;
+	} /* end if */
+	
+	/* axl_true if the handler is defined */
+	return axl_true;
+}
+
 void common_sasl_free_common (SaslAuthBackend * backend, axl_bool dump_content)
 {
 	axlHashCursor * cursor;
@@ -532,8 +622,16 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 				return axl_false;
 			} /* end if */
 			
-		} else {
-			/* add here other formats ... */
+		} else if (common_sasl_format_registered (ctx, ATTR_VALUE (node, "type"))) {
+			msg ("SASL: found registered handler for %s format", ATTR_VALUE (node, "type"));
+			
+			/* call to load */
+			if (! common_sasl_format_load_db (ctx, node, mutex)) {
+				/* failed to load some database */
+				common_sasl_free (result);
+				error ("SASL: failed to load some databases configured");
+				return axl_false;
+			} /* end if */
 			
 		} /* end if */
 
