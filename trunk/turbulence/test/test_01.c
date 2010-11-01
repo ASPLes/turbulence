@@ -2176,7 +2176,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 		printf ("Test 12: testing test-12.third-server, user defined SASL database..\n");
 		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
 						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.third-server"),
-					   NULL, NULL);
+						   NULL, NULL);
 		if (! vortex_connection_is_ok (conn, axl_false)) {
 			printf ("ERROR (15): expected to find proper connection after turbulence startup..\n");
 			return axl_false;
@@ -2290,6 +2290,28 @@ axl_bool test_12a (void) {
 	/* configure test path to locate appropriate sasl.conf files */
 	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
 						   vortex_support_build_filename ("test_12_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* call implement common test_12 */
+	return test_12_common (vCtx, tCtx, 3, 1, axl_false);
+}
+
+axl_bool test_12b (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+
+	/* FIRST PART: init vortex and turbulence (same test as
+	   test_12a but change databases to be managed by a mysql
+	   server) */
+	if (! test_common_init (&vCtx, &tCtx, "test_12a.conf")) 
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
+						   vortex_support_build_filename ("test_12b_module", NULL));
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -3896,6 +3918,8 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
+	goto test;
+
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -3936,6 +3960,12 @@ int main (int argc, char ** argv)
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
+
+ test:
+
+	run_test (test_12b, "Test 12-b: check mod sasl mysql");
+
+	return 0;
 
 	if (! disable_python_tests) {
 		run_test (test_13, "Test 13: Check mod python");
