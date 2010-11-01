@@ -6,7 +6,7 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_operate_sasl_user_string_string_bool_bool_int.h \
 	sasl_radmin_types.h
 
-EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h \
+EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h mysql.sasl.dtd mysql.sasl.dtd.h \
              mod-sasl.win32.xml $(sasl_radmin_files) sasl.example.conf \
 	     auth-db.example.xml remote-admins.example.xml
 
@@ -25,7 +25,7 @@ mod_sasl_la_LDFLAGS  = -module -ldl $(VORTEX_XML_RPC_LIBS) $(VORTEX_SASL_LIBS) $
 
 # mod-sasl-mysql.so
 if ENABLE_MYSQL_SUPPORT
-mod_sasl_mysql_la_SOURCES   = mod_sasl_mysql.c common-sasl.c common-sasl.h common.sasl.dtd.h
+mod_sasl_mysql_la_SOURCES   = mod_sasl_mysql.c common-sasl.c common-sasl.h common.sasl.dtd.h mysql.sasl.dtd.h
 mod_sasl_mysql_la_LDFLAGS   = -module -ldl $(MYSQL_LIBS)
 endif
 
@@ -61,8 +61,12 @@ update-radmin:
 sasl-radmin.idl: 
 	xml-rpc-gen-1.1 sasl-radmin.idl --out-server-dir . --only-server --disable-main-file --disable-autoconf
 
-# build sasl-dtd.h file
+# build common.sasl.dtd.h file
 common.sasl.dtd.h: common.sasl.dtd
+	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
+
+# build mysql.sasl.dtd.h file
+mysql.sasl.dtd.h: mysql.sasl.dtd
 	axl-knife --input $< --dtd-to-c --output $@ --ifnewer
 
 

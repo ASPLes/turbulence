@@ -67,6 +67,8 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
 					     const char      * serverName,
 					     VortexMutex     * mutex);
 
+const char   *  common_sasl_get_file_path   (SaslAuthBackend * sasl_backend);
+
 axl_bool        common_sasl_auth_user      (SaslAuthBackend  * sasl_backend,
 					    VortexConnection * conn,
 					    const char       * auth_id,
@@ -185,9 +187,10 @@ axl_bool        common_sasl_register_format (TurbulenceCtx        * ctx,
 axl_bool        common_sasl_format_registered (TurbulenceCtx  * ctx,
 					       const char     * format);
 
-axl_bool        common_sasl_format_load_db    (TurbulenceCtx  * ctx,
-					       axlNode        * node,
-					       VortexMutex    * mutex);
+axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
+					       SaslAuthBackend  * backend,
+					       axlNode          * node,
+					       VortexMutex      * mutex);
 
 void            common_sasl_free_common    (SaslAuthBackend * backend, axl_bool dump_content);
 void            common_sasl_free           (SaslAuthBackend  * backend);

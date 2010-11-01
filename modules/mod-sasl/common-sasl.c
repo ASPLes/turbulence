@@ -318,9 +318,10 @@ axl_bool        common_sasl_format_registered (TurbulenceCtx  * ctx,
  * @internal Allows to load an auth database represented in the provided
  * xml node (axlNode).
  */
-axl_bool        common_sasl_format_load_db    (TurbulenceCtx  * ctx,
-					       axlNode        * node,
-					       VortexMutex    * mutex)
+axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
+					       SaslAuthBackend  * backend,
+					       axlNode          * node,
+					       VortexMutex      * mutex)
 {
 	ModSaslFormatHandler    op_handler;
 	axlPointer              result;
@@ -335,7 +336,7 @@ axl_bool        common_sasl_format_load_db    (TurbulenceCtx  * ctx,
 	} /* end if */
 
 	/* call to load auth db */
-	result = op_handler (ctx, NULL, node, MOD_SASL_OP_TYPE_LOAD_AUTH_DB, 
+	result = op_handler (ctx, backend, node, MOD_SASL_OP_TYPE_LOAD_AUTH_DB,
 			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
 			     NULL, NULL, NULL, NULL, NULL, &err, mutex);
 
@@ -575,10 +576,9 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 	/* now validate content found */
         dtd = axl_dtd_parse (COMMON_SASL_DTD, -1, &err);
         if (dtd == NULL) {
-		error ("failed to load sasl.dtd to check sasl configuration, error: %s",
+		error ("failed to load common.sasl.dtd to check sasl configuration, error: %s",
 		       axl_error_get (err));
 		axl_error_free (err);
-
                 return axl_false;
 	}
 
@@ -626,7 +626,7 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 			msg ("SASL: found registered handler for %s format", ATTR_VALUE (node, "type"));
 			
 			/* call to load */
-			if (! common_sasl_format_load_db (ctx, node, mutex)) {
+			if (! common_sasl_format_load_db (ctx, result, node, mutex)) {
 				/* failed to load some database */
 				common_sasl_free (result);
 				error ("SASL: failed to load some databases configured");
@@ -754,6 +754,25 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
 	} /* end while */
 
 	return axl_false;
+}
+
+/** 
+ * @brief Allows to get the path to the file (sasl.conf) that was
+ * loaded to initiate the provided sasl auth backend.
+ *
+ * @param sasl_backend The backend that is required to return the path
+ * that was used to load the sasl.conf file that represents this
+ * backend.
+ *
+ * @return A reference to the path or NULL if it fails.
+ */
+const char   *  common_sasl_get_file_path   (SaslAuthBackend * sasl_backend)
+{
+	if (sasl_backend == NULL)
+		return NULL;
+
+	/* return path */
+	return sasl_backend->sasl_conf_path;
 }
 
 /** 
