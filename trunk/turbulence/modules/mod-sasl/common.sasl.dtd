@@ -8,8 +8,8 @@
 	  type            CDATA   #REQUIRED
 	  location        CDATA   #REQUIRED
 	  format          CDATA   #REQUIRED
-	  remote          CDATA   #REQUIRED
-	  remote-admins   CDATA   #REQUIRED>
+	  remote          CDATA   #IMPLIED
+	  remote-admins   CDATA   #IMPLIED>
 
 <!-- <method-allowed> -->
 <!ELEMENT method-allowed (method)+>

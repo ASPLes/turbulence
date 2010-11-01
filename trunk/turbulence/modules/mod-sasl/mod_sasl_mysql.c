@@ -7,6 +7,9 @@
 /* include support for common-sasl */
 #include <common-sasl.h>
 
+/* include dtd definition */
+#include <mysql.sasl.dtd.h>
+
 /* use this declarations to avoid c++ compilers to mangle exported
  * names. */
 BEGIN_C_DECLS
@@ -14,8 +17,213 @@ BEGIN_C_DECLS
 /* global turbulence context reference */
 TurbulenceCtx * ctx = NULL;
 
+/* global dtd used to validate document defining settings to open
+   mysql database */
+axlDtd        * mysql_sasl_dtd = NULL;
 
+/** 
+ * @internal Function that creates a connection to the MySQL database
+ * configured on the xml node.
+ */ 
+MYSQL * mod_sasl_mysql_get_connection (TurbulenceCtx  * ctx,
+				       axlNode        * auth_db_node_conf, 
+				       axlError      ** err)
+{
+	MYSQL   * conn;
+	int       port = 0;
+	int       reconnect = 1;
+	axlDoc  * doc;
+	axlNode * node;
 
+	if (ctx == NULL || auth_db_node_conf == NULL) {
+		axl_error_report (err, -1, "Received null ctx, auth db node or sql query, failed to run SQL command");
+		return NULL;
+	} /* end if */
+
+	/* check if the connection is already defined */
+	conn = axl_node_annotate_get (auth_db_node_conf, "mysql-conn", axl_false);
+	if (conn) {
+		/* reuse connection */
+		return conn;
+	} /* end if */
+
+	/* get document containing MySQL settings */
+	doc  = axl_node_annotate_get (auth_db_node_conf, "mysql-conf", axl_false);
+	if (doc == NULL) {
+		axl_error_report (err, -1, "Found no xml document defining MySQL settings to connect to the database");
+		return NULL;
+	} /* end if */
+
+	/* get the node that contains the configuration */
+	node = axl_doc_get (doc, "/sasl-auth-db/connection-settings");
+
+	/* create a mysql connection */
+	conn = mysql_init (NULL);
+
+	/* get port */
+	if (HAS_ATTR (node, "port") && strlen (ATTR_VALUE (node, "port")) > 0) {
+		/* get port configured by the user */
+		port = atoi (ATTR_VALUE (node, "port"));
+	}
+	
+	/* create a connection */
+	if (mysql_real_connect (conn, 
+				/* get host */
+				ATTR_VALUE (node, "host"), 
+				/* get user */
+				ATTR_VALUE (node, "user"), 
+				/* get password */
+				ATTR_VALUE (node, "password"), 
+				/* get database */
+				ATTR_VALUE (node, "database"), 
+				port, NULL, 0) == NULL) {
+		axl_error_report (err, mysql_errno (conn), "Mysql connect error: %s, failed to run SQL command", mysql_error (conn));
+		return NULL;
+	} /* end if */
+
+	/* flag here to reconnect in case of lost connection */
+	mysql_options (conn, MYSQL_OPT_RECONNECT, (const char *) &reconnect);
+
+	/* record connection */
+	axl_node_annotate_data_full (auth_db_node_conf, "mysql-conn", NULL, conn, (axlDestroyFunc) mysql_close);
+
+	return conn;
+}
+
+/** 
+ * @internal Function that makes a SQL connection to the configured
+ * database and return a MYSQL_RES object that contains the result or
+ * axl_true in the case non_query is axl_true.
+ *
+ * With the result created, the caller must do:
+ *
+ */
+MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx, 
+				     axlNode        * auth_db_node_conf,
+				     const char     * sql_query,
+				     axl_bool         non_query,
+				     axlError      ** err)
+{  
+	MYSQL     * conn;
+
+	/* check sql connection */
+	if (sql_query == NULL) {
+		axl_error_report (err, -1, "Unable to run SQL query, received NULL content, failed to run SQL command");
+		return NULL;
+	} /* end if */
+
+	/* get connection */
+	conn = mod_sasl_mysql_get_connection (ctx, auth_db_node_conf, err);
+	if (conn == NULL) {
+		axl_error_report (err, -1, "Failed to get connection to MySQL database. Unable to execute query: %s", sql_query);
+		return NULL;
+	}
+
+	/* now run query */
+	if (mysql_query (conn, sql_query)) {
+		axl_error_report (err, mysql_errno (conn), "Failed to run SQL query, error was %u: %s\n", mysql_errno (conn), mysql_error (conn));
+		return NULL;
+	} /* end if */
+	
+	/* check if this is a non query and return proper status now */
+	if (non_query)
+		return INT_TO_PTR (axl_true);
+
+	/* return result created */
+	return  mysql_store_result(conn);
+}
+
+axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx, 
+				 axlNode          * auth_db_node_conf,
+				 const char       * auth_id,
+				 const char       * authorization_id,
+				 const char       * password,
+				 const char       * serverName,
+				 const char       * sasl_method)
+{
+	/* const char * auth_query = ATTR_VALUE (auth_db_node_conf, "query");*/
+	
+	/* replace auth_query with recognized tokens */
+
+	return axl_false;
+}
+
+axl_bool mod_sasl_mysql_load_auth_db (TurbulenceCtx     * ctx,
+				      SaslAuthBackend   * sasl_backend,
+				      axlNode           * auth_db_node_conf,
+				      axlError         ** err)
+{
+	MYSQL      * conn;
+	const char * location;
+	char       * basedir = NULL;
+	axlDoc     * doc;
+	axlError   * local_err = NULL;
+
+	/* check if location is defined */
+	if (! HAS_ATTR (auth_db_node_conf, "location")) {
+		axl_error_report (err, -1, "Unable to open auth mysql database, 'location' attribute is not defined");
+		return axl_false;
+	} /* end if */
+
+	/* find the node that holds the connection configuration */
+	location = ATTR_VALUE (auth_db_node_conf, "location");
+
+	/* check if the location is relative or not */
+	if (! turbulence_file_is_fullpath (location)) {
+		/* get base dir of the sasl.conf that represents this
+		   backend */
+		basedir  = turbulence_base_dir (common_sasl_get_file_path (sasl_backend));
+
+		/* now build a new path */
+		location = axl_strdup_printf ("%s%s%s", basedir, VORTEX_FILE_SEPARATOR, location);
+		msg ("Found relative file to auth mysql db settings, resolved to: %s", location);
+	} /* end if */
+
+	/* now load the file */
+	doc      = axl_doc_parse_from_file (location, &local_err);
+	/* check for error and report */
+	if (doc == NULL) {
+		axl_error_report (err, -1, "Failed to open auth mysql db at %s error was %s", location, axl_error_get (local_err));
+		axl_error_free (local_err);
+	} /* end if */
+
+	/* dealloc some variables */
+	if (basedir) {
+		axl_free (basedir);
+		axl_free ((char *) location);
+	} /* end if */
+
+	/* return if error */
+	if (doc == NULL) {
+		return axl_false;
+	} /* end if */
+
+	/* do DTD validation */
+        if (! axl_dtd_validate (doc, mysql_sasl_dtd, &local_err)) {
+		axl_error_report (err, -1, "Failed to open auth mysql db at %s, found DTD error %s", location, axl_error_get (local_err));
+		axl_error_free (local_err);
+		axl_doc_free (doc);
+		return axl_false;
+	} /* end if */
+
+	/* link the document to this node so we can reuse it later */
+	axl_node_annotate_data_full (auth_db_node_conf, "mysql-conf", NULL, doc, (axlDestroyFunc) axl_doc_free);
+
+	/* request to load msyql database */
+	conn = mod_sasl_mysql_get_connection (ctx, auth_db_node_conf, err);
+	if (conn == NULL) 
+		return axl_false;
+
+	msg ("load database ok");
+
+	/* connection ok, this means we have loaded the database */
+	return axl_true;
+}
+
+/** 
+ * @internal Main entry point to resolve requests to mysql database
+ * according to the operation requested.
+ */
 axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
 					  SaslAuthBackend  * sasl_backend,
 					  axlNode          * auth_db_node_conf,
@@ -28,37 +236,48 @@ axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
 					  axlError        ** err,
 					  VortexMutex      * mutex)
 {
-	MYSQL * conn;
-
 	switch (op_type) {
 	case MOD_SASL_OP_TYPE_AUTH:
 		/* request to auth user */
-		break;
+		return INT_TO_PTR (mod_sasl_mysql_do_auth (ctx, auth_db_node_conf, 
+							   auth_id, authorization_id, password, serverName, sasl_method));
 	case MOD_SASL_OP_TYPE_LOAD_AUTH_DB:
-		/* request to load msyql database */
-		
-		/* connect */
-		
-		conn = mysql_init (NULL);
-		mysql_close(conn);
-
-		break;
+		/* request to load database (check we can connect with current settings) */
+		return INT_TO_PTR (mod_sasl_mysql_load_auth_db (ctx, sasl_backend, auth_db_node_conf, err));
 	}
 	return NULL;
 }
 
 /* mod_sasl_mysql init handler */
 static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
+	axlError * err = NULL;
+
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
 
+	/* load DTD later used */
+        mysql_sasl_dtd = axl_dtd_parse (MYSQL_SASL_DTD, -1, &err);
+        if (mysql_sasl_dtd == NULL) {
+		error ("failed to load mysql.sasl.dtd to check sasl configuration, error: %s",
+		       axl_error_get (err));
+		axl_error_free (err);
+                return axl_false;
+	} /* end if */
+
 	/* install here all support to handle "mysql" databases */
-	return common_sasl_register_format (_ctx, "mysql", mod_sasl_mysql_format_handler);
+	if (! common_sasl_register_format (_ctx, "mysql", mod_sasl_mysql_format_handler)) {
+		error ("Failed to register mod-sasl mysql database handler, register format function failed");
+		return axl_false;
+	}
+
+	msg ("Registered mod-sasl mysql database handler OK");
+	return axl_true;
 } /* end mod_sasl_mysql_init */
 
 /* mod_sasl_mysql close handler */
 static void mod_sasl_mysql_close (TurbulenceCtx * _ctx) {
-	/* Place here the code required to stop and dealloc resources used by your module */
+	/* finish dtd used */
+	axl_dtd_free (mysql_sasl_dtd);
 	return;
 } /* end mod_sasl_mysql_close */
 
