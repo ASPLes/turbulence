@@ -47,7 +47,15 @@
  * store users databases. 
  */
 typedef enum {
-	SASL_BACKEND_XML = 1
+	/** 
+	 * @internal Database handled by xml files.
+	 */
+	SASL_BACKEND_XML = 1,
+	/** 
+	 * @internal Database handled by an external function that
+	 * bridges requests into the appropriate database.
+	 */
+	SASL_BACKEND_FORMAT_HANDLER = 2
 } SaslBackEndType;
 
 /** 
@@ -320,12 +328,16 @@ axl_bool        common_sasl_format_registered (TurbulenceCtx  * ctx,
  */
 axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
 					       SaslAuthBackend  * backend,
+					       SaslAuthDb       * db,
 					       axlNode          * node,
 					       VortexMutex      * mutex)
 {
 	ModSaslFormatHandler    op_handler;
 	axlPointer              result;
 	axlError              * err = NULL;
+
+	/* flag the type */
+	db->type          = SASL_BACKEND_FORMAT_HANDLER;
 	
 	/* get handler defined */
 	op_handler = common_sasl_format_get_handler (ctx, ATTR_VALUE (node, "type"));
@@ -347,7 +359,7 @@ axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
 		axl_error_free (err);
 		return axl_false;
 	} /* end if */
-	
+
 	/* axl_true if the handler is defined */
 	return axl_true;
 }
@@ -485,6 +497,110 @@ char * common_sasl_find_alt_file (TurbulenceCtx * ctx,
 	return path;
 }
 
+
+/** 
+ * @internal Allows to load a single <auth-db> declaration found inside a
+ * particular sasl.conf file. 
+ *
+ */
+axl_bool common_sasl_load_single_auth_db (TurbulenceCtx * ctx, 
+					  SaslAuthBackend * sasl_backend,
+					  axlNode         * node,
+					  const char      * alt_location,
+					  VortexMutex     * mutex)
+{
+	SaslAuthDb * db;
+
+	/* check if it is possible to load the database: it is
+	   native xml database or format handled by a external
+	   format handler */
+	if (! (HAS_ATTR_VALUE (node, "type", "xml") && HAS_ATTR (node, "location")) &&
+	    ! common_sasl_format_registered (ctx, ATTR_VALUE (node, "type"))) {
+		
+		/* format not found or unable to handle */
+		error ("Found request to load database with unrecognized format %s (location: %s, serverName: %s)",
+		       ATTR_VALUE (node, "type") ? ATTR_VALUE (node, "type") : "", 
+		       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "");
+		/* failed to load database */
+		return axl_false;
+	} /* end if */
+
+	/* CREATE: create auth db object */
+	db = axl_new (SaslAuthDb, 1);
+
+	/* CONFIGURE: configure if this database is flaged
+	   with remote administration and the format for
+	   stored passwords */
+	db->remote_admin = HAS_ATTR_VALUE (node, "remote", "yes");
+	msg2 ("sasl remote admin status: %d", db->remote_admin);
+	if (HAS_ATTR_VALUE (node, "format", "sha-1"))
+		db->format = SASL_STORAGE_FORMAT_SHA1;
+	else if (HAS_ATTR_VALUE (node, "format", "md5"))
+		db->format = SASL_STORAGE_FORMAT_MD5;
+	else if (HAS_ATTR_VALUE (node, "format", "plain"))
+		db->format = SASL_STORAGE_FORMAT_PLAIN;
+	else {
+		wrn ("using as default storage format: md5");
+		db->format = SASL_STORAGE_FORMAT_MD5;
+	} /* end if */
+	
+	/* REGISTER: database according to serverName get the serverName value */
+	if (HAS_ATTR (node, "serverName") && strlen (ATTR_VALUE (node, "serverName")) > 0) {
+		/* check if there are other database
+		 * added for the same serverName */
+		if (axl_hash_exists (sasl_backend->dbs, (axlPointer) ATTR_VALUE (node, "serverName"))) {
+			error ("found a serverName database associated to the current database (serverName configured twice!)");
+			return axl_false;
+		}
+		
+		/* fine, add to the database loaded hash */
+		axl_hash_insert_full (sasl_backend->dbs, 
+				      /* the key to store and its destroy function */
+				      axl_strdup (ATTR_VALUE (node, "serverName")), axl_free,
+				      /* the value to store and its destroy function */
+				      db, (axlDestroyFunc) common_sasl_db_free);
+		
+	} else {
+		/* no serverName found, it seems this
+		 * is the default database to be used,
+		 * check if there is already configure
+		 * a default database */
+		if (sasl_backend->default_db != NULL) {
+			error ("it was found several default users databases (serverName empty or not found)");
+			common_sasl_db_free (db);
+			return axl_false;
+		} /* end if */
+		
+		/* configure as the default one */
+		sasl_backend->default_db = db;
+	} /* end if */
+	
+	/* now load the particular content of the database (or
+	   connect to it) */
+	if (HAS_ATTR_VALUE (node, "type", "xml") &&
+	    HAS_ATTR (node, "location")) {
+		
+		/* call to load the database in xml format */
+		if (! common_sasl_load_auth_db_xml (sasl_backend, db, node, alt_location, mutex)) {
+			
+			error ("SASL: failed to load some databases configured");
+			return axl_false;
+		} /* end if */
+		
+	} else if (common_sasl_format_registered (ctx, ATTR_VALUE (node, "type"))) {
+		msg ("SASL: found registered handler for %s format", ATTR_VALUE (node, "type"));
+		
+		/* call to load */
+		if (! common_sasl_format_load_db (ctx, sasl_backend, db, node, mutex)) {
+			error ("SASL: failed to load some databases configured");
+			return axl_false;
+		} /* end if */
+	} /* end if */
+
+	/* format loaded */
+	return axl_true;
+}
+
 /** 
  * @brief Public mod-sasl APi that allows to load sasl backend from
  * the default file or the one located using alt_location. The
@@ -610,30 +726,12 @@ axl_bool  common_sasl_load_config (TurbulenceCtx    * ctx,
 			continue;
 		} /* end if */
 
-		if (HAS_ATTR_VALUE (node, "type", "xml") &&
-		    HAS_ATTR (node, "location")) {
-
-			/* call to load the database in xml format */
-			if (! common_sasl_load_auth_db_xml (result, node, alt_location, mutex)) {
-				/* failed to load some database */
-				common_sasl_free (result);
-
-				error ("SASL: failed to load some databases configured");
-				return axl_false;
-			} /* end if */
-			
-		} else if (common_sasl_format_registered (ctx, ATTR_VALUE (node, "type"))) {
-			msg ("SASL: found registered handler for %s format", ATTR_VALUE (node, "type"));
-			
-			/* call to load */
-			if (! common_sasl_format_load_db (ctx, result, node, mutex)) {
-				/* failed to load some database */
-				common_sasl_free (result);
-				error ("SASL: failed to load some databases configured");
-				return axl_false;
-			} /* end if */
-			
-		} /* end if */
+		/* load single db */
+		if (! common_sasl_load_single_auth_db (ctx, result, node, alt_location, mutex)) {
+			/* failed to load some database */
+			common_sasl_free (result);
+			return axl_false;
+		}
 
 		/* get the next database */
 		node = axl_node_get_next_called (node, "auth-db");
@@ -704,7 +802,6 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
 					     VortexMutex     * mutex)
 {
 	axlNode * node;
-	char    * base_dir;
 
 	/* check input parameters */
 	v_return_val_if_fail (ctx,          axl_false);
@@ -721,39 +818,25 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
 
 		/* check for serverName definition */
 		msg ("Checking database serverName=%s with %s", serverName, ATTR_VALUE (node, "serverName"));
-		if (HAS_ATTR (node, "serverName") && ! HAS_ATTR_VALUE (node, "serverName", serverName)) {
+		if (! HAS_ATTR (node, "serverName") || ! HAS_ATTR_VALUE (node, "serverName", serverName)) {
 			/* get next auth db */
 			node = axl_node_get_next_called (node, "auth-db");
 			continue;
 		} /* end if */
 
-		if (HAS_ATTR_VALUE (node, "type", "xml") &&
-		    HAS_ATTR (node, "location")) {
-
-			/* call to load the database in xml format */
-			base_dir = turbulence_base_dir (sasl_backend->sasl_conf_path);
-			if (! common_sasl_load_auth_db_xml (sasl_backend, node, base_dir, mutex)) {
-				axl_free (base_dir);
-
-				error ("SASL: failed to load some databases configured");
-				return axl_false;
-			} /* end if */
-			axl_free (base_dir);
-
-			/* database loaded */
-			return axl_true;
-			
-		} else {
-			/* add here other formats ... */
-			
-		} /* end if */
-
-		/* get the next database */
-		node = axl_node_get_next_called (node, "auth-db");
+		/* node found! */
+		break;
 
 	} /* end while */
 
-	return axl_false;
+	/* check if we did find the node */
+	if (node == NULL) {
+		error ("Unable to find <auth-db> node cleration for the serverName=%s", serverName);
+		return axl_false;
+	} /* end if */
+
+	/* load single db and directly return result */
+	return common_sasl_load_single_auth_db (ctx, sasl_backend, node, NULL, mutex);
 }
 
 /** 
@@ -788,19 +871,18 @@ const char   *  common_sasl_get_file_path   (SaslAuthBackend * sasl_backend)
  * returned.
  */
 axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
+					SaslAuthDb      * db,
 					axlNode         * node,
 					const char      * alt_location,
 					VortexMutex     * mutex)
 {
 	/* get a reference to the turbulence context */
 	TurbulenceCtx * ctx = sasl_backend->ctx;
-	SaslAuthDb    * db;
 	axlError      * err  = NULL;
 	char          * base_dir;
 	char          * path;
 
 	/* create one db */
-	db                = axl_new (SaslAuthDb, 1);
 	db->dump_on_close = axl_true;
 	db->type          = SASL_BACKEND_XML;
 
@@ -843,20 +925,6 @@ axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 	} else {
 		msg2 ("sasl auth db: %s", db->db_path);
 
-		/* configure the rest of parameters */
-		db->remote_admin = HAS_ATTR_VALUE (node, "remote", "yes");
-		msg2 ("sasl remote admin status: %d", db->remote_admin);
-		if (HAS_ATTR_VALUE (node, "format", "sha-1"))
-			db->format = SASL_STORAGE_FORMAT_SHA1;
-		else if (HAS_ATTR_VALUE (node, "format", "md5"))
-			db->format = SASL_STORAGE_FORMAT_MD5;
-		else if (HAS_ATTR_VALUE (node, "format", "plain"))
-			db->format = SASL_STORAGE_FORMAT_PLAIN;
-		else {
-			wrn ("using as default storage format: md5");
-			db->format = SASL_STORAGE_FORMAT_MD5;
-		} /* end if */
-		
 		/* check remote admins */
 		if (db->remote_admin && HAS_ATTR (node, "remote-admins") && strlen (ATTR_VALUE (node, "remote-admins")) > 0) {
 
@@ -885,37 +953,6 @@ axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 			} /* end if */
 		}
 		
-		/* get the serverName value */
-		if (HAS_ATTR (node, "serverName") && strlen (ATTR_VALUE (node, "serverName")) > 0) {
-			/* check if there are other database
-			 * added for the same serverName */
-			if (axl_hash_exists (sasl_backend->dbs, (axlPointer) ATTR_VALUE (node, "serverName"))) {
-				error ("found a serverName database associated to the current database (serverName configured twice!)");
-				common_sasl_db_free (db);
-				return axl_false;
-			}
-			
-			/* fine, add to the database loaded hash */
-			axl_hash_insert_full (sasl_backend->dbs, 
-					      /* the key to store and its destroy function */
-					      axl_strdup (ATTR_VALUE (node, "serverName")), axl_free,
-					      /* the value to store and its destroy function */
-					      db, (axlDestroyFunc) common_sasl_db_free);
-			
-		} else {
-			/* no serverName found, it seems this
-			 * is the default database to be used,
-			 * check if there is already configure
-			 * a default database */
-			if (sasl_backend->default_db != NULL) {
-				error ("it was found several default users databases (serverName empty or not found)");
-				common_sasl_db_free (db);
-				return axl_false;
-			} /* end if */
-			
-			/* configure as the default one */
-			sasl_backend->default_db = db;
-		} /* end if */
 	} /* end if (type == xml) */
 
 	return axl_true;

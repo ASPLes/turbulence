@@ -189,6 +189,7 @@ axl_bool        common_sasl_format_registered (TurbulenceCtx  * ctx,
 
 axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
 					       SaslAuthBackend  * backend,
+					       SaslAuthDb       * db,
 					       axlNode          * node,
 					       VortexMutex      * mutex);
 
@@ -215,6 +216,7 @@ char * common_sasl_find_alt_file  (TurbulenceCtx * ctx,
 				   const char    * file);
 
 axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend  * sasl_backend,
+					SaslAuthDb       * db,
 					axlNode          * node,
 					const char       * alt_location,
 					VortexMutex      * mutex);
