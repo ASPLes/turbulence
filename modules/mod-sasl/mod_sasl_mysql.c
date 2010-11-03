@@ -139,9 +139,24 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 				 const char       * authorization_id,
 				 const char       * password,
 				 const char       * serverName,
-				 const char       * sasl_method)
+				 const char       * sasl_method,
+				 axlError        ** err)
 {
-	/* const char * auth_query = ATTR_VALUE (auth_db_node_conf, "query");*/
+	/* const char * auth_query; */
+	axlDoc     * doc;
+	axlNode    * node;
+
+	/* get the auth query */
+	doc  = axl_node_annotate_get (auth_db_node_conf, "mysql-conf", axl_false);
+	if (doc == NULL) {
+		axl_error_report (err, -1, "Found no xml document defining MySQL settings to connect to the database");
+		return axl_false;
+	} /* end if */
+
+	/* get the node that contains the configuration */
+	node = axl_doc_get (doc, "/sasl-auth-db/get-password");
+	msg ("Trying to auth %s with query string %s", auth_id, ATTR_VALUE (node, "query"));
+	
 	
 	/* replace auth_query with recognized tokens */
 
@@ -240,7 +255,7 @@ axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
 	case MOD_SASL_OP_TYPE_AUTH:
 		/* request to auth user */
 		return INT_TO_PTR (mod_sasl_mysql_do_auth (ctx, auth_db_node_conf, 
-							   auth_id, authorization_id, password, serverName, sasl_method));
+							   auth_id, authorization_id, password, serverName, sasl_method, err));
 	case MOD_SASL_OP_TYPE_LOAD_AUTH_DB:
 		/* request to load database (check we can connect with current settings) */
 		return INT_TO_PTR (mod_sasl_mysql_load_auth_db (ctx, sasl_backend, auth_db_node_conf, err));

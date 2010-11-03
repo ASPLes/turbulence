@@ -118,7 +118,19 @@ struct _SaslAuthDb {
 	 * memory.
 	 */
 	axl_bool            dump_on_close;
-	
+
+	/** 
+	 * @brief Reference to the xml node (<auth-db>) that pointed
+	 * to the auth db definition.
+	 */
+	axlNode           * node;
+
+	/** 
+	 * @brief A reference to the format handler (if defined) that
+	 * is associated to the type of auth-db that this structure
+	 * represents.
+	 */
+	ModSaslFormatHandler format_handler;
 };
 
 /** 
@@ -528,6 +540,9 @@ axl_bool common_sasl_load_single_auth_db (TurbulenceCtx * ctx,
 	/* CREATE: create auth db object */
 	db = axl_new (SaslAuthDb, 1);
 
+	/* record node that was used to load this authdb */
+	db->node = node;
+
 	/* CONFIGURE: configure if this database is flaged
 	   with remote administration and the format for
 	   stored passwords */
@@ -595,6 +610,10 @@ axl_bool common_sasl_load_single_auth_db (TurbulenceCtx * ctx,
 			error ("SASL: failed to load some databases configured");
 			return axl_false;
 		} /* end if */
+		
+		/* configure the format handler here to avoid calling
+		   over and over again to this function */
+		db->format_handler = common_sasl_format_get_handler (ctx, ATTR_VALUE (node, "type"));
 	} /* end if */
 
 	/* format loaded */
@@ -1023,6 +1042,57 @@ axl_bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 }
 
 /** 
+ * @internal Function that supports the authentication of SASL users
+ * provided a SaslAuthDb using xml format.
+ * 
+ * @param db The reference to the xml database.
+ * @param auth_id The user to authenticate.
+ * @param authorization_id The authorization to use.
+ * @param password The password to be used.
+ * 
+ * @return 1 if the account was autenticated. 0 if login or password
+ * were not found or they are incorrect. -1 in the case the account is
+ * disabled.
+ */
+axl_bool common_sasl_auth_format_handler (TurbulenceCtx    * ctx, 
+					  SaslAuthBackend  * sasl_backend,
+					  SaslAuthDb       * db, 
+					  const char       * auth_id, 
+					  const char       * authorization_id, 
+					  const char       * password, 
+					  const char       * serverName,
+					  VortexMutex      * mutex)
+{
+	ModSaslFormatHandler    op_handler;
+	axlPointer              result;
+	axlError              * err = NULL;
+
+	if (ctx == NULL || auth_id == NULL) {
+		error ("Failed to request auth to format handler, ctx or auth_id are NULL");
+		return axl_false;
+	} /* end if */
+
+	/* get handler defined */
+	op_handler = db->format_handler;
+	if (op_handler == NULL) {
+		error ("Failed to request auth to format handler (%s), it is not defined", ATTR_VALUE (db->node, "type"));
+		return axl_false;
+	}
+
+	/* call to do auth */
+	result = op_handler (ctx, sasl_backend, db->node, MOD_SASL_OP_TYPE_AUTH,
+			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
+			     auth_id, authorization_id, password, serverName, NULL, &err, mutex);
+
+	/* account authenticated in the case of 1 */
+	if (PTR_TO_INT (result) == 1)
+		return axl_true;
+	/* in the case or 0 (not authenticated) or -1 (disabled) */
+	return axl_false;
+
+}
+
+/** 
  * @internal Function that implements the accounts-disabled option
  * from sasl.conf file.
  */
@@ -1147,8 +1217,15 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		return axl_false;
 	}
 
+	if (auth_id == NULL) {
+		error ("auth_id is NULL, unable to perform authentication");
+		return axl_false;
+	} /* end if */
+
 	/* get a reference to the context */
 	ctx = sasl_backend->ctx;
+
+	msg ("Requesting to auth=%s, over conn-id=%d (serverName: %s)", auth_id, vortex_connection_get_id (conn), serverName ? serverName : "");
 
 	/* lock the mutex */
 	LOCK;
@@ -1209,6 +1286,10 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	case SASL_BACKEND_XML:
 		/* get result */
 		result = common_sasl_auth_db_xml (ctx, db, auth_id, authorization_id, password);
+		break;
+	case SASL_BACKEND_FORMAT_HANDLER:
+		/* get result from format handler */
+		result = common_sasl_auth_format_handler (ctx, sasl_backend, db, auth_id, authorization_id, password, serverName, NULL);
 		break;
 	default:
 		/* no support db format found */
