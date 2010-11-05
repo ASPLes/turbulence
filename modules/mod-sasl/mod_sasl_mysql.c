@@ -97,6 +97,16 @@ MYSQL * mod_sasl_mysql_get_connection (TurbulenceCtx  * ctx,
  *
  * With the result created, the caller must do:
  *
+ * \code
+ * MYSQL_ROW row;
+ *
+ * // get a cell data
+ * row = mysql_fetch_row (result);
+ * row[i] -> each field.
+ *
+ * // to release 
+ * mysql_free_result (result);
+ * \endcode
  */
 MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx, 
 				     axlNode        * auth_db_node_conf,
@@ -142,9 +152,12 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 				 const char       * sasl_method,
 				 axlError        ** err)
 {
-	/* const char * auth_query; */
-	axlDoc     * doc;
-	axlNode    * node;
+	char        * auth_query; 
+	axlDoc      * doc;
+	axlNode     * node;
+	MYSQL_RES   * result;
+	MYSQL_ROW     row;
+	axl_bool      _result;
 
 	/* get the auth query */
 	doc  = axl_node_annotate_get (auth_db_node_conf, "mysql-conf", axl_false);
@@ -154,13 +167,32 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	} /* end if */
 
 	/* get the node that contains the configuration */
-	node = axl_doc_get (doc, "/sasl-auth-db/get-password");
-	msg ("Trying to auth %s with query string %s", auth_id, ATTR_VALUE (node, "query"));
-	
+	node       = axl_doc_get (doc, "/sasl-auth-db/get-password");
+	auth_query = axl_strdup (ATTR_VALUE (node, "query"));
 	
 	/* replace auth_query with recognized tokens */
+	axl_replace (auth_query, "%u", auth_id);
+	axl_replace (auth_query, "%n", serverName);
+	axl_replace (auth_query, "%i", authorization_id);
+	axl_replace (auth_query, "%m", sasl_method);
 
-	return axl_false;
+	msg ("Trying to auth %s with query string %s", auth_id, auth_query);
+
+	/* run query */
+	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, auth_query, axl_false, err);
+	axl_free (auth_query);
+	/* check result */
+	if (result == NULL) {
+		error ("Unable to authenticate user, query string failed with %s", axl_error_get (*err));
+		return 0; 
+	} /* end if */
+
+	/* return content from the first [0][0] array position */
+	row     = mysql_fetch_row (result);
+	_result = axl_cmp (row[0], password);
+	mysql_free_result (result);
+
+	return _result ? 1 : 0;
 }
 
 axl_bool mod_sasl_mysql_load_auth_db (TurbulenceCtx     * ctx,

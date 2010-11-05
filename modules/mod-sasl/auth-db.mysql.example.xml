@@ -13,6 +13,10 @@
 
        - %n : the serverName associated to the request. If not defined
               it will be empty string. Keep in mind for your SQL.
+
+       - %i : authorization_id
+
+       - %m : SASL method 
   -->
   
   <get-password query="SELECT password FROM users WHERE auth_id = '%u'" />
