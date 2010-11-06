@@ -2115,6 +2115,9 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	vortex_connection_close (conn);
 	printf ("Test 12: connection closed..\n");
 
+	/* wait sometime to ensure conlist is removed */
+	vortex_async_queue_timedpop (queue, 10000);
+
 	/* at this point we must have 1 connections registered (the master listener) */
 	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
 	if (axl_list_length (connList) != connections_after_close) {
@@ -2134,6 +2137,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	} /* end if */	
 
 	/* enable SASL auth for current connection */
+	printf ("Test 12: checking aspl user is not authenticated for other serverName (expected failure..)\n");
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
 	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
@@ -2151,6 +2155,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	}
 
 	/* enable SASL auth for current connection */
+	printf ("Test 12: checking aspl2 user IS authenticated for other serverName (not expected failure..)\n");
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl2", NULL);
 	vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
 	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
@@ -3918,8 +3923,6 @@ int main (int argc, char ** argv)
 		argc--;
 	} /* end if */
 
-	goto test;
-
 	/* init context to be used on the following tests */
 	test_with_context_init ();
 
@@ -3961,15 +3964,11 @@ int main (int argc, char ** argv)
 
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
 
- test:
-
 	run_test (test_12b, "Test 12-b: check mod sasl mysql");
-
-	return 0;
 
 	if (! disable_python_tests) {
 		run_test (test_13, "Test 13: Check mod python");
-		
+
 		run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)"); 
 	} /* end if */
 

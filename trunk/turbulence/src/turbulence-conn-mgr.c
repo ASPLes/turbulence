@@ -61,6 +61,10 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 	TurbulenceConnMgrState * state = user_data;
 	TurbulenceCtx          * ctx   = state->ctx;
 
+	/* do not remove if hash is not defined */
+	if (ctx->conn_mgr_hash == NULL)
+		return;
+
 	/* new connection created: configure it */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 

@@ -189,6 +189,11 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 
 	/* return content from the first [0][0] array position */
 	row     = mysql_fetch_row (result);
+	if (row == NULL) {
+		mysql_free_result (result);
+		return 0;
+	} /* end if */
+	/* check result */
 	_result = axl_cmp (row[0], password);
 	mysql_free_result (result);
 
@@ -323,6 +328,9 @@ static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
 
 /* mod_sasl_mysql close handler */
 static void mod_sasl_mysql_close (TurbulenceCtx * _ctx) {
+	/* frees up other memory used by the libmysqlclient. */
+	mysql_library_end ();
+
 	/* finish dtd used */
 	axl_dtd_free (mysql_sasl_dtd);
 	return;
