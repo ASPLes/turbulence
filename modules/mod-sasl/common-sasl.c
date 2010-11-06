@@ -850,7 +850,7 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
 
 	/* check if we did find the node */
 	if (node == NULL) {
-		error ("Unable to find <auth-db> node cleration for the serverName=%s", serverName);
+		error ("Unable to find <auth-db> node declaration for the serverName=%s", serverName);
 		return axl_false;
 	} /* end if */
 
@@ -914,8 +914,22 @@ axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
 		db->db_path  = common_sasl_find_alt_file (ctx, path, ATTR_VALUE (node, "location"));
 		axl_free (path);
 	} else {
+		/* use "sasl" context find the file */
 		db->db_path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", ATTR_VALUE (node, "location"));
-	}
+		if (db->db_path == NULL) {
+			/* try to find file at the directory where
+			   sasl.conf file was loaded */
+			base_dir    = turbulence_base_dir (common_sasl_get_file_path (sasl_backend));
+			wrn ("Unable to find %s file on default 'sasl' location, checking at %s", ATTR_VALUE (node, "location"), base_dir);
+			db->db_path = axl_strdup_printf ("%s%s%s", base_dir, VORTEX_FILE_SEPARATOR, ATTR_VALUE (node, "location"));
+			axl_free (base_dir);
+			if (! vortex_support_file_test (db->db_path, FILE_IS_REGULAR)) {
+				wrn ("File not found at %s", db->db_path);
+				axl_free (db->db_path);
+				db->db_path = NULL;
+			} /* end if */
+		} /* end if */
+	} /* end if */
 
 	/* check if the path provided is valid */
 	if (db->db_path == NULL) {
