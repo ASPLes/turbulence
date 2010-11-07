@@ -319,6 +319,8 @@ TurbulenceModDef module_def = {
  * - \ref turbulence_mod_sasl_work_dir
  * - \ref turbulence_mod_sasl_cli
  * - \ref turbulence_mod_sasl_ramdin
+ * - \ref turbulence_mod_sasl_mysql
+ * - \ref turbulence_mod_sasl_creating_password
  *
  * \section turbulence_mod_sasl_intro Introduction
  *
@@ -518,4 +520,97 @@ TurbulenceModDef module_def = {
  * SASL administrators. See \ref turbulence_db_list_management to setup the
  * administrator list.</li>
  * </ol>
+ *
+ * \section turbulence_mod_sasl_mysql Using MySQL to auth SASL accounts
+ *
+ * This section assumes you already have installed <b>mod-sasl-mysql</b>
+ * either due to source "make install" or because your distribution
+ * provides a package to install it. To check it, look if you have a
+ * file called <b>extension.modules</b> located at
+ * ${sysconfdir}/turbulence/sasl directory. To know your sysconfdir
+ * value use:
+ *
+ * \code
+ * >> turbulence --conf-location
+ * \endcode
+ *
+ * Inside that file (<b>exension.modules</b>) you should find a
+ * declaration like follows:
+ *
+ * \htmlinclude extension.modules.xml
+ *
+ * To use a MySQL database to auth SASL accounts you must first
+ * prepare your MySQL server with some SQL to store those users
+ * accounts and prepare your SQL queries to adapt your particular
+ * structure. There is no fixed or expected SQL structure, so you can
+ * adapt the following example with no problem.
+ *
+ * The following is a working example used by Turbulence regression
+ * test to check <b>mod-sasl-mysql</b> module. It will work in most
+ * situations so you can start with it. Connect to your database and
+ * run the following. Rembember to change user and password:
+ *
+ * \include create-mysql-sasl-database.sql
+ *
+ * Now you need to enable this database to by used by mod-sasl. This
+ * is done by updating your <b>sasl.conf</b> (usually found at
+ * /etc/turbulence/sasl/sasl.conf) to have a declaration like follows:
+ *
+ * \code
+ *  <!-- mysql database backend format -->
+ *  <auth-db type="mysql" 
+ *           location="auth-db.mysql.xml" 
+ *           format="md5" />
+ * \endcode
+ *
+ * Note that this <b><auth-db></b> declaration do not provide a
+ * <b>serverName</b> value. This means it will be used for all auth
+ * requests if no other especific database is found for the provided
+ * serverName and no other default database is found prior this
+ * one. In the case you want to use MySQL only for a particular
+ * serverName, set it.
+ *
+ * Now you have registered this <b><auth-db></b> database,
+ * <b>mod-sasl</b> will redirect requests to
+ * <b>mod-sasl-mysql</b>. Fine, but now you need to tell
+ * mod-sasl-mysql how to handle requests. To do so, fill the
+ * <b>auth-db.mysql.xml</b> file with the following:
+ *
+ * \htmlinclude auth-db.mysql.example.xml-tmp
+ *
+ * As you can see the file is self explanatory. There is a declaration
+ * to provide connection settings to reach the MySQL server and a
+ * declaration with the SQL required to get the password.
+ *
+ * Reached this point you are now able to SASL auth your users using a
+ * MySQL database. However..
+ *
+ * \section turbulence_mod_sasl_creating_password Format and how to create hashed passwords compatible with mod-sasl
+ *
+ * ..an important detail is how to generate the format used to store
+ * the password.  In the case use "plain" format
+ * (<b>format="plain"</b> attribute declaration inside
+ * <b><auth-db></b>) then nothing especial is required. In the case
+ * you use md5 or sha-1 you must hash the password using the
+ * corresponding method, upper case the result, and inverleave a ":"
+ * sign each 2 positions. For example:
+ *
+ * \code
+ * Plain password: test
+ * MD5:            09:8F:6B:CD:46:21:D3:73:CA:DE:4E:83:26:27:B4:F6
+ * SHA-1:          A9:4A:8F:E5:CC:B1:9B:A6:1C:4C:08:73:D3:91:E9:87:98:2F:BB:D3
+ * \endcode
+ *
+ * Along with mod-sasl code is included a python script that can help
+ * you generating these passwords and as example of code so your
+ * application can generate those passwords too. The application is
+ * <b>gen-mod-sasl-pass.py</b>, and its content is:
+ *
+ * \include gen-mod-sasl-pass.py
+ *
+ * To generate passwords do the following:
+ * 
+ * \code
+ * >> gen-mod-sasl-pass.py md5 YOUR_PASSWORD
+ * \endcode
  */

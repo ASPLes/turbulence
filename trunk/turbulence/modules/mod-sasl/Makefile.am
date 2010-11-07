@@ -8,7 +8,7 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 
 EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h mysql.sasl.dtd mysql.sasl.dtd.h \
              mod-sasl.win32.xml $(sasl_radmin_files) sasl.example.conf \
-	     auth-db.example.xml remote-admins.example.xml
+	     auth-db.example.xml remote-admins.example.xml gen-mod-sasl-pass.py create-mysql-sasl-database.sql
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
@@ -39,7 +39,7 @@ mod_DATA = mod-sasl.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/sasl
-modconf_DATA = sasl.example.conf sasl.example.conf.tmp auth-db.example.xml remote-admins.example.xml
+modconf_DATA = sasl.example.conf auth-db.example.xml remote-admins.example.xml extension.modules 
 
 # render html version from default configuration files
 %.conf.tmp: %.conf
@@ -75,3 +75,12 @@ pkgconfig_DATA = sasl-radmin.pc
 
 saslradmindir   = $(datadir)/mod-sasl/radmin
 saslradmin_DATA = sasl-radmin.idl
+
+# local tasks
+all-local: extension.modules.xml auth-db.mysql.example.xml-tmp sasl.example.conf.tmp
+
+extension.modules.xml: extension.modules
+	axl-knife -i $< -o $@ -e -p fragment
+
+auth-db.mysql.example.xml-tmp: auth-db.mysql.example.xml
+	axl-knife -i $< -o $@ -e -p fragment

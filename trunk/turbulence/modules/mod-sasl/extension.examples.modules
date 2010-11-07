@@ -1,0 +1,4 @@
+<extensions>
+  <!-- load MySQL backend support for SASL module -->
+  <ext location="/usr/lib/turbulence/modules/mod-sasl-mysql.so" />
+</extensions>
