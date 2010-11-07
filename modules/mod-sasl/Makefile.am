@@ -39,7 +39,7 @@ mod_DATA = mod-sasl.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/sasl
-modconf_DATA = sasl.example.conf auth-db.example.xml remote-admins.example.xml extension.modules 
+modconf_DATA = sasl.example.conf auth-db.example.xml remote-admins.example.xml extension.example.modules 
 
 # render html version from default configuration files
 %.conf.tmp: %.conf
@@ -77,9 +77,9 @@ saslradmindir   = $(datadir)/mod-sasl/radmin
 saslradmin_DATA = sasl-radmin.idl
 
 # local tasks
-all-local: extension.modules.xml auth-db.mysql.example.xml-tmp sasl.example.conf.tmp
+all-local: extension.example.modules.xml auth-db.mysql.example.xml-tmp sasl.example.conf.tmp
 
-extension.modules.xml: extension.modules
+extension.example.modules.xml: extension.example.modules
 	axl-knife -i $< -o $@ -e -p fragment
 
 auth-db.mysql.example.xml-tmp: auth-db.mysql.example.xml

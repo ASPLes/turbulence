@@ -537,7 +537,7 @@ TurbulenceModDef module_def = {
  * Inside that file (<b>exension.modules</b>) you should find a
  * declaration like follows:
  *
- * \htmlinclude extension.modules.xml
+ * \htmlinclude extension.example.modules.xml
  *
  * To use a MySQL database to auth SASL accounts you must first
  * prepare your MySQL server with some SQL to store those users
