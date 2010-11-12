@@ -1,0 +1,3 @@
+<extensions>
+  <ext location="../modules/mod-sasl/.libs/mod-sasl-mysql.so" />
+</extensions>
