@@ -1,0 +1,19 @@
+<sasl-auth-db>
+  <!-- The following defines the connection settings that will be used to connect the database -->
+  <connection-settings user="turbulence_test" 
+		       password="1234" 
+		       database="turbulence_test" 
+		       host="localhost" 
+		       port="" />
+  <!-- the following defines the SQL query that will be used to get
+       the password associated to a user (auth_id) and under a
+       serverName. Here is the list of provided values:
+
+       - %u : the auth_id requested.
+
+       - %n : the serverName associated to the request. If not defined
+              it will be empty string. Keep in mind for your SQL.
+  -->
+  
+  <get-password query="SELECT password FROM users WHERE auth_id = '%u' and serverName = '%n'" />
+</sasl-auth-db>
