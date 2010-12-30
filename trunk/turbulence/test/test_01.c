@@ -1337,6 +1337,9 @@ axl_bool test_07 (void) {
 	/* close the connection */
 	vortex_connection_close (conn);
 
+	/* wait a 30ms to allow turbulence registering created connections */
+	test_common_microwait (30000);
+
 	list = turbulence_conn_mgr_conn_list (tCtx, VortexRoleInitiator, NULL);
 	if (axl_list_length (list) != 0) {
 		printf ("ERROR (5): expected to find 0 connections registered, but found %d..\n", 
@@ -3891,6 +3894,8 @@ void terminate_contexts (void) {
 	return;
 }
 
+#define CHECK_TEST(name) if (run_test == NULL || axl_cmp (run_test, name))
+
 /** 
  * @brief General regression test to check all features inside
  * turbulence.
@@ -3898,6 +3903,8 @@ void terminate_contexts (void) {
 int main (int argc, char ** argv)
 {
 	axl_bool disable_python_tests = axl_false;
+	char * run_test = NULL;
+	axl_bool enable_10a = axl_true;
 
 	printf ("** test_01: Turbulence BEEP application server regression test\n");
 	printf ("** Copyright (C) 2008 Advanced Software Production Line, S.L.\n**\n");
@@ -3908,9 +3915,11 @@ int main (int argc, char ** argv)
 	printf ("**                   axl:        %s\n**\n",
 		AXL_VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     time ./test_01 [--debug] [--no-python]\n**\n");
+	printf ("**     time ./test_01 [--debug] [--no-python] [--run-test=NAME] [--no-10a]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01 [--debug]\n**\n");
+	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
+	printf ("** Available tests: test_01, \n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
@@ -3920,6 +3929,12 @@ int main (int argc, char ** argv)
 			test_common_enable_debug = axl_true;
 		if (axl_cmp (argv[argc], "--no-python"))
 			disable_python_tests = axl_true;
+		if (axl_cmp (argv[argc], "--no-10a"))
+			 enable_10a = axl_false;
+		if (argv[argc] && axl_memcmp (argv[argc], "--run-test", 10)) {
+			run_test = argv[argc] + 11;
+			printf ("INFO: running test: %s\n", run_test);
+		}
 		argc--;
 	} /* end if */
 
@@ -3927,69 +3942,101 @@ int main (int argc, char ** argv)
 	test_with_context_init ();
 
 	/* run tests */
+	CHECK_TEST("test_01")
 	run_test (test_01, "Test 01: Turbulence db-list implementation");
 
+	CHECK_TEST("test_01a")
 	run_test (test_01a, "Test 01-a: Regular expressions");
 
+	CHECK_TEST("test_0b")
 	run_test (test_01b, "Test 01-b: smtp notificaitons");
 
+	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");
 
+	CHECK_TEST("test_03")
 	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl, tbc-sasl-conf)");
 
+	CHECK_TEST("test_04")
 	run_test (test_04, "Test 04: Check module loading support");
 
 	/* terminate context used by previous tests */
 	terminate_contexts ();
 
+	CHECK_TEST("test_05")
 	run_test (test_05, "Test 05: Check mediator API");
 
+	CHECK_TEST("test_05a")
 	run_test (test_05_a, "Test 05-a: Check system user/group id resolving..");
 	
+	CHECK_TEST("test_06")
 	run_test (test_06, "Test 06: Turbulence startup and stop");
 
+	CHECK_TEST("test_07")
 	run_test (test_07, "Test 07: Turbulence local connection");
 
+	CHECK_TEST("test_08")
 	run_test (test_08, "Test 08: Turbulence profile path filtering (basic)");
 
+	CHECK_TEST("test_09")
 	run_test (test_09, "Test 09: Turbulence profile path filtering (serverName)");
 
+	CHECK_TEST("test_10")
 	run_test (test_10, "Test 10: Turbulence profile path filtering (child processes)");
 
-	run_test (test_10_a, "Test 10-a: Recover from child with failures...");
+	if (enable_10a) {
+		CHECK_TEST("test_10a")
+		run_test (test_10_a, "Test 10-a: Recover from child with failures...");
+	}
 
+	CHECK_TEST("test_11")
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
 
+	CHECK_TEST("test_12")
 	run_test (test_12, "Test 12: Check mod sasl (profile path selected authentication)"); 
 
+	CHECK_TEST("test_12a")
 	run_test (test_12a, "Test 12-a: Check mod sasl (profile path selected authentication, no childs)"); 
 
+	CHECK_TEST("test_12b")
 	run_test (test_12b, "Test 12-b: check mod sasl mysql");
 
 	if (! disable_python_tests) {
+		CHECK_TEST("test_13")
 		run_test (test_13, "Test 13: Check mod python");
 
+		CHECK_TEST("test_13a")
 		run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)"); 
 	} /* end if */
 
+	CHECK_TEST("test_14")
 	run_test (test_14, "Test 14: Notify different server after profile path selected");
 
+	CHECK_TEST("test_15")
 	run_test (test_15, "Test 15: anchillary data for socket passing");
 
+	CHECK_TEST("test_15a")
 	run_test (test_15a, "Test 15-a: Child creation with socket passing support");
 
+	CHECK_TEST("test_16")
 	run_test (test_16, "Test 16: Connections that were working, must not be available at childs..");
 
+	CHECK_TEST("test_17")
 	run_test (test_17, "Test 17: many connections at the same time for a profile path with separate=yes and reuse=yes");
 
+	CHECK_TEST("test_18")
 	run_test (test_18, "Test 18: check child process creation that do not accept the connection..");
 
+	CHECK_TEST("test_19")
 	run_test (test_19, "Test 19: check child process creation that do not accept the connection (II)..");
 
+	CHECK_TEST("test_20")
 	run_test (test_20, "Test 20: check profile path state also applies to childs (with reuse=yes)..");
 
+	CHECK_TEST("test_21")
 	run_test (test_21, "Test 21: check connection id on child reuse (with reuse=yes)..");
 
+	CHECK_TEST("test_22")
 	run_test (test_22, "Test 22: check TLS module.."); 
 
 	printf ("All tests passed OK!\n");

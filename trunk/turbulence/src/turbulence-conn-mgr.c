@@ -58,8 +58,16 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 				   axlPointer         user_data)
 {
 	/* get turbulence context */
-	TurbulenceConnMgrState * state = user_data;
-	TurbulenceCtx          * ctx   = state->ctx;
+	TurbulenceConnMgrState * state;
+	TurbulenceCtx          * ctx;
+
+	/* check if we are the last reference */
+	if (vortex_connection_ref_count (conn) == 1)
+		return;
+
+	/* get access to state and context */
+	state = user_data;
+	ctx   = state->ctx;
 
 	/* do not remove if hash is not defined */
 	if (ctx->conn_mgr_hash == NULL)
