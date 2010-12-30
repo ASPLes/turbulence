@@ -569,7 +569,7 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 	if (! handle_start_reply) {
 		/* set the connection to still finish BEEP greetings
 		   negotiation phase */
-		vortex_connection_set_data (conn, "initial_accept", INT_TO_PTR (axl_true));
+		vortex_connection_set_initial_accept (conn, axl_true);
 	}
 
 	/* now finish and register the connection */
