@@ -644,8 +644,10 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 	/* get state */
 	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
 	if (state == NULL) {
-		error ("Failed to find connection manager internal state associated to connection id=%d, failed to return stats..",
-		       vortex_connection_get_id (conn));
+		if (vortex_connection_channels_count (conn) > 1) {
+			error ("Failed to find connection manager internal state associated to connection id=%d but it has channels %d, failed to return stats..",
+			       vortex_connection_channels_count (conn), vortex_connection_get_id (conn));
+		} /* end if */
 		/* unlock the mutex */
 		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 		return NULL;

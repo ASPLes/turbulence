@@ -427,8 +427,14 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 	state = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
 	ctx   = state->ctx;
 
-	msg ("Called to temporal profile mask on %s phase, for connection id=%d (state %p, profile path selected: %p)", 
-	     channel_num == -1 ? "greetings" : "channel creation", vortex_connection_get_id (connection), state, state->path_selected);
+	/* the following is to avoid noisy output on greetings phase
+	 * (because it is called too many times) */
+	if (channel_num == -1)
+		msg2 ("Called to temporal profile mask on greetings phase, for connection id=%d (state %p, profile path selected: %p)", 
+		      vortex_connection_get_id (connection), state, state->path_selected);
+	else 
+		msg ("Called to temporal profile mask on channel creation phase, for connection id=%d (state %p, profile path selected: %p)", 
+		     vortex_connection_get_id (connection), state, state->path_selected);
 	
 	/* check if the state has a profile path selected */
 	if (state->path_selected == NULL) {

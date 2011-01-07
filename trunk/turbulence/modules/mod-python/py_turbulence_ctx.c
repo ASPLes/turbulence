@@ -174,6 +174,27 @@ static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args
 	return Py_None;
 }
 
+static PyObject * py_turbulence_ctx_wrn (PyTurbulenceCtx * self, PyObject * args)
+{
+	char          * message = NULL;
+	TurbulenceCtx * ctx = self->ctx;
+
+	/* parse and check result */
+	if (! PyArg_ParseTuple (args, "z", &message))
+		return NULL;
+
+	if (message) {
+		/* prepare message */
+		py_turbulence_ctx_sanitize (message);
+
+		/* drop the log */
+		wrn (message);
+	} /* end if */
+	
+	Py_INCREF (Py_None);
+	return Py_None;
+}
+
 static PyObject * py_turbulence_ctx_error (PyTurbulenceCtx * self, PyObject * args)
 {
 	char          * message = NULL;
@@ -246,6 +267,9 @@ static PyMethodDef py_turbulence_ctx_methods[] = {
 	/* msg */
 	{"msg", (PyCFunction) py_turbulence_ctx_msg, METH_VARARGS,
 	 "Records a turbulence log message (msg ()). This is sent to the configured log and showed on the console according to the configuration."},
+	/* wrn */
+	{"wrn", (PyCFunction) py_turbulence_ctx_wrn, METH_VARARGS,
+	 "Records a turbulence log message (wrn ()). This is sent to the configured log and showed on the console according to the configuration."},
 	/* error */
 	{"error", (PyCFunction) py_turbulence_ctx_error, METH_VARARGS,
 	 "Records a turbulence error message (error ()). This is sent to the configured log and showed on the console according to the configuration."},
