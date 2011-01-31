@@ -563,6 +563,12 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		return;
 	}
 
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		error ("Connection id=%d is not working after notifying ppath selected handler..", vortex_connection_get_id (conn));
+		vortex_connection_close (conn);
+		return;
+	}
+
 	/* check if the connection was received during on connect
 	   phase (vortex_listener_set_on_accept_handler) or because a
 	   channel start */
@@ -576,7 +582,7 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 	vortex_connection_set_close_socket (conn, axl_true);
 	vortex_reader_watch_connection (TBC_VORTEX_CTX (ctx), conn);
 
-	/* because the conn manager module was bee initialized again,
+	/* because the conn manager module has been initialized again,
 	   register the connection handling by this process */
 	turbulence_conn_mgr_register (ctx, conn);
 

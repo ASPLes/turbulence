@@ -183,7 +183,7 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
  * 
  * @param m The console message to output.
  */
-#define access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
+#define tbc_access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
 int      turbulence_init (TurbulenceCtx * ctx, 
@@ -223,6 +223,8 @@ const char    * turbulence_sysconfdir      (TurbulenceCtx * ctx);
 const char    * turbulence_datadir         (TurbulenceCtx * ctx);
 
 const char    * turbulence_runtime_datadir (TurbulenceCtx * ctx);
+
+const char    * turbulence_runtime_tmpdir  (TurbulenceCtx * ctx);
 
 axl_bool        turbulence_is_num         (const char * value);
 
