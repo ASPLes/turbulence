@@ -366,11 +366,11 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 		 * accepted */
 		if (channel_num > 0) {
 			/* report access */
-			access ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
-				uri, state->path_selected->path_name, 
-				vortex_connection_get_id (connection), 
-				vortex_connection_get_host (connection),
-				vortex_connection_get_port (connection));
+			tbc_access ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
+				    uri, state->path_selected->path_name, 
+				    vortex_connection_get_id (connection), 
+				    vortex_connection_get_host (connection),
+				    vortex_connection_get_port (connection));
 		}
 		
 		/* profile allowed, do not filter */

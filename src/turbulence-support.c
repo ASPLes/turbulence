@@ -76,12 +76,13 @@ int mkstemp(char *template);
 char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 {
 #if defined(AXL_OS_UNIX)
+	FILE               * file_handle;
 	int                  temp_file;
 	char               * temp_name;
 	char               * str_pid;
 	char               * command;
 	int                  status;
-	char               * backtrace_file;
+	char               * backtrace_file = NULL;
 
 	temp_name = axl_strdup ("/tmp/turbulence-backtrace.XXXXXX");
 	temp_file = mkstemp (temp_name);
@@ -113,11 +114,39 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	close (temp_file);
 	
 	/* build the command to get gdb output */
-	backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.gdb", turbulence_runtime_datadir (ctx), time (NULL));
+	while (1) {
+		backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.gdb", turbulence_runtime_datadir (ctx), time (NULL));
+		file_handle    = fopen (backtrace_file, "w");
+		if (file_handle == NULL) {
+			msg ("Changing path because path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
+			axl_free (backtrace_file);
+			backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.gdb", turbulence_runtime_tmpdir (ctx), time (NULL));
+		} else {
+			fclose (file_handle);
+			msg ("Checked that %s is writable/readable for the current usid=%d", backtrace_file, getuid ());
+			break;
+		} /* end if */
+
+		/* check path again */
+		file_handle    = fopen (backtrace_file, "w");
+		if (file_handle == NULL) {
+			error ("Failed to produce backtrace, alternative path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
+			axl_free (backtrace_file);
+			return NULL;
+		}
+		fclose (file_handle);
+		break; /* reached this point alternative path has worked */
+	} /* end while */
+
+	if (backtrace_file == NULL) {
+		error ("Failed to produce backtrace, internal reference is NULL");
+		return NULL;
+	}
 
 	/* place some system information */
 	command  = axl_strdup_printf ("echo \"Turbulence backtrace at `hostname -f`, created at `date`\" > %s", backtrace_file);
 	status   = system (command);
+	msg ("Running: %s, exit status: %d", command, status);
 	axl_free (command);
 
 	/* get profile path id */
@@ -128,17 +157,20 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 		command   = axl_strdup_printf ("echo \"Failure found at child process.\" >> %s", backtrace_file);
 	}
 	status   = system (command);
+	msg ("Running: %s, exit status: %d", command, status);
 	axl_free (command);
 
 	/* get place some pid information */
 	command  = axl_strdup_printf ("echo -e 'Process that failed was %d. Here is the backtrace:\n--------------' >> %s", getpid (), backtrace_file);
 	status   = system (command);
+	msg ("Running: %s, exit status: %d", command, status);
 	axl_free (command);
 	
 	/* get backtrace */
 	command  = axl_strdup_printf ("gdb -x %s >> %s", temp_name, backtrace_file);
 	status   = system (command);
-	
+	msg ("Running: %s, exit status: %d", command, status);
+
 	/* remove gdb commands */
 	unlink (temp_name);
 	axl_free (temp_name);

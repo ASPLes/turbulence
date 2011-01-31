@@ -248,8 +248,6 @@ static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObj
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "zis", &message, &size, &profile))
 		return NULL;
-
-
 	
 	/* get the connection */
 	if (! turbulence_conn_mgr_broadcast_msg (ctx, message, size, profile, NULL, NULL)) {

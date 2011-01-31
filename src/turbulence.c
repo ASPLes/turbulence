@@ -1134,6 +1134,20 @@ const char    * turbulence_runtime_datadir        (TurbulenceCtx * ctx)
 	return TBC_RUNTIME_DATADIR;
 }
 
+/** 
+ * @brief Allows to get current temporal directory.
+ * @param ctx The turbulence ctx where the configuration will be checked.
+ * @retrurn The path to the temporal directory.
+ */
+const char    * turbulence_runtime_tmpdir  (TurbulenceCtx * ctx)
+{
+#if defined(AXL_OS_UNIX)
+	return "/tmp";
+#elif defined(AXL_OS_WIN32)
+	return "c:/windows/temp";
+#endif
+}
+
 
 /** 
  * @brief Allows to check if the provided value contains a decimal
