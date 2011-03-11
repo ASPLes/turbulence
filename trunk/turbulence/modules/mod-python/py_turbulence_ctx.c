@@ -237,6 +237,11 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
 	return py_vortex_connection_find_reference (conn, self->py_vortex_ctx);
 }
 
+typedef struct _PyTurbulenceBroadcastData {
+	PyObject * handler;
+	PyObject * data;
+} PyTurbulenceBroadcastData;
+
 
 static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObject * args)
 {
@@ -244,9 +249,11 @@ static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObj
 	const char       * message = NULL;
 	int                size    = 0;
 	const char       * profile = NULL;
+	PyObject         * handler = NULL;
+	PyObject         * data    = NULL;
 
 	/* parse and check result */
-	if (! PyArg_ParseTuple (args, "zis", &message, &size, &profile))
+	if (! PyArg_ParseTuple (args, "zis|OO", &message, &size, &profile, &handler, &data))
 		return NULL;
 	
 	/* get the connection */
