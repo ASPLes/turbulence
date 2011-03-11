@@ -237,30 +237,106 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
 	return py_vortex_connection_find_reference (conn, self->py_vortex_ctx);
 }
 
-typedef struct _PyTurbulenceBroadcastData {
-	PyObject * handler;
-	PyObject * data;
-} PyTurbulenceBroadcastData;
+/** 
+ * @internal Function used to bridge filter notification for each
+ * connection to report back filtering.
+ */
+static axl_bool  py_turbulence_ctx_broadcast_msg_bridge (VortexConnection * conn, axlPointer user_data)
+{
+	PyGILState_STATE           state;
+	PyObject                 * py_conn = NULL;
+	PyTurbulenceInvokeData   * invoke_data = user_data;
+	PyObject                 * args;
+	PyObject                 * result;
+	int                        result_value;
+	TurbulenceCtx            * ctx = NULL;
+	PyTurbulenceCtx          * py_ctx = (PyTurbulenceCtx *)invoke_data->py_ctx;
 
+	/* get ctx reference */
+	if (invoke_data && invoke_data->py_ctx) 
+		ctx = py_ctx->ctx;
+
+	/* get connection reference */
+	py_conn = py_vortex_connection_find_reference (conn, py_ctx->py_vortex_ctx);
+	if (py_conn == NULL) {
+		error ("Failed to find PyConn connection reference, null returned after providing conn=%p and py_ctx=%p", conn, invoke_data->py_ctx);
+		return axl_true; /* filter on failure */
+	} /* end if */
+
+	/* acquire the GIL */
+	state = PyGILState_Ensure();
+
+	/* create a tuple to contain arguments */
+	args = PyTuple_New (2);
+	PyTuple_SetItem (args, 0, py_conn);
+	Py_INCREF (invoke_data->data);
+	PyTuple_SetItem (args, 1, invoke_data->data);
+
+	/* now invoke */
+	result = PyObject_Call (invoke_data->handler, args, NULL);
+
+	/* handle exceptions */
+	py_vortex_log (PY_VORTEX_DEBUG, "broadcast_msg_bridge notification finished, checking for exceptions..");
+	py_vortex_handle_and_clear_exception (py_conn);
+
+	/* now implement other attributes */
+	result_value = 0;
+	if (! PyArg_Parse (result, "i", &result_value)) {
+		error ("Failed to parse result, expected to find integer or boolean value");
+	} /* end if */
+
+	Py_XDECREF (result);
+	Py_DECREF (args);
+
+	/* release the GIL */
+	PyGILState_Release (state);
+
+	/* filter according state */
+	return result_value;
+}
 
 static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObject * args)
 {
-	TurbulenceCtx    * ctx = self->ctx;
-	const char       * message = NULL;
-	int                size    = 0;
-	const char       * profile = NULL;
-	PyObject         * handler = NULL;
-	PyObject         * data    = NULL;
+	TurbulenceCtx          * ctx         = self->ctx;
+	const char             * message     = NULL;
+	int                      size        = 0;
+	const char             * profile     = NULL;
+	PyObject               * handler     = NULL;
+	PyObject               * data        = NULL;
+	PyTurbulenceInvokeData * invoke_data = NULL;
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "zis|OO", &message, &size, &profile, &handler, &data))
 		return NULL;
+
+	/* update size if -1 is provided */
+	if (size == -1)
+		size = strlen (message);
+
+	/* check to create invoke data */
+	if (handler) {
+		/* create invoke data */
+		invoke_data          = axl_new (PyTurbulenceInvokeData, 1);
+		invoke_data->handler = handler;
+		invoke_data->py_ctx  = __PY_OBJECT (self);
+		/* set handler data */
+		invoke_data->data    = data;
+		if (invoke_data->data == NULL)
+			invoke_data->data = Py_None;
+	} /* end if */
 	
 	/* get the connection */
-	if (! turbulence_conn_mgr_broadcast_msg (ctx, message, size, profile, NULL, NULL)) {
+	if (! turbulence_conn_mgr_broadcast_msg (ctx, message, size, profile, 
+						 /* invoke bridge */
+						 invoke_data ? py_turbulence_ctx_broadcast_msg_bridge : NULL, 
+						 /* invoke data */
+						 invoke_data)) {
 		Py_INCREF (Py_False);
 		return Py_False;
-	}
+	} /* end if */
+
+	/* release invoke data if any */
+	axl_free (invoke_data);
 
 	/* return proper result */
 	Py_INCREF (Py_True);

@@ -45,6 +45,13 @@
 /* include turbulence */
 #include <turbulence.h>
 
+typedef struct _PyTurbulenceInvokeData {
+	PyObject    * handler;
+	PyObject    * data;
+	PyObject    * py_ctx;
+	axlPointer    user_data;
+} PyTurbulenceInvokeData;
+
 void            py_turbulence_init (void);
 
 PyMODINIT_FUNC  initlibpy_turbulence (void);

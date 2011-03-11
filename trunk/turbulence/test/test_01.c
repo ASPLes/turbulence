@@ -2618,6 +2618,147 @@ axl_bool test_13_a (void) {
 	return axl_true;
 }
 
+axl_bool test_13_b (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_13b.conf")) 
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("python"), 
+						   vortex_support_build_filename ("test_13_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* now open connection to localhost */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* unregister from turbulence to avoid echo effect. Because
+	 * all connections created under the same process are
+	 * registered into turbulence, we want to unregister to
+	 * simulate independent connections */
+	turbulence_conn_mgr_unregister (tCtx, conn);
+	
+	/* now create a channel registered by python code */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test");
+	if (channel == NULL) {
+		printf ("ERROR (4): expected to proper channel creation but a failure was found..\n");
+		return axl_false;
+	}
+	
+	/* send a message and check result */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	if (! vortex_channel_send_msg (channel, "python-check", 12, NULL)) {
+		printf ("ERROR (5): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	/* get the frame */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (6): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 1")) {
+		printf ("ERROR (7): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* now send message that should be not broadcasted */
+	printf ("Test 13-b: BROADCAST 1: sending initial test..\n");
+	if (! vortex_channel_send_msg (channel, "broadcast 1", 11, NULL)) {
+		printf ("ERROR (8): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	/* get the frame */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (9): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, broadcast 1")) {
+		printf ("ERROR (10): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* now send message that should be not broadcasted */
+	printf ("Test 13-b: BROADCAST 2: sending initial test..\n");
+	if (! vortex_channel_send_msg (channel, "broadcast 2", 11, NULL)) {
+		printf ("ERROR (11): expected to send content but found error..\n");
+		return axl_false;
+	} /* end if */
+
+	/* get the frame */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (12): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, broadcast 2")) {
+		printf ("ERROR (13): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* get the frame (from the broadcast) */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (14): expected to find reply for get pid request...\n");
+		return axl_false;
+	} /* end if */
+
+	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "This should reach")) {
+		printf ("ERROR (15): expected to find 'profile path notified' but found '%s'",
+			(const char*) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* clear frame */
+	vortex_frame_unref (frame);
+
+	/* close the connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 
 axl_bool test_14 (void) {
 	TurbulenceCtx    * tCtx;
@@ -4007,6 +4148,11 @@ int main (int argc, char ** argv)
 
 		CHECK_TEST("test_13a")
 		run_test (test_13_a, "Test 13-a: Check mod python (same test, no childs)"); 
+
+		CHECK_TEST("test_13b")
+		run_test (test_13_b, "Test 13-b: Check mod python (broadcast and filtering)"); 
+
+		return 0;
 	} /* end if */
 
 	CHECK_TEST("test_14")
