@@ -369,6 +369,26 @@ void turbulence_conn_mgr_register (TurbulenceCtx * ctx, VortexConnection * conn)
 	return;
 }
 
+
+/** 
+ * @internal Function used to unregister a particular connection from
+ * the connection manager.
+ */
+void turbulence_conn_mgr_unregister    (TurbulenceCtx    * ctx, 
+					VortexConnection * conn)
+{
+	/* new connection created: configure it */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+
+	/* remove from the hash */
+	axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
+
+	/* unlock */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+	return;
+}
+
 typedef struct _TurbulenceBroadCastMsg {
 	const void      * message;
 	int               message_size;
@@ -387,7 +407,9 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
 		return axl_false;
 
 	/* channel found send the message */
-	msg ("sending notification on channel running profile: %s", broadcast->profile);
+	msg ("sending notification on channel=%d, conn=%d running profile: %s", 
+	     vortex_channel_get_number (channel), vortex_connection_get_id (vortex_channel_get_connection (channel)),
+	     broadcast->profile);
 	vortex_channel_send_msg (channel, broadcast->message, broadcast->message_size, NULL);
 
 	/* always return axl_true to make the process to continue */
