@@ -360,7 +360,7 @@ axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
 	} /* end if */
 
 	/* call to load auth db */
-	result = op_handler (ctx, backend, node, MOD_SASL_OP_TYPE_LOAD_AUTH_DB,
+	result = op_handler (ctx, NULL, backend, node, MOD_SASL_OP_TYPE_LOAD_AUTH_DB,
 			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
 			     NULL, NULL, NULL, NULL, NULL, &err, mutex);
 
@@ -1069,6 +1069,7 @@ axl_bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
  * disabled.
  */
 axl_bool common_sasl_auth_format_handler (TurbulenceCtx    * ctx, 
+					  VortexConnection * conn,
 					  SaslAuthBackend  * sasl_backend,
 					  SaslAuthDb       * db, 
 					  const char       * auth_id, 
@@ -1094,7 +1095,7 @@ axl_bool common_sasl_auth_format_handler (TurbulenceCtx    * ctx,
 	}
 
 	/* call to do auth */
-	result = op_handler (ctx, sasl_backend, db->node, MOD_SASL_OP_TYPE_AUTH,
+	result = op_handler (ctx, conn, sasl_backend, db->node, MOD_SASL_OP_TYPE_AUTH,
 			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
 			     auth_id, authorization_id, password, serverName, NULL, &err, mutex);
 
@@ -1303,7 +1304,7 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		break;
 	case SASL_BACKEND_FORMAT_HANDLER:
 		/* get result from format handler */
-		result = common_sasl_auth_format_handler (ctx, sasl_backend, db, auth_id, authorization_id, password, serverName, NULL);
+		result = common_sasl_auth_format_handler (ctx, conn, sasl_backend, db, auth_id, authorization_id, password, serverName, NULL);
 		break;
 	default:
 		/* no support db format found */

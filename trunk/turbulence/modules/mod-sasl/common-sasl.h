@@ -169,6 +169,7 @@ typedef enum {
  * SASL database formats.
  */
 typedef axlPointer (*ModSaslFormatHandler) (TurbulenceCtx    * ctx,
+					    VortexConnection * conn,
 					    SaslAuthBackend  * sasl_backend,
 					    axlNode          * auth_db_node_conf,
 					    ModSaslOpType      op_type,

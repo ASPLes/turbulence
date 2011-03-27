@@ -144,6 +144,7 @@ MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx,
 }
 
 axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx, 
+				 VortexConnection * conn,
 				 axlNode          * auth_db_node_conf,
 				 const char       * auth_id,
 				 const char       * authorization_id,
@@ -152,7 +153,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 				 const char       * sasl_method,
 				 axlError        ** err)
 {
-	char        * auth_query; 
+	char        * query; 
 	axlDoc      * doc;
 	axlNode     * node;
 	MYSQL_RES   * result;
@@ -167,23 +168,25 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	} /* end if */
 
 	/* get the node that contains the configuration */
-	node       = axl_doc_get (doc, "/sasl-auth-db/get-password");
-	auth_query = axl_strdup (ATTR_VALUE (node, "query"));
+	node  = axl_doc_get (doc, "/sasl-auth-db/get-password");
+	query = axl_strdup (ATTR_VALUE (node, "query"));
 	
-	/* replace auth_query with recognized tokens */
-	axl_replace (auth_query, "%u", auth_id);
-	axl_replace (auth_query, "%n", serverName);
-	axl_replace (auth_query, "%i", authorization_id);
-	axl_replace (auth_query, "%m", sasl_method);
+	/* replace query with recognized tokens */
+	axl_replace (query, "%u", auth_id);
+	axl_replace (query, "%n", serverName);
+	axl_replace (query, "%i", authorization_id);
+	axl_replace (query, "%m", sasl_method);
+	axl_replace (query, "%p", vortex_connection_get_host (conn));
 
-	msg ("Trying to auth %s with query string %s", auth_id, auth_query);
+	msg ("Trying to auth %s with query string %s", auth_id, query);
 
 	/* run query */
-	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, auth_query, axl_false, err);
-	axl_free (auth_query);
+	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_false, err);
+	axl_free (query);
 	/* check result */
 	if (result == NULL) {
 		error ("Unable to authenticate user, query string failed with %s", axl_error_get (*err));
+		axl_error_free (*err);
 		return 0; 
 	} /* end if */
 
@@ -196,6 +199,32 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	/* check result */
 	_result = axl_cmp (row[0], password);
 	mysql_free_result (result);
+
+	/* now check for auth-log declaration to report it */
+	node = axl_doc_get (doc, "/sasl-auth-db/auth-log");
+	if (node) {
+		/* log auth defined */
+		query = axl_strdup (ATTR_VALUE (node, "query"));
+	
+		/* replace query with recognized tokens */
+		axl_replace (query, "%t", _result ? "ok" : "failed");
+		axl_replace (query, "%u", auth_id);
+		axl_replace (query, "%n", serverName);
+		axl_replace (query, "%i", authorization_id);
+		axl_replace (query, "%m", sasl_method);
+		axl_replace (query, "%p", vortex_connection_get_host (conn));
+		
+		msg ("Trying to auth-log %s:%s with query string %s", auth_id, _result ? "ok" : "failed", query);
+		/* exec query */
+		if (! mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_true, err)) {
+			error ("Unable to auth-log, failed query configured, error was: %d:%s",
+			       axl_error_get_code (*err), axl_error_get (*err));
+			axl_error_free (*err);
+		}
+		axl_free (query);
+		
+	} /* end if */
+	
 
 	return _result ? 1 : 0;
 }
@@ -277,6 +306,7 @@ axl_bool mod_sasl_mysql_load_auth_db (TurbulenceCtx     * ctx,
  * according to the operation requested.
  */
 axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
+					  VortexConnection * conn,
 					  SaslAuthBackend  * sasl_backend,
 					  axlNode          * auth_db_node_conf,
 					  ModSaslOpType      op_type,
@@ -291,7 +321,7 @@ axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
 	switch (op_type) {
 	case MOD_SASL_OP_TYPE_AUTH:
 		/* request to auth user */
-		return INT_TO_PTR (mod_sasl_mysql_do_auth (ctx, auth_db_node_conf, 
+		return INT_TO_PTR (mod_sasl_mysql_do_auth (ctx, conn, auth_db_node_conf, 
 							   auth_id, authorization_id, password, serverName, sasl_method, err));
 	case MOD_SASL_OP_TYPE_LOAD_AUTH_DB:
 		/* request to load database (check we can connect with current settings) */
