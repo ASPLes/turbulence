@@ -1,5 +1,5 @@
 <!-- <sasl-auth-db> -->
-<!ELEMENT sasl-auth-db (connection-settings, get-password)>
+<!ELEMENT sasl-auth-db (connection-settings, get-password, auth-log?, ip-filter?)>
 
 <!-- <connection-settings> -->
 <!ELEMENT connection-settings EMPTY>
@@ -13,6 +13,16 @@
 <!-- <get-password> -->
 <!ELEMENT get-password EMPTY>
 <!ATTLIST get-password 
+	  query           CDATA   #REQUIRED>
+
+<!-- <auth-log> -->
+<!ELEMENT auth-log EMPTY>
+<!ATTLIST auth-log 
+	  query           CDATA   #REQUIRED>
+
+<!-- <ip-filter> -->
+<!ELEMENT ip-filter EMPTY>
+<!ATTLIST ip-filter 
 	  query           CDATA   #REQUIRED>
 
 

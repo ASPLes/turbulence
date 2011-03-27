@@ -17,7 +17,61 @@
        - %i : authorization_id
 
        - %m : SASL method 
+
+       - %p : remote peer ip address.
   -->
   
   <get-password query="SELECT password FROM users WHERE auth_id = '%u'" />
+
+   <!-- the following defines the optional SQL query that will be used to
+        report login ok or login failure according to %t (status)
+        which contains "ok" or "failed". The following variables are supported:
+
+       - %t : auth status: "ok" or "failed"
+
+       - %u : the auth_id requested.
+
+       - %n : the serverName associated to the request. If not defined
+              it will be empty string. Keep in mind for your SQL.
+
+       - %i : authorization_id
+
+       - %m : SASL method 
+
+       - %p : remote peer ip address.
+   -->
+
+   <auth-log query="INSERT INTO auth_log (user, status, ip, serverName) VALUES ('%u', '%t', '%p', '%n')" />
+
+   <!-- the following defines the optional SQL query that will be used
+        to ask for the filter IP declaration, along with the
+        activation status for this filter. This filter will be used by
+        the auth engine to allow or not the auth process. 
+
+	Valid declarations are the following:
+
+          - Just the IP list separated by comas:  "192.168.0.132, 192.168.0.137, 89.140.23,4"
+          - A netmask declaration: "89.140.23.0/29, 192.168.0.132/32"
+
+        The SQL sentence must return a tuple where the first parameter
+        is a boolean value indicating if there is a filter configured
+        and the second parameter the filter itself:
+	
+        The following variables are supported:
+
+	- %u : the auth_id requested.
+	
+	- %n : the serverName associated to the request. If not defined
+	       it will be empty string. Keep in mind for your SQL.
+	
+	- %i : authorization_id
+
+        - %m : SASL method 
+
+        Note %p (the remote peer ip address) is not provided. This is
+        to enforce that the user space only has to especify the
+        filter, not to deal with the filter itself.
+ 
+	-->
+   <ip-filter query="SELECT status, filter_decl FROM user WHERE name = '%u'" />
 </sasl-auth-db>
