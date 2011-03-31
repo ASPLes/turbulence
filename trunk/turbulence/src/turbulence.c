@@ -1136,8 +1136,10 @@ const char    * turbulence_runtime_datadir        (TurbulenceCtx * ctx)
 
 /** 
  * @brief Allows to get current temporal directory.
+ *
  * @param ctx The turbulence ctx where the configuration will be checked.
- * @retrurn The path to the temporal directory.
+ *
+ * @return The path to the temporal directory.
  */
 const char    * turbulence_runtime_tmpdir  (TurbulenceCtx * ctx)
 {
@@ -1455,6 +1457,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  *   - \ref profile_path_configuration
  *   - \ref profile_path_flags_supported_by_allow_and_if_sucess
+ *   - \ref profile_path_expressions_examples
  *   - \ref turbulence_execution_model
  *   - \ref turbulence_starting_without_profiles
  *
@@ -1906,7 +1909,22 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * connection as authenticated using the provided flag:
  * "sasl:is:authenticated".</p>
  *
- * \section turbulence_execution_model 3.3 Turbulence execution model (process security)
+ * \section profile_path_expressions_examples 3.3 Profile path configuration: expression examples
+ *
+ * For the case an expression is required to match source or
+ * destination the following expressions area available:
+ *
+ * - <b>192.168.0.*</b> allows to match everything that matches the network IP part 192.168.0.X.
+ *
+ * - <b>not 192.168.0.*</b> allows to match everything that isn't the network IP part 192.168.0.X.
+ *
+ * - <b>192.168.1.132, 192.168.1.134</b> allows to match a list of ips.
+ *
+ * - <b>192.168.1.0, 192.168.0.*</b> allows to match a list of wilcard ips.
+ *
+ * - <b>not 192.168.1.0, 192.168.0.*</b> allows to inverse the previous match.
+ *
+ * \section turbulence_execution_model 3.4 Turbulence execution model (process security)
  *
  * It is posible to configure Turbulence, through profile path
  * configuration, to handle connections in the same master process or
@@ -1931,7 +1949,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * killed. This is configured with <b><kill-childs-on-exit value="yes" /></b>
  * inside <global-settings> node.
  *
- * \section turbulence_starting_without_profiles 3.4 Making turbulence to start without profiles defined
+ * \section turbulence_starting_without_profiles 3.5 Making turbulence to start without profiles defined
  *
  * By default Turbulence checks after module start up (init method) if
  * there are at least one profile to serve. It is found that no
