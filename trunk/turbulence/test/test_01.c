@@ -451,6 +451,37 @@ axl_bool  test_01a () {
 	/* compile and match */
 	MATCH_AND_CHECK("*", "case", axl_true);
 
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.132,192.168.0.150", "192.168.0.132", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.132,192.168.0.150", "192.168.0.150", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.132,192.168.0.150", "192.168.0.123", axl_false);
+
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.132,192.168.0.*", "192.168.0.145", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("192.168.0.132,192.168.0.*", "192.168.1.145", axl_false);
+
+	/* compile and match */
+	MATCH_AND_CHECK(" 192.168.0.132 ,  192.168.0.150  ", "192.168.0.132", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("  192.168.0.132  ,  192.168.0.150  ", "192.168.0.150", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK(" 192.168.0.132  ,   192.168.0.150  ", "192.168.0.123", axl_false);
+
+	/* compile and match */
+	MATCH_AND_CHECK("  192.168.0.132  ,  192.168.0.*   ", "192.168.0.145", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("  192.168.0.132  ,  192.168.0.*  ", "192.168.1.145", axl_false);
+
+
 	/* free context */
 	turbulence_ctx_free (ctx);
 
