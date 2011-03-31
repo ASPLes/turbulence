@@ -277,17 +277,38 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 					  const char    * expression, 
 					  const char    * error_msg)
 {
-	TurbulenceExpr * expr;
-	const char     * error;
-	int              erroroffset;
-	int              dealloc = axl_false;
-	int              additional_size;
+	TurbulenceExpr  * expr;
+	const char      * error;
+	int               erroroffset;
+	int               dealloc = axl_false;
+	int               additional_size;
+	char           ** strv;
+	int               iterator;
 
 	/* create the turbulence expression node */
 	expr = axl_new (TurbulenceExpr, 1);
 
-	/* copy the raw expression */
-	expr->string_expression = axl_strdup (expression);
+	/* check for , in inside the string to translate into | */
+	if (strstr (expression, ",")) {
+		/* found ',' prepare string */
+		strv = axl_stream_split (expression, 1, ",");
+		
+		/* now clean each piece */
+		iterator = 0;
+		while (strv[iterator]) {
+			axl_stream_trim (strv[iterator]);
+
+			/* next position */
+			iterator++;
+		} /* end while */
+
+		/* now rejoin */
+		expr->string_expression = axl_stream_join (strv, "|");
+		axl_stream_freev (strv);
+	} else {
+		/* copy the raw expression */
+		expr->string_expression = axl_strdup (expression);
+	}
 
 	/* check if the expression is negative */
 	msg ("checking negative expression: %s", expression);
