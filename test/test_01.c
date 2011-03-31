@@ -481,6 +481,8 @@ axl_bool  test_01a () {
 	/* compile and match */
 	MATCH_AND_CHECK("  192.168.0.132  ,  192.168.0.*  ", "192.168.1.145", axl_false);
 
+	/* compile and match */
+	MATCH_AND_CHECK("not  192.168.0.132  ,  192.168.0.*  ", "192.168.1.145", axl_true);
 
 	/* free context */
 	turbulence_ctx_free (ctx);

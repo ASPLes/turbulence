@@ -143,6 +143,65 @@ MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx,
 	return  mysql_store_result(conn);
 }
 
+axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
+					       const char        * query, 
+					       VortexConnection  * conn,
+					       axlNode           * auth_db_node_conf) {
+
+	MYSQL_RES      * result;
+	MYSQL_ROW        row;
+	axlError       * err = NULL;
+	TurbulenceExpr * expr;
+
+	/* run query */
+	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_false, &err);
+
+	/* check result */
+	if (result == NULL) {
+		error ("Unable to run ip filter SQL, query string failed with %s", axl_error_get (err));
+		axl_error_free (err);
+		return axl_false; 
+	} /* end if */
+
+	/* return content from the first [0][0] array position */
+	row     = mysql_fetch_row (result);
+	if (row == NULL) {
+		mysql_free_result (result);
+		return axl_false;
+	} /* end if */
+
+	/* check for empty filter string */
+	if (row[0] == NULL || strlen (row[0]) == 0)
+		return axl_true;
+	msg ("Checking to apply ip filter with expression: %s (ip: %s:%s)", row[0], 
+	     vortex_connection_get_host (conn), vortex_connection_get_host_ip (conn));
+
+	/* build expression */
+	expr = turbulence_expr_compile (ctx, row[0], NULL);
+	if (expr == NULL) {
+		error ("Failed to compile expression: %s. Unable to apply ip filter, denying connection.", row[0]);
+		mysql_free_result (result);
+		return axl_false; /* do not filter */
+	}
+	mysql_free_result (result);
+
+	/* now match by hostname  */
+	if (turbulence_expr_match (expr, vortex_connection_get_host (conn))) {
+		turbulence_expr_free (expr);
+		return axl_true; /* do not filter */
+	}
+
+	/* ..and by hostip */
+	if (turbulence_expr_match (expr, vortex_connection_get_host_ip (conn))) {
+		turbulence_expr_free (expr);
+		return axl_true; /* do not filter */
+	}
+
+	/* free expression */
+	turbulence_expr_free (expr);
+	return axl_false; /* do filter */
+}
+
 axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx, 
 				 VortexConnection * conn,
 				 axlNode          * auth_db_node_conf,
@@ -165,6 +224,31 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	if (doc == NULL) {
 		axl_error_report (err, -1, "Found no xml document defining MySQL settings to connect to the database");
 		return axl_false;
+	} /* end if */
+
+	/* check for ip filter reference */
+	node  = axl_doc_get (doc, "/sasl-auth-db/ip-filter");
+	if (node && HAS_ATTR (node, "query")) {
+		/* ip filter defined, get query */
+		query = axl_strdup (ATTR_VALUE (node, "query"));
+
+		/* replace query with recognized tokens */
+		axl_replace (query, "%u", auth_id);
+		axl_replace (query, "%n", serverName);
+		axl_replace (query, "%i", authorization_id);
+		axl_replace (query, "%m", sasl_method);
+		
+		if (! mod_sasl_mysql_check_ip_filter_query (ctx, query, conn, auth_db_node_conf)) {
+			error ("IP filtered by defined expression associated to user: %s denied connection from %s", 
+			       auth_id, vortex_connection_get_host_ip (conn));
+			axl_free (query);
+			return 0;
+		}
+		msg ("IP filtered by defined expression associated to user: %s allowed connection from %s", 
+		       auth_id, vortex_connection_get_host_ip (conn));
+		
+		/* ip not filtered, now let the auth continue */
+		axl_free (query);
 	} /* end if */
 
 	/* get the node that contains the configuration */

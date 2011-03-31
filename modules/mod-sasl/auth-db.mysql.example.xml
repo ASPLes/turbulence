@@ -73,5 +73,5 @@
         filter, not to deal with the filter itself.
  
 	-->
-   <ip-filter query="SELECT status, filter_decl FROM user WHERE name = '%u'" />
+   <ip-filter query="SELECT ip_filter FROM user WHERE name = '%u'" />
 </sasl-auth-db>

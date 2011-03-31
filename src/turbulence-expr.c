@@ -283,10 +283,20 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 	int               dealloc = axl_false;
 	int               additional_size;
 	char           ** strv;
+	char            * aux = NULL;
 	int               iterator;
 
 	/* create the turbulence expression node */
 	expr = axl_new (TurbulenceExpr, 1);
+
+	/* copy the raw expression */
+	expr->string_expression = axl_strdup (expression);
+
+	/* check if the expression is negative */
+	expression = turbulence_expr_check_negative_expr (expression, &expr->negative);
+	if (expr->negative) {
+		msg ("  found, updated expression to: not %s", expression);
+	}
 
 	/* check for , in inside the string to translate into | */
 	if (strstr (expression, ",")) {
@@ -296,6 +306,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 		/* now clean each piece */
 		iterator = 0;
 		while (strv[iterator]) {
+			/* clear item */
 			axl_stream_trim (strv[iterator]);
 
 			/* next position */
@@ -303,29 +314,28 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 		} /* end while */
 
 		/* now rejoin */
-		expr->string_expression = axl_stream_join (strv, "|");
+		expression = axl_stream_join (strv, "|");
 		axl_stream_freev (strv);
-	} else {
-		/* copy the raw expression */
-		expr->string_expression = axl_strdup (expression);
-	}
+		dealloc = axl_true;
+		msg ("NOTE: expression expanded to:: %s", expression);
+	} /* end if */
 
-	/* check if the expression is negative */
-	msg ("checking negative expression: %s", expression);
-	expression = turbulence_expr_check_negative_expr (expression, &expr->negative);
-	if (expr->negative) {
-		msg ("  found, updated expression to: not %s", expression);
-	}
-	
 	/* do some regular expression support to avoid making it
 	 * painful */
 	if (turbulence_expr_has_escapable_chars (expression, strlen (expression), &additional_size)) {
+		if (dealloc)
+			aux = (char *) expression;
+
 		/* expand all * and / values which are not preceded as
 		 * .* or \/ */
 		msg ("NOTE: expanding expression: '%s'..", expression);
 		expression = turbulence_expr_copy_and_escape (expression, strlen (expression), additional_size);
 		msg ("      to: '%s'..", expression);
 		dealloc    = axl_true;
+
+		/* release previously allocated expression */
+		if (aux)
+			axl_free (aux);
 	} /* end if */
 
 	/* compile expression */
