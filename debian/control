@@ -56,6 +56,14 @@ Depends: turbulence-server (>= ${Source-Version}),
 Description: SASL profile implementation for Turbulence
   Server side SASL module for Turbulence. BEEP authentication.
 
+Package: libturbulence-mod-tls
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-tls-1.1 (>= 1.1.4)
+Description: TLS profile implementation for Turbulence
+  Server side TLS module for Turbulence. BEEP session security.
+
 Package: libturbulence-mod-python
 Section: libs
 Architecture: any
