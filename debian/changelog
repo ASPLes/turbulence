@@ -1,3 +1,9 @@
+turbulence (0.4.1-squeeze1) stable; urgency=low
+
+  * New upstream revision
+
+ -- Francis Brosnan <francis@aspl.es>  Sat, 14 May 2011 15:53:43 +0200
+
 turbulence (0.4.1-lenny4) stable; urgency=low
 
   * New upstream revision
