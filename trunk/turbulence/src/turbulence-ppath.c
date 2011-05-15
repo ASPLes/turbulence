@@ -629,7 +629,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 
 	/* check if this function was called to select a path with an
 	   state created */
-	state                = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
+	state  = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
 	if (state != NULL) {
 		state->path_selected = def;
 	} else {
@@ -654,7 +654,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	 * the following sets the requested serverName so modules
 	 * notified through profile path selected and react according
 	 * to this value. */
-	if (serverName) {
+	if (serverName && strlen (serverName) > 0) {
 		msg ("Setting requested serverName=%s but still first opened channel is required", serverName);
 		state->requested_serverName = axl_strdup (serverName);
 	} /* end if */
@@ -731,9 +731,22 @@ void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx,
  */
 axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * connection, axlPointer data)
 {
-	TurbulenceCtx * ctx = data;
+	TurbulenceCtx * ctx        = data;
+
+	/* check if we are in a child process to find a preselected
+	 * profile path (and caused creation of this child)  */
+	if (! ctx->is_main_process && ctx->child_ppath) {
+		msg ("Detected call to select a profile path on a connection id=%d inside a process with a preselected profile path %s, setting..",
+		     vortex_connection_get_id (connection), turbulence_ppath_get_name (ctx->child_ppath));
+		/* restore child profile path */
+		__turbulence_ppath_set_state (ctx, connection, 
+					      turbulence_ppath_get_id (ctx->child_ppath), NULL);
+		return axl_true;
+	}
+
 	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
-	msg ("Call to select a profile path at connection time, conn-id=%d", vortex_connection_get_id (connection));
+	msg ("Call to select a profile path at connection time (pre <greetings />), conn-id=%d", 
+	     vortex_connection_get_id (connection));
 	return __turbulence_ppath_select ((TurbulenceCtx *) data, connection, -1, NULL, NULL, -1, "", NULL, axl_true);
 }
 
