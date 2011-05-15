@@ -103,7 +103,8 @@ void turbulence_conn_mgr_unref (axlPointer data)
 		vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state);
 		
 		/* unref the connection */
-		msg ("Unregistering connection: %d (%p)", vortex_connection_get_id ((VortexConnection*) state->conn), state->conn);
+		msg ("Unregistering connection: %d (%p, socket: %d)", 
+		     vortex_connection_get_id ((VortexConnection*) state->conn), state->conn, vortex_connection_get_socket (state->conn));
 		vortex_connection_unref ((VortexConnection*) state->conn, "turbulence-conn-mgr");
 	} /* end if */
 
@@ -209,8 +210,8 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	state->ctx  = ctx;
 
 	/* store in the hash */
-	msg ("Registering connection: %d (%p, refs: %d, channels: %d)", vortex_connection_get_id (conn), conn, 
-	     vortex_connection_ref_count (conn), vortex_connection_channels_count (conn));
+	msg ("Registering connection: %d (%p, refs: %d, channels: %d, socket: %d)", vortex_connection_get_id (conn), conn, 
+	     vortex_connection_ref_count (conn), vortex_connection_channels_count (conn), vortex_connection_get_socket (conn));
 	axl_hash_insert_full (ctx->conn_mgr_hash, 
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,

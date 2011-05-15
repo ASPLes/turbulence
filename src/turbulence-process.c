@@ -54,7 +54,7 @@ void turbulence_process_free_child_data (TurbulenceChild * child)
 	if (child == NULL)
 		return;
 #if defined(AXL_OS_UNIX)
-	unlink (child->socket_control_path);
+	/* unlink (child->socket_control_path);*/
 	axl_free (child->socket_control_path);
 	child->socket_control_path = NULL;
 	vortex_close_socket (child->child_connection);
@@ -200,7 +200,7 @@ void turbulence_process_signal_received (int _signal) {
 }
 
 #if defined(AXL_OS_UNIX)
-int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, TurbulenceCtx * ctx)
+int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, TurbulenceCtx * ctx)
 {
 	int                  _socket     = -1;
 	int                  _aux_socket = -1;
@@ -216,19 +216,21 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	/* create socket and check result */
 	_socket = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (_socket == -1) {
-		return -1;
+	        error ("%s: Failed to create local socket to hold connection, reached limit?, errno: %d, %s", 
+		       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_error (errno));
+	        return -1;
 	}
 
-	/* if parent, just return */
-	if (is_parent) {
+	/* if child, wait until it connects to the child */
+	if (is_child) {
 		while (tries > 0) {
 			if (connect (_socket, (struct sockaddr *)&socket_name, sizeof (socket_name))) {
 				if (errno == 107 || errno == 111 || errno == 2) {
 					/* implement a wait operation */
 					turbulence_sleep (ctx, delay);
 				} else {
-					error ("Unexpected error found while creating child control connection: (code: %d) %s", 
-					       errno, vortex_errno_get_last_error ());
+					error ("%s: Unexpected error found while creating child control connection: (code: %d) %s", 
+					       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error ());
 					break;
 				} /* end if */
 			} else {
@@ -241,28 +243,54 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 			delay = delay * 2;
 
 		} /* end if */
+
+		/* drop an ok log */
+		msg ("%s: local socket (%s) = %d created OK", is_child ? "CHILD" : "PARENT", path, _socket);
+
 		return _socket;
 	}
 
 	/* child handling */
+	/* unlink for previously created file */
 	unlink (path);
-	if (strlen (path) >= sizeof (socket_name.sun_path)) 
+
+	/* check path */
+	if (strlen (path) >= sizeof (socket_name.sun_path)) {
+	        vortex_close_socket (_socket);
+	        error ("%s: Failed to create local socket to hold connection, path is bigger that limit (%d >= %d), path: %s", 
+		       is_child ? "CHILD" : "PARENT", strlen (path), sizeof (socket_name.sun_path), path);
 		return -1;
+	}
 	umask (0077);
 	if (bind (_socket, (struct sockaddr *) &socket_name, sizeof(socket_name))) {
+	        error ("%s: Failed to create local socket to hold conection, bind function failed with error: %d, %s", 
+		       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error ());
 		vortex_close_socket (_socket);
 		return -1;
 	} /* end if */
 
 	/* listen */
 	if (listen (_socket, 1) < 0) {
-		error ("Failed to listen on socket created, error was (code: %d) %s", errno, vortex_errno_get_last_error ());
+	        vortex_close_socket (_socket);
+		error ("%s: Failed to listen on socket created, error was (code: %d) %s", 
+		       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error ());
 		return -1;
 	}
 
 	/* now call to accept connection from parent */
 	_aux_socket = vortex_listener_accept (_socket);
+	if (_aux_socket < 0) 
+	         error ("%s: Failed to create local socket to hold conection, listener function failed with error: %d, %s (socket value is %d)", 
+			is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error (), _aux_socket);
 	vortex_close_socket (_socket);
+
+	/* unix semantic applies, now remove the file socket because
+	 * now having opened a socket, the reference will be removed
+	 * after this is closed. */
+	unlink (path);
+
+	/* drop an ok log */
+	msg ("%s: local socket (%s) = %d created OK", is_child ? "CHILD" : "PARENT", path, _socket);	
 	
 	return _aux_socket;
 }
@@ -972,7 +1000,19 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	int                access_log[2]  = {-1, -1};
 	int                vortex_log[2]  = {-1, -1};
 	TurbulenceLoop   * control;
-	const char       * ppath_name     = turbulence_ppath_get_name (def) ? turbulence_ppath_get_name (def) : "";
+	const char       * ppath_name;
+
+	/* check if we are main process (only main process can create
+	 * childs, at least for now) */
+	if (! ctx->is_main_process) {
+		error ("Internal runtime error, child process %d is trying to create another subchild, closing conn-id=%d", 
+		       ctx->pid, vortex_connection_get_id (conn));
+		vortex_connection_shutdown (conn);
+		return;
+	} /* end if */
+
+	/* get profile path name */
+	ppath_name     = turbulence_ppath_get_name (def) ? turbulence_ppath_get_name (def) : "";
 
 	msg2 ("Calling to create child process to handle profile path: %s..", ppath_name);
 	vortex_mutex_lock (&ctx->child_process_mutex);
@@ -993,7 +1033,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 		return;
 	}
-	msg ("Not reusing child processes (reuse=no flag)");
+	if (child == NULL) 
+		msg ("Creating a child process (first instance)");
+	else
+		msg ("Childs defined, but not reusing child processes (reuse=no flag)");
 
 	if (turbulence_log_is_enabled (ctx)) {
 		if (pipe (general_log) != 0)
@@ -1032,12 +1075,12 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* free temporal directory */
 	axl_free (temp_dir);
 
-	
 	msg ("Creating socket_control_path = '%s'", child->socket_control_path);
 
 	/* call to fork */
 	pid = fork ();
 	if (pid != 0) {
+		msg ("PARENT: child process created pid=%d, selected-ppath=%s", pid, def->path_name ? def->path_name : "(empty)");
 		/* unwatch the connection from the parent to avoid
 		   receiving more content which now handled by the
 		   child and unregister from connection manager */
@@ -1102,9 +1145,14 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		msg ("PARENT=%d: Created child process pid=%d (childs: %d)", getpid (), pid, turbulence_process_child_count (ctx));
 		return;
 	} /* end if */
+	msg ("CHILD: child started with process created pid=%d, selected-ppath=%s (ppath id: %d)", 
+	     getpid (), def->path_name ? def->path_name : "(empty)", turbulence_ppath_get_id (def));
 
 	/* do not log messages until turbulence_ctx_reinit finishes */
-	child_ctx = ctx;
+	child_ctx        = ctx;
+
+	/* record profile path selected */
+	ctx->child_ppath = def;
 
 	/* reinit TurbulenceCtx */
 	turbulence_ctx_reinit (ctx);
@@ -1115,6 +1163,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	child->ctx = ctx;
 	msg ("CHILD: process creating control connection..");
 	if (! __turbulence_process_create_parent_connection (child)) {
+	        error ("Failed to create parent connection, finishing child process..");
 		vortex_connection_shutdown (conn);
 		turbulence_process_free_child_data (child);
 		return;

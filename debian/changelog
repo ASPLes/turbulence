@@ -1,3 +1,9 @@
+turbulence (0.4.1-squeeze13) stable; urgency=low
+
+  * Adding additional fixings.
+
+ -- Francis Brosnan <francis@aspl.es>  Sun, 15 May 2011 23:55:39 +0200
+
 turbulence (0.4.1-squeeze2) stable; urgency=low
 
   * Added missing mysql-sasl module.
