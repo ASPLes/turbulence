@@ -76,7 +76,7 @@ Package: libturbulence-mod-python
 Section: libs
 Architecture: any
 Depends: turbulence-server (>= ${Source-Version}), 
-  python-vortex (>= 1.1.4)
+  python-vortex (>= 1.1.4), libpython2.6
 Recommends: python-vortex-sasl, python-vortex-tls
 Description: SASL profile implementation for Turbulence
   Server side SASL module for Turbulence. BEEP authentication.
