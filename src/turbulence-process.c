@@ -200,7 +200,7 @@ void turbulence_process_signal_received (int _signal) {
 }
 
 #if defined(AXL_OS_UNIX)
-int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, TurbulenceCtx * ctx)
+int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, TurbulenceCtx * ctx)
 {
 	int                  _socket     = -1;
 	int                  _aux_socket = -1;
@@ -217,12 +217,12 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 	_socket = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (_socket == -1) {
 	        error ("%s: Failed to create local socket to hold connection, reached limit?, errno: %d, %s", 
-		       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_error (errno));
+		       is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_error (errno));
 	        return -1;
 	}
 
 	/* if child, wait until it connects to the child */
-	if (is_child) {
+	if (is_parent) {
 		while (tries > 0) {
 			if (connect (_socket, (struct sockaddr *)&socket_name, sizeof (socket_name))) {
 				if (errno == 107 || errno == 111 || errno == 2) {
@@ -230,7 +230,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 					turbulence_sleep (ctx, delay);
 				} else {
 					error ("%s: Unexpected error found while creating child control connection: (code: %d) %s", 
-					       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error ());
+					       is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error ());
 					break;
 				} /* end if */
 			} else {
@@ -245,7 +245,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 		} /* end if */
 
 		/* drop an ok log */
-		msg ("%s: local socket (%s) = %d created OK", is_child ? "CHILD" : "PARENT", path, _socket);
+		msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _socket);
 
 		return _socket;
 	}
@@ -258,13 +258,13 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 	if (strlen (path) >= sizeof (socket_name.sun_path)) {
 	        vortex_close_socket (_socket);
 	        error ("%s: Failed to create local socket to hold connection, path is bigger that limit (%d >= %d), path: %s", 
-		       is_child ? "CHILD" : "PARENT", strlen (path), sizeof (socket_name.sun_path), path);
+		       is_parent ? "PARENT" : "CHILD", strlen (path), sizeof (socket_name.sun_path), path);
 		return -1;
 	}
 	umask (0077);
 	if (bind (_socket, (struct sockaddr *) &socket_name, sizeof(socket_name))) {
 	        error ("%s: Failed to create local socket to hold conection, bind function failed with error: %d, %s", 
-		       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error ());
+		       is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error ());
 		vortex_close_socket (_socket);
 		return -1;
 	} /* end if */
@@ -273,7 +273,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 	if (listen (_socket, 1) < 0) {
 	        vortex_close_socket (_socket);
 		error ("%s: Failed to listen on socket created, error was (code: %d) %s", 
-		       is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error ());
+		       is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error ());
 		return -1;
 	}
 
@@ -281,7 +281,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 	_aux_socket = vortex_listener_accept (_socket);
 	if (_aux_socket < 0) 
 	         error ("%s: Failed to create local socket to hold conection, listener function failed with error: %d, %s (socket value is %d)", 
-			is_child ? "CHILD" : "PARENT", errno, vortex_errno_get_last_error (), _aux_socket);
+			is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error (), _aux_socket);
 	vortex_close_socket (_socket);
 
 	/* unix semantic applies, now remove the file socket because
@@ -290,7 +290,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_child, Tur
 	unlink (path);
 
 	/* drop an ok log */
-	msg ("%s: local socket (%s) = %d created OK", is_child ? "CHILD" : "PARENT", path, _socket);	
+	msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _socket);	
 	
 	return _aux_socket;
 }
