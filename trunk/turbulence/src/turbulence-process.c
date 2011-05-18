@@ -615,7 +615,7 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 	turbulence_conn_mgr_register (ctx, conn);
 
 	/* check to handle start reply message */
-	msg ("Checking to handle start channel reply=%d at child=%d", handle_start_reply, getpid ());
+	msg ("Checking to handle start channel=%s serverName=%s reply=%d at child=%d", profile, serverName ? serverName : "", handle_start_reply, getpid ());
 	if (handle_start_reply) {
 		/* handle start channel reply */
 		if (! vortex_channel_0_handle_start_msg_reply (TBC_VORTEX_CTX (ctx), conn, channel_num,
@@ -630,7 +630,7 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 			if (channel0 != NULL) 
 				vortex_channel_block_until_replies_are_sent (channel0, 1000);
 		} else {
-			msg ("Channel start accepted on child..");
+			msg ("Channel start accepted on child profile=%s, serverName=%s accepted on child", profile, serverName ? serverName : "");
 		}
 	} /* end if */
 
@@ -1242,6 +1242,13 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* check here for setuid support */
 	turbulence_ppath_change_user_id (ctx, def);
 
+	/* create parent control loop */
+	msg ("CHILD: starting child loop to watch for sockets from parent");
+	control = turbulence_loop_create (ctx);
+	turbulence_loop_watch_descriptor (control, child->child_connection, 
+					  turbulence_process_parent_notify, child, NULL);
+	msg ("CHILD: started socket watch on (%d)", child->child_connection);
+
 	/* perfom common tasks for new connection acceptance */
 	msg ("CHILD: handling new connection (first) at child connection process, handle_start_reply=%d, frame=%p",
 	     handle_start_reply, frame);
@@ -1250,13 +1257,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 						    profile, profile_content,
 						    encoding, serverName,
 						    frame);
-	/* create parent control loop */
-	msg ("CHILD: starting child loop to watch for sockets from parent");
-	control = turbulence_loop_create (ctx);
-	turbulence_loop_watch_descriptor (control, child->child_connection, 
-					  turbulence_process_parent_notify, child, NULL);
-	msg ("CHILD: started socket watch on (%d)", child->child_connection);
-	
+
 	msg ("CHILD: process created OK...wait for requests");
 	queue = ctx->child_wait;
 

@@ -641,6 +641,20 @@ VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 	return conn;
 }
 
+axl_bool count_channels (axlPointer key, axlPointer _value, axlPointer user_data, axlPointer _ctx)
+{
+	int           * count  = user_data;
+	int             value  = PTR_TO_INT(_value);
+	TurbulenceCtx * ctx    = _ctx;
+	
+	/* count */
+	msg2 ("Adding %d to current count %d (profile: %s)", *count, value, key);
+	(*count) = (*count) + value;
+
+	return axl_false; /* iterate over all items found in the
+			   * hash */
+}
+
 /** 
  * @brief Allows to get a newly created hash cursor pointing to opened
  * profiles on this connection (key), containing how many channels
@@ -658,6 +672,7 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 {
 	TurbulenceConnMgrState * state;
 	axlHashCursor          * cursor;
+	int                      total_count;
 
 	v_return_val_if_fail (ctx && conn, NULL);
 	
@@ -676,9 +691,23 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 		return NULL;
 	}
 
-	msg ("Getting profiles stats for conn-id: %d (running profiles: %d, channels: %d)", 
-	     vortex_connection_get_id (conn), axl_hash_items (state->profiles_running),
-	     vortex_connection_channels_count (conn));
+	/* ensure current hash info is consistent with the channel
+	 * number running on the connection */
+	total_count = 0;
+	axl_hash_foreach2 (state->profiles_running, count_channels, &total_count, ctx);
+	if (total_count != (vortex_connection_channels_count (conn) -1)) {
+		/* release current mutex */
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+		msg2 ("  Found inconsistent channel count (%d != %d) for profile stats, unlock and wait", 
+		      total_count, (vortex_connection_channels_count (conn) - 1));
+		
+		/* call to wait before calling again to get mgr
+		 * stats (2ms) */
+		turbulence_ctx_wait (ctx, 2000);
+		
+		/* call to get stats again */
+		return turbulence_conn_mgr_profiles_stats (ctx, conn);
+	}
 	
 	/* create the cursor */
 	cursor = axl_hash_cursor_new (state->profiles_running);
@@ -708,16 +737,9 @@ axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer da
 	/* uninstall on close full handler to avoid race conditions */
 	vortex_connection_remove_on_close_full (conn, turbulence_conn_mgr_on_close, state);
 
-	/* release mutex for a moment now we could jump into the user
-	   code due to the next shutdown */
-	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
-
 	msg ("shutting down connection id %d", vortex_connection_get_id (conn));
 	vortex_connection_shutdown (conn);
 	msg ("..socket status after shutdown: %d..", vortex_connection_get_socket (conn));
-
-	/* unlock mutex */
-	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* now unref */
 	vortex_connection_unref (conn, "turbulence-conn-mgr shutdown");
@@ -734,8 +756,8 @@ void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 	/* shutdown all pending connections */
 	msg ("calling to cleanup registered connections that are still opened: %d", axl_hash_items (ctx->conn_mgr_hash));
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
-	axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_shutdown_connections, NULL);
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+	axl_hash_foreach (ctx->conn_mgr_hash, turbulence_conn_mgr_shutdown_connections, NULL);
 
 	/* destroy mutex */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
