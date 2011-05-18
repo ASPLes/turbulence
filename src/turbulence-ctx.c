@@ -85,6 +85,9 @@ TurbulenceCtx * turbulence_ctx_new ()
 	/* init ppath unique id assigment */
 	ctx->ppath_next_id = 1;
 
+	/* init wait queue */
+	ctx->wait_queue    = vortex_async_queue_new ();
+
 	/* return context created */
 	return ctx;
 }
@@ -261,6 +264,26 @@ axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
 }
 
 /** 
+ * @brief Allows to implement a microseconds blocking wait.
+ *
+ * @param microseconds Blocks the caller during the value
+ * provided. 1.000.000 = 1 second.
+ * 
+ * If ctx is NULL or microseconds <= 0, the function returns
+ * inmediately. 
+ */
+void            turbulence_ctx_wait           (TurbulenceCtx * ctx,
+					       long microseconds)
+{
+	if (ctx == NULL || microseconds <= 0) 
+		return;
+	/* acquire a reference */
+	msg2 ("Process waiting during %d microseconds..", (int) microseconds);
+	vortex_async_queue_timedpop (ctx->wait_queue, microseconds);
+	return;
+}
+
+/** 
  * @brief Deallocates the turbulence context provided.
  * 
  * @param ctx The context reference to terminate.
@@ -275,6 +298,9 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	axl_hash_free (ctx->data);
 	ctx->data = NULL;
 	vortex_mutex_destroy (&ctx->data_mutex);
+
+	/* release wait queue */
+	vortex_async_queue_unref (ctx->wait_queue);
 
 	/* release the node itself */
 	axl_free (ctx);

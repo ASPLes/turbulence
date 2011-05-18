@@ -54,6 +54,11 @@ struct _TurbulenceCtx {
 	int                  console_debug3;
 	int                  console_color_debug;
 
+	/* wait queue: this queue is used by turbulence_ctx_wait to
+	 * implement wait blocking wait without allocatting every time
+	 * a custom wait is required */
+	VortexAsyncQueue   * wait_queue;
+
 	/* Turbulence current pid (process identifier) */
 	int                  pid;
 	axl_bool             is_main_process;
@@ -125,6 +130,7 @@ struct _TurbulenceCtx {
 	/*** turbulence mediator module ***/
 	axlHash            * mediator_hash;
 	VortexMutex          mediator_hash_mutex;
+
 };
 
 /** 

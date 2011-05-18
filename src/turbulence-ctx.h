@@ -82,6 +82,9 @@ void            turbulence_ctx_set_data_full  (TurbulenceCtx * ctx,
 axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
 					       const char    * key);
 
+void            turbulence_ctx_wait           (TurbulenceCtx * ctx,
+					       long microseconds);
+
 void            turbulence_ctx_free           (TurbulenceCtx * ctx);
 
 /* @} */

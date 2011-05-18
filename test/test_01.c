@@ -64,6 +64,20 @@ axl_bool        test_common_enable_debug = axl_false;
 	} /* end if */                                          \
 } while (0);
 
+void show_conn_errors (VortexConnection * conn)
+{
+	int    code;
+	char * msg;
+	int    iterator = 0;
+
+	while (vortex_connection_pop_channel_error (conn, &code, &msg)) {
+		printf ("ERROR: %d. %d:%s\n", ++iterator, code, msg);
+		axl_free (msg);
+	}
+
+	return;
+}
+
 axl_bool test_common_init (VortexCtx     ** vCtx, 
 			   TurbulenceCtx ** tCtx, 
 			   const char     * config)
@@ -2397,6 +2411,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
 	if (channel == NULL) {
 		printf ("ERROR (3): expected to proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 
@@ -2404,6 +2419,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test");
 	if (channel == NULL) {
 		printf ("ERROR (4): expected to proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 	
@@ -2412,18 +2428,21 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
 	if (! vortex_channel_send_msg (channel, "python-check", 12, NULL)) {
 		printf ("ERROR (5): expected to send content but found error..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
 	frame = vortex_channel_get_reply (channel, queue);
 	if (frame == NULL) {
 		printf ("ERROR (6): expected to find reply for get pid request...\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
 	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 1")) {
 		printf ("ERROR (7): expected to find 'profile path notified' but found '%s'",
 			(const char*) vortex_frame_get_payload (frame));
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2440,6 +2459,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (8): expected to find proper connection after turbulence startup..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2457,6 +2477,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (9): expected to find proper connection after turbulence startup..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2467,6 +2488,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	
 	if (status != VortexOk) {
 		printf ("ERROR (10): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2476,6 +2498,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
 	if (channel == NULL) {
 		printf ("ERROR (11): expected to proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 
@@ -2483,6 +2506,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test-2");
 	if (channel == NULL) {
 		printf ("ERROR (12): expected to proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 	/* unref the queue */
@@ -2493,18 +2517,21 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
 	if (! vortex_channel_send_msg (channel, "python-check-2", 14, NULL)) {
 		printf ("ERROR (13): expected to send content but found error..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
 	frame = vortex_channel_get_reply (channel, queue);
 	if (frame == NULL) {
 		printf ("ERROR (14): expected to find reply for get pid request...\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
 	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 2")) {
 		printf ("ERROR (15): expected to find 'profile path notified' but found '%s'",
 			(const char*) vortex_frame_get_payload (frame));
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2529,6 +2556,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (16): expected to find proper connection after turbulence startup..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2540,6 +2568,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	
 	if (status != VortexOk) {
 		printf ("ERROR (17): expected proper auth for aspl user, but error found was: (%d) %s..\n", status, status_message);
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -2549,6 +2578,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
 	if (channel == NULL) {
 		printf ("ERROR (18): expected to proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 
@@ -2556,6 +2586,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:python-test-3");
 	if (channel == NULL) {
 		printf ("ERROR (19): expected to proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 	/* unref the queue */
@@ -2566,18 +2597,21 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
 	if (! vortex_channel_send_msg (channel, "python-check-3", 14, NULL)) {
 		printf ("ERROR (20): expected to send content but found error..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
 	frame = vortex_channel_get_reply (channel, queue);
 	if (frame == NULL) {
 		printf ("ERROR (21): expected to find reply for get pid request...\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
 	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "hey, this is python app 3")) {
 		printf ("ERROR (22): expected to find 'profile path notified' but found '%s'",
 			(const char*) vortex_frame_get_payload (frame));
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -4010,6 +4044,45 @@ axl_bool test_22 (void) {
 	return axl_true;
 }
 
+axl_bool test_23 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_23.conf")) 
+		return axl_false;
+
+	/* add a search path to allow reg test to find tls.conf file */
+	vortex_support_add_domain_search_path (vCtx, "tls", "test_22_datadir");
+
+	/* register a profile for testing */
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+
+	/* register a frame received handler */
+	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-22:1",
+					      test_22_frame_received, NULL);
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* call to test against test-22.server */
+	if (! test_22_operations (vCtx, "test-22.server", queue, axl_false)) 
+		return axl_false;  
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+	
+	return axl_true;
+}
+
 /** 
  * @brief Helper handler that allows to execute the function provided
  * with the message associated.
@@ -4089,7 +4162,7 @@ int main (int argc, char ** argv)
 	printf ("**                   axl:        %s\n**\n",
 		AXL_VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     time ./test_01 [--debug] [--no-python] [--run-test=NAME] [--no-10a]\n**\n");
+	printf ("**     time ./test_01 [--help] [--debug] [--no-python] [--run-test=NAME] [--no-10a]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01 [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
@@ -4099,6 +4172,8 @@ int main (int argc, char ** argv)
 
 	/* uncomment the following four lines to get debug */
 	while (argc > 0) {
+		if (axl_cmp (argv[argc], "--help")) 
+			exit (0);
 		if (axl_cmp (argv[argc], "--debug")) 
 			test_common_enable_debug = axl_true;
 		if (axl_cmp (argv[argc], "--no-python"))
@@ -4184,8 +4259,6 @@ int main (int argc, char ** argv)
 
 		CHECK_TEST("test_13b")
 		run_test (test_13_b, "Test 13-b: Check mod python (broadcast and filtering)"); 
-
-		return 0;
 	} /* end if */
 
 	CHECK_TEST("test_14")
@@ -4217,6 +4290,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_22")
 	run_test (test_22, "Test 22: check TLS module.."); 
+
+	CHECK_TEST("test_23")
+	run_test (test_23, "Test 23: check TLS module on child process without serverName.."); 
 
 	printf ("All tests passed OK!\n");
 

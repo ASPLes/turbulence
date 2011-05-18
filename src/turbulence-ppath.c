@@ -238,6 +238,9 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		/* item from the profile path */
 		item = ppath_items[iterator];
 
+		/* profile properly matched, including the serverName */
+		msg2 ("  <allow>: Checking profile path def (profile: %s == %s?)", turbulence_expr_get_expression (item->profile), uri);
+
 		/* check the profile uri */
 		if (! turbulence_expr_match (item->profile, uri)) {
 			/* profile doesn't match, go to the next */
@@ -280,7 +283,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 			/* check the serverName value provided against
 			 * the configuration */
 			if (! turbulence_expr_match (state->path_selected->serverName, serverName ? serverName : "")) {
-				error ("serverName='%s' doesn't match current profile path conf (%s)", serverName ? serverName : "",
+				error ("  <allow>: serverName='%s' doesn't match current profile path conf (%s)", serverName ? serverName : "",
 				       turbulence_ppath_get_name (state->path_selected));
 				/* filter the channel creation because
 				 * the serverName provided doesn't
@@ -290,6 +293,8 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		} /* end if */
 
 		/* profile properly matched, including the serverName */
+		msg2 ("  <allow>: Profile path matched, including serverName at <allow> level: channel_num=%d, profile=%s, serverName=%s", 
+		      channel_num, uri, serverName ? serverName : "");
 		return axl_false;
 	} /* end if */
 
@@ -307,6 +312,10 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		 * check all <allow> and <if-success> nodes inside. */
 		if (item->type == PROFILE_IF) {
 
+			/* profile properly matched, including the serverName */
+			msg2 ("  <if-success>: found if branch, now checking if we have some profile accepted matching: %s?)", 
+			      turbulence_expr_get_expression (item->profile));
+
 			/* check if we have a profile attr alias before continue */
 			if (axl_hash_exists (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile))) {
 				/* found alias for expression, check attribute */
@@ -322,6 +331,10 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 			/* get current profiles running on the connection */
 			profiles = turbulence_conn_mgr_profiles_stats (ctx, connection);
 			axl_hash_cursor_first (profiles);
+			
+			msg2 ("  <if-success>: connection id=%d profiles activated are %d, with %d channels working..", 
+			      vortex_connection_get_id (connection), axl_hash_items (axl_hash_cursor_hash (profiles)), 
+			      vortex_connection_channels_count (connection));
 
 			/* for each profile running on the connection,
 			 * check if the current <if-success>
@@ -331,6 +344,9 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 
 				/* get the uri value */
 				uri2 = axl_hash_cursor_get_key (profiles);
+
+				/* profile properly matched, including the serverName */
+				msg2 ("  <if-success>: Checking profile path def (profile: %s == %s?)", turbulence_expr_get_expression (item->profile), uri2);
 
 				/* try to match the profile expression against
 				   a concrete profile value */
@@ -396,12 +412,14 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 	TurbulencePPathState  * state  = user_data;
 	TurbulenceCtx         * ctx    = state->ctx;
 
+	msg2 ("  Starting profile path [%s] iterator for channel_num=%d, profile=%s, serverName=%s", 
+	      turbulence_ppath_get_name (state->path_selected), channel_num, uri, serverName ? serverName : "");
 	if (state == NULL || state->path_selected == NULL) {
 		error ("No profile path selected, deny: %s (conn id: %d [%s:%s])", 
-				uri, 
-				vortex_connection_get_id (connection), 
-				vortex_connection_get_host (connection),
-				vortex_connection_get_port (connection));
+		       uri, 
+		       vortex_connection_get_id (connection), 
+		       vortex_connection_get_host (connection),
+		       vortex_connection_get_port (connection));
 		/* filter, no profile path selected */
 		return axl_true;
 	} /* end if */
@@ -488,14 +506,16 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 		msg2 ("Called to temporal profile mask on greetings phase, for connection id=%d (state %p, profile path selected: %p)", 
 		      vortex_connection_get_id (connection), state, state->path_selected);
 	else 
-		msg ("Called to temporal profile mask on channel creation phase, for connection id=%d (state %p, profile path selected: %p)", 
-		     vortex_connection_get_id (connection), state, state->path_selected);
+		msg ("Called to temporal profile=%s with serverName=%s mask on channel creation phase, for connection id=%d (state %p, profile path selected: %p)", 
+		     uri, serverName ? serverName : "", vortex_connection_get_id (connection), state, state->path_selected);
 	
 	/* check if the state has a profile path selected */
 	if (state->path_selected == NULL) {
 		/* no profile path selected, check if we are in greetings phase */
-		if (channel_num == -1) 
+		if (channel_num == -1) {
+			error ("channel creation for profile %s was filtered since no profile path was selected and channel num is -1", uri);
 			return axl_true; /* filter profile */
+		}
 
 		/* call to select a profile path with the received
 		   serverName and signaling we are NOT in on connect phase */
@@ -522,6 +542,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 			/* flag the connection to skip futher handling
 			 * letting the child process to finish start
 			 * handle */
+			msg2 ("Skip filter handling for uri=%s and let it to the child..", uri);
 			vortex_connection_set_data (connection, VORTEX_CONNECTION_SKIP_HANDLING, INT_TO_PTR (axl_true));
 			return axl_true; /* return true, to filter at
 					  * the parent and to skip
