@@ -48,6 +48,57 @@
  * @{
  */
 
+/** 
+ * @private
+ * \section Notes about how profile path is applied 
+ *
+ * In general terms, profile path is the mechanism used by Turbulence
+ * to know which profiles and settings are to be enforced on a
+ * particular connection.
+ *
+ * To do so, the following chain is followed:
+ *
+ *  1) A connection is received or created due to a tuning profile
+ *  (like TLS) and it has no profile path selected.
+ *
+ *  2) Then, a call to __turbulence_ppath_select is done to find a
+ *  profile path to associate. This function is in charge of setting
+ *  the mask handler that implements the profile path once selected.
+ *
+ *  3) If a profile path can't be selected yet because all of them are
+ *  declared using a serverName and the client still didn't opeend a
+ *  channel requesting a particular serverName, then a temporal
+ *  profile path mask is used: __turbulence_ppath_mask_temporal.
+ *
+ *  4) Once the right profile path is selected for a connection, is
+ *  then configured the profile path mask __turbulence_ppath_mask.
+ *
+ * In all steps above, if the connection requests some value that do
+ * not match administrative configuration, the connection is either
+ * dropped or channel is defined (according its status: if it has a
+ * temporal profile path mask or the definitive one).
+ *
+ * \section Profile path state
+ *
+ * Every connection has a profile path state object which stores
+ * currently the profile path definition selected. This value is
+ * accessed via:
+ *
+ *  state = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
+ *
+ * In the case it is required to apply a profile path to a connection
+ * because it is in the context of a child with a profile path
+ * selected or some similar reason, use the following code:
+ *
+ *  __turbulence_ppath_set_state (ctx, connection, turbulence_ppath_get_id (ctx->child_ppath), NULL);
+ *
+ * For example, this code is used to handle connections at
+ * __turbulence_ppath_handle_connection_on_connect when it is detected
+ * the connection is notified at at function due to a tuning profile
+ * process in process.
+ *
+ */
+
 typedef struct _TurbulencePPathState {
 	/* a reference to the profile path selected for the
 	 * connection */
@@ -328,6 +379,8 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
  * @internal Mask function that allows to control how profiles are
  * handled and sequenced by the client according to the state of the
  * connection (profiles already accepted, etc).
+ *
+ * SEE NOTES AT THE TOP OF THE FILE.
  */
 axl_bool  __turbulence_ppath_mask (VortexConnection  * connection, 
 				   int                 channel_num,
@@ -409,6 +462,8 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
  * selects an appropriate profile mask, it is then configured
  * __turbulence_ppath_mask to be called always.
  *
+ *
+ * SEE NOTES AT THE TOP OF THE FILE.
  */
 axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection, 
 					      int                 channel_num,
@@ -534,6 +589,8 @@ void                 turbulence_ppath_add_profile_attr_alias (TurbulenceCtx * ct
  * stage, otherwise axl_true is returned either because the profile
  * path was configured or because it will be configured on next calls
  * to __turbulence_ppath_select
+ *
+ * SEE NOTES AT THE TOP OF THE FILE.
  */
 axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx, 
 				    VortexConnection   * connection, 
@@ -686,6 +743,8 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
  * @internal Function used to set connection profile path state to the
  * provided values. This is currently used after a fork operation to
  * restore connection state.
+ *
+ * SEE NOTES AT THE TOP OF THE FILE.
  */
 void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx, 
 				     VortexConnection * conn, 
