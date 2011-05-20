@@ -266,6 +266,8 @@ axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
 /** 
  * @brief Allows to implement a microseconds blocking wait.
  *
+ * @param ctx The context where the wait will be implemented.
+ *
  * @param microseconds Blocks the caller during the value
  * provided. 1.000.000 = 1 second.
  * 

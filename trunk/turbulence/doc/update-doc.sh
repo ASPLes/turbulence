@@ -1,2 +1,2 @@
 #!/bin/bash
-scp html/* aspl@www.aspl.es:www/turbulence/html/
+scp html/* aspl-web@www.aspl.es:www/turbulence/html/
