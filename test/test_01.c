@@ -4056,6 +4056,15 @@ axl_bool test_23 (void) {
 	/* add a search path to allow reg test to find tls.conf file */
 	vortex_support_add_domain_search_path (vCtx, "tls", "test_22_datadir");
 
+	/* configure test path to locate appropriate sasl.conf files:
+	 * THIS IS NOT REQUIRED for this test, but we need this files
+	 * until we find a way to notify turbulence which modules
+	 * should be enabled according to some criteria which we
+	 * suspect it is a lot of work to handle a very especial
+	 * case */
+	vortex_support_add_domain_search_path (vCtx, "sasl", "test_12_module");
+
+
 	/* register a profile for testing */
 	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
 
