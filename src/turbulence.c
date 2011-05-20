@@ -1395,9 +1395,9 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * - To enable application authentication (\ref turbulence_mod_sasl "by using SASL profiles"), that
  *     is, you can use already tested and integrated SASL framework to
- *     add auth to your server side applications.
+ *     add auth to your server side applications (including site particular sasl configuration, MySQL support...).
  *
- * - To secure connection transmissions in a transparent way for your
+ * - To secure connection transmissions in a transparent way to your
  *     application (\ref turbulence_mod_tls "by using TLS profile").
  *
  * - The \ref turbulence_execution_model "execution model" required by
