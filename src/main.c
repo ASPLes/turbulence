@@ -60,6 +60,10 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_post_usage_header (POST_HEADER);
 
 	/* install default debug options. */
+	exarg_install_arg ("version", "v", EXARG_NONE,
+			   "Show turbulence version.");
+
+	/* install default debug options. */
 	exarg_install_arg ("debug", "d", EXARG_NONE,
 			   "Makes all log produced by the application, to be also dropped to the console in sort form.");
 
@@ -96,6 +100,14 @@ int  main_init_exarg (int argc, char ** argv)
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
+
+	/* check for version request */
+	if (exarg_is_defined ("version")) {
+		printf ("%s\n", VERSION);
+		/* terminates exarg */
+		exarg_end ();
+		return axl_false;
+	}
 
 	/* check for conf-location option */
 	if (exarg_is_defined ("conf-location")) {
