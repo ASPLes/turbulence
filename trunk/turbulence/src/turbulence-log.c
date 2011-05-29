@@ -165,6 +165,24 @@ axl_bool __turbulence_log_manager_transfer_content (TurbulenceLoop * loop,
 	char    buffer[4097];
 	int     output_sink = PTR_TO_INT (ptr);
 
+	switch (output_sink) {
+	case LOG_REPORT_GENERAL:
+		output_sink = ctx->general_log;
+		break;
+	case LOG_REPORT_ERROR:
+		output_sink = ctx->error_log;
+		break;
+	case LOG_REPORT_ACCESS:
+		output_sink = ctx->access_log;
+		break;
+	case LOG_REPORT_VORTEX:
+		output_sink = ctx->vortex_log;
+		break;
+	default:
+		/* send to default output sink */
+		output_sink = ctx->general_log;
+	} /* end switch */
+
 	/* read content */
 	size = read (descriptor, buffer, 4096);
 			
@@ -225,7 +243,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 		turbulence_loop_watch_descriptor (ctx->log_manager,
 						  descriptor,
 						  __turbulence_log_manager_transfer_content,
-						  INT_TO_PTR (ctx->general_log),
+						  INT_TO_PTR (LOG_REPORT_GENERAL),
 						  NULL);
 		break;
 	case LOG_REPORT_ERROR:
@@ -233,7 +251,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 		turbulence_loop_watch_descriptor (ctx->log_manager,
 						  descriptor,
 						  __turbulence_log_manager_transfer_content,
-						  INT_TO_PTR (ctx->error_log),
+						  INT_TO_PTR (LOG_REPORT_ERROR),
 						  NULL);
 		break;
 	case LOG_REPORT_ACCESS:
@@ -241,7 +259,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 		turbulence_loop_watch_descriptor (ctx->log_manager,
 						  descriptor,
 						  __turbulence_log_manager_transfer_content,
-						  INT_TO_PTR (ctx->access_log),
+						  INT_TO_PTR(LOG_REPORT_ACCESS),
 						  NULL);
 		break;
 	case LOG_REPORT_VORTEX:
@@ -249,7 +267,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 		turbulence_loop_watch_descriptor (ctx->log_manager,
 						  descriptor,
 						  __turbulence_log_manager_transfer_content,
-						  INT_TO_PTR (ctx->vortex_log),
+						  INT_TO_PTR(LOG_REPORT_VORTEX),
 						  NULL);
 		break;
 	} /* end switch */
@@ -366,11 +384,7 @@ axl_bool   turbulence_log_is_enabled    (TurbulenceCtx * ctx)
 	return turbulence_config_is_attr_positive (ctx, node, "enabled");
 }
 
-/** 
- * @internal
- * @brief Stops and dealloc all resources hold by the module.
- */
-void turbulence_log_cleanup (TurbulenceCtx * ctx)
+void __turbulence_log_close (TurbulenceCtx * ctx)
 {
 	/* close the general log */
 	if (ctx->general_log >= 0)
@@ -391,6 +405,32 @@ void turbulence_log_cleanup (TurbulenceCtx * ctx)
 	if (ctx->vortex_log >= 0)
 		close (ctx->vortex_log);
 	ctx->vortex_log = -1;
+	return;
+}
+
+void __turbulence_log_reopen (TurbulenceCtx * ctx)
+{
+	msg ("Reload received, reopening log references..");
+
+	/* call to close all logs opened at this moment */
+	__turbulence_log_close (ctx);
+
+	/* call to open again */
+	turbulence_log_init (ctx);
+
+	msg ("Log reopening finished..");
+
+	return;
+}
+
+/** 
+ * @internal
+ * @brief Stops and dealloc all resources hold by the module.
+ */
+void turbulence_log_cleanup (TurbulenceCtx * ctx)
+{
+	/* call to close current logs */
+	__turbulence_log_close (ctx);
 
 	/* now finish log manager */
 	turbulence_loop_close (ctx->log_manager, axl_true);

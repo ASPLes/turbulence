@@ -187,6 +187,9 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 	}
 	already_notified = axl_true;
 
+	/* call to reload logs */
+	__turbulence_log_reopen (ctx);
+
 	/* reload turbulence here, before modules
 	 * reloading */
 	turbulence_db_list_reload_module ();
