@@ -68,4 +68,6 @@ axl_bool  turbulence_log_is_enabled    (TurbulenceCtx * ctx);
 
 void      turbulence_log_cleanup       (TurbulenceCtx * ctx);
 
+void      __turbulence_log_reopen      (TurbulenceCtx * ctx);
+
 #endif
