@@ -1,4 +1,5 @@
 #! /bin/sh
+
 # postinst script for turbulence-server
 #
 # see: dh_installdeb(1)
@@ -7,7 +8,11 @@ set -e
 
 case "$1" in
     configure)
+        # create startup links
     	update-rc.d -f turbulence start 23 2 3 4 5 . stop 20 0 1 6 . > /dev/null
+
+	# restart server if it were installed
+	/etc/init.d/turbulence restart
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
