@@ -1,3 +1,27 @@
+turbulence (0.5.2-squeeze3) stable; urgency=low
+
+  * Adding missing files..
+
+ -- Francis Brosnan <francis@aspl.es>  Sun, 29 May 2011 12:36:04 +0200
+
+turbulence (0.5.2-squeeze2) stable; urgency=low
+
+  * Added log rotation and proper init.d stop start.
+
+ -- root <root@rubalcaba.aspl.local>  Sun, 29 May 2011 12:28:40 +0200
+
+turbulence (0.5.2-squeeze1) stable; urgency=low
+
+  * New upstream release.
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 20 May 2011 11:34:44 +0200
+
+turbulence (0.4.1-squeeze14) stable; urgency=low
+
+  * More updates from SVN.
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 16 May 2011 00:17:26 +0200
+
 turbulence (0.4.1-squeeze13) stable; urgency=low
 
   * Adding additional fixings.
