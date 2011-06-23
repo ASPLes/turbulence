@@ -299,20 +299,34 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 	/* create timestamp */
 	time_val = time (NULL);
 	time_str = axl_strdup (ctime (&time_val));
+	if (time_str == NULL)
+		return;
 	time_str [strlen (time_str) - 1] = 0;
 
 	/* write stamp */
 	string = axl_strdup_printf ("%s [%d] (%s:%d) ", time_str, getpid (), file, line);
-	length = strlen (string);
 	axl_free (time_str);
+	if (string == NULL)
+		return;
+	length = strlen (string);
 
 	/* create message */
 	string2 = axl_strdup_printfv (message, args);
+	if (string2 == NULL) {
+		axl_free (string);
+		return;
+	}
 	length2 = strlen (string2);
 
 	/* build final log message */
 	total  = length + length2 + 1;
 	result = axl_new (char, total + 1);
+	if (result == NULL) {
+		axl_free (string);
+		axl_free (string2);
+		return;
+	}
+
 	memcpy (result, string, length);
 	memcpy (result + length, string2, length2);
 	memcpy (result + length + length2, "\n", 1);

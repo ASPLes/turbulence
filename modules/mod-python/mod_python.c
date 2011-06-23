@@ -54,6 +54,8 @@ TurbulenceCtx * ctx = NULL;
 
 /* reference to the last configuration file loaded */
 axlDoc       * mod_python_conf = NULL;
+/* reference to the last site configuration file loaded */
+axlDoc       * mod_python_site_conf = NULL;
 
 /* mutex used to control application top level initialization */
 VortexMutex    mod_python_top_init;
@@ -222,6 +224,7 @@ axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function)
  * continue signaling its proper start up.
  */
 axl_bool mod_python_init_applications (TurbulenceCtx     * ctx, 
+				       axlDoc            * python_conf,
 				       const char        * workDir, 
 				       const char        * serverName, 
 				       VortexConnection  * conn)
@@ -235,7 +238,7 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 	const char * src;
 
 	/* for each application */
-	node = axl_doc_get (mod_python_conf, "/mod-python/application");
+	node = axl_doc_get (python_conf, "/mod-python/application");
 	while (node) {
 		msg ("loading python app [%s]", ATTR_VALUE (node, "name"));
 
@@ -251,11 +254,12 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 
 		/* now check for applications already loaded */
 		if (PTR_TO_INT (axl_node_annotate_get (node, "app-started", axl_false))) {
-			msg2 ("  -> app already started");
+			msg ("  app [%s] already started", ATTR_VALUE (node, "name"));
 			/* found application already loaded */
 			node = axl_node_get_next_called (node, "application");
 			continue;
 		} /* end if */
+		msg ("  app [%s] not started (flag not found)", ATTR_VALUE (node, "name"));
 		
 		/* find location node */
 		location = axl_node_get_child_called (node, "location");
@@ -476,6 +480,9 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	axl_doc_free (mod_python_conf);
 	mod_python_conf = NULL;
 
+	axl_doc_free (mod_python_site_conf);
+	mod_python_site_conf = NULL;
+
 	/* now defer python finalize call to avoid calling to py
 	   finalize having references setup inside turbulence and
 	   vortex structures. This will ensure this finalize is called
@@ -551,6 +558,44 @@ axl_bool mod_python_load_config (void) {
 	return axl_true;
 }
 
+axl_bool mod_python_load_site_config (TurbulenceCtx    * ctx, 
+				      const char       * workDir, 
+				      const char       * serverName,
+				      VortexConnection * conn) 
+{
+
+	char             * site_config;
+	axlError         * err = NULL;
+
+	/* check if site config was not loaded */
+	if (mod_python_site_conf == NULL) {
+
+		site_config = axl_strdup_printf ("%s/python.conf", workDir);
+		msg ("Checking to load site python.conf at %s", site_config);
+		if (vortex_support_file_test (site_config, FILE_EXISTS)) {
+			
+			msg ("Found site %s/python.conf, loading..", workDir);
+			mod_python_site_conf  = axl_doc_parse_from_file (site_config, &err);
+			/* check parse result */
+			if (mod_python_site_conf == NULL) {
+				error ("failed to load mod-python site configuration file at %s, error found was: %s", 
+				       site_config, axl_error_get (err));
+				axl_free (site_config);
+				axl_error_free (err);
+				return axl_false;
+			} /* end if */
+
+		} /* end if */
+		axl_free (site_config);
+	} /* end if */
+
+	/* now init applications that may not be already initialized */
+	if (! mod_python_init_applications (ctx, mod_python_site_conf, workDir, serverName, conn)) 
+		return axl_false;
+
+	return axl_true;
+}
+
 /** 
  * @brief Starts python function once a profile path is selected 
  */
@@ -570,7 +615,6 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	/* lock to check and initialize */
 	vortex_mutex_lock (&mod_python_top_init);
 
-	
 	if (! mod_python_py_init) {
 		/* initialize python engine and configure it to use with
 		   mod-python */
@@ -593,11 +637,19 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* for each application found, register it and call to
 	 * initialize its function */
-	if (! mod_python_init_applications (ctx, workDir, serverName, conn)) {
+	if (! mod_python_init_applications (ctx, mod_python_conf, workDir, serverName, conn)) {
 		PyGILState_Release (state); 
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
 	}
+
+	/* now load python applications at the working dir if it is found */
+	if (! mod_python_load_site_config (ctx, workDir, serverName, conn)) {
+		PyGILState_Release (state); 
+		vortex_mutex_unlock (&mod_python_top_init);
+		return axl_false;
+	}
+
 	msg ("mod-python applications initialized");
 
 	/* let other threads to enter inside python engine: this must
