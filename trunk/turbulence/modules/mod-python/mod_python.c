@@ -687,11 +687,11 @@ END_C_DECLS
  * profiles. It allows writing dynamic applications that loads at run
  * time, saving the compile-install cycle required by usual C modules.
  *
- * \section turbulence_mod_python_configuring Configuring mod-python
+ * \section turbulence_mod_python_config_location Global mod-python python.conf location
  *
  * Assuming you have a python app that works with Turbulence
- * mod-python, you must configure it under python.conf file. This is
- * usually found at:
+ * mod-python, you can configure it under the global python.conf file
+ * which is usually found at:
  *
  * \code
  * /etc/turbulence/python/python.conf
@@ -704,8 +704,35 @@ END_C_DECLS
  * >> turbulence --conf-location
  * \endcode
  *
- * Inside that applications it is placed one declaration for each
- * application installed/recognized by Turbulence. It should look like:
+ * \section turbulence_mod_python_config_location_site Site mod-python python.conf location
+ *
+ * You can also place a python.conf file at the profile path working
+ * dir (work-dir attribute). This method is recommend in the case more
+ * application separation is needed. 
+ *
+ * Assuming you have the following profile path declaration:
+ *
+ * \code
+ * <path-def server-name="core-admin" 
+ *           src=".*" path-name="core-admin" 
+ *           separate="yes" 
+ *           reuse="yes" run-as-user="core-admin" run-as-group="core-admin" 
+ *           work-dir="/home/acinom/programas/core-admin/server-component" >
+ *    <!-- more declarations -->
+ * </path-def>
+ * \endcode
+ *
+ * Then you can place a python.conf file with your python app initializations at:
+ *
+ * \code
+ * /home/acinom/programas/core-admin/server-component/python.conf
+ * \endcode
+ *
+ * \section turbulence_mod_python_configuring Configuring mod-python
+ *
+ * No matter where is located your python.conf, inside that file is
+ * found a list of applications installed/recognized by Turbulence. It
+ * should look like:
  *
  * \htmlinclude turbulence.python.xml-tmp
  * 
@@ -716,11 +743,12 @@ END_C_DECLS
  *
  * \note To know more about writing mod-python applications see \ref turbulence_mod_python_writing_apps
  *
- * Note that each application has a <b>"serverName"</b>
- * configured. This lets to know mod-python to only start that
- * applications if a BEEP connection is bound to that serverName value
- * (virtual hosting) by creating the first channel accepted requesting
- * such serverName.
+ * Note that each <application> may have a <b>"serverName"</b>
+ * declaration configured. This lets to know mod-python to only start
+ * those applications where the BEEP connection is bound to that
+ * serverName value (virtual hosting). Note a BEEP connection gets
+ * bounded to a serverName on first channel accepted requesting such
+ * serverName.
  *
  * See following section for all details. 
  *
@@ -786,15 +814,15 @@ END_C_DECLS
  *   with proper serverName configuration to ensure a separate child
  *   is created for each python app. With this, each python context
  *   will run in a separted process. In this context you may also be
- *   interested in profile path chroot attribute to improve isolation levels.
+ *   interested in profile path chroot attribute to improve isolation level.
  *
- * - <b>For application with state</b>: in this case, you will require share
- *   state between BEEP clients so all of them access to the same
- *   python context. This is the default behavior but, if it is
- *   required to share application state but with application
- *   separation, you must look into reuse=yes profile path
- *   attribute. This attribute will require separate=yes and may be
- *   mixed with chroot profile path attribute.
+ * - <b>For several separeted applications with shared state</b>: this
+ *   is the case where it is required to share state between BEEP
+ *   clients so all of them access to the same python context. To
+ *   enable this configuration you'll have to combine resue="yes" and
+ *   separate="yes" at profile path declaration. Again, you may also
+ *   be interested in profile path chroot attribute to improve
+ *   isolation level.
  *
  * 
  * \section turbulence_mod_python_add_path Adding path to python application
