@@ -59,7 +59,7 @@ Description: SASL profile implementation for Turbulence
 Package: libturbulence-mod-sasl-mysql
 Section: libs
 Architecture: any
-Depends: libturbulence-mod-sasl
+Depends: libturbulence-mod-sasl, libmysqlclient16
 Description: MySQL support for Turbulence SASL module
   This provides MySQL support so it is possible to store and auth
   users from a MySQL database.
@@ -76,7 +76,7 @@ Package: libturbulence-mod-python
 Section: libs
 Architecture: any
 Depends: turbulence-server (>= ${Source-Version}), 
-  python-vortex (>= 1.1.4), libpython2.6
+  python-vortex (>= 1.1.4), libpython2.6 | python2.5
 Recommends: python-vortex-sasl, python-vortex-tls
 Description: SASL profile implementation for Turbulence
   Server side SASL module for Turbulence. BEEP authentication.

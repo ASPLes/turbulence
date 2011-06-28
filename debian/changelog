@@ -1,3 +1,9 @@
+turbulence (0.5.3-squeeze1) stable; urgency=low
+
+  * New upstream release. Adding optional reference python2.5
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 28 Jun 2011 17:40:31 +0200
+
 turbulence (0.5.2-squeeze3) stable; urgency=low
 
   * Adding missing files..
