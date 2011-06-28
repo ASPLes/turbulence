@@ -245,7 +245,7 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 		/* check if node has serverName attribute and compare
 		   it with serverName defined (and only if defined) */
 		if (serverName && HAS_ATTR (node, "serverName") && ! HAS_ATTR_VALUE (node, "serverName", serverName)) {
-			msg2 ("  -> no match for serverName=%s (app serverName=%s)", serverName, ATTR_VALUE (node, "serverName"));
+			msg ("  -> no match for serverName=%s (app serverName=%s)", serverName, ATTR_VALUE (node, "serverName"));
 			/* found serverName defined, but application spec states other serverName, skipping this application */
 			/* get next node */
 			node = axl_node_get_next_called (node, "application");

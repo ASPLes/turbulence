@@ -1,5 +1,5 @@
 # Module definition
-EXTRA_DIST = mod_tls.xml mod_tls.win32.xml
+EXTRA_DIST = mod_tls.xml mod_tls.win32.xml tls.example.conf
 
 INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
