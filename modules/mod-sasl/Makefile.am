@@ -8,7 +8,8 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 
 EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h mysql.sasl.dtd mysql.sasl.dtd.h \
              mod-sasl.win32.xml $(sasl_radmin_files) sasl.example.conf \
-	     auth-db.example.xml remote-admins.example.xml gen-mod-sasl-pass.py create-mysql-sasl-database.sql
+	     auth-db.example.xml remote-admins.example.xml gen-mod-sasl-pass.py create-mysql-sasl-database.sql \
+	     extension.example.modules auth-db.mysql.example.xml sasl-radmin.idl
 
 INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
