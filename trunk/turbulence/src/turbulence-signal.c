@@ -114,6 +114,8 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 	/* check for sigint */
 	if (enable_sigint)
 		signal (SIGINT,  signal_handler); 		
+	else 
+		signal (SIGINT,  NULL); 		
 	signal (SIGSEGV, signal_handler);
 	signal (SIGABRT, signal_handler);
 	signal (SIGTERM, signal_handler); 
@@ -121,6 +123,8 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 	/* check for sigchild */
 	if (enable_sigchild)
 		signal (SIGCHLD, signal_handler);
+	else
+		signal (SIGCHLD, NULL);
 
 #if defined(AXL_OS_UNIX)
 /*	signal (SIGKILL, signal_handler); */
@@ -129,6 +133,8 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 	/* check for sighup */
 	if (enable_sighup)
 		signal (SIGHUP,  signal_handler);
+	else
+		signal (SIGHUP, NULL);
 #endif
 
 	/* configure handlers received */
