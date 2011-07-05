@@ -207,7 +207,7 @@ axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function)
 		/* now implement other attributes */
 		if (! PyArg_Parse (result, "i", &_result)) {
 			py_vortex_handle_and_clear_exception (NULL);
-			return axl_false;
+			_result = axl_false;
 		}
 	} /* end if */
 
