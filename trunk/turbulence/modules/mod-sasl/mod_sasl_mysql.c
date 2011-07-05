@@ -140,7 +140,7 @@ MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx,
 		return INT_TO_PTR (axl_true);
 
 	/* return result created */
-	return  mysql_store_result(conn);
+	return mysql_store_result (conn);
 }
 
 axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
@@ -171,8 +171,10 @@ axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
 	} /* end if */
 
 	/* check for empty filter string */
-	if (row[0] == NULL || strlen (row[0]) == 0)
+	if (row[0] == NULL || strlen (row[0]) == 0) {
+		mysql_free_result (result);
 		return axl_true;
+	}
 	msg ("Checking to apply ip filter with expression: %s (ip: %s:%s)", row[0], 
 	     vortex_connection_get_host (conn), vortex_connection_get_host_ip (conn));
 
@@ -309,7 +311,6 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		
 	} /* end if */
 	
-
 	return _result ? 1 : 0;
 }
 
@@ -432,6 +433,8 @@ static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
 
 	/* install here all support to handle "mysql" databases */
 	if (! common_sasl_register_format (_ctx, "mysql", mod_sasl_mysql_format_handler)) {
+		axl_dtd_free (mysql_sasl_dtd);
+		mysql_sasl_dtd = NULL;
 		error ("Failed to register mod-sasl mysql database handler, register format function failed");
 		return axl_false;
 	}
