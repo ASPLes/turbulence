@@ -1,3 +1,15 @@
+turbulence (0.5.3-squeeze3) stable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan Blázquez <francis@aspl.es>  Mon, 11 Jul 2011 12:26:25 +0200
+
+turbulence (0.5.3-squeeze2) stable; urgency=low
+
+  * New upstream release. 
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 28 Jun 2011 20:08:29 +0200
+
 turbulence (0.5.3-squeeze1) stable; urgency=low
 
   * New upstream release. Adding optional reference python2.5
