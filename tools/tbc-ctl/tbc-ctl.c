@@ -66,6 +66,8 @@ VortexConnection * conn;
 
 axlList          * commands = NULL;
 
+axl_bool           debug_was_enabled = axl_false;
+
 typedef struct _TbcCtlCommand {
 	char * command;
 	char * description;
@@ -429,6 +431,89 @@ void tbc_ctl_update_commands_available (void)
 	return;
 }
 
+void tbc_ctl_pritn_content_received_table (axlDoc * doc)
+{
+	axlNode * node;
+	axlNode * node2;
+	int       num_columns = 0;
+	int       size;
+	int       length;
+
+	/* print title */
+	node = axl_doc_get (doc, "/table/title");
+	if (node) 
+		printf ("%s\n\n", axl_node_get_content (node, &size));
+
+	/* now print columns */
+	node = axl_doc_get (doc, "/table/column-description/column");
+	while (node) {
+		/* print column name */
+		printf ("%s   ", ATTR_VALUE (node, "name"));
+
+		/* get next column */
+		node = axl_node_get_next_called (node, "column");
+
+		/* increase number of columns found */
+		num_columns++;
+	} /* end while */
+
+	if (num_columns > 0)
+		printf ("\n");
+
+	/* now print columns separators */
+	node = axl_doc_get (doc, "/table/column-description/column");
+	while (node) {
+		/* print column name */
+		length = strlen (ATTR_VALUE (node, "name"));
+		while (length > 0) {
+			printf ("-");
+			length--;
+		}
+		printf ("   ");
+
+		/* get next column */
+		node = axl_node_get_next_called (node, "column");
+
+	} /* end while */
+	
+	if (num_columns > 0)
+		printf ("\n");
+
+	/* now print the content */
+	node = axl_doc_get (doc, "/table/content/row");
+	while (node) {
+
+		/* now print each column */
+		node2 = axl_node_get_child_called (node, "d");
+		while (node2) {
+			/* print content */
+			printf ("%s   ", axl_node_get_content (node2, &size));
+
+			/* get next node called */
+			node2 = axl_node_get_next_called (node2, "d");
+		} /* end while */
+
+		printf ("\n");
+
+		/* get next node */
+		node = axl_node_get_next_called (node, "row");
+	} /* end if */
+
+	return;
+}
+
+void tbc_ctl_print_content_received (axlDoc * doc)
+{
+	axlNode * node = axl_doc_get_root (doc);
+
+	/* check result type */
+	if (NODE_CMP_NAME (node, "table")) {
+		tbc_ctl_pritn_content_received_table (doc);
+	}
+	
+	return;
+}
+
 void tbc_ctl_command_send (const char * command)
 {
 	VortexChannel * channel;
@@ -467,14 +552,43 @@ void tbc_ctl_command_send (const char * command)
 	if (doc == NULL) 
 		return;
 
+	if (debug_was_enabled) 
+		printf ("DEBUG: content received: %s\n", (char *) vortex_frame_get_payload (frame));
+
 	/* content received */
-	printf ("%s\n", (char *) vortex_frame_get_payload (frame));
+	tbc_ctl_print_content_received (doc);
 
 	/* free document received */
 	axl_doc_free (doc);
 
 	return;
 }
+
+void tbc_ctl_print_commands (void)
+{ 
+	int             iterator = 0;
+	TbcCtlCommand * cmd;
+
+
+	printf ("List of commands available:\n\n");
+	printf ("help -- Get this help\n");
+	printf ("debug -- Enable debug during this session\n");
+
+	while (iterator < axl_list_length (commands)) {
+		/* get command */
+		cmd = axl_list_get_nth (commands, iterator);
+		
+		printf ("%s -- %s\n", cmd->command, cmd->description);
+
+		/* next command */
+		iterator++;
+	} /* end while */
+
+	printf ("\n");
+
+	return;
+}
+
 
 void tbc_ctl_command_loop (void)
 {
@@ -496,8 +610,25 @@ void tbc_ctl_command_loop (void)
 			break;
 		}
 
-		/* send command read */
-		tbc_ctl_command_send (command);
+		/* detect help command */
+		if (axl_cmp (command, "help")) {
+			/* print available commands */
+			tbc_ctl_print_commands ();
+		} else if (axl_cmp (command, "debug")) {
+			/* invert current selection */
+			debug_was_enabled = ! debug_was_enabled;
+
+			/* enable debug */
+			turbulence_log_enable   (ctx, debug_was_enabled);
+			turbulence_log2_enable  (ctx, debug_was_enabled);
+			turbulence_color_log_enable (ctx, debug_was_enabled);
+
+			printf ("Debug was: %s\n", debug_was_enabled ? "ENABLED" : "disabled");
+
+		} else {
+			/* send command read */
+			tbc_ctl_command_send (command);
+		}
 		
 		/* free command */
 		axl_free (command);
