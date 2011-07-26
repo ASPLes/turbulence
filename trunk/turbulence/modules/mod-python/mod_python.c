@@ -888,4 +888,18 @@ END_C_DECLS
  * </li>
  * </ol>
  *
+ * \section turbulence_mod_python_getting_working_dir How to get current profile path working directory 
+ *
+ * Inside \ref profile_path_configuration "profile path configuration"
+ * it is possible to define a working directory where the user can
+ * place some special files that are loaded especific profile path
+ * activated. In many cases it is interesting to get where is this
+ * working dir located so the BEEP application can store files using
+ * current running uid/gid. To do so, you can use the following:
+ *
+ * \code
+ * # run this at the application_init python method
+ * working_dir = os.path.dirname (sys.modules[__name__].__file__)
+ * \endcode
+ *
  */
