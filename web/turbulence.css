@@ -165,7 +165,8 @@ ul.images img {
 }
 
 .logo { 
-  position: absolute; right: 10px; top: 20px; z-index: 1;
+  position: absolute; right: 10px; top: 40px; z-index: 1;
+  padding-right: 20px;
 }
 
 .alt-logo img { 
