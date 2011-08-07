@@ -97,10 +97,17 @@ TurbulenceCtx * turbulence_ctx_new ()
  * after a child process creation. It also closed or removes internal
  * elements not required by child process.
  */
-void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
+void           turbulence_ctx_reinit (TurbulenceCtx * ctx, TurbulenceChild * child, TurbulencePPathDef * def)
 {
 	/* init pid to the child */
 	ctx->pid = getpid ();
+
+	/* define context child and child context */
+	ctx->child   = child;
+	child->ctx   = ctx;
+
+	/* record profile path selected */
+	ctx->child->ppath = def;
 
 	/* re-init mutex */
 	vortex_mutex_create (&ctx->exit_mutex);
@@ -108,14 +115,11 @@ void           turbulence_ctx_reinit (TurbulenceCtx * ctx)
 	vortex_mutex_create (&ctx->data_mutex);
 	vortex_mutex_create (&ctx->registered_modules_mutex);
 
-	/* reinit conn manager: reinit = axl_true */
-	/* turbulence_conn_mgr_init (ctx, axl_true); */
-	
+	/* mutex on child object */
+	vortex_mutex_create (&ctx->child->mutex);
+
 	/* clean child process list: reinit = axl_true */
 	turbulence_process_init (ctx, axl_true);
-
-	/* flag as we are in a child process */
-	ctx->is_main_process = axl_false; /* not a child */
 
 	return;
 }
@@ -131,6 +135,9 @@ void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx,
 					       VortexCtx     * vortex_ctx)
 {
 	v_return_if_fail (ctx);
+
+	/* acquire a reference to the context */
+	vortex_ctx_ref (vortex_ctx);
 	
 	/* configure vortex ctx */
 	ctx->vortex_ctx = vortex_ctx;
@@ -187,6 +194,7 @@ void            turbulence_ctx_set_data       (TurbulenceCtx * ctx,
 
 	return;
 }
+
 
 /** 
  * @brief Allows to configure user defined data indexed by the
@@ -286,6 +294,26 @@ void            turbulence_ctx_wait           (TurbulenceCtx * ctx,
 }
 
 /** 
+ * @brief Allows to check if the provided turbulence ctx is associated
+ * to a child process.
+ *
+ * This function can be used to check if the current execution context
+ * is bound to a child process which means we are running in a child
+ * process
+ *
+ * @return axl_false when contexts is representing master process
+ * otherwise axl_true is returned (child process). Keep in mind the
+ * function returns axl_false (master process) in the case or NULL
+ * reference received.
+ */
+axl_bool        turbulence_ctx_is_child       (TurbulenceCtx * ctx)
+{
+	if (ctx == NULL)
+		return axl_false;
+	return ctx->child != NULL;
+}
+
+/** 
  * @brief Deallocates the turbulence context provided.
  * 
  * @param ctx The context reference to terminate.
@@ -304,7 +332,23 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	/* release wait queue */
 	vortex_async_queue_unref (ctx->wait_queue);
 
+	/* now modules and vortex library is stopped, terminate
+	 * modules unloading them. This will allow having usable code
+	 * mapped into modules address which is usable until the last
+	 * time.  */
+	turbulence_module_cleanup (ctx);
+
+	/* include a error warning */
+	if (vortex_ctx_ref_count (ctx->vortex_ctx) <= 0) 
+		error ("ERROR: current process is attempting to release vortex context more times than references supported");
+	else {
+		/* release vortex reference acquired */
+		msg ("Finishing VortexCtx (%p)", ctx->vortex_ctx);
+		vortex_ctx_unref (&(ctx->vortex_ctx));
+	}
+
 	/* release the node itself */
+	msg ("Finishing TurbulenceCtx (%p)", ctx);
 	axl_free (ctx);
 
 	return;

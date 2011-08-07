@@ -150,7 +150,7 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	axl_free (command);
 
 	/* get profile path id */
-	if (ctx->is_main_process) 
+	if (ctx->child == NULL) 
 		command  = axl_strdup_printf ("echo \"Failure found at main process.\" >> %s", backtrace_file);
 	else {
 		/* get profile path associated to child process */

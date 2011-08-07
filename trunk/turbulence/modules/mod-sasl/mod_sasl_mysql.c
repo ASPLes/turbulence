@@ -423,7 +423,8 @@ static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
 	TBC_MOD_PREPARE (_ctx);
 
 	/* load DTD later used */
-        mysql_sasl_dtd = axl_dtd_parse (MYSQL_SASL_DTD, -1, &err);
+	if (mysql_sasl_dtd == NULL)
+		mysql_sasl_dtd = axl_dtd_parse (MYSQL_SASL_DTD, -1, &err);
         if (mysql_sasl_dtd == NULL) {
 		error ("failed to load mysql.sasl.dtd to check sasl configuration, error: %s",
 		       axl_error_get (err));
@@ -445,11 +446,13 @@ static int  mod_sasl_mysql_init (TurbulenceCtx * _ctx) {
 
 /* mod_sasl_mysql close handler */
 static void mod_sasl_mysql_close (TurbulenceCtx * _ctx) {
+	msg ("Finishing mod-sasl MySQL extension..");
 	/* frees up other memory used by the libmysqlclient. */
 	mysql_library_end ();
 
 	/* finish dtd used */
 	axl_dtd_free (mysql_sasl_dtd);
+	mysql_sasl_dtd = NULL;
 	return;
 } /* end mod_sasl_mysql_close */
 

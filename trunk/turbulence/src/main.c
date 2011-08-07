@@ -320,7 +320,8 @@ int main (int argc, char ** argv)
 
 
 	/* drop a log */
-	msg ("Turbulence STARTED OK (pid: %d)", getpid ());
+	msg ("Turbulence STARTED OK (pid: %d, vortex ctx refs: %d)", getpid (),
+	     vortex_ctx_ref_count (vortex_ctx));
 	/* flag that the server started ok */
 	ctx->started = axl_true;
 

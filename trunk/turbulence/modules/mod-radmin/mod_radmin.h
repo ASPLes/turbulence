@@ -44,5 +44,6 @@
  * @brief Profile that defines radmin channels
  */
 #define RADMIN_URI "urn:aspl.es:beep:profiles:radmin-ctl"
+#define RADMIN_URI_INTERNAL "urn:aspl.es:beep:profiles:radmin-internal"
 
 #endif

@@ -77,7 +77,14 @@ axl_bool mod_sasl_load_extension_modules (TurbulenceCtx * ctx)
 	axlDoc           * modules;
 	axlNode          * node;
 	axlError         * error = NULL;
-	char             * path  = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "sasl", "extension.modules", NULL);
+	char             * path;
+
+	/* find extension file on configured sasl domain */
+	path  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "sasl", "extension.modules");
+	if (path == NULL)  {
+		/* not found, load from default location */
+		path  = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "sasl", "extension.modules", NULL);
+	} /* end if */
 
 	if (! vortex_support_file_test (path, FILE_EXISTS)) {
 		msg ("No SASL extension modules found at %s, skipping..", path);

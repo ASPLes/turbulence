@@ -49,6 +49,7 @@
 
 /* include read line support */
 #include <readline/readline.h>
+#include <readline/history.h>
 
 #define HELP_HEADER "tbc-ctl: a CLI tool to manage turbulence remote management interface\n\
 Copyright (C) 2009  Advanced Software Production Line, S.L.\n\n"
@@ -170,6 +171,14 @@ char  * tbc_ctl_getpass (char  * prompt)
 	return s;
 }
 
+void tbc_ctl_connection_closed (VortexConnection * conn)
+{
+	
+	printf ("\n**\n** Connection=%d to server closed\n**\n", vortex_connection_get_id (conn));
+
+	return;
+}
+
 
 axl_bool tbc_ctl_do_connection (void) {
 
@@ -189,7 +198,13 @@ axl_bool tbc_ctl_do_connection (void) {
 				      port,
 				      NULL, NULL);
 	/* check connection returned */
-	return vortex_connection_is_ok (conn, axl_false);
+	if (! vortex_connection_is_ok (conn, axl_false))
+		return axl_false;
+
+	/* install on close handling */
+	vortex_connection_set_on_close (conn, tbc_ctl_connection_closed);
+
+	return axl_true;
 }
 
 /** 
@@ -222,8 +237,9 @@ axlDoc * tbc_ctl_parse_content_and_check_errors (VortexFrame * frame)
 
 		/* found error */
 		printf (" ERROR code:     %s\n", ATTR_VALUE (node, "code"));
-		node = axl_node_get_child_called (node, "msg");
-		printf (" ERROR msg:      %s\n", axl_node_get_content (node, NULL));
+		printf (" ERROR msg:      %s\n", axl_node_get_content_trans (node, NULL));
+
+		/* get error content */
 		node = axl_node_get_next_called  (node, "content");
 		content = axl_node_get_content (node, NULL);
 		if (content != NULL && strlen (content) > 0)
@@ -363,6 +379,14 @@ void tbc_refresh_available_commands (axlDoc * doc)
 	if (commands != NULL)
 		axl_list_free (commands);
 	commands = axl_list_new (axl_list_always_return_1, tbc_ctl_command_free);
+
+	/* add virtual command */
+	cmd = axl_new (TbcCtlCommand, 1);
+	cmd->command = axl_strdup ("debug");
+	cmd->description = axl_strdup ("Enable debug during this session");
+
+	/* insert into the list */
+	axl_list_append (commands, cmd);	
 	
 	/* for each command registered */
 	node = axl_doc_get (doc, "/table/content/row");
@@ -433,38 +457,96 @@ void tbc_ctl_update_commands_available (void)
 
 void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 {
-	axlNode * node;
-	axlNode * node2;
-	int       num_columns = 0;
-	int       size;
-	int       length;
+	axlNode    * node;
+	axlNode    * node2;
+	int          num_columns = 0;
+	int          size;
+	int          length;
+	int          col_lengths[20];
+	int          iterator;
+	const char * content;   
 
 	/* print title */
 	node = axl_doc_get (doc, "/table/title");
 	if (node) 
-		printf ("%s\n\n", axl_node_get_content (node, &size));
+		printf (">>> %s <<<\n", axl_node_get_content (node, &size));
 
-	/* now print columns */
-	node = axl_doc_get (doc, "/table/column-description/column");
+	/* get initial column header sizes */
+	node     = axl_doc_get (doc, "/table/column-description/column");
+	iterator = 0;
 	while (node) {
-		/* print column name */
-		printf ("%s   ", ATTR_VALUE (node, "name"));
+		/* get initial column length */
+		col_lengths[iterator] = strlen (ATTR_VALUE (node, "name"));
 
 		/* get next column */
 		node = axl_node_get_next_called (node, "column");
 
 		/* increase number of columns found */
 		num_columns++;
+
+		/* next iterator */
+		iterator++;
+
+	} /* end while */
+
+	if (num_columns > 0)
+		printf ("\n");
+
+	/* now ensure we have maximum lengths */
+	node = axl_doc_get (doc, "/table/content/row");
+	while (node) {
+
+		/* now print each column */
+		iterator = 0;
+		node2    = axl_node_get_child_called (node, "d");
+		while (node2) {
+			content = axl_node_get_content (node2, &size);
+			if (size > col_lengths[iterator]) {
+				col_lengths[iterator] = size;
+			}
+
+			/* get next node called */
+			node2 = axl_node_get_next_called (node2, "d");
+
+			/* next iterator */
+			iterator++;
+		} /* end while */
+
+		/* get next node */
+		node = axl_node_get_next_called (node, "row");
+	} /* end if */
+
+	/* now print column headers */
+	node     = axl_doc_get (doc, "/table/column-description/column");
+	iterator = 0;
+	while (node) {
+		/* print column name */
+		printf ("%s", ATTR_VALUE (node, "name"));
+
+		length = strlen (ATTR_VALUE (node, "name"));
+		while (length < col_lengths[iterator]) {
+			printf (" ");
+			length++;
+		}
+		printf ("   ");
+
+		/* get next column */
+		node = axl_node_get_next_called (node, "column");
+
+		/* next iterator */
+		iterator++;
+
 	} /* end while */
 
 	if (num_columns > 0)
 		printf ("\n");
 
 	/* now print columns separators */
-	node = axl_doc_get (doc, "/table/column-description/column");
+	iterator = 0;
+	node     = axl_doc_get (doc, "/table/column-description/column");
 	while (node) {
 		/* print column name */
-		length = strlen (ATTR_VALUE (node, "name"));
+		length = col_lengths[iterator];
 		while (length > 0) {
 			printf ("-");
 			length--;
@@ -473,6 +555,7 @@ void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 
 		/* get next column */
 		node = axl_node_get_next_called (node, "column");
+		iterator++;
 
 	} /* end while */
 	
@@ -484,13 +567,23 @@ void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 	while (node) {
 
 		/* now print each column */
-		node2 = axl_node_get_child_called (node, "d");
+		node2    = axl_node_get_child_called (node, "d");
+		iterator = 0;
 		while (node2) {
 			/* print content */
-			printf ("%s   ", axl_node_get_content (node2, &size));
+			printf ("%s", axl_node_get_content (node2, &size));
+
+			while (size < col_lengths[iterator]) {
+				printf (" ");
+				size++;
+			}
+			printf ("   ");
 
 			/* get next node called */
 			node2 = axl_node_get_next_called (node2, "d");
+
+			/* next iterator */
+			iterator++;
 		} /* end while */
 
 		printf ("\n");
@@ -546,14 +639,14 @@ void tbc_ctl_command_send (const char * command)
 
 	/* wait for reply */
 	frame = vortex_channel_wait_reply (channel, msg_no, wait_reply);
+
+	if (debug_was_enabled)  
+		printf ("DEBUG: content received: %s\n", frame ? (char *) vortex_frame_get_payload (frame) : "null frame received");
 	
 	/* parse content received and check errors */
 	doc = tbc_ctl_parse_content_and_check_errors (frame);
 	if (doc == NULL) 
 		return;
-
-	if (debug_was_enabled) 
-		printf ("DEBUG: content received: %s\n", (char *) vortex_frame_get_payload (frame));
 
 	/* content received */
 	tbc_ctl_print_content_received (doc);
@@ -593,13 +686,21 @@ void tbc_ctl_print_commands (void)
 void tbc_ctl_command_loop (void)
 {
 	char * command;
-	char * prompt = axl_strdup_printf ("tbc-ctl:%s:%s> ", 
-					   vortex_connection_get_host (conn), vortex_connection_get_port (conn));
+	char * prompt = NULL;
 
 	/* get commands available */
 	tbc_ctl_update_commands_available ();
 
 	while (axl_true) {
+		/* build connection prompt */
+		axl_free (prompt);
+		if (vortex_connection_is_ok (conn, axl_false)) {
+			prompt = axl_strdup_printf ("tbc-ctl:%s:%s> ", 
+						    vortex_connection_get_host (conn), vortex_connection_get_port (conn));
+		} else {
+			prompt = axl_strdup ("tbc-ctl (unconnected)> ");
+		} /* end if */
+
 		/* read command */
 		command = readline (prompt);
 
@@ -609,6 +710,16 @@ void tbc_ctl_command_loop (void)
 			msg ("Exiting..");
 			break;
 		}
+
+		/* check for empty commands */
+		axl_stream_trim (command);
+		if (strlen (command) == 0) {
+			axl_free (command);
+			continue;
+		}
+
+		/* save the command */
+		add_history (command);
 
 		/* detect help command */
 		if (axl_cmp (command, "help")) {

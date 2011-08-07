@@ -61,8 +61,9 @@ struct _TurbulenceCtx {
 
 	/* Turbulence current pid (process identifier) */
 	int                  pid;
-	axl_bool             is_main_process;
-	TurbulencePPathDef * child_ppath;
+	/* if the following is NULL this is the main process,
+	 * otherwise it points to the child process */
+	TurbulenceChild    * child;
 	
 	/* some variables used to terminate turbulence. */
 	axl_bool             is_exiting;
@@ -140,10 +141,18 @@ struct _TurbulenceChild {
 	int                  pid;
 	TurbulenceCtx      * ctx;
 	TurbulencePPathDef * ppath;
+
 #if defined(AXL_OS_UNIX)
 	int                  child_connection;
 	char               * socket_control_path;
 #endif
+
+	/* connection management */
+	VortexConnection   * conn_mgr;
+
+	/* ref counting and mutex */
+	int                  ref_count;
+	VortexMutex          mutex;
 };
 
 typedef enum {

@@ -1,0 +1,4 @@
+<extensions>
+  <!-- load MySQL backend support for SASL module -->
+  <ext location="../modules/mod-sasl/.libs/mod-sasl-mysql.so" />
+</extensions>

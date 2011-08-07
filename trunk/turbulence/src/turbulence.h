@@ -66,6 +66,7 @@
 #include <turbulence-process.h>
 #include <turbulence-loop.h>
 #include <turbulence-mediator.h>
+#include <turbulence-child.h>
 
 /** 
  * \addtogroup turbulence
@@ -186,13 +187,13 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
 #define tbc_access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
-int      turbulence_init (TurbulenceCtx * ctx, 
+axl_bool turbulence_init (TurbulenceCtx * ctx, 
 			  VortexCtx     * vortex_ctx,
 			  const char    * config);
 
 void     turbulence_exit                (TurbulenceCtx * ctx,
-					 int             free_ctx,
-					 int             free_vortex_ctx);
+					 axl_bool        free_ctx,
+					 axl_bool        free_vortex_ctx);
 
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value);
 

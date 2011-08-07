@@ -55,7 +55,7 @@ ModCloseFunc       turbulence_module_get_close   (TurbulenceModule * module);
 
 axl_bool           turbulence_module_exists      (TurbulenceModule * module);
 
-void               turbulence_module_register    (TurbulenceModule * module);
+axl_bool           turbulence_module_register    (TurbulenceModule * module);
 
 void               turbulence_module_unregister  (TurbulenceModule * module);
 

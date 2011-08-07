@@ -506,7 +506,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 		msg2 ("Called to temporal profile mask on greetings phase, for connection id=%d (state %p, profile path selected: %p)", 
 		      vortex_connection_get_id (connection), state, state->path_selected);
 	else 
-		msg ("Called to temporal profile=%s with serverName=%s mask on channel creation phase, for connection id=%d (state %p, profile path selected: %p)", 
+		msg ("Called to temporal mask profile=%s with serverName=%s mask on channel creation phase, for connection id=%d (state %p, profile path selected: %p)", 
 		     uri, serverName ? serverName : "", vortex_connection_get_id (connection), state, state->path_selected);
 	
 	/* check if the state has a profile path selected */
@@ -744,7 +744,17 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 						 /* signal to handle start request reply */
 						 ! on_connect, 
 						 channel_num,
-						 uri, profile_content, encoding, serverName, 
+						 uri, profile_content, encoding, 
+						 /* note reference
+						  * received on
+						  * serverName is
+						  * allocated by the
+						  * parent process and
+						  * thus must be
+						  * finished on child
+						  * when no longer
+						  * required */
+						 (char*) serverName, 
 						 frame);
 		msg ("finished turbulence_process_create_child (parent view)..");
 	} else {
@@ -815,14 +825,25 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 
 	/* check if we are in a child process to find a preselected
 	 * profile path (and caused creation of this child)  */
-	if (! ctx->is_main_process && ctx->child_ppath) {
-		msg ("Detected call to select a profile path on a connection id=%d inside a process with a preselected profile path %s, setting..",
-		     vortex_connection_get_id (connection), turbulence_ppath_get_name (ctx->child_ppath));
+	if (ctx->child) {
+		/* check especial case where master process is
+		 * connecting this child: this is the especial BEEP
+		 * connection that exists linking master process with
+		 * each child. */
+		if (vortex_connection_get_listener (connection) == ctx->child->conn_mgr) {
+			msg ("CHILD: detected connection from master process: %s:%s..accepting",
+			     vortex_connection_get_host (connection), vortex_connection_get_port (connection));
+			/* do not configure any mask */
+			return axl_true;
+		} /* end if */
+
+		msg ("CHILD: Detected call to select a profile path on a connection id=%d inside a process with a preselected profile path %s, setting..",
+		     vortex_connection_get_id (connection), turbulence_ppath_get_name (ctx->child->ppath));
 		/* restore child profile path */
 		__turbulence_ppath_set_state (ctx, connection, 
-					      turbulence_ppath_get_id (ctx->child_ppath), NULL);
+					      turbulence_ppath_get_id (ctx->child->ppath), NULL);
 		return axl_true;
-	}
+	} /* end if */
 
 	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
 	msg ("Call to select a profile path at connection time (pre <greetings />), conn-id=%d", 
