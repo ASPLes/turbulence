@@ -16,17 +16,17 @@ CURRENT FRANCIS WORK
       turbulence.conf without being linked to mod-sasl.
     
     - Keep on working on tbc-ctl (check to reenable console
-      stdout). Rewrite the tool to use PyVortex.
-
-* Add support for loading particular modules from inside profile
-  paths. Add support to module to load particular settings according
-  to requested serverName. Work around
-  turbulence_ppath_get_server_name. Updated test_12 to check different
-  databases.
+      stdout) and mod-radmin (adding more commands to manage and check
+      turbulence state).
 
 * Add limit support to control child process created globally and
   childs process created due to profile path configuration.
 
+* Add support for turbulence to split its configuration file into 
+  separate files that are loaded from a directory (like apache2 and
+  similar). That would allow having ports configuration in one file
+  and profile path defined in other file..
+  
 IDEAS & USEFUL HINTS
 
 * It would be great to allow turbulence configuring which kind of
@@ -38,17 +38,24 @@ IDEAS & USEFUL HINTS
   to do automatic empty replies in the case the frame received do not
   do this.
 
-LONG TERM/NEED HELP ELEMENTS
+WANT TO COLLABORATE: PICK ONE! 
 
-* Make mod-sasl to support more SASL profiles (CRAM-MD5, DIGEST-MD5
-and anonymous). 
+* Add support for turbulence to split its configuration file into 
+  separate files that are loaded from a directory (like apache2 and
+  similar). That would allow having ports configuration in one file
+  and profile path defined in other file..
 
-* Create a mod-tls module to activate the TLS profile according to the
-serverName received and other run time values. 
+* Add support to turbulence/vortex to implement bandwidth at context
+  level, connection level and channel level, allowing to control how
+  many bytes can be sent or many bytes can be sent by a group of items.
+  Link this concept with profile paths.
 
-* Add support to mod-sasl and mod-tls to perform multihosting, that
-is, providing different databases and certificates according to the
-serverName (and maybe other configuration values).
+* Make mod-sasl to support more SASL profiles. Note: CRAM-MD5 and 
+  DIGEST-MD5 are deprecated and forces to store passwords in plaintext. 
+  It is better to avoid them.
 
-* Create a connection manager to allow configuring a list of
-connections that can be received by a single host. 
+* Add support for lua (lua language) like mod-python so lua can be used
+  as first class language to write turbulence applications..
+
+* Add support for php like mod-python so php can be used as first class 
+  language to write turbulence applications...

@@ -51,7 +51,9 @@ typedef struct _TurbulenceCtx TurbulenceCtx;
 
 TurbulenceCtx * turbulence_ctx_new            (void);
 
-void            turbulence_ctx_reinit         (TurbulenceCtx * ctx);
+void            turbulence_ctx_reinit         (TurbulenceCtx * ctx, 
+					       TurbulenceChild * child, 
+					       TurbulencePPathDef * def);
 
 void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx, 
 					       VortexCtx     * vortex_ctx);
@@ -84,6 +86,8 @@ axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
 
 void            turbulence_ctx_wait           (TurbulenceCtx * ctx,
 					       long microseconds);
+
+axl_bool        turbulence_ctx_is_child       (TurbulenceCtx * ctx);
 
 void            turbulence_ctx_free           (TurbulenceCtx * ctx);
 

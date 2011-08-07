@@ -298,15 +298,18 @@ axl_bool           turbulence_module_exists      (TurbulenceModule * module)
  * to it.
  * 
  * @param module The module being registered.
+ *
+ * @return axl_false in the case module was not registered, otherwise
+ * axl_true when the module is registered.
  */
-void               turbulence_module_register  (TurbulenceModule * module)
+axl_bool             turbulence_module_register  (TurbulenceModule * module)
 {
 	TurbulenceCtx    * ctx;
 	int                iterator;
 	TurbulenceModule * mod_added;
 
 	/* check values received */
-	v_return_if_fail (module);
+	v_return_val_if_fail (module, axl_false);
 
 	/* get context reference */
 	ctx = module->ctx;
@@ -325,7 +328,7 @@ void               turbulence_module_register  (TurbulenceModule * module)
 			wrn ("skipping module found: %s, already found a module registered with the same name, at path: %s",
 			     module->def->mod_name, mod_added->path);
 			vortex_mutex_unlock (&ctx->registered_modules_mutex);
-			return;
+			return axl_false;
 		} /* end if */
 
 		/* next position */
@@ -336,7 +339,7 @@ void               turbulence_module_register  (TurbulenceModule * module)
 	msg ("Registered modules (%d, %p)", axl_list_length (ctx->registered_modules), ctx->registered_modules);
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
-	return;
+	return axl_true;
 }
 
 /** 
@@ -503,7 +506,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 		case TBC_CLOSE_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->close != NULL) {
-				msg ("closing module: %s", module->def->mod_name);
+				msg ("closing module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				module->def->close (ctx);
 				vortex_mutex_lock (&ctx->registered_modules_mutex);
@@ -512,7 +515,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 		case TBC_RELOAD_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->reconf != NULL) {
-				msg ("reloading module: %s", module->def->mod_name);
+				msg ("reloading module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				module->def->reconf (ctx);
 				vortex_mutex_lock (&ctx->registered_modules_mutex);
@@ -521,7 +524,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 		case TBC_INIT_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->init != NULL) {
-				msg ("initializing module: %s", module->def->mod_name);
+				msg ("initializing module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				if (! module->def->init (ctx)) {
 					/* init failed */
@@ -535,7 +538,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 		case TBC_PPATH_SELECTED_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->ppath_selected != NULL) {
-				msg ("notifying profile path selected on module: %s", module->def->mod_name);
+				msg ("notifying profile path selected on module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				if (! module->def->ppath_selected (ctx, data, data2))  {
 					/* init failed */
@@ -591,7 +594,7 @@ void               turbulence_module_cleanup   (TurbulenceCtx * ctx)
 		return;
 
 	/* release the list and all modules */
-	msg ("Cleaning up turbulence module..");
+	msg ("Cleaning up turbulence %d modules (ctx: %p)..", axl_list_length (ctx->registered_modules), ctx);
 	axl_list_free (ctx->registered_modules);
 	ctx->registered_modules = NULL;
 	vortex_mutex_destroy (&ctx->registered_modules_mutex);

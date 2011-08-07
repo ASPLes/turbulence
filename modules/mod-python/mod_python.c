@@ -54,11 +54,13 @@ TurbulenceCtx * ctx = NULL;
 
 /* reference to the last configuration file loaded */
 axlDoc       * mod_python_conf = NULL;
+
 /* reference to the last site configuration file loaded */
 axlDoc       * mod_python_site_conf = NULL;
 
 /* mutex used to control application top level initialization */
 VortexMutex    mod_python_top_init;
+
 /* control if python itself was initialized on this process */
 axl_bool       mod_python_py_init = axl_false;
 
@@ -169,7 +171,7 @@ finish:
  * @brief Function used to get inside the python application code
  * calling the init function.
  */ 
-axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function)
+axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function, axlNode * node)
 {
 	/* init function has one parameter: PyTurbulencCtx */
 	PyObject * py_tbc_ctx;
@@ -208,7 +210,14 @@ axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function)
 		if (! PyArg_Parse (result, "i", &_result)) {
 			py_vortex_handle_and_clear_exception (NULL);
 			_result = axl_false;
-		}
+		} 
+	} /* end if */
+
+	/* check initialization */
+	if (_result) {
+		/* app started, grab a reference to py_tbc_ctx created */
+		msg ("Annotating PyTurbulenceCtx %p on <%s>", py_tbc_ctx, axl_node_get_name (node));
+		axl_node_annotate_data (node, "py_tbc_ctx", py_tbc_ctx);
 	} /* end if */
 
 	Py_XDECREF (result);
@@ -334,7 +343,7 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 		msg ("app-init %s (%p) entry point found", ATTR_VALUE (location, "app-init"), function);
 
 		/* call to activate module */
-		if (! mod_python_init_app (ctx, function)) {
+		if (! mod_python_init_app (ctx, function, node)) {
 
 			/* remove path */
 			if (! mod_python_remove_first_path ()) {
@@ -386,7 +395,20 @@ static int  mod_python_init (TurbulenceCtx * _ctx) {
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
 
-	/* init mutex */
+	/* check if we are in child and if applications were started
+	 * before (on parent): due to python restrictions, it is not
+	 * possible to server python apps at the parent master process
+	 * and then start the same or other python applications on
+	 * childs */
+	if (turbulence_ctx_is_child (ctx)) {
+		if (mod_python_py_init) {
+			error ("Unable to start mod-python on child having a parent with python apps initialized..");
+			return axl_false;
+		} /* end if */
+	} /* end if */
+	
+
+	/* init mutex and flag (always: parent or child) */
 	vortex_mutex_create (&mod_python_top_init);
 	mod_python_py_init = axl_false;
 
@@ -434,18 +456,45 @@ void mod_python_close_module (axlNode * node, axlNode * location)
 	return;
 }
 
+void mod_python_finalize (axlPointer _ctx) {
+	TurbulenceCtx * ctx = _ctx;
+	PyGILState_STATE    state;
+	
+	msg ("mod-python: calling to finalize engine..");
+
+	/* acquire the GIL */
+	state = PyGILState_Ensure();
+
+	Py_Finalize ();
+
+	msg ("mod-python: engine finalization...done");
+
+	return;
+}
+
 /* mod_python close handler */
 static void mod_python_close (TurbulenceCtx * _ctx) {
 	axlNode           * node;
 	axlNode           * location;
 	PyGILState_STATE    state;
+	VortexCtx         * vortex_ctx = turbulence_ctx_get_vortex_ctx (_ctx);
+	PyTurbulenceCtx   * py_tbc_ctx;
 
-	/* destroy */
-	vortex_mutex_destroy (&mod_python_top_init);
+	/* lock python top init mutex */
+	vortex_mutex_lock (&mod_python_top_init);
 
 	/* check if the module was initialized */
-	if (! mod_python_py_init)
+	if (! mod_python_py_init) {
+		/* release mutex */
+		vortex_mutex_unlock (&mod_python_top_init);
 		return;
+	}
+
+	/* say we are closing */
+	mod_python_py_init = axl_false;
+
+	/* signal py-vortex to stop firing events into python */
+	vortex_ctx_set_data (vortex_ctx, "py:vo:ctx:de", INT_TO_PTR (axl_true));
 
 	/* acquire the GIL */
 	state = PyGILState_Ensure();
@@ -470,6 +519,13 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 		/* call to notify close */
 		mod_python_close_module (node, location);
 
+		/* now get py tbc ctx to ensure release */
+		py_tbc_ctx = axl_node_annotate_get (node, "py_tbc_ctx", axl_false);
+		if (py_tbc_ctx) {
+			msg ("calling to release internal vortex.Ctx reference..");
+			py_turbulence_ctx_nullify_vortex_ctx (py_tbc_ctx);
+		}
+
 		/* get next node */
 		node = axl_node_get_next_called (node, "application");
 	}
@@ -483,12 +539,18 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	axl_doc_free (mod_python_site_conf);
 	mod_python_site_conf = NULL;
 
-	/* now defer python finalize call to avoid calling to py
-	   finalize having references setup inside turbulence and
-	   vortex structures. This will ensure this finalize is called
-	   as late as possible. */
-	Py_Finalize ();
+	/* install finaliztion handler */
+	/* turbulence_ctx_set_data_full (_ctx, "mod:python:finalize", ctx, 
+	   NULL, mod_python_finalize); */
+ 
+	/* unlock */
+	vortex_mutex_unlock (&mod_python_top_init);
 
+	/* destroy */
+	vortex_mutex_destroy (&mod_python_top_init);
+
+	msg ("Calling to finalize python engine (Py_Finalize)..");
+	Py_Finalize ();
 
 	/* not required to release the GIL */
 	return;
@@ -512,12 +574,15 @@ void mod_python_initialize (void)
 		Py_Initialize ();
 
 		/* call to initialize threading API and to acquire the lock */
+		msg ("    init pythreads..");
 		PyEval_InitThreads();
 
 		/* call to init py-turbulence */
+		msg ("    init py-turbulence..");
 		py_turbulence_init ();
 
 		/* configure exception handler */
+		msg ("    configure exception handler..");
 		py_vortex_set_exception_handler (mod_python_exception);
 
 		/* signal python initialized */
@@ -531,9 +596,12 @@ void mod_python_initialize (void)
 /** 
  * @internal Check and load mod-python configuration (python.conf).
  */
-axl_bool mod_python_load_config (void) {
+void mod_python_load_config (TurbulenceCtx    * ctx, 
+			     const char       * workDir, 
+			     const char       * serverName) 
+{
 	char     * config;
-	axlError * error = NULL;
+	axlError * err = NULL;
 
 	if (mod_python_conf == NULL) {
 		/* python.conf not loaded */
@@ -542,58 +610,49 @@ axl_bool mod_python_load_config (void) {
 
 		/* load configuration file */
 		config           = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "python", "python.conf");
-		msg ("loading mod-python config: %s", config);
-		mod_python_conf  = axl_doc_parse_from_file (config, &error);
-		axl_free (config);
-		if (mod_python_conf == NULL) {
-			error ("failed to load mod-python configuration file, error found was: %s", 
-			       axl_error_get (error));
-			axl_error_free (error);
-			return axl_false;
+		if (config) {
+			msg ("loading mod-python config: %s", config);
+			mod_python_conf  = axl_doc_parse_from_file (config, &err);
+			axl_free (config);
+			if (mod_python_conf == NULL) {
+				error ("failed to load mod-python configuration file, error found was: %s", 
+				       axl_error_get (err));
+				axl_error_free (err);
+				err = NULL; /* prepare for next */
+			} /* end if */
 		} /* end if */
+
 	} else {
 		msg ("mod-python config already loaded..");
 	} /* end if */
 
-	return axl_true;
-}
-
-axl_bool mod_python_load_site_config (TurbulenceCtx    * ctx, 
-				      const char       * workDir, 
-				      const char       * serverName,
-				      VortexConnection * conn) 
-{
-
-	char             * site_config;
-	axlError         * err = NULL;
-
 	/* check if site config was not loaded */
-	if (mod_python_site_conf == NULL) {
+	if (mod_python_site_conf == NULL && workDir) {
 
-		site_config = axl_strdup_printf ("%s/python.conf", workDir);
-		msg ("Checking to load site python.conf at %s", site_config);
-		if (vortex_support_file_test (site_config, FILE_EXISTS)) {
+		config = axl_strdup_printf ("%s/python.conf", workDir);
+		msg ("Checking to load site python.conf at %s", config);
+		if (vortex_support_file_test (config, FILE_EXISTS)) {
 			
 			msg ("Found site %s/python.conf, loading..", workDir);
-			mod_python_site_conf  = axl_doc_parse_from_file (site_config, &err);
+			mod_python_site_conf  = axl_doc_parse_from_file (config, &err);
+			axl_free (config);
+
 			/* check parse result */
 			if (mod_python_site_conf == NULL) {
 				error ("failed to load mod-python site configuration file at %s, error found was: %s", 
-				       site_config, axl_error_get (err));
-				axl_free (site_config);
+				       config, axl_error_get (err));
+				axl_free (config);
 				axl_error_free (err);
-				return axl_false;
 			} /* end if */
 
 		} /* end if */
-		axl_free (site_config);
 	} /* end if */
 
-	/* now init applications that may not be already initialized */
-	if (! mod_python_init_applications (ctx, mod_python_site_conf, workDir, serverName, conn)) 
-		return axl_false;
+	/* now ensure all applications inside serverName or all of
+	 * them not */
+	
 
-	return axl_true;
+	return;
 }
 
 /** 
@@ -615,6 +674,16 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	/* lock to check and initialize */
 	vortex_mutex_lock (&mod_python_top_init);
 
+	/* check and load mod-python system config */
+	mod_python_load_config (ctx, workDir, serverName);
+
+	/* if no configuration was loaded, just return */
+	if (mod_python_conf == NULL && mod_python_site_conf == NULL) {
+		msg ("mod-python: no system or site config was found, not starting any python app");
+		vortex_mutex_unlock (&mod_python_top_init);
+		return axl_true; 
+	} /* end if */
+
 	if (! mod_python_py_init) {
 		/* initialize python engine and configure it to use with
 		   mod-python */
@@ -627,14 +696,6 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	/* acquire the GIL */
 	state  = PyGILState_Ensure();
 
-	/* check and load mod-python config */
-	if (! mod_python_load_config ()) {
-		/* release the GIL */
-		PyGILState_Release (state); 
-		vortex_mutex_unlock (&mod_python_top_init);
-		return axl_false;
-	}
-
 	/* for each application found, register it and call to
 	 * initialize its function */
 	if (! mod_python_init_applications (ctx, mod_python_conf, workDir, serverName, conn)) {
@@ -644,7 +705,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	}
 
 	/* now load python applications at the working dir if it is found */
-	if (! mod_python_load_site_config (ctx, workDir, serverName, conn)) {
+	if (! mod_python_init_applications (ctx, mod_python_site_conf, workDir, serverName, conn)) {
 		PyGILState_Release (state); 
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
@@ -895,7 +956,7 @@ END_C_DECLS
  * place some special files that are loaded especific profile path
  * activated. In many cases it is interesting to get where is this
  * working dir located so the BEEP application can store files using
- * current running uid/gid. To do so, you can use the following:
+p * current running uid/gid. To do so, you can use the following:
  *
  * \code
  * # run this at the application_init python method

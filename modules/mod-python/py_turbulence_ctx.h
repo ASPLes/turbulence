@@ -51,6 +51,8 @@ void       py_turbulence_ctx_set      (PyObject      * py_tbc_ctx,
 
 PyObject * py_turbulence_ctx_create   (TurbulenceCtx * ctx);
 
+void       py_turbulence_ctx_nullify_vortex_ctx (PyTurbulenceCtx * self);
+
 void       init_turbulence_ctx        (PyObject * module);
 
 #endif

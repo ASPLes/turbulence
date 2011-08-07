@@ -63,6 +63,7 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 	int exit_status = 0;
 	int pid;
 	int ppath_id;
+
 	if (_signal == SIGHUP) {
 		msg ("received reconf signal, handling..");
 		/* notify */

@@ -45,25 +45,6 @@
 #include <sys/wait.h>
 #include <sys/un.h>
 
-#if !defined(random)
-long random (void);
-#endif
-
-void turbulence_process_free_child_data (TurbulenceChild * child)
-{
-	if (child == NULL)
-		return;
-#if defined(AXL_OS_UNIX)
-	/* unlink (child->socket_control_path);*/
-	axl_free (child->socket_control_path);
-	child->socket_control_path = NULL;
-	vortex_close_socket (child->child_connection);
-#endif
-
-	axl_free (child);
-	return;
-}
-
 /** 
  * @internal Function used to init process module (for its internal
  * handling).
@@ -89,52 +70,46 @@ void turbulence_process_init         (TurbulenceCtx * ctx, axl_bool reinit)
 }
 
 
-typedef struct _TurbulenceProcessFinished {
-	VortexCtx       * vortex_ctx;
-	TurbulenceChild * child;
-} TurbulenceProcessFinished;
-
-axlPointer __turbulence_process_finished (TurbulenceProcessFinished * data)
+axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 {
-	TurbulenceChild  * child      = data->child;
-	VortexCtx        * vortex_ctx = data->vortex_ctx;
-	TurbulenceCtx    * ctx        = child->ctx;
+	VortexCtx        * vortex_ctx = ctx->vortex_ctx;
 	int                delay      = 300000; /* 300ms */
 	int                tries      = 10; 
 
-	/* free pointer received */
-	axl_free (data);
-	
 	while (tries > 0) {
 
-		/* check if the reader has connections watched at this time */
-		if (vortex_reader_connections_watched (vortex_ctx) > 0) {
-			msg2 ("cancelled child process termination because new connections are now handled, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d",
+		/* check if the conn manager has connections watched
+		 * at this time */
+		vortex_mutex_lock (&ctx->conn_mgr_mutex);
+		if (axl_hash_items (ctx->conn_mgr_hash) > 0) {
+			msg ("CHILD: cancelled child process termination because new connections are now handled, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d",
 			      tries, delay, 
 			      vortex_reader_connections_watched (vortex_ctx), 
 			      axl_hash_items (ctx->conn_mgr_hash));
+			vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 			return NULL;
-		}
+		} /* end if */
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 		
 		/* finish current thread if turbulence is existing */
 		if (ctx->is_exiting) {
-			msg2 ("Found turbulence existing, finishing child process termination thread signaled due to vortex reader stop");
+			msg ("CHILD: Found turbulence existing, finishing child process termination thread signaled due to vortex reader stop");
 			return NULL;
 		}
 
 		/* reduce tries, wait */
-		msg2 ("delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-existing=%d",
-		      tries, delay,
-		      vortex_reader_connections_watched (vortex_ctx), 
-		      axl_hash_items (ctx->conn_mgr_hash),
-		      ctx->is_exiting);
+		msg ("CHILD: delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-existing=%d",
+		     tries, delay,
+		     vortex_reader_connections_watched (vortex_ctx), 
+		     axl_hash_items (ctx->conn_mgr_hash),
+		     ctx->is_exiting);
 		tries--;
 		turbulence_sleep (ctx, delay);
 	}
 
 	/* unlock waiting child */
-	msg2 ("calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p)..",
-	      ctx, ctx->child_wait);
+	msg ("CHILD: calling to unlock due to vortex reader stoped (no more connections to be watched): %p (%p, vortex refs: %d)..",
+	     ctx, ctx->child_wait, vortex_ctx_ref_count (ctx->vortex_ctx));
 	if (ctx && ctx->child_wait) {
 		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
 	}
@@ -142,12 +117,9 @@ axlPointer __turbulence_process_finished (TurbulenceProcessFinished * data)
 }
 
 
-void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
+void turbulence_process_check_for_finish (TurbulenceCtx * ctx)
 {
 	VortexThread                thread;
-	TurbulenceProcessFinished * data;
-	TurbulenceChild           * child = user_data;
-	TurbulenceCtx             * ctx   = child->ctx;
 
 	/* do not implement any notification if the turbulence process
 	   is itself finishing */
@@ -156,7 +128,7 @@ void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
 
 	/* check if the child process was configured with a reuse
 	   flag, if not, notify exist right now */
-	if (! child->ppath->reuse) {
+	if (! ctx->child->ppath->reuse) {
 		/* so it is a child process without reuse flag
 		   activated, exit now */
 		if (ctx && ctx->child_wait) {
@@ -172,15 +144,11 @@ void turbulence_process_finished (VortexCtx * vortex_ctx, axlPointer user_data)
 	   reader, so he can listen for new registration while we do
 	   the wait code for new connections... */
 
-	/* build data to be notified */
-	data             = axl_new (TurbulenceProcessFinished, 1);
-	data->vortex_ctx = vortex_ctx;
-	data->child      = user_data;
-	
 	/* create data to be notified */
+	msg ("CHILD: initiated child termination (checking for rogue connections..");
 	if (! vortex_thread_create (&thread,
 				    (VortexThreadFunc) __turbulence_process_finished,
-				    data, VORTEX_THREAD_CONF_END)) {
+				    ctx, VORTEX_THREAD_CONF_END)) {
 		error ("Failed to create thread to watch reader state and notify process termination (code %d) %s",
 		       errno, vortex_errno_get_last_error ());
 	}
@@ -621,14 +589,22 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		if (! vortex_channel_0_handle_start_msg_reply (TBC_VORTEX_CTX (ctx), conn, channel_num,
 							       profile, profile_content,
 							       encoding, serverName, frame)) {
-			error ("Channel start not accepted on child process, finising process=%d, closing conn id=%d..",
-			       getpid (), vortex_connection_get_id (conn));
+			error ("Channel start not accepted on child=%d process, closing conn id=%d..sending error reply",
+			       vortex_getpid (), vortex_connection_get_id (conn));
 
 			/* wait here so the error message reaches the
 			 * remote BEEP peer */
 			channel0 = vortex_connection_get_channel (conn, 0);
 			if (channel0 != NULL) 
 				vortex_channel_block_until_replies_are_sent (channel0, 1000);
+
+			/* because this connection is being handled at
+			 * the child and the child did not accepted
+			 * it, shutdown to force its removal */
+			error ("   shutting down connection id=%d (refs: %d) because it was not accepted on child process due to start handle negative reply", 
+			       vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
+			turbulence_conn_mgr_unregister (ctx, conn);
+			vortex_connection_shutdown (conn);
 		} else {
 			msg ("Channel start accepted on child profile=%s, serverName=%s accepted on child", profile, serverName ? serverName : "");
 		}
@@ -871,75 +847,129 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 	return axl_true; /* don't close descriptor */
 }
 
-axl_bool __turbulence_process_release_parent_connections_foreach  (axlPointer key, axlPointer data, axlPointer user_data, axlPointer user_data2) 
+axl_bool __turbulence_process_release_parent_connections_channels_foreach (axlPointer _channel_num, axlPointer _channel, axlPointer _ctx)
 {
-	TurbulenceConnMgrState * state         = data; 
+	VortexChannel * channel = _channel;
+	TurbulenceCtx * ctx     = _ctx;
+
+	if (vortex_channel_ref_count (channel) > 1) {
+		msg ("CHILD: normalizing channel=%d ref count: %d to 1", vortex_channel_get_number (channel), vortex_channel_ref_count (channel));
+		while (vortex_channel_ref_count (channel) > 1) 
+			vortex_channel_unref (channel);
+	} /* end if */
+	
+	return axl_false; /* make foreach to continue */
+}
+
+void __turbulence_process_release_parent_connections_foreach  (VortexConnection * conn, axlPointer user_data, axlPointer user_data2, axlPointer user_data3) 
+{
 	TurbulenceChild        * parent        = user_data;
-	TurbulenceCtx          * ctx           = parent->ctx;
-	int                      client_socket = vortex_connection_get_socket (state->conn);
 	VortexConnection       * child_conn    = user_data2;
+	TurbulenceCtx          * ctx           = parent->ctx;
+	TurbulenceConnMgrState * state;
+
+	int                      client_socket = vortex_connection_get_socket (conn);
 	int                      ref_count;
+	int                    * additional_count = user_data3;
+
+	/* ensure we remove reference to the listener that created the
+	 * connection. The key (_vo:li:master) used to access listener
+	 * associated is defined src/vortex_listener.c at vortex
+	 * sources. We we do here is to ensure all connections have no
+	 * listener reference (including the one that produced this
+	 * child). */
+	vortex_connection_delete_key_data (conn, "_vo:li:master");
+
+	/* get state */
+	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
 
 	/* do handle connections already nullified */
-	if (state->conn == NULL)
-		return axl_false;
+	if (state == NULL) {
+		msg ("CHILD: found parent connection id=%d (socket: %d) with no state associated..proceed to send it to parent", 
+		     vortex_connection_get_id (conn), client_socket);
+	} else {
 
-	/* remove installed handlers (channel added and channel removed) */
-	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_ADD_HANDLER, state->added_channel_id);
-	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_REMOVE_HANDLER, state->removed_channel_id);
+		/* nullify state */
+		state->conn = NULL;
 
-	/* remove previous on close (defined in the parent context no
-	   matter if the connection is handled by the parent or the
-	   current child) */
-	vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, state);
+		/* remove installed handlers (channel added and channel removed) */
+		vortex_connection_remove_handler (conn, CONNECTION_CHANNEL_ADD_HANDLER, state->added_channel_id);
+		vortex_connection_remove_handler (conn, CONNECTION_CHANNEL_REMOVE_HANDLER, state->removed_channel_id);
+
+		/* remove previous on close (defined in the parent context no
+		   matter if the connection is handled by the parent or the
+		   current child) */
+		if (! vortex_connection_remove_on_close_full (conn, turbulence_conn_mgr_on_close, ctx)) 
+			wrn ("CHILD: Reference to conn_mgr_on_close handler was not removed for conn id=%d", 
+			     vortex_connection_get_id (conn));
+	} /* end if */
 
 	/* don't close/send the socket that the child must handle */
 	if (vortex_connection_get_id (child_conn) == 
-	    vortex_connection_get_id (state->conn)) {
-		ref_count = vortex_connection_ref_count (state->conn);
-		msg ("NOT Sending connection id=%d to parent (now handled by child) (ref count: %d, pointer: %p, role: %d)", 
-		     vortex_connection_get_id (state->conn),
+	    vortex_connection_get_id (conn)) {
+		ref_count = vortex_connection_ref_count (conn);
+		msg ("CHILD: NOT Sending connection id=%d to parent (now handled by child) (ref count: %d, pointer: %p, role: %d)", 
+		     vortex_connection_get_id (conn),
 		     ref_count,
-		     state->conn, vortex_connection_get_role (state->conn));
-
+		     conn, vortex_connection_get_role (conn));
+		
 		/* reduce reference count */
-		vortex_connection_unref (state->conn, "child process handled");
+		vortex_connection_unref (conn, "child process handled");
+		
+		/* flag connection as managed */
+		vortex_connection_set_data (conn, "tbc:conn:prep", INT_TO_PTR (axl_true));
 
-		state->conn = NULL;
-		return axl_false;
-	}
+		return;
+	} /* end if */
 
 	/* send the socket descriptor to the parent to avoid holding a
 	   bucket in the child (don't wait) */
 	if (! turbulence_process_send_socket (client_socket, parent, "s", 1)) {
-		error ("Failed to send socket to parent process, error was: %d (%s)", errno, vortex_errno_get_last_error ());
-		return axl_false;
+		error ("CHILD: Failed to send socket (%d) from conn-id=%d to parent process, error was: %d (%s)", 
+		       client_socket, vortex_connection_get_id (conn), errno, vortex_errno_get_last_error ());
 	} /* end if */
 
 	/* get connection ref count */
-	ref_count = vortex_connection_ref_count (state->conn);
-	msg ("Connection id=%d sent to parent (ref count: %d, pointer: %p, role: %d)", 
-	     vortex_connection_get_id (state->conn),
+	ref_count = vortex_connection_ref_count (conn);
+	msg ("CHILD: Connection id=%d (socket: %d) sent to parent (ref count: %d, pointer: %p, role: %d)", 
+	     vortex_connection_get_id (conn),
+	     client_socket,
 	     ref_count,
-	     state->conn, vortex_connection_get_role (state->conn));
-
-	/* terminate the connection */
-	vortex_connection_set_close_socket (state->conn, axl_false);
-	vortex_connection_shutdown (state->conn); 
+	     conn, vortex_connection_get_role (conn));
 
 	/* now unref the connection as much times as required leaving
 	   the ref count equal to 1 so next calls to vortex
 	   reinitialization, which reinitializes the vortex reader,
 	   will release its reference */
 	while (ref_count > 1)  {
-		vortex_connection_unref (state->conn, "child process");
+		vortex_connection_unref (conn, "child process");
 		ref_count--;
 	}
 
-	/* nullify state */
-	state->conn = NULL;
+	/* now normalize channels ref count associated to the connection */
+	vortex_connection_foreach_channel (conn, __turbulence_process_release_parent_connections_channels_foreach, ctx);
 
-	return axl_false;
+	/* terminate the connection */
+	vortex_connection_set_close_socket (conn, axl_false);
+	vortex_connection_shutdown (conn); 
+
+	/* acquire a reference to the context to contrarest reference
+	 * released by vortex reader on reinit: this is done by
+	 * counting how many reference we have to acquire after
+	 * vortex_ctx_reinit */
+	(*additional_count) += 1;
+
+	return;
+}
+
+void __turbulence_process_release_parent_connections_print_status (VortexConnection * conn, axlPointer user_data, axlPointer user_data2, axlPointer user_data3)
+{
+	TurbulenceCtx * ctx        = user_data;
+
+	msg ("  conn-id: %d, role: %d, refs: %d", 
+	     vortex_connection_get_id (conn), vortex_connection_get_role (conn), vortex_connection_ref_count (conn));
+	
+	return;
 }
 
 /** 
@@ -962,13 +992,153 @@ axl_bool __turbulence_process_release_parent_connections_foreach  (axlPointer ke
  * child is added to the newly initialized connection manager hash by
  * issuing a turbulence_conn_mgr_register.
  */
-void __turbulence_process_release_parent_connections (TurbulenceCtx * ctx, TurbulenceChild * parent, VortexConnection * child_conn)
+int __turbulence_process_release_parent_connections (TurbulenceCtx * ctx, TurbulenceChild * parent, VortexConnection * child_conn)
 {
+	int ref_counts = 0;
+
 	/* clear the hash */
-	axl_hash_foreach2 (ctx->conn_mgr_hash, __turbulence_process_release_parent_connections_foreach, parent, child_conn);
+	vortex_reader_foreach_offline (ctx->vortex_ctx, __turbulence_process_release_parent_connections_foreach, parent, child_conn, &ref_counts);
+
+	/* check the connection the child is going to handle was prepared (if not, calling manually to prepare) */
+	if (! vortex_connection_get_data (child_conn, "tbc:conn:prep")) {
+		msg ("CHILD: found child activate connection id=%d (refs: %d) not prepared by parent release, doing manually",
+		     vortex_connection_get_id (child_conn), vortex_connection_ref_count (child_conn));
+
+		__turbulence_process_release_parent_connections_foreach (child_conn, parent, child_conn, &ref_counts);
+	}
+
+	/* now print status and get the number of additional ref count
+	 * we have to do to contrarest references removed by
+	 * connections deallocated by vortex reader
+	 * reinitialization. */
+	msg ("After preparing connection release for next vortex engine startup, connections registered and its status is");
+	vortex_reader_foreach_offline (ctx->vortex_ctx, __turbulence_process_release_parent_connections_print_status, ctx, NULL, NULL);
 
 	/* reinit */
 	turbulence_conn_mgr_init (ctx, axl_true);
+	return ref_counts;
+}
+
+/** 
+ * @internal Function called when the BEPP internal connection from
+ * the parent to the child is completed (no mater the result).
+ */
+void __turbulence_process_complete_management_connection_aux (VortexConnection * conn, axlPointer _child)
+{
+	TurbulenceChild * child = _child;
+	TurbulenceCtx   * ctx   = child->ctx;
+
+	/* configure connection */
+	child->conn_mgr = conn;
+
+	/* unregister from conn mgr */
+	turbulence_conn_mgr_unregister (ctx, conn);
+
+	msg ("PARENT: received reply for child conn_mgr from parent, conn-id=%d status: %d",
+	     vortex_connection_get_id (conn), vortex_connection_is_ok (conn, axl_false));
+	if (! vortex_connection_is_ok (child->conn_mgr, axl_false)) {
+		error ("PARENT: Unable to create connection management associated to the child process");
+
+		/* close the connection */
+		vortex_connection_close (child->conn_mgr);
+		child->conn_mgr = NULL;
+		return;
+	} /* end if */
+
+	msg ("PARENT: Management connection id=%d created for child pid=%d", 
+	     vortex_connection_get_id (child->conn_mgr), child->pid);
+	return;
+}
+
+/** 
+ * @internal This function is called by the parent and the child
+ * process to complete the connection that will provide access between
+ * the child and parent.
+ */
+void __turbulence_process_complete_management_connection (TurbulenceCtx * ctx, TurbulenceChild * child)
+{
+	VortexConnection * conn_mgr;
+	VORTEX_SOCKET      session;
+
+	/* get a reference to the current listener */
+	conn_mgr = child->conn_mgr;
+
+	msg ("PARENT: creating child management connection using listener socket: %d", vortex_connection_get_socket (conn_mgr));
+
+	/* connect to this listener (and set NULL on
+	 * child->conn_mgr) */
+	child->conn_mgr = vortex_connection_new (ctx->vortex_ctx, 
+						 vortex_connection_get_local_addr (conn_mgr),
+						 vortex_connection_get_local_port (conn_mgr),
+						 __turbulence_process_complete_management_connection_aux, child);
+	/* get socket */
+	session = vortex_connection_get_socket (conn_mgr);
+	vortex_connection_set_close_socket (conn_mgr, axl_false);
+
+	/* close listener created previously: though this connection
+	 * was created with vortex_listener_new and thus we should use
+	 * vortex_connection_shutdown, in this case we use
+	 * vortex_connection_close because we have acquired a reference */
+	msg ("PARENT: releasing connection used to create the child connection id=%d management: ref %d",
+	     vortex_connection_get_id (conn_mgr),
+	     vortex_connection_ref_count (conn_mgr));
+	vortex_connection_shutdown (conn_mgr);
+	vortex_connection_close (conn_mgr);
+
+	/* now send socket to the child */ 
+	if (! turbulence_process_send_socket (session, child, "s", 1))  {
+		error ("PARENT: Unable to send socket associated to the management connection associated to the child process");
+		return;
+	} /* end if */
+
+	return;
+}
+
+void __turbulence_process_prepare_logging (TurbulenceCtx * ctx, axl_bool is_parent, int * general_log, int * error_log, int * access_log, int * vortex_log)
+{
+	/* check if log is enabled or not */
+	if (! turbulence_log_is_enabled (ctx))
+		return;
+
+	if (is_parent) {
+
+		/* support for general-log */
+		turbulence_log_manager_register (ctx, LOG_REPORT_GENERAL, general_log[0]); /* register read end */
+		vortex_close_socket (general_log[1]);                                      /* close write end */
+		
+		/* support for error-log */
+		turbulence_log_manager_register (ctx, LOG_REPORT_ERROR, error_log[0]); /* register read end */
+		vortex_close_socket (error_log[1]);                                      /* close write end */
+			
+		/* support for access-log */
+		turbulence_log_manager_register (ctx, LOG_REPORT_ACCESS, access_log[0]); /* register read end */
+		vortex_close_socket (access_log[1]);                                      /* close write end */
+		
+		/* support for vortex-log */
+		turbulence_log_manager_register (ctx, LOG_REPORT_VORTEX, vortex_log[0]); /* register read end */
+		vortex_close_socket (vortex_log[1]);                                      /* close write end */
+
+		return;
+	} /* end if */
+
+	/** CHILD CASE: log redirected to parent pipe **/
+
+	/* configure new general log */
+	turbulence_log_configure (ctx, LOG_REPORT_GENERAL, general_log[1]); /* configure write end */
+	vortex_close_socket (general_log[0]);                               /* close read end */
+	
+	/* configure new error log */
+	turbulence_log_configure (ctx, LOG_REPORT_ERROR, error_log[1]); /* configure write end */
+	vortex_close_socket (error_log[0]);                             /* close read end */
+
+	/* configure new access log */
+	turbulence_log_configure (ctx, LOG_REPORT_ACCESS, access_log[1]); /* configure write end */
+	vortex_close_socket (access_log[0]);                              /* close read end */
+	
+	/* configure new vortex log */
+	turbulence_log_configure (ctx, LOG_REPORT_VORTEX, vortex_log[1]); /* configure write end */
+	vortex_close_socket (vortex_log[0]);                              /* close read end */
+
 	return;
 }
 
@@ -984,7 +1154,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 				      const char          * profile,
 				      const char          * profile_content,
 				      VortexEncoding        encoding,
-				      const char          * serverName,
+				      char                * serverName,
 				      VortexFrame         * frame)
 {
 	int                pid;
@@ -992,8 +1162,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	TurbulenceChild  * child;
 	int                client_socket;
 	VortexAsyncQueue * queue;
-	char             * temp_dir;
-
+	
 	/* pipes to communicate logs from child to parent */
 	int                general_log[2] = {-1, -1};
 	int                error_log[2]   = {-1, -1};
@@ -1001,10 +1170,12 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	int                vortex_log[2]  = {-1, -1};
 	TurbulenceLoop   * control;
 	const char       * ppath_name;
+	int                ref_counts;
+	VortexChannel    * channel0;
 
 	/* check if we are main process (only main process can create
 	 * childs, at least for now) */
-	if (! ctx->is_main_process) {
+	if (ctx->child) {
 		error ("Internal runtime error, child process %d is trying to create another subchild, closing conn-id=%d", 
 		       ctx->pid, vortex_connection_get_id (conn));
 		vortex_connection_shutdown (conn);
@@ -1050,32 +1221,19 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	} /* end if */
 
 	/* create control socket path */
-	child        = axl_new (TurbulenceChild, 1);
-	child->ppath = def;
-
-	/* create socket path */
-	child->socket_control_path = axl_strdup_printf ("%s%s%s%s%ld.tbc",
-							turbulence_runtime_datadir (ctx),
-							VORTEX_FILE_SEPARATOR,
-							"turbulence",
-							VORTEX_FILE_SEPARATOR,
-							random ());
-	/* check base dir exists */
-	temp_dir = turbulence_base_dir (child->socket_control_path);
-	if (temp_dir && ! vortex_support_file_test (temp_dir, FILE_EXISTS)) {
-		/* base directory having child socket control do not exists */
-		wrn ("run time directory %s do not exists, creating..", temp_dir);
-		if (! turbulence_create_dir (temp_dir)) {
-			error ("Unable to create directory to hold child socket connection, unable to create child process..");
-			axl_free (temp_dir);
-			vortex_mutex_unlock (&ctx->child_process_mutex);
-			return;
-		} /* end if */
+	child        = turbulence_child_new (ctx, def);
+	if (child == NULL) {
+		/* unlock child process mutex */
+		vortex_mutex_unlock (&ctx->child_process_mutex);
+		/* close connection that would handle child process */
+		vortex_connection_shutdown (conn);
+		return;
 	} /* end if */
-	/* free temporal directory */
-	axl_free (temp_dir);
 
-	msg ("Creating socket_control_path = '%s'", child->socket_control_path);
+	/* unregister from connection manager */
+	msg ("PARENT: created temporal listener to prepare child management connection id=%d (socket: %d): %p (refs: %d)", 
+	     vortex_connection_get_id (child->conn_mgr), vortex_connection_get_socket (child->conn_mgr),
+	     child->conn_mgr, vortex_connection_ref_count (child->conn_mgr));
 
 	/* call to fork */
 	pid = fork ();
@@ -1083,7 +1241,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		msg ("PARENT: child process created pid=%d, selected-ppath=%s", pid, def->path_name ? def->path_name : "(empty)");
 		/* unwatch the connection from the parent to avoid
 		   receiving more content which now handled by the
-		   child and unregister from connection manager */
+		   child */
 		vortex_reader_unwatch_connection (CONN_CTX (conn), conn);
 
 		/* update child pid and additional data */
@@ -1092,9 +1250,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 		/* create child connection socket */
 		if (! __turbulence_process_create_child_connection (child)) {
+			error ("Unable to create child process connection to pass sockets for pid=%", pid);
 			vortex_mutex_unlock (&ctx->child_process_mutex);
 			vortex_connection_shutdown (conn);
-			turbulence_process_free_child_data (child);
+			turbulence_child_unref (child);
 			return;
 		}
 
@@ -1104,9 +1263,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		/* send the socket descriptor to the child to avoid
 		   holding a bucket in the parent */
 		if (! turbulence_process_send_socket (client_socket, child, "s", 1)) {
+			error ("Unable to send socket associated to the connection that originated the child process");
 			vortex_mutex_unlock (&ctx->child_process_mutex);
 			vortex_connection_shutdown (conn);
-			turbulence_process_free_child_data (child);
+			turbulence_child_unref (child);
 			return;
 		}
 
@@ -1115,57 +1275,60 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		vortex_connection_shutdown (conn);
 
 		/* register pipes to receive child logs */
-		if (turbulence_log_is_enabled (ctx)) {
-			/* support for general-log */
-			turbulence_log_manager_register (ctx, LOG_REPORT_GENERAL, general_log[0]); /* register read end */
-			vortex_close_socket (general_log[1]);                                      /* close write end */
-
-			/* support for error-log */
-			turbulence_log_manager_register (ctx, LOG_REPORT_ERROR, error_log[0]); /* register read end */
-			vortex_close_socket (error_log[1]);                                      /* close write end */
-
-			/* support for access-log */
-			turbulence_log_manager_register (ctx, LOG_REPORT_ACCESS, access_log[0]); /* register read end */
-			vortex_close_socket (access_log[1]);                                      /* close write end */
-
-			/* support for vortex-log */
-			turbulence_log_manager_register (ctx, LOG_REPORT_VORTEX, vortex_log[0]); /* register read end */
-			vortex_close_socket (vortex_log[1]);                                      /* close write end */
-		} /* end if */
+		__turbulence_process_prepare_logging (ctx, axl_true, general_log, error_log, access_log, vortex_log);
 
 		/* register the child process identifier */
 		axl_hash_insert_full (ctx->child_process,
 				      /* key and destroy func */
 				      INT_TO_PTR (turbulence_ppath_get_id (def)), NULL,
 				      /* data and destroy func */
-				      child, (axlDestroyFunc) turbulence_process_free_child_data);
+				      child, (axlDestroyFunc) turbulence_child_unref);
+
 		vortex_mutex_unlock (&ctx->child_process_mutex);
+
+		/* create management connection with child process */
+		__turbulence_process_complete_management_connection (ctx, child);
 
 		/* record child */
 		msg ("PARENT=%d: Created child process pid=%d (childs: %d)", getpid (), pid, turbulence_process_child_count (ctx));
 		return;
 	} /* end if */
-	msg ("CHILD: child started with process created pid=%d, selected-ppath=%s (ppath id: %d)", 
-	     getpid (), def->path_name ? def->path_name : "(empty)", turbulence_ppath_get_id (def));
 
-	/* do not log messages until turbulence_ctx_reinit finishes */
-	child_ctx        = ctx;
-
-	/* record profile path selected */
-	ctx->child_ppath = def;
+	/** NOTE: don't place msg/error/wrn calls untill next call to
+	 * turbulence_ctx_reinit to avoid showing wrong pids on
+	 * logs */
 
 	/* reinit TurbulenceCtx */
-	turbulence_ctx_reinit (ctx);
+	turbulence_ctx_reinit (ctx, child, def);
+
+	/*** NOTE: the following child_ctx is configured for signal handling ***/
+	child_ctx = ctx;
+
+	msg ("CHILD: child started with process created pid=%d, selected-ppath=%s (ppath id: %d, vortex ctx refs: %d), conn activation id=%d, refs: %d, status: %d", 
+	     getpid (), def->path_name ? def->path_name : "(empty)", turbulence_ppath_get_id (def), vortex_ctx_ref_count (ctx->vortex_ctx),
+	     vortex_connection_get_id (conn), vortex_connection_ref_count (conn), vortex_connection_is_ok (conn, axl_false));
+
+	/* normalize reference counting for the connection */
+	while (vortex_connection_ref_count (conn) < 2) {
+		if (! vortex_connection_ref (conn, "child normalize")) {
+			error ("Failed to acquire references to move the connection id=%d to ref count=3", 
+			       vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
+			vortex_connection_shutdown (conn);
+			turbulence_child_unref (child);
+			return; 
+		} else {
+			msg ("CHILD: normalizing conn id=%d ref count to %d (must have 3)", 
+			     vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
+		} /* end if */
+	} /* end if */
 
 	/* now create child connection, connecting this way with the
 	   parent */
-	/* create child connection socket */
-	child->ctx = ctx;
 	msg ("CHILD: process creating control connection..");
 	if (! __turbulence_process_create_parent_connection (child)) {
 	        error ("Failed to create parent connection, finishing child process..");
 		vortex_connection_shutdown (conn);
-		turbulence_process_free_child_data (child);
+		turbulence_child_unref (child);
 		return;
 	}
 
@@ -1173,28 +1336,13 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	   sockets) */
 	msg ("CHILD: calling to release all (parent) connections but conn-id=%d", 
 	     vortex_connection_get_id (conn));
-	__turbulence_process_release_parent_connections (ctx, child, conn);
+	ref_counts = __turbulence_process_release_parent_connections (ctx, child, conn);
 	
-	msg ("CHILD: all parent connections released, continue with child process preparation..");
+	msg ("CHILD: all parent connections released, continue with child process preparation (vortex ctx refs: %d, additional ref counts: %d)..",
+	     vortex_ctx_ref_count (ctx->vortex_ctx), ref_counts);
 
 	/* check if log is enabled to redirect content to parent */
-	if (turbulence_log_is_enabled (ctx)) {
-		/* configure new general log */
-		turbulence_log_configure (ctx, LOG_REPORT_GENERAL, general_log[1]); /* configure write end */
-		vortex_close_socket (general_log[0]);                               /* close read end */
-
-		/* configure new error log */
-		turbulence_log_configure (ctx, LOG_REPORT_ERROR, error_log[1]); /* configure write end */
-		vortex_close_socket (error_log[0]);                             /* close read end */
-
-		/* configure new access log */
-		turbulence_log_configure (ctx, LOG_REPORT_ACCESS, access_log[1]); /* configure write end */
-		vortex_close_socket (access_log[0]);                              /* close read end */
-
-		/* configure new vortex log */
-		turbulence_log_configure (ctx, LOG_REPORT_VORTEX, vortex_log[1]); /* configure write end */
-		vortex_close_socket (vortex_log[0]);                              /* close read end */
-	}
+	__turbulence_process_prepare_logging (ctx, /* is_parent */axl_false, general_log, error_log, access_log, vortex_log);
 
 	/* cleanup log stuff used only by the parent process */
 	turbulence_loop_close (ctx->log_manager, axl_false);
@@ -1210,22 +1358,70 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 				   axl_false,
 				   turbulence_process_signal_received);
 
-	msg ("CHILD: Created child process: %d", getpid ());
-
 	/* reinit vortex ctx */
 	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 	vortex_ctx_reinit (vortex_ctx);
 
+	/* now acquire one reference for temporal listener.. */
+	/* ..and another one for connection that is about being
+	 * accepted. 
+	 *
+	 * The following code acquires 3 references + ref_counts
+	 * content, which represents connections that will be
+	 * terminated by vortex engine restart (and thus causing a
+	 * vortex_ctx_unref). 
+	 *
+	 * The idea is that, vortex ctx should have 1 + 3 references
+	 * where these are: 1 for the object itself and 3 more for the
+	 * connection that is about to handle this child, the temporal
+	 * listener used to interconnect the master process and the
+	 * child, and a reference owned by TurbulenceCtx object at the
+	 * child.).
+	 *
+	 * We do this because vortex_ctx_reinit sets to 1 the internal
+	 * reference counting found inside vortex_ctx. */
+	ref_counts += 3;
+	while (ref_counts > 0) {
+		vortex_ctx_ref (vortex_ctx);
+		ref_counts--;
+	} /* end if */
+
 	/* set finish handler that will help to finish child process
 	   (or not) */
 	ctx->child_wait = vortex_async_queue_new ();
-	vortex_ctx_set_on_finish (vortex_ctx, turbulence_process_finished, child);
 
 	/* (re)start vortex */
+	msg ("CHILD: restarting vortex engine at child process..");
 	if (! vortex_init_ctx (vortex_ctx)) {
 		error ("failed to restart vortex engine after fork operation");
 		exit (-1);
 	} /* end if */
+
+	/* register temporal child management listener connection: the
+	 * following code reinsert the temporal listener connection
+	 * created into the vortex reader to link parent and child
+	 * process.
+	 * 
+	 * Later, when the parent connection is received on this
+	 * listener, the function turbulence_conn_mgr_notify will
+	 * check it to replace it with the actual running
+	 * connection. In the same step the function will call to
+	 * shutdown causing the vortex reader to release the temporal
+	 * listener. See NOTE REFERENCE 002 inside
+	 * turbulence_conn_mgr_notify  */
+	msg ("CHILD: registering (vortex reader) temporal child management connection id=%d %p (socket: %d, refs: %d, vortex ctx refs: %d)",
+	     vortex_connection_get_id (child->conn_mgr), child->conn_mgr, vortex_connection_get_socket (child->conn_mgr), 
+	     vortex_connection_ref_count (child->conn_mgr), vortex_ctx_ref_count (ctx->vortex_ctx));
+
+	/* check channel 0 ref counting for conn accepted */
+	channel0 = vortex_connection_get_channel (conn, 0);
+	while (vortex_channel_ref_count (channel0) > 1) 
+		vortex_channel_unref (channel0);
+	msg ("       conn-id=%d channel 0 refs: %d", vortex_connection_get_id (conn), vortex_channel_ref_count (channel0));
+
+	vortex_connection_set_close_socket (child->conn_mgr, axl_true);
+	vortex_reader_watch_connection (ctx->vortex_ctx, child->conn_mgr);
+	/* checked: no more references required for child->conn_mgr, which stays here in 2 */
 
 	/* (re)initialize here all modules */
 	if (! turbulence_module_notify (ctx, TBC_INIT_HANDLER, NULL, NULL, NULL)) {
@@ -1258,6 +1454,14 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 						    encoding, serverName,
 						    frame);
 
+	/* finish serverName, profile and profile_content reference
+	 * here: they were allocated by parent process so we have to
+	 * finish them */
+	if (serverName && strlen (serverName) > 0)
+		axl_free (serverName);
+	axl_free ((char*)profile);
+	axl_free ((char*)profile_content);
+
 	msg ("CHILD: process created OK...wait for requests");
 	queue = ctx->child_wait;
 
@@ -1265,10 +1469,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	ctx->started = axl_true;
 
 	vortex_async_queue_pop (ctx->child_wait);
-	msg ("finishing process...");
-
-	/* call to uninstall finish watcher */
-	vortex_ctx_set_on_finish (vortex_ctx, NULL, NULL);
+	msg ("CHILD: finishing process...");
 
 	/* terminate parent loop */
 	turbulence_loop_close (control, axl_true);
@@ -1277,20 +1478,35 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	vortex_frame_unref (frame);
 
 	/* release child descriptor */
-	turbulence_process_free_child_data (child);
+	msg ("CHILD: finishing child structure (container)");
+	turbulence_child_unref (child);
 
 	/* terminate turbulence execution */
 	turbulence_exit (ctx, axl_false, axl_false);
 
 	/* free context (the very last operation) */
+	msg ("CHILD: vortex engine stopped, now finishing VortexCtx (%p, refs: %d)", vortex_ctx, vortex_ctx_ref_count (vortex_ctx));
+	if (vortex_ctx_ref_count (vortex_ctx) != 2)
+		error ("CHILD: VortexCtx object ref count should be 2 but found %d", vortex_ctx_ref_count (vortex_ctx));
 	vortex_ctx_free (vortex_ctx);
+
+	/* uninstall signal handling */
+	turbulence_signal_install (ctx, 
+				   /* disable sigint */
+				   axl_false, 
+				   /* signal sighup */
+				   axl_false,
+				   /* enable sigchild */
+				   axl_false,
+				   NULL);
+
+	/* finish process */
+	turbulence_ctx_free (ctx);
 
 	/* unref the queue here to avoid vortex finish handler to
 	   access to the queue */
 	vortex_async_queue_unref (queue);
 
-	/* finish process */
-	turbulence_ctx_free (ctx);
 	exit (0);
 	
 	return;
@@ -1396,6 +1612,54 @@ int      turbulence_process_child_count  (TurbulenceCtx * ctx)
 	return count;
 }
 
+axl_bool turbulence_process_child_list_build (axlPointer _pid, axlPointer _child, axlPointer _result)
+{
+	TurbulenceChild * child = _child;
+
+	/* acquire a reference */
+	if (turbulence_child_ref (child)) {
+		/* add the child */
+		axl_list_append (_result, child);
+	} /* end if */
+	
+	return axl_false; /* do not stop foreach process */
+}
+
+/** 
+ * @brief Allows to get the list of childs created at the time the
+ * call happend.
+ *
+ * @param ctx The context where the childs were created. The context
+ * must represents a master process (turbulence_ctx_is_child (ctx) ==
+ * axl_false).
+ *
+ * @return A list (axlList) where each position contains a \ref
+ * TurbulenceChild reference. Use axl_list_free to finish the list
+ * returned. The function returns NULL if wrong reference received (it
+ * is null or it does not represent a master process).
+ */
+axlList         * turbulence_process_child_list (TurbulenceCtx * ctx)
+{
+	axlList * result;
+
+	if (ctx == NULL)
+		return NULL;
+	if (turbulence_ctx_is_child (ctx))
+		return NULL;
+
+	/* build the list */
+	result = axl_list_new (axl_list_always_return_1, (axlDestroyFunc) turbulence_child_unref);
+	if (result == NULL)
+		return NULL;
+
+	/* now add childs */
+	vortex_mutex_lock (&ctx->child_process_mutex);
+	axl_hash_foreach (ctx->child_process, turbulence_process_child_list_build, result);
+	vortex_mutex_unlock (&ctx->child_process_mutex);
+
+	return result;
+}
+
 /** 
  * @brief Allows to check if the provided process Id belongs to a
  * child process currently running.
@@ -1407,13 +1671,68 @@ int      turbulence_process_child_count  (TurbulenceCtx * ctx)
  * @return axl_true if the process exists, otherwise axl_false is
  * returned.
  */
-axl_bool turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid)
+axl_bool turbulence_process_child_exists  (TurbulenceCtx * ctx, int pid)
 {
 	/* check context received */
 	if (ctx == NULL || pid < 0)
 		return axl_false;
 
 	return (turbulence_process_find_pid_from_ppath_id (ctx, pid) != -1);
+}
+
+/** 
+ * @brief Allows to get a reference to the child object identified
+ * with the provided pid.
+ *
+ * @param ctx The context where the child process will be searched.
+ *
+ * @param pid The child pid process searched.
+ *
+ * @return A reference to the turbulence child process or NULL if it
+ * fails. The caller must release the reference when no longer
+ * required calling to \ref turbulence_child_unref.
+ */
+TurbulenceChild * turbulence_process_child_by_id (TurbulenceCtx * ctx, int pid)
+{
+	TurbulenceChild * child;
+	axlHashCursor   * cursor;
+
+	/* check ctx reference */
+	if (ctx == NULL)
+		return NULL;
+
+	vortex_mutex_lock (&ctx->child_process_mutex);
+
+	/* find child */
+	cursor = axl_hash_cursor_new (ctx->child_process);
+	while (axl_hash_cursor_has_item (cursor)) {
+
+		/* check child */
+		child = axl_hash_cursor_get_value (cursor);
+		if (child->pid == pid) {
+			/* found child */
+			turbulence_child_ref (child);
+			
+			/* free cursor */
+			axl_hash_cursor_free (cursor);
+			
+			/* unlock */
+			vortex_mutex_unlock (&ctx->child_process_mutex);
+
+			/* return reference */
+			return child;
+		}
+
+		/* next item */
+		axl_hash_cursor_next (cursor);
+	} /* end while */
+
+	vortex_mutex_unlock (&ctx->child_process_mutex);
+
+	/* free cursor */
+	axl_hash_cursor_free (cursor);
+
+	return NULL; /* no child found */
 }
 
 /** 

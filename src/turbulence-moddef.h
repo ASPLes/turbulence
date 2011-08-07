@@ -38,7 +38,7 @@
 #define __TURBULENCE_MODDEF_H__
 
 /** 
- * \defgroup turbulence_moddef Turbulence Module Def: Type definitions for modules
+ * \defgroup turbulence_moddef Turbulence Module Def: Type and handler definitions for turbulence modules
  */
 
 /**
@@ -51,11 +51,25 @@
  * a turbulence module.
  *
  * The module must return axl_true to signal the modules was
- * initialized and must be registered as properly loaded. This handler
- * is called when the module is loaded and after a fork operation
- * (child process created) when turbulence signals the module to
- * reinitialize some structures that may be affected by the fork
- * operation (like mutexes, threads..).
+ * properly initialized so turbulence can register it as usable.
+ *
+ * This handler is called only once at turbulence startup and when a
+ * child process is created (separate="yes" directive inside profile
+ * path configuration, see \ref turbulence_execution_model and \ref profile_path_configuration). 
+ *
+ * To know if current init call is for a child process you can use:
+ *
+ * \code
+ * if (turbulence_ctx_is_child (ctx) {
+ *      // reinitialize 
+ * } else {
+ *      // normal init
+ * }
+ * \endcode
+ *
+ * Keep in mind child creation is implemented using fork() call
+ * (without further exec()). This means you may require reinitialize
+ * some structures (like mutex). 
  *
  * @param ctx The turbulence context where the init operation is
  * taking place.

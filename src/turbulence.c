@@ -75,9 +75,9 @@ int fsync (int fd);
  *
  * A call to \ref turbulence_exit is required before exit.
  */
-int  turbulence_init (TurbulenceCtx * ctx, 
-		      VortexCtx     * vortex_ctx,
-		      const char    * config)
+axl_bool  turbulence_init (TurbulenceCtx * ctx, 
+			   VortexCtx     * vortex_ctx,
+			   const char    * config)
 {
 	/* no initialization done if null reference received */
 	if (ctx == NULL) {
@@ -91,7 +91,6 @@ int  turbulence_init (TurbulenceCtx * ctx,
 
 	/* get current process id */
 	ctx->pid = getpid ();
-	ctx->is_main_process = axl_true; /* not a child */
 
 	/* init turbulence internals */
 	vortex_mutex_create (&ctx->exit_mutex);
@@ -206,8 +205,8 @@ void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
  * runtime execution (calling to all module cleanups).
  */
 void turbulence_exit (TurbulenceCtx * ctx, 
-		      int             free_ctx,
-		      int             free_vortex_ctx)
+		      axl_bool        free_ctx,
+		      axl_bool        free_vortex_ctx)
 {
 	VortexCtx * vortex_ctx;
 
@@ -248,10 +247,6 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* terminate vortex */
 	msg ("now, terminate vortex library after turbulence cleanup..");
 	vortex_exit_ctx (vortex_ctx, free_vortex_ctx);
-
-	/* now modules and vortex library is stopped, terminate
-	 * modules unloading them */
-	turbulence_module_cleanup (ctx);
 
 	/* terminate run module */
 	turbulence_run_cleanup (ctx);

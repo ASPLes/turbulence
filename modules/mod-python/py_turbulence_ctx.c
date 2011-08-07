@@ -78,11 +78,30 @@ static PyObject * py_turbulence_ctx_new (PyTypeObject *type, PyObject *args, PyO
 static void py_turbulence_ctx_dealloc (PyTurbulenceCtx* self)
 {
 	/* decrease vortex.Ctx reference */
+	py_vortex_log (PY_VORTEX_DEBUG, "finishing py_turbulence_ctx ref (%p), with py_vortex_ctx ref (%p)",
+		       self, self->py_vortex_ctx);
 	Py_XDECREF (self->py_vortex_ctx);
 	self->py_vortex_ctx = NULL;
 
 	/* free the node it self */
 	self->ob_type->tp_free ((PyObject*)self);
+
+	return;
+}
+
+/** 
+ * @brief Function used to nullify and release PyVortexCtx object
+ * associated to the PyTurbulenceCtx to avoid memory leaks on
+ * turbulence finalization.
+ */
+void       py_turbulence_ctx_nullify_vortex_ctx (PyTurbulenceCtx * self)
+{
+	if (self->py_vortex_ctx) {
+		py_vortex_log (PY_VORTEX_DEBUG, "release and nullify py_vortex_ctx ref (%p) inside py_tbc_ctx (%p)",
+			       self->py_vortex_ctx, self);
+		Py_XDECREF (self->py_vortex_ctx);
+		self->py_vortex_ctx = NULL;
+	}
 
 	return;
 }

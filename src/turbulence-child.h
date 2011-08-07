@@ -34,44 +34,16 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
-#ifndef __TURBULENCE_CONN_MGR_H__
-#define __TURBULENCE_CONN_MGR_H__
+#ifndef __TURBULENCE_CHILD_H__
+#define __TURBULENCE_CHILD_H__
 
-/* internal use API */
-void turbulence_conn_mgr_init          (TurbulenceCtx    * ctx, 
-					axl_bool           reinit);
+#include <turbulence.h>
 
-void turbulence_conn_mgr_register      (TurbulenceCtx    * ctx, 
-					VortexConnection * conn);
+TurbulenceChild * turbulence_child_new (TurbulenceCtx      * ctx,
+					TurbulencePPathDef * def);
 
-void turbulence_conn_mgr_unregister    (TurbulenceCtx    * ctx, 
-					VortexConnection * conn);
+axl_bool          turbulence_child_ref (TurbulenceChild * child);
 
-void turbulence_conn_mgr_cleanup       (TurbulenceCtx * ctx);
-
-/* public API */
-axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
-					     const void               * message,
-					     int                        message_size,
-					     const char               * profile,
-					     TurbulenceConnMgrFilter    filter_conn,
-					     axlPointer                 filter_data);
-
-axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx, 
-					    VortexPeerRole             role,
-					    const char               * filter);
-
-VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
-						   int             conn_id);
-
-axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
-						       VortexConnection * conn);
-
-
-
-/* private API */
-void turbulence_conn_mgr_on_close (VortexConnection * conn, 
-				   axlPointer         user_data);
-
+void              turbulence_child_unref (TurbulenceChild * child);
 
 #endif 

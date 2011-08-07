@@ -50,20 +50,26 @@ void              turbulence_process_create_child (TurbulenceCtx       * ctx,
 						   const char          * profile,
 						   const char          * profile_content,
 						   VortexEncoding        encoding,
-						   const char          * serverName,
+						   char                * serverName,
 						   VortexFrame         * frame);
 
 void              turbulence_process_kill_childs  (TurbulenceCtx * ctx);
 
 int               turbulence_process_child_count  (TurbulenceCtx * ctx);
 
-axl_bool          turbulence_process_child_exits  (TurbulenceCtx * ctx, int pid);
+axlList         * turbulence_process_child_list (TurbulenceCtx * ctx);
+
+TurbulenceChild * turbulence_process_child_by_id (TurbulenceCtx * ctx, int pid);
+
+axl_bool          turbulence_process_child_exists  (TurbulenceCtx * ctx, int pid);
 
 int               turbulence_process_find_pid_from_ppath_id (TurbulenceCtx * ctx, int pid);
 
 TurbulenceChild * turbulence_process_get_child_from_ppath (TurbulenceCtx      * ctx, 
 							   TurbulencePPathDef * def,
 							   axl_bool             acquire_mutex);
+
+void              turbulence_process_check_for_finish (TurbulenceCtx * ctx);
 
 void              turbulence_process_cleanup      (TurbulenceCtx * ctx);
 
