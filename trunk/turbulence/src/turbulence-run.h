@@ -53,6 +53,10 @@ void turbulence_run_cleanup   (TurbulenceCtx * ctx);
  * calling to \ref turbulence_run_check_clean_start in the cases where
  * the main file or module configuration is not properly setup.
  * @param ctx The context to be checked for clean start.
+ *
+ * NOTE: This macro and its associated function \ref
+ * turbulence_run_check_clean_start must not be used by turbulence
+ * modules.
  */
 #define CLEAN_START(ctx) turbulence_run_check_clean_start(ctx)
 
