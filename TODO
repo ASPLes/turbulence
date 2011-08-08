@@ -1,4 +1,8 @@
-CURRENT FRANCIS WORK
+FRANCIS WORK
+
+* Add a test to check that mod-python breaks nicely when a python
+  app fails to start (it should not break).
+
 * Keep on working on turbulence mediator module to provide a low
   coupling interface to connect modules and API not known each
   other. 

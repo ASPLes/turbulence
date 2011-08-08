@@ -70,8 +70,6 @@ axl_bool       mod_python_py_init = axl_false;
 	      TBC_FAST_CLOSE(conn);                                                            \
         }                                                                                      \
         wrn (msg, ##__VA_ARGS__);                                                              \
-        /* clean for clean start activated */                                                  \
-        CLEAN_START (ctx);                                                                     \
                                                                                                \
         /* get next node */                                                                    \
         node = axl_node_get_next_called (node, "application");                                 \
