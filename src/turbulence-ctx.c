@@ -339,12 +339,14 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	turbulence_module_cleanup (ctx);
 
 	/* include a error warning */
-	if (vortex_ctx_ref_count (ctx->vortex_ctx) <= 0) 
-		error ("ERROR: current process is attempting to release vortex context more times than references supported");
-	else {
-		/* release vortex reference acquired */
-		msg ("Finishing VortexCtx (%p)", ctx->vortex_ctx);
-		vortex_ctx_unref (&(ctx->vortex_ctx));
+	if (ctx->vortex_ctx) {
+		if (vortex_ctx_ref_count (ctx->vortex_ctx) <= 0) 
+			error ("ERROR: current process is attempting to release vortex context more times than references supported");
+		else {
+			/* release vortex reference acquired */
+			msg ("Finishing VortexCtx (%p)", ctx->vortex_ctx);
+			vortex_ctx_unref (&(ctx->vortex_ctx));
+		}
 	}
 
 	/* release the node itself */
