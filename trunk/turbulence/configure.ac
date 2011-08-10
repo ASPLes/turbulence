@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://fact.aspl.es
 dnl
 
-AC_INIT(turbulence,0.5.3.b4690.g4692)
+AC_INIT(turbulence,0.5.3.b4729.g4731)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
@@ -310,7 +310,7 @@ turbulence-config
 ])
 
 dnl Ensure turbulence-config is executable
-chmod +x turbulence-config
+chmod +x ./turbulence-config
 
 echo "------------------------------------------"
 echo "--       Turbulence Settings            --"
