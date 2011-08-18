@@ -246,7 +246,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 			axl_free (query);
 			return 0;
 		}
-		msg ("IP filtered by defined expression associated to user: %s allowed connection from %s", 
+		msg ("IP not filtered by defined expression associated to user: %s allowed connection from %s", 
 		       auth_id, vortex_connection_get_host_ip (conn));
 		
 		/* ip not filtered, now let the auth continue */
