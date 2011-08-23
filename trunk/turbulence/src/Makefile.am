@@ -81,6 +81,8 @@ libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbol
 
 libturbulenceincludedir = $(includedir)/turbulence
 
+all-local: update-def
+
 libturbulence.def: update-def
 
 update-def:

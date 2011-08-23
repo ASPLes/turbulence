@@ -1463,10 +1463,12 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  *   - \ref turbulence_modules_configuration
  *   - \ref turbulence_modules_filtering
- *   - \ref turbulence_mod_sasl   "4.3 mod-sasl: SASL support for Turbulence (auth services)"
- *   - \ref turbulence_mod_tunnel "4.4 mod-tunnel: TUNNEL support for Turbulence (BEEP proxy services)"
- *   - \ref turbulence_mod_python "4.5 mod-python: python language support for Turbulence"
- *   - \ref turbulence_mod_tls    "4.6 mod-tls: TLS support for Turbulence (secure connections)"
+ *   - \ref turbulence_modules_activation
+ *   - \ref turbulence_mod_sasl   "4.4 mod-sasl: SASL support for Turbulence (auth services)"
+ *   - \ref turbulence_mod_tunnel "4.5 mod-tunnel: TUNNEL support for Turbulence (BEEP proxy services)"
+ *   - \ref turbulence_mod_python "4.6 mod-python: python language support for Turbulence"
+ *   - \ref turbulence_mod_tls    "4.7 mod-tls: TLS support for Turbulence (secure connections)"
+ *   - \ref turbulence_mod_radmin "4.8 mod-radmin: support for query runtime status"
  *
  * \section installing_turbulence 1.1 Installing Turbulence
  *
@@ -1742,6 +1744,27 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * with the set of modules to be skipped. This is done inside <b><modules /></b> section:
  *
  * \htmlinclude module-skip.xml-tmp
+ *
+ * \section turbulence_modules_activation 4.3 Enable a turbulence module
+ *
+ * To enable a turbulence module, just make the module pointer file to be
+ * available in one of the directories listed inside <b>&lt;modules></b>. This is
+ * usually done as follows:
+ * <ul>
+ *
+ *   <li>On Windows: just copy the module pointer .xml file into the mods-enabled and restart turbulence.</li>
+ *
+ *   <li>On Unix: link the module pointer .xml file like this
+ *   (assuming you want to enable mod-sasl and mods available and
+ *   enabled folders are located at /etc/turbulence):
+ *
+ *    \code
+ *    >> ln -s /etc/turbulence/mods-enabled/mod-sasl.xml /etc/turbulence/mods-available/mod-sasl.xml
+ *    \endcode
+ *   ..and restart turbulence.
+ *   </li>
+ * 
+ *   
  *
  * \section profile_path_configuration 3.1 Profile path configuration
  *

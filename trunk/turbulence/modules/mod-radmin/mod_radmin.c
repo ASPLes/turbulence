@@ -1206,7 +1206,92 @@ TurbulenceModDef module_def = {
  * administrative tasks like reloading.
  *
  * 
- * \section turbulence_mod_radmin_configuration Configuring the mod-radmin module
+ * \section turbulence_mod_radmin_configuration Configuring the mod-radmin module (server side)
+ *
+ * After enabling the module (see \ref turbulence_modules_activation),
+ * you need to configure a profile path inside turbulence.conf file to
+ * allow the profile used by mod-radmin from the locations you
+ * want. 
+ *
+ * Maybe the simpliest way to enable mod-radmin is to allow its usage
+ * without passwords only from localhost. This is the best method when
+ * developing, but it is really insecure when using Turbulence in
+ * production environment (even only allowing connections from
+ * locations, because that address is accesible to code that runs
+ * Turbulence). 
+ *
+ * Here is how to enable mod-radmin for localhost. Add the following
+ * profile path declaration inside <b>&lt;profile-path-configuration></b> node, found in turbulence.conf file:
+ *
+ * \code
+ *   <path-def server-name="localhost" src="127.0.0.1" path-name="local radmin">
+ *     <allow profile="urn:aspl.es:beep:profiles:radmin-ctl" />
+ *   </path-def>
+ * \endcode
+ *
+ * You must ensure this is the first declaration that matches
+ * serverName="localhost". If you want to be able to connect with the
+ * address (127.0.0.1), change server-name declaration.
+ *
+ * A more secure mod-radmin configuration will be to use TLS to secure
+ * the connection, and SASL to ask for a password before allowing
+ * mod-radmin. This method is the recommended for production because
+ * allows connecting from any place. Here is how to enable mod-radmin
+ * with TLS+SASL:
+ *
+ * \code
+ *   <path-def server-name="radmin.yourserver.com" src=".*" path-name="remote radmin">
+ *     <if-success profile="http://iana.org/beep/TLS" >
+ *        <if-success profile="http://iana.org/beep/SASL/.*" connmark="sasl:is:authenticated" >
+ *           <allow profile="urn:aspl.es:beep:profiles:radmin-ctl" />
+ *        </if-success>
+ *     </if-success>
+ *   </path-def>
+ * \endcode
+ * 
+ * NOTE: check \ref turbulence_mod_sasl "mod-sasl documenation" to
+ * know how to configure a user database that authenticates
+ * connections for mod-radmin and \ref turbulence_mod_tls "mod-tls
+ * documentation" to know how to configure the certificate and key to
+ * use to secure the connection.
+ *
+ * IMPORTANT NOTE: You must configure the profile path that holds
+ * mod-radmin without separate="yes". This is because the module must
+ * execute in the parent process. 
+ *
+ * If you configure separate="yes", the module will be activated on
+ * child process, making registered profile to be not available (child
+ * process can't receive connections, only parents do).
+ *
+ * 
+ * \section turbulence_mod_radmin_using Using mod-radmin (client side)
+ *
+ * Assuming you have a Turbulence with mod-radmin enabled, you just
+ * connect with:
+ *
+ * \code
+ * >> turbulence-ctl
+ * I: connecting turbulence at localhost:602..
+ * I: connected OK!
+ * tbc-ctl:localhost:602> 
+ * \endcode
+ *
+ * Now get connections available at this moment and its activity:
+ *
+ * \code
+ * tbc-ctl:localhost:602> show connections
+ * >>> Connection list <<<
+ * 
+ * proc-id   conn-id   role       source            dest            channels opened   ppath          auth id   last activity              bytes recv   bytes sent   
+ * -------   -------   --------   ---------------   -------------   ---------------   ------------   -------   ------------------------   ----------   ----------   
+ * 28693     1         master     0.0.0.0:602       0.0.0.0:602     -1                -              -         -                          0            0            
+ * 28693     2         master     0.0.0.0:604       0.0.0.0:604     -1                -              -         -                          0            0            
+ * 28693     3         master     0.0.0.0:3206      0.0.0.0:3206    -1                -              -         -                          0            0            
+ * 28693     7         listener   127.0.0.1:43024   127.0.0.1:602   2                 local radmin   -         Tue Aug 23 17:18:10 2011   377          1711         
+ * 28702     7         listener   127.0.0.1:43022   127.0.0.1:602   3                 core-admin     -         Tue Aug 23 17:17:58 2011   1041         603     
+ * \endcode
+ *
+ * Write "help" or press to autocomplete two times to get commands autocompleted.
  *
  * \section turbulence_mod_radmin_problems Usual problems found while using mod-radmin
  *
@@ -1214,6 +1299,8 @@ TurbulenceModDef module_def = {
  *
  * Check you you have declared profile path supporting mod-radmin
  * without using separate="yes". 
+ *
+ * 
  *
  * 
  */

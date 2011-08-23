@@ -3,24 +3,10 @@
 /* soft yellow for the function panel: #fffddf; */
 /* strong grey for some backgrounds:   #b0b0b0; */
 
-body { 
-   margin: 0px; 
-   background: url("bg.gif");
-   font-family: TrebuchetMS, Arial, FreeSans, Sans, Sans-Serif, Helvetica;
-}
-
 h1, h2, h3, a { 
    color: #172e4b;
-   font-family: TrebuchetMS, Arial, FreeSans, Sans, Sans-Serif, Helvetica;
 }
 
-p, b, ul, li, i {
-   font-family: TrebuchetMS, Arial, FreeSans, Sans, Sans-Serif, Helvetica;
-}
-
-.tabs span { 
-        color: #172e4b;
-}
 
 a:visited {
 	color: #1066be;
@@ -200,8 +186,7 @@ span.header {
 }
 
 .aspl-logo-header { 
-  padding: 0px;
-  margin: 0px;
+  padding: 3px;
   position: absolute;
   top: 0px;
   right: 0px;

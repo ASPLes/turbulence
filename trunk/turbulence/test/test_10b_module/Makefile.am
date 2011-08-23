@@ -1,5 +1,5 @@
 # Module definition
-EXTRA_DIST = mod-test-10b.xml
+EXTRA_DIST = mod_test_10b.xml
 
 INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
