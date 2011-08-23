@@ -23,7 +23,7 @@ dnl  royalty or fee but returning back any change, improvement or
 dnl  addition in the form of source code, project image, documentation
 dnl  patches, etc. 
 dnl
-dnl  For comercial support on build BEEP enabled solutions contact us:
+dnl  For comercial support on build BEEP enabled solutions contact us: 
 dnl          
 dnl      Postal address:
 dnl         Advanced Software Production Line, S.L.
