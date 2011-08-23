@@ -436,12 +436,21 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 		 * this case we can't say the channel have been
 		 * accepted */
 		if (channel_num > 0) {
-			/* report access */
-			tbc_access ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
-				    uri, state->path_selected->path_name, 
-				    vortex_connection_get_id (connection), 
-				    vortex_connection_get_host (connection),
-				    vortex_connection_get_port (connection));
+			/* check if the profile is registered */
+			if (! vortex_profiles_is_registered (ctx->vortex_ctx, uri)) {
+				error ("server is accepting profile %s under ppath: \"%s\" conn id: %d [%s:%s]) but profile is not registered, so no handler will reply: maybe MISSING module?", 
+				       uri, state->path_selected->path_name, 
+				       vortex_connection_get_id (connection), 
+				       vortex_connection_get_host (connection),
+				       vortex_connection_get_port (connection));
+			} else {
+				/* report access */
+				tbc_access ("profile: %s accepted (ppath: \"%s\" conn id: %d [%s:%s])", 
+					    uri, state->path_selected->path_name, 
+					    vortex_connection_get_id (connection), 
+					    vortex_connection_get_host (connection),
+					    vortex_connection_get_port (connection));
+			}
 		}
 		
 		/* profile allowed, do not filter */
