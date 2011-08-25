@@ -52,6 +52,142 @@
  */
 
 /** 
+ * @internal Iteration function used to find all <include> nodes.
+ */
+axl_bool turbulence_config_find_include_nodes (axlNode    * node, 
+					       axlNode    * parent, 
+					       axlDoc     * doc, 
+					       axl_bool   * was_removed, 
+					       axlPointer   ptr)
+{
+	/* check and add */
+	if (NODE_CMP_NAME (node, "include")) {
+		/* add to the list */
+		axl_list_append (ptr, node);
+	}
+	
+
+	return axl_true; /* never stop until the last node is
+			  * visited */
+}
+
+void turbulence_config_load_expand_nodes (TurbulenceCtx * ctx)
+{
+	axlList    * include_nodes;
+	int          iterator;
+	axlNode    * node, * node2;
+	axlDoc     * doc_aux;
+	axlError   * error;
+	const char * path;
+	char       * full_path;
+
+	/* directory reading */
+	DIR           * dir;
+	struct dirent * dirent;
+	int             length;
+
+
+	/* create the list and iterate over all nodes */
+	include_nodes = axl_list_new (axl_list_always_return_1, NULL);
+	axl_doc_iterate (ctx->config, DEEP_ITERATION, turbulence_config_find_include_nodes, include_nodes);
+	msg ("Found include nodes %d, expanding..", axl_list_length (include_nodes));
+
+	/* next position */
+	iterator = 0;
+	while (iterator < axl_list_length (include_nodes)) {
+
+		/* get the node to replace */
+		node = axl_list_get_nth (include_nodes, iterator);
+
+		/* try to load document or directory */
+		if (HAS_ATTR (node, "src")) {
+			error = NULL;
+			path  = ATTR_VALUE (node, "src");
+			msg ("Loading document from: %s", path);
+			doc_aux = axl_doc_parse_from_file (path, &error);
+			if (doc_aux == NULL) {
+				wrn ("Failed to load document at %s, error was: %s", path, axl_error_get (error));
+				axl_error_free (error);
+			} else {
+				/* ok, now replace the content from the document into the original document */
+				node2 = axl_doc_get_root (doc_aux);
+				axl_node_deattach (node2);
+
+				/* and */
+				axl_node_replace (node, node2, axl_true);
+
+				/* associate data to the node so it is released all memory when finished */
+				axl_node_annotate_data_full (node2, "doc", NULL, doc_aux, (axlDestroyFunc) axl_doc_free);
+					
+			} /* end if */
+
+		} else if (HAS_ATTR (node, "dir")) {
+			msg ("Opening directory: %s", ATTR_VALUE (node, "dir"));
+			dir    = opendir (ATTR_VALUE (node, "dir"));
+			while ((dirent = readdir (dir))) {
+
+				/* build path */
+				full_path = axl_strdup_printf ("%s/%s", ATTR_VALUE (node, "dir"), dirent->d_name);
+
+				/* check for regular file */
+				if (! vortex_support_file_test (full_path, FILE_IS_REGULAR)) {
+					axl_free (full_path);
+					continue;
+				} /* end if */
+					
+				/* found regular file */
+				full_path = axl_strdup_printf ("%s/%s", ATTR_VALUE (node, "dir"), dirent->d_name);
+				msg ("Found regular file: %s..loading", full_path);
+				length = strlen (full_path);
+				if (full_path[length - 1] == '~') {
+					wrn ("Skipping file %s", full_path);
+					axl_free (full_path);
+					continue;
+				}
+
+				/* load document */
+				error   = NULL;
+				doc_aux = axl_doc_parse_from_file (full_path, &error);
+				if (doc_aux == NULL) {
+					wrn ("Failed to load document at %s, error was: %s", full_path, axl_error_get (error));
+					axl_error_free (error);
+					axl_free (full_path);
+					continue;
+				} 
+				axl_free (full_path);
+
+				/* ok, now replace the content from the document into the original document */
+				node2 = axl_doc_get_root (doc_aux);
+				axl_node_deattach (node2);
+					
+				/* set the node content following reference node */
+				axl_node_set_child_after (node, node2);
+
+				/* associate data to the node so it is released all memory when finished */
+				axl_node_annotate_data_full (node2, "doc", NULL, doc_aux, (axlDestroyFunc) axl_doc_free);
+					
+				/* next directory */
+			}
+
+			/* close directory */
+			closedir (dir);
+			
+			/* remove include node */
+			axl_node_remove (node, axl_true);
+		}
+
+
+
+		/* next iterator */
+		iterator++;
+	} /* end while */
+
+	axl_list_free (include_nodes);
+	return;
+}
+
+
+/** 
  * @internal Loads the turbulence main file, which has all definitions to make
  * turbulence to start.
  * 
@@ -65,7 +201,6 @@ axl_bool  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 {
 	axlError   * error;
 	axlDtd     * dtd_file;
-
 
 	/* check null value */
 	if (config == NULL) {
@@ -89,6 +224,9 @@ axl_bool  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 
 	/* drop a message */
 	msg ("file %s loaded, ok", config);
+
+	/* now process inclusions */
+	turbulence_config_load_expand_nodes (ctx);
 
 	/* found dtd file */
 	dtd_file = axl_dtd_parse (TURBULENCE_CONFIG_DTD, -1, &error);

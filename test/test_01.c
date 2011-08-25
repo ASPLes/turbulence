@@ -1388,6 +1388,35 @@ axl_bool test_06 (void) {
 	return axl_true;
 }
 
+axl_bool test_06_a (void) {
+	TurbulenceCtx * tCtx;
+	VortexCtx     * vCtx;
+	axlNode       * node;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_06a.conf"))
+		return axl_false;
+
+	/* check that indeed data was inserted */
+	node = axl_doc_get (tCtx->config, "/turbulence/global-settings/ports/port");
+	if (node == NULL) {
+		printf ("ERROR: expected to find ports/port node but found NULL\n");
+		return axl_false;
+	}
+
+	/* now check no include is found in the document */
+	if (axl_doc_find_called (tCtx->config, "include")) {
+		printf ("ERROR: no include node should be found, but it was..\n");
+		return axl_false;
+	}
+		
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_07 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -4790,6 +4819,9 @@ int main (int argc, char ** argv)
 	
 	CHECK_TEST("test_06")
 	run_test (test_06, "Test 06: Turbulence startup and stop");
+
+	CHECK_TEST("test_06a")
+	run_test (test_06_a, "Test 06-a: Check file configuration splitting support");
 
 	CHECK_TEST("test_07")
 	run_test (test_07, "Test 07: Turbulence local connection");
