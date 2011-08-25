@@ -1,4 +1,4 @@
-SUBDIRS = test_11_module test_15_module test_10b_module
+SUBDIRS = test_06a test_11_module test_15_module test_10b_module
 
 INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 	$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -Wall -ansi  \
@@ -7,6 +7,9 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 
 configuration_files = \
 	test_01-b.conf \
+	test_06a.conf \
+	test06a.ports.conf \
+	test06a.listener.conf \
 	test_07.conf  \
 	test_08.conf  \
 	test_09.conf  \
