@@ -62,7 +62,7 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 {
 	int exit_status = 0;
 	int pid;
-	int ppath_id;
+	TurbulenceChild * child;
 
 	if (_signal == SIGHUP) {
 		msg ("received reconf signal, handling..");
@@ -81,11 +81,20 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 		msg ("child process (%d) finished with status: %d",
 		     pid, exit_status);
 
-		/* remove pid from list */
-		ppath_id = turbulence_process_find_pid_from_ppath_id (ctx, pid);
+		/* lock to remove */
 		vortex_mutex_lock (&ctx->child_process_mutex);
-		msg ("Found profile path id %d associated to child pid: %d", ppath_id, pid);
-		axl_hash_remove (ctx->child_process, INT_TO_PTR (ppath_id));
+
+		/* get child to reduce childs running */
+		child = axl_hash_get (ctx->child_process, INT_TO_PTR (pid));
+		if (child) {
+			/* decrease number of childs running */
+			child->ppath->childs_running--;
+		} /* end if */
+
+		/* remove pid from list */
+		axl_hash_remove (ctx->child_process, INT_TO_PTR (pid));
+
+		/* unlock */
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 
 		/* reconfigure signal again */

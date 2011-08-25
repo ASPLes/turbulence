@@ -18,7 +18,8 @@
                     kill-childs-on-exit?,                                                 \
                     system-paths?,                                                        \
                     notify-failures?,                                                     \
-                    allow-start-without-profiles?)>                                       \
+                    allow-start-without-profiles?,                                        \
+                    global-child-limit?)>                                                 \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
 <!ELEMENT port            (#PCDATA)>                                                      \
@@ -68,6 +69,9 @@
                                                                                           \
 <!ELEMENT allow-start-without-profiles   EMPTY>                                           \
 <!ATTLIST allow-start-without-profiles   value  (yes|no) #REQUIRED>                       \
+                                                                                          \
+<!ELEMENT global-child-limit   EMPTY>                                                     \
+<!ATTLIST global-child-limit   value  CDATA #REQUIRED>                                    \
                                                                                           \
 <!ELEMENT file-socket EMPTY>                                                              \
 <!ATTLIST file-socket value  CDATA #REQUIRED                                              \
@@ -121,6 +125,7 @@
    run-as-user    CDATA #IMPLIED                                                          \
    run-as-group   CDATA #IMPLIED                                                          \
    separate       CDATA #IMPLIED                                                          \
+   child-limit    CDATA #IMPLIED                                                          \
    reuse          CDATA #IMPLIED                                                          \
    chroot         CDATA #IMPLIED                                                          \
           work-dir       CDATA #IMPLIED>                                                  \

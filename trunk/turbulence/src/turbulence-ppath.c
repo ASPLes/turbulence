@@ -522,9 +522,9 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 	if (state->path_selected == NULL) {
 		/* no profile path selected, check if we are in greetings phase */
 		if (channel_num == -1) {
-			error ("channel creation for profile %s was filtered since no profile path was selected and channel num is -1", uri);
+			/* error ("channel creation for profile %s was filtered since no profile path was selected and channel num is -1", uri); */
 			return axl_true; /* filter profile */
-		}
+		} /* end if */
 
 		/* call to select a profile path with the received
 		   serverName and signaling we are NOT in on connect phase */
@@ -1077,6 +1077,12 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 
 		/* check for child reuse  */
 		definition->reuse    = HAS_ATTR_VALUE (pdef, "reuse", "yes");
+
+		/* set child limit if any */
+		if (HAS_ATTR (pdef, "child-limit")) 
+			definition->child_limit = vortex_support_strtod (ATTR_VALUE (pdef, "child-limit"), NULL);
+		else
+			definition->child_limit = -1;
 
 		/* check for chroot value */
 		definition->chroot   = ATTR_VALUE (pdef, "chroot");

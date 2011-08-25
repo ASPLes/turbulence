@@ -1856,6 +1856,12 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * executing group to the provided value. Requires Turbulence startup
  * user to have permissions to run this system operation. Note this
  * configuration may require to use separate (and/or reuse) flag.</li>
+ *
+ * <li><b>child-limit</b>: [child number] In the case this profile
+ * path has a declaration of separate="yes" this flag limits the
+ * number of child process that can be created due to this profile
+ * path. Rembember to set at least child-limit="1" when reuse="yes",
+ * though it is recommended to avoid using this flag when reuse="yes".</li>
  * 
  * </ol> 
  * 

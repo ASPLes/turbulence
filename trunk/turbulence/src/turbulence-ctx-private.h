@@ -234,7 +234,20 @@ struct _TurbulencePPathDef {
 	/* allows to configure a working directory associated to the
 	 * profile path. */
 	const char * work_dir;
+	
+	/** 
+	 * allows to control profile path child limit. By default it
+	 * is set to -1 which means no limit is set, so global child
+	 * limit is applied (</turbulence/global-settings/global-child-limit>)
+	 */
+	int child_limit;
 
+	/** 
+	 * allows to track current number of child processes that are
+	 * running with this profile path. On child process it has no
+	 * value.
+	 */
+	int childs_running;
 };
 
 /** 

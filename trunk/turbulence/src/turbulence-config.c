@@ -135,7 +135,53 @@ axlDoc * turbulence_config_get (TurbulenceCtx * ctx)
 	return ctx->config;
 }
 
-/**
+/** 
+ * @brief Allows to configure the provided name and value on the
+ * provided path inside the turbulence config.
+ *
+ * @param ctx The turbulence context where the configuration will be
+ * modified.
+ *
+ * @param path The xml path to the configuration to be modified.
+ *
+ * @param attr_name The attribute name to be modified on the selected
+ * path node.
+ *
+ * @param attr_value The attribute value to be modified on the
+ * selected path node. 
+ *
+ * @return axl_true if the value was configured, otherwise axl_false
+ * is returned (telling the value wasn't configured mostly because the
+ * path is wrong or the node does not exists or any of the values
+ * passed to the function is NULL).
+ */
+axl_bool            turbulence_config_set      (TurbulenceCtx * ctx,
+						const char    * path,
+						const char    * attr_name,
+						const char    * attr_value)
+{
+	axlNode * node;
+
+	/* check values received */
+	v_return_val_if_fail (ctx && path && attr_name && attr_value, axl_false);
+
+	msg ("Setting value %s=%s at path %s (%s)", attr_name, attr_value, path, attr_name);
+
+	/* get the node */
+	node = axl_doc_get (ctx->config, path);
+	if (node == NULL) {
+		wrn ("  Path %s was not found in config (%p)", path, ctx->config);
+		return axl_false;
+	} /* end if */
+
+	/* set attribute */
+	axl_node_remove_attribute (node, attr_name);
+	axl_node_set_attribute (node, attr_name, attr_value);
+	
+	return axl_true;
+}
+
+/** 
  * @brief Allows to check if an xml attribute is positive, that is,
  * have 1, true or yes as value.
  *
@@ -195,6 +241,50 @@ axl_bool        turbulence_config_is_attr_negative (TurbulenceCtx * ctx,
 	return axl_false;
 }
 
+
+/** 
+ * @brief Allows to get the value found on provided config path at the
+ * selected attribute.
+ *
+ * @param ctx The turbulence context where to get the configuration value.
+ *
+ * @param path The path to the node where the config is found.
+ *
+ * @param attr_name The attribute name to be returned as a number.
+ *
+ * @return The function returns the value configured or -1 in the case
+ * the configuration is wrong. The function returns -2 in the case
+ * path, ctx or attr_name are NULL. The function returns -3 in the
+ * case the path is not found so the user can take default action.
+ */
+int             turbulence_config_get_number (TurbulenceCtx * ctx, 
+					      const char    * path,
+					      const char    * attr_name)
+{
+	axlNode * node;
+	int       value;
+	char    * error = NULL;
+
+	/* check values received */
+	v_return_val_if_fail (ctx && path && attr_name, -2);
+
+	msg ("Getting value at path %s (%s)", path, attr_name);
+
+	/* get the node */
+	node = axl_doc_get (ctx->config, path);
+	if (node == NULL) {
+		wrn ("  Path %s was not found in config (%p)", path, ctx->config);
+		return -3;
+	}
+
+	msg ("  Translating value to a number %s=%s", attr_name, ATTR_VALUE (node, attr_name));
+
+	/* now get the value */
+	value = vortex_support_strtod (ATTR_VALUE (node, attr_name), &error);
+	if (error && strlen (error) > 0) 
+		return -1;
+	return value;
+}
 
 /** 
  * @internal Cleanups the turbulence config module. This is called by
