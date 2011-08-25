@@ -46,6 +46,11 @@ void            turbulence_config_cleanup  (TurbulenceCtx * ctx);
 
 axlDoc        * turbulence_config_get      (TurbulenceCtx * ctx);
 
+axl_bool        turbulence_config_set      (TurbulenceCtx * ctx,
+					    const char    * path,
+					    const char    * attr_name,
+					    const char    * attr_value);
+
 axl_bool        turbulence_config_is_attr_positive (TurbulenceCtx * ctx,
 						    axlNode       * node,
 						    const char    * attr_name);
@@ -53,5 +58,9 @@ axl_bool        turbulence_config_is_attr_positive (TurbulenceCtx * ctx,
 axl_bool        turbulence_config_is_attr_negative (TurbulenceCtx * ctx,
 						    axlNode       * node,
 						    const char    * attr_name);
+
+int             turbulence_config_get_number (TurbulenceCtx * ctx, 
+					      const char    * path,
+					      const char    * attr_name);
 
 #endif

@@ -12,6 +12,8 @@ configuration_files = \
 	test_09.conf  \
 	test_10.conf  \
 	test_10-a.conf \
+	test_10b.conf \
+	test_10c.conf \
 	test_11.conf  \
 	test_12.conf  \
 	test_12a.conf \

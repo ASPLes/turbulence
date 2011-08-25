@@ -74,7 +74,7 @@ axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 {
 	VortexCtx        * vortex_ctx = ctx->vortex_ctx;
 	int                delay      = 300000; /* 300ms */
-	int                tries      = 10; 
+	int                tries      = 30; 
 
 	while (tries > 0) {
 
@@ -97,12 +97,15 @@ axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 			return NULL;
 		}
 
-		/* reduce tries, wait */
-		msg ("CHILD: delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-existing=%d",
-		     tries, delay,
-		     vortex_reader_connections_watched (vortex_ctx), 
-		     axl_hash_items (ctx->conn_mgr_hash),
-		     ctx->is_exiting);
+		if (tries < 10) {
+			/* reduce tries, wait */
+			msg ("CHILD: delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-existing=%d",
+			     tries, delay,
+			     vortex_reader_connections_watched (vortex_ctx), 
+			     axl_hash_items (ctx->conn_mgr_hash),
+			     ctx->is_exiting);
+		} /* end if */
+
 		tries--;
 		turbulence_sleep (ctx, delay);
 	}
@@ -354,7 +357,7 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 		/* close the socket  */
 		vortex_close_socket (socket);
 	} else {
-		error ("Failed to send socket, error was: %s", vortex_errno_get_error (errno));
+		error ("Failed to send socket, error code %d, textual was: %s", rv, vortex_errno_get_error (errno));
 	}
 	
 	return rv;
@@ -510,10 +513,15 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 	/* send the socket descriptor to the child to avoid holding a
 	   bucket in the parent */
 	if (! turbulence_process_send_socket (client_socket, child, conn_status, strlen (conn_status))) {
-		error ("Something failed while sending socket (%d) to child already created, error (code %d): %s",
-		       client_socket, errno, vortex_errno_get_last_error ());
+		error ("PARENT: Something failed while sending socket (%d) to child pid %d already created, error (code %d): %s",
+		       client_socket, child->pid, errno, vortex_errno_get_last_error ());
+
 		/* release ancillary data */
 		axl_free (conn_status);
+
+		/* lets wait a bit to rehandle this connection
+		 * unlocking this master process */
+
 
 		/* close connection */
 		vortex_connection_shutdown (conn);
@@ -1143,6 +1151,64 @@ void __turbulence_process_prepare_logging (TurbulenceCtx * ctx, axl_bool is_pare
 }
 
 /** 
+ * @internal Allows to check child limit (global and profile path
+ * limits).
+ *
+ * @param ctx The context where the limit is being checked.
+ *
+ * @param conn The connection that triggered the child creation
+ * process.
+ *
+ * @param def The profile path def selected for this connection.
+ *
+ * @return axl_true in the case the limit was reched and the
+ * connection was closed, otherwise axl_false is returned.
+ */
+axl_bool turbulence_process_check_child_limit (TurbulenceCtx      * ctx,
+					       VortexConnection   * conn,
+					       TurbulencePPathDef * def,
+					       axl_bool             unlock_mutex_if_failure)
+{
+	int                global_child_limit;
+
+	/* check limits here before continue */
+	global_child_limit = turbulence_config_get_number (ctx, "/turbulence/global-settings/global-child-limit", "value");
+
+	/* check for default or undefined */
+	if (global_child_limit == -3 || global_child_limit == -1)
+		global_child_limit = 100;
+
+	msg ("Checking global child limit: %d before creating process.", global_child_limit);
+
+	if (axl_hash_items (ctx->child_process) >= global_child_limit) {
+		error ("Child limit reached (%d), unable to accept connection on child process, closing conn-id=%d", 
+		       global_child_limit, vortex_connection_get_id (conn));
+
+	handle_failure:
+
+		/* unlock before shutting down connection */
+		if (unlock_mutex_if_failure)
+			vortex_mutex_unlock (&ctx->child_process_mutex);
+		
+		vortex_connection_shutdown (conn);
+		return axl_true; /* limit reached */
+	} /* end if */	
+
+	/* now check profile path limits */
+	if (def && def->child_limit > 0) {
+		/* check limits */
+		if (def->childs_running >= def->child_limit) {
+			error ("Profile path child limit reached (%d), unable to accept connection on child process, closing conn-id=%d", 
+			       def->child_limit, vortex_connection_get_id (conn));
+			
+			goto handle_failure;
+		} /* end if */
+	} /* end if */
+
+	return axl_false; /* limit NOT reached */
+}
+
+/** 
  * @internal Allows to create a child process running listener connection
  * provided.
  */
@@ -1204,6 +1270,12 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 		return;
 	}
+
+	/* check limits here before continue: unlock_mutex_if_failure = axl_true */
+	if (turbulence_process_check_child_limit (ctx, conn, def, axl_true)) 
+		return;
+
+	/* show some logs about what will happen */
 	if (child == NULL) 
 		msg ("Creating a child process (first instance)");
 	else
@@ -1279,10 +1351,13 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 		/* register the child process identifier */
 		axl_hash_insert_full (ctx->child_process,
-				      /* key and destroy func */
-				      INT_TO_PTR (turbulence_ppath_get_id (def)), NULL,
+				      /* store child pid */
+				      INT_TO_PTR (pid), NULL,
 				      /* data and destroy func */
 				      child, (axlDestroyFunc) turbulence_child_unref);
+
+		/* update number of childs running this profile path */
+		def->childs_running++;
 
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 
@@ -1695,42 +1770,19 @@ axl_bool turbulence_process_child_exists  (TurbulenceCtx * ctx, int pid)
 TurbulenceChild * turbulence_process_child_by_id (TurbulenceCtx * ctx, int pid)
 {
 	TurbulenceChild * child;
-	axlHashCursor   * cursor;
 
 	/* check ctx reference */
 	if (ctx == NULL)
 		return NULL;
 
+	/* lock */
 	vortex_mutex_lock (&ctx->child_process_mutex);
 
-	/* find child */
-	cursor = axl_hash_cursor_new (ctx->child_process);
-	while (axl_hash_cursor_has_item (cursor)) {
+	/* get child */
+	child = axl_hash_get (ctx->child_process, INT_TO_PTR (pid));
 
-		/* check child */
-		child = axl_hash_cursor_get_value (cursor);
-		if (child->pid == pid) {
-			/* found child */
-			turbulence_child_ref (child);
-			
-			/* free cursor */
-			axl_hash_cursor_free (cursor);
-			
-			/* unlock */
-			vortex_mutex_unlock (&ctx->child_process_mutex);
-
-			/* return reference */
-			return child;
-		}
-
-		/* next item */
-		axl_hash_cursor_next (cursor);
-	} /* end while */
-
+	/* unlock */
 	vortex_mutex_unlock (&ctx->child_process_mutex);
-
-	/* free cursor */
-	axl_hash_cursor_free (cursor);
 
 	return NULL; /* no child found */
 }
@@ -1741,14 +1793,13 @@ TurbulenceChild * turbulence_process_child_by_id (TurbulenceCtx * ctx, int pid)
  */
 axl_bool __find_ppath_id (axlPointer key, axlPointer data, axlPointer user_data, axlPointer user_data2) 
 {
-	int               ppath_id   = PTR_TO_INT (key);
 	int             * pid        = (int *) user_data;
 	int             * _ppath_id  = (int *) user_data2;
 	TurbulenceChild * child      = data;
 	
 	if (child->pid == (*pid)) {
 		/* child found, update pid to have ppath_id */
-		(*_ppath_id) = ppath_id;
+		(*_ppath_id) = turbulence_ppath_get_id (child->ppath);
 		return axl_true; /* found key, stop foreach */
 	}
 	return axl_false; /* child not found, keep foreach looping */
@@ -1784,12 +1835,11 @@ int      turbulence_process_find_pid_from_ppath_id (TurbulenceCtx * ctx, int pid
  */
 axl_bool __find_ppath (axlPointer key, axlPointer data, axlPointer user_data, axlPointer user_data2) 
 {
-	int                   ppath_id   = PTR_TO_INT (key);
 	TurbulencePPathDef  * ppath      = user_data;
 	TurbulenceChild     * child      = data;
 	TurbulenceChild    ** result     = user_data2;
 	
-	if (ppath_id == turbulence_ppath_get_id (ppath)) {
+	if (turbulence_ppath_get_id (child->ppath) == turbulence_ppath_get_id (ppath)) {
 		/* found child associated, updating reference and
 		   signaling to stop earch */
 		(*result) = child;
@@ -1817,9 +1867,13 @@ TurbulenceChild * turbulence_process_get_child_from_ppath (TurbulenceCtx * ctx,
 {
 	TurbulenceChild * result = NULL;
 	
+	/* lock mutex if signaled */
 	if (acquire_mutex)
 		vortex_mutex_lock (&ctx->child_process_mutex);
+
 	axl_hash_foreach2 (ctx->child_process, __find_ppath, def, &result);
+
+	/* unlock mutex if signaled */
 	if (acquire_mutex)
 		vortex_mutex_unlock (&ctx->child_process_mutex);
 

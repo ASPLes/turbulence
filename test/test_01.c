@@ -2269,6 +2269,136 @@ axl_bool test_10_b (void) {
 	return axl_true;
 }
 
+VortexConnection * test_10_c_connect_and_check (VortexCtx * vCtx, TurbulenceCtx * ctx, axl_bool channel_should_fail)
+{
+	
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* create connection */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		exit (-1);
+	} /* end if */
+	
+	printf ("Test 10-c: connection id=%d (%p) created..\n", 
+		vortex_connection_get_id (conn), conn);
+
+	/* check to create profile 2 channel: MUST WORK */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel_should_fail) {
+		printf ("Test 10-c: channel should fail...checking: %p\n", channel);
+		if (channel != NULL) {
+			printf ("ERROR (2): expected to find NULL channel reference (creation ok) but found failure..\n");
+			exit (-1);
+		}
+	} else {
+		printf ("Test 10-c: channel should NOT fail...checking: %p\n", channel);
+		if (channel == NULL) {
+			printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+			exit (-1);
+		}
+
+		/* check connection after created it */
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (4): expected to find proper connection after turbulence startup..\n");
+			exit (-1);
+		} /* end if */
+
+	} /* end if */
+
+	printf ("Test 10-c: channel num=%d (%p) created..\n", 
+		vortex_channel_get_number (channel), channel);
+
+	/* now wait a bit 100ms */
+	turbulence_sleep (tCtxTest10prev, 100000);
+
+	return conn;
+}
+						     
+
+axl_bool test_10_c (void) {
+
+	VortexCtx        * vCtx;
+	VortexConnection * conn, * conn2, * conn3;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtxTest10prev, "test_10c.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtxTest10prev)) 
+		return axl_false;
+
+	/* install signal handling (handle child processes) */
+	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, axl_true, test_10_prev_signal_handler);
+
+	/* create connection to local server */
+	printf ("Test 10-c: CREATE FIRST CONNECTION(1): creating child process..\n");
+	conn = test_10_c_connect_and_check (vCtx, tCtxTest10prev, axl_false);
+
+	/* now create a second child */
+	printf ("Test 10-c: CREATING SECOND CONNECTION(2): attempting to create a second child to see if it is allowed..\n");
+
+	/* second reference */
+	conn2 = test_10_c_connect_and_check (vCtx, tCtxTest10prev, axl_true);
+
+	printf ("Test 10-c: check childs (first: should be 1)..\n");
+	if (turbulence_process_child_count (tCtxTest10prev) != 1) {
+		printf ("ERROR (8): expected to find child count 1 but found %d..\n", turbulence_process_child_count (tCtxTest10prev));
+		return axl_false;
+	} /* end if */
+
+	/* ok, close connection not used */
+	vortex_connection_close (conn2);
+
+	printf ("Test 10-c: changing run time settings to accept 3 childs and check profile path limits..\n");
+	if (! turbulence_config_set (tCtxTest10prev, "/turbulence/global-settings/global-child-limit", "value", "3")) {
+		printf ("ERROR (9): expected to change global child limit but found failure..\n");
+		return axl_false;
+	}
+
+	printf ("Test 10-c: CREATING SECOND CONNECTION(3): creating a second connection again (it should work..)\n");
+
+	/* second reference */
+	conn2 = test_10_c_connect_and_check (vCtx, tCtxTest10prev, axl_false);
+
+
+	printf ("Test 10-c: check childs (second check, should be 2)..\n");
+	if (turbulence_process_child_count (tCtxTest10prev) != 2) {
+		printf ("ERROR (8): expected to find child count 1 but found %d..\n", turbulence_process_child_count (tCtxTest10prev));
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 10-c: ok, now create a third connection that should fail because profile path limits..\n");
+
+	/* second reference */
+	conn3 = test_10_c_connect_and_check (vCtx, tCtxTest10prev, axl_true);
+
+	printf ("Test 10-c: check childs..\n");
+	if (turbulence_process_child_count (tCtxTest10prev) != 2) {
+		printf ("ERROR (8): expected to find child count 2 but found %d..\n", turbulence_process_child_count (tCtxTest10prev));
+		return axl_false;
+	} /* end if */
+	
+
+	/* close connection */
+	vortex_connection_close (conn3);
+	vortex_connection_close (conn2);
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtxTest10prev);
+
+	return axl_true;
+}
+
 typedef struct _FailStructure  {
 	char * value;
 } FailStructure;
@@ -4374,6 +4504,7 @@ axl_bool test_22_unfinished (VortexCtx * vCtx, const char * serverName, VortexAs
 	} /* end if */
 
 	/* now open a channel */
+	printf ("Test 22: creating TLS channel to simulate an unfinished TLS handshake..\n");
 	channel = vortex_channel_new_full (conn, /* the connection */
 					   0,          /* the channel vortex chose */
 					   serverName, /* the serverName value (no matter if it is NULL) */
@@ -4393,6 +4524,7 @@ axl_bool test_22_unfinished (VortexCtx * vCtx, const char * serverName, VortexAs
 					   NULL, NULL);
 	if (channel == NULL) {
 		printf ("ERROR (2): expected to create TLS channel but failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
@@ -4681,6 +4813,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_10b")
 	run_test (test_10_b, "Test 10-b: check master-child BEEP link)");
+
+	CHECK_TEST("test_10c")
+	run_test (test_10_c, "Test 10-c: check global child limit and profile path limit)");
 
 	CHECK_TEST("test_11")
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
