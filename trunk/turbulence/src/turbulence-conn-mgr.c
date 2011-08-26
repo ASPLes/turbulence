@@ -130,12 +130,13 @@ void turbulence_conn_mgr_added_handler (VortexChannel * channel, axlPointer user
 	 * hash to a pointer that may be lost when the channel is
 	 * closed by still other channels with the same profile are
 	 * running in the connection. */
-	char                   * running_profile = axl_strdup (vortex_channel_get_profile (channel));
+	char                   * running_profile;
 	int                      count;
 
 	/* check if hash is finished */
 	if (ctx->conn_mgr_hash == NULL) 
 		return;
+
 
 	/* get the lock */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
@@ -149,6 +150,9 @@ void turbulence_conn_mgr_added_handler (VortexChannel * channel, axlPointer user
 		return;
 	}
 	
+	/* make a copy of running profile */
+	running_profile = axl_strdup (vortex_channel_get_profile (channel));
+
 	/* get channel count for the profile */
 	count = PTR_TO_INT (axl_hash_get (state->profiles_running, (axlPointer) running_profile));
 	count++;

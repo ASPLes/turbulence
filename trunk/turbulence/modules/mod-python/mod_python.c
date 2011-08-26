@@ -633,17 +633,16 @@ void mod_python_load_config (TurbulenceCtx    * ctx,
 			
 			msg ("Found site %s/python.conf, loading..", workDir);
 			mod_python_site_conf  = axl_doc_parse_from_file (config, &err);
-			axl_free (config);
 
 			/* check parse result */
 			if (mod_python_site_conf == NULL) {
 				error ("failed to load mod-python site configuration file at %s, error found was: %s", 
 				       config, axl_error_get (err));
-				axl_free (config);
 				axl_error_free (err);
 			} /* end if */
 
 		} /* end if */
+		axl_free (config);
 	} /* end if */
 
 	/* now ensure all applications inside serverName or all of

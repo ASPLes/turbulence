@@ -24,11 +24,6 @@ FRANCIS WORK
       stdout) and mod-radmin (adding more commands to manage and check
       turbulence state).
 
-* Add support for turbulence to split its configuration file into 
-  separate files that are loaded from a directory (like apache2 and
-  similar). That would allow having ports configuration in one file
-  and profile path defined in other file..
-  
 IDEAS & USEFUL HINTS
 
 * It would be great to allow turbulence configuring which kind of
@@ -41,11 +36,6 @@ IDEAS & USEFUL HINTS
   do this.
 
 WANT TO COLLABORATE: PICK ONE! 
-
-* Add support for turbulence to split its configuration file into 
-  separate files that are loaded from a directory (like apache2 and
-  similar). That would allow having ports configuration in one file
-  and profile path defined in other file..
 
 * Add support to turbulence/vortex to implement bandwidth at context
   level, connection level and channel level, allowing to control how
