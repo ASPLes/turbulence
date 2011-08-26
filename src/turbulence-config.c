@@ -136,7 +136,6 @@ void turbulence_config_load_expand_nodes (TurbulenceCtx * ctx)
 				} /* end if */
 					
 				/* found regular file */
-				full_path = axl_strdup_printf ("%s/%s", ATTR_VALUE (node, "dir"), dirent->d_name);
 				msg ("Found regular file: %s..loading", full_path);
 				length = strlen (full_path);
 				if (full_path[length - 1] == '~') {

@@ -1,0 +1,1 @@
+EXTRA_DIST = 01-profile.conf 02-profile.conf

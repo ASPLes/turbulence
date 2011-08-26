@@ -1392,6 +1392,7 @@ axl_bool test_06_a (void) {
 	TurbulenceCtx * tCtx;
 	VortexCtx     * vCtx;
 	axlNode       * node;
+	int             iterator;
 
 	/* init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_06a.conf"))
@@ -1409,7 +1410,32 @@ axl_bool test_06_a (void) {
 		printf ("ERROR: no include node should be found, but it was..\n");
 		return axl_false;
 	}
-		
+
+	/* check we have loaded all profile paths */
+	if (! axl_doc_find_called (tCtx->config, "path-def")) {
+		printf ("ERROR: checking that configuration includes a <path-def> node...but it wasn't found..\n");
+		return axl_false;
+	}
+
+	/* check the number or profile path defs */
+	node = axl_doc_find_called (tCtx->config, "path-def");
+
+	iterator = 0;
+	while (node) {
+		/* node found */
+		iterator++;
+
+		/* next node */
+		node = axl_node_get_next_called (node, "path-def");
+	}
+
+	/* check number of profile paths */
+	if (iterator != 2) {
+		printf ("ERROR: expected to find 2 <path-def> nodes but found %d..\n", iterator);
+		return axl_false;
+	}
+	printf ("Test 06-a: <path-def> nodes found: %d\n", iterator);
+	
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
