@@ -17,8 +17,9 @@ tmp_xml_examples = \
 	override-system-paths.xml-tmp \
 	tls-example.xml-tmp \
 	tls-sasl-example.xml-tmp \
-	notify-failures.xml-tmp
-
+	notify-failures.xml-tmp \
+	include-from-file.xml-tmp \
+	include-from-dir.xml-tmp
 
 xml_examples = \
 	global-settings.xml \
@@ -38,7 +39,9 @@ xml_examples = \
 	override-system-paths.xml \
 	tls-example.xml \
 	tls-sasl-example.xml \
-	notify-failures.xml
+	notify-failures.xml \
+	include-from-file.xml \
+	include-from-dir.xml
 
 drafts_and_docs = \
 	draft-brosnan-beep-limit-close.txt \
