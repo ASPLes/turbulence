@@ -1450,6 +1450,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref turbulence_configuring_log_files
  *   - \ref turbulence_db_list_management "2.7 Turbulence Db-List management"
  *   - \ref turbulence_configure_system_paths
+ *   - \ref turbulence_configure_splitting
  *
  * <b>Section 3: BEEP profile management</b>
  *
@@ -1721,50 +1722,32 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * - <b>datadir</b>: base dir where static turbulence data files are located (${datadir}/turbulence).
  * - <b>runtime_datadir</b>: base directory where run time files are created (${runtime_datadir}/turbulence).
  *
- * \section turbulence_modules_configuration 4.1 Turbulence modules configuration
+ * \section turbulence_configure_splitting 2.9 Splitting turbulence configuration
+ *
+ * As we saw, turbulence has a main configuration file which is
+ * <b>turbulence.conf</b>. However, it is possible to split this file
+ * into several files or even directories with additional files.
+ *
+ * In the case you want to move some configuration into a separate
+ * file, just place the following:
  * 
- * Modules loaded by turbulence are found at the directories
- * configured in the <b>&lt;modules></b> section. Here is an
- * example:
+ * \htmlinclude include-from-file.xml-tmp
  *
- * \htmlinclude tbc-modules.xml-tmp
- * 
- * Every directory configured contains turbulence xml module pointers
- * having the following content: 
+ * Then the <b>&lt;include /></b> node will be replaced with the content found inside <b>file-with-config.conf</b>. 
  *
- * \htmlinclude module-conf.xml-tmp
- * 
- * Each module have its own configuration file, which should use XML
- * as default configuration format. 
+ * <b>NOTE: </b> even having this feature, the resuling
+ * turbulence.conf file after replacing all <b>includes</b> must be a
+ * properly formated turbulence.conf file.
  *
- * \section turbulence_modules_filtering 4.2 Turbulence module filtering
+ * It is also possible to load a set of configuration files from a
+ * directory. This is useful for profile paths where all of them are
+ * stored separated into /etc/turbulence/profile.d directory. That's
+ * why the following declaration inside <profile-path-configuration>:
  *
- * It is possible to configure Turbulence to skip some module so it is
- * not loaded. This is done by adding a <b><no-load /></b> declaration
- * with the set of modules to be skipped. This is done inside <b><modules /></b> section:
+ * \htmlinclude include-from-dir.xml-tmp
  *
- * \htmlinclude module-skip.xml-tmp
- *
- * \section turbulence_modules_activation 4.3 Enable a turbulence module
- *
- * To enable a turbulence module, just make the module pointer file to be
- * available in one of the directories listed inside <b>&lt;modules></b>. This is
- * usually done as follows:
- * <ul>
- *
- *   <li>On Windows: just copy the module pointer .xml file into the mods-enabled and restart turbulence.</li>
- *
- *   <li>On Unix: link the module pointer .xml file like this
- *   (assuming you want to enable mod-sasl and mods available and
- *   enabled folders are located at /etc/turbulence):
- *
- *    \code
- *    >> ln -s /etc/turbulence/mods-enabled/mod-sasl.xml /etc/turbulence/mods-available/mod-sasl.xml
- *    \endcode
- *   ..and restart turbulence.
- *   </li>
- * 
- *   
+ * Previous declaration import all content from files found in
+ * <b>/etc/turbulence/profile.d</b> replacing the <b>include</b> node.
  *
  * \section profile_path_configuration 3.1 Profile path configuration
  *
@@ -1986,6 +1969,52 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * To control or change this behaviour check
  * <b><allow-start-without-profiles value="yes or no" /></b> inside
  * <global-settings> node.
+ *
+ * \section turbulence_modules_configuration 4.1 Turbulence modules configuration
+ * 
+ * Modules loaded by turbulence are found at the directories
+ * configured in the <b>&lt;modules></b> section. Here is an
+ * example:
+ *
+ * \htmlinclude tbc-modules.xml-tmp
+ * 
+ * Every directory configured contains turbulence xml module pointers
+ * having the following content: 
+ *
+ * \htmlinclude module-conf.xml-tmp
+ * 
+ * Each module have its own configuration file, which should use XML
+ * as default configuration format. 
+ *
+ * \section turbulence_modules_filtering 4.2 Turbulence module filtering
+ *
+ * It is possible to configure Turbulence to skip some module so it is
+ * not loaded. This is done by adding a <b><no-load /></b> declaration
+ * with the set of modules to be skipped. This is done inside <b><modules /></b> section:
+ *
+ * \htmlinclude module-skip.xml-tmp
+ *
+ * \section turbulence_modules_activation 4.3 Enable a turbulence module
+ *
+ * To enable a turbulence module, just make the module pointer file to be
+ * available in one of the directories listed inside <b>&lt;modules></b>. This is
+ * usually done as follows:
+ * <ul>
+ *
+ *   <li>On Windows: just copy the module pointer .xml file into the mods-enabled and restart turbulence.</li>
+ *
+ *   <li>On Unix: link the module pointer .xml file like this
+ *   (assuming you want to enable mod-sasl and mods available and
+ *   enabled folders are located at /etc/turbulence):
+ *
+ *    \code
+ *    >> ln -s /etc/turbulence/mods-enabled/mod-sasl.xml /etc/turbulence/mods-available/mod-sasl.xml
+ *    \endcode
+ *   ..and restart turbulence.
+ *   </li>
+ * 
+ *   
+ *
  */
 
 /** 
