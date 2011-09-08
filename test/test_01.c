@@ -1781,28 +1781,6 @@ axl_bool test_09 (void) {
 TurbulenceCtx    * tCtxTest10 = NULL;
 TurbulenceCtx    * tCtxTest10a = NULL;
 
-void test_10_received (VortexChannel    * channel, 
-		       VortexConnection * connection, 
-		       VortexFrame      * frame, 
-		       axlPointer         user_data)
-{
-	TurbulenceCtx      * ctx = tCtxTest10;
-	TurbulencePPathDef * ppath_selected;
-
-	msg ("Received frame request at child (pid: %d): %s",
-	     getpid (), (char*) vortex_frame_get_payload (frame));
-
-	/* send pid reply */
-	if (axl_cmp ("GET pid", (char*) vortex_frame_get_payload (frame))) 
-		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%d", getpid ());
-
-	if (axl_cmp ("GET profile path", (char*) vortex_frame_get_payload (frame)))  {
-		ppath_selected = turbulence_ppath_selected (connection);
-		vortex_channel_send_rpyv (channel, vortex_frame_get_msgno (frame), "%s", turbulence_ppath_get_name (ppath_selected));
-	}
-	return;
-}
-
 void test_10_signal_handler (int _signal)
 {
 	/* marshal signal */
@@ -1822,22 +1800,11 @@ axl_bool test_10 (void) {
 	VortexChannel    * channel;
 	VortexAsyncQueue * queue;
 	VortexFrame      * frame;
+	int                iterator;
 
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtxTest10, "test_10.conf")) 
 		return axl_false;
-
-	/* register here all profiles required by tests */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-2");
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-4");
-
-	/* register a frame received for the remote side (child process) */
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-1", 
-					      test_10_received, NULL);
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-2", 
-					      test_10_received, NULL);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtxTest10)) 
@@ -1845,7 +1812,6 @@ axl_bool test_10 (void) {
 
 	/* create queue and release it on vortex ctx finish */
 	queue = vortex_async_queue_new ();
-	vortex_ctx_set_data_full (vCtx, "test_10_q", queue, NULL, (axlDestroyFunc) vortex_async_queue_unref);
 
 	/* install signal handling */
 	turbulence_signal_install (tCtxTest10, axl_false, axl_false, axl_true, test_10_signal_handler);
@@ -1868,6 +1834,7 @@ axl_bool test_10 (void) {
 	} /* end if */
 
 	/* check to create profile 2 channel: MUST WORK */
+	printf ("Test 10: creating channel..\n");
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
 	if (channel == NULL) {
 		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
@@ -1895,6 +1862,7 @@ axl_bool test_10 (void) {
 	} /* end if */
 
 	/* ask for remote pid and compare it to the current value */
+	printf ("Test 10: ...all checks ok, getting pid..\n");
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
 	if (! vortex_channel_send_msg (channel, "GET pid", 7, NULL)) {
 		printf ("ERROR (6): expected to find remote pid request message sent successfully but found an error..\n");
@@ -1923,12 +1891,25 @@ axl_bool test_10 (void) {
 	vortex_connection_close (conn);
 
 	/* do a micro wait */
-	printf ("Test 10: waiting 2 seconds for child to exit..\n");
-	turbulence_sleep (tCtxTest10, 2000000);
-	printf ("Test 10: done..checking child exist..\n");
+	printf ("Test 10: waiting 4 seconds for child to exit..\n");
+	iterator = 0;
+	while (iterator < 4000) {
+		
+		/* wait a bit */
+		turbulence_sleep (tCtxTest10, 1000);
+
+		/* check child count */
+		if (turbulence_process_child_count (tCtxTest10) == 0) 
+			break;
+
+		/* next */
+		iterator++;
+	}
+
+	printf ("Test 10: child count after wait: %d..\n", turbulence_process_child_count (tCtxTest10));
 
 	/* check child count */
-	if (turbulence_process_child_count (tCtxTest10) != 0) {
+	if (turbulence_process_child_count (tCtxTest10) != 0)  {
 		printf ("ERROR (9): expected to find child process count equal to 0 but found: %d..\n",
 			turbulence_process_child_count (tCtxTest10));
 		return axl_false;
@@ -2007,6 +1988,9 @@ axl_bool test_10 (void) {
 		return axl_false;
 	} /* end if */
 
+	/* unref queue */
+	vortex_async_queue_unref (queue);
+
 	/* release the frame */
 	vortex_frame_unref (frame);
 	
@@ -2038,9 +2022,6 @@ axl_bool test_10_prev (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtxTest10prev, "test_10.conf")) 
 		return axl_false;
-
-	/* register here all profiles required by tests */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtxTest10prev)) 
@@ -2105,11 +2086,24 @@ axl_bool test_10_prev (void) {
 	} /* end while */
 
 	/* close connection to force child stop operation */
+	printf ("Test 10-prev: closing connection to child, this should cause child to finish (pid: %d)..\n", getpid ());
 	vortex_connection_shutdown (conn);
 	vortex_connection_close (conn);
 
-	/* now wait a bit 2seg */
-	turbulence_sleep (tCtxTest10prev, 2000000);
+	/* now wait a bit 4seg */
+	iterator = 0;
+	while (iterator < 4000) {
+		
+		/* wait a bit */
+		turbulence_sleep (tCtxTest10prev, 1000);
+
+		/* check child count */
+		if (turbulence_process_child_count (tCtxTest10prev) == 0) 
+			break;
+
+		/* next */
+		iterator++;
+	}
 
 	printf ("Test 10-prev: child should have finished..\n");
 
@@ -2152,9 +2146,6 @@ axl_bool test_10_b (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtxTest10prev, "test_10b.conf")) 
 		return axl_false;
-
-	/* register here all profiles required by tests */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtxTest10prev)) 
@@ -2211,8 +2202,9 @@ axl_bool test_10_b (void) {
 	}
 
 	/* check connection role */
-	if (vortex_connection_get_role (child->conn_mgr) != VortexRoleInitiator) {
-		printf ("Test 10-b: expected to find initiator role but found: %d\n", vortex_connection_get_role (child->conn_mgr));
+	if (vortex_connection_get_role (child->conn_mgr) != VortexRoleListener) {
+		printf ("Test 10-b: expected to find listener role but found: %d (%d)\n", 
+			vortex_connection_get_role (child->conn_mgr), VortexRoleMasterListener);
 		return axl_false;
 	}
 	printf ("Test 10-b: connection management at parent ok..\n");
@@ -2273,6 +2265,7 @@ axl_bool test_10_b (void) {
 	vortex_frame_unref (frame);
 
 	/* ok, now use master<->child link */
+	printf ("Test 10-b: checking master<->child to create internal channels, role: %d\n", vortex_connection_get_role (child->conn_mgr));
 	channel = vortex_channel_new (child->conn_mgr, 0, "urn:aspl.es:beep:profiles:reg-test:profile-10b-internal",
 				      NULL, NULL, NULL, NULL, NULL, NULL);
 	if (channel == NULL) {
@@ -2454,24 +2447,6 @@ axl_bool test_10_c (void) {
 	return axl_true;
 }
 
-typedef struct _FailStructure  {
-	char * value;
-} FailStructure;
-
-void test_10_a_received (VortexChannel    * channel, 
-			 VortexConnection * connection, 
-			 VortexFrame      * frame, 
-			 axlPointer         user_data)
-{
-	FailStructure * structure = user_data;
-
-	/*** begin: FORCED SEG FAULT ACCESS ***/
-	printf ("This will fail: %s\n", structure->value);
-	/*** end: FORCED SEG FAULT ACCESS ***/
-
-	return;
-}
-
 axl_bool test_10_a (void) {
 
 	VortexCtx        * vCtx;
@@ -2481,13 +2456,6 @@ axl_bool test_10_a (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtxTest10a, "test_10-a.conf"))
 		return axl_false;
-
-	/* register here all profiles required by tests */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
-
-	/* register a frame received for the remote side (child process) */
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-1", 
-					      test_10_a_received, NULL);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtxTest10a)) 
@@ -2508,7 +2476,7 @@ axl_bool test_10_a (void) {
 
 	/* check to create profile 2 channel: MUST WORK */
 	printf ("Test 10-a: opening channel...\n");
-	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1-failed");
 	if (channel == NULL) {
 		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
 		return axl_false;
@@ -2891,7 +2859,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 		/* check child count here */
 		tries = 3;
 		while (axl_true) {
-			printf ("Test 12: checking process count list %d..\n", turbulence_process_child_count (tCtx));
+			printf ("Test 12: checking process count list %d (current pid: %d)..\n", turbulence_process_child_count (tCtx), getpid ());
 			if (turbulence_process_child_count (tCtx) != 0 && tries == 0) {
 				printf ("ERROR (20): expected to find child count 0 but found %d..\n", 
 					turbulence_process_child_count (tCtx));
@@ -2923,10 +2891,6 @@ axl_bool test_12 (void) {
 	/* configure signal handling */
 	test12Ctx = tCtx;
 	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, test_12_signal_received);
-
-	/* configure test path to locate appropriate sasl.conf files */
-	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
-						   vortex_support_build_filename ("test_12_module", NULL));
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -4782,13 +4746,19 @@ int main (int argc, char ** argv)
 	printf ("**                   axl:        %s\n**\n",
 		AXL_VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     time ./test_01 [--help] [--debug] [--no-python] [--python-tests] [--run-test=NAME] [--no-10a]\n**\n");
+	printf ("**     time ./test_01 [--help] [--debug] [--no-python] [--python-tests] [--run-test=NAME] [--no-10a] [--valgrind-children]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
-	printf ("**     libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no ./test_01 [--debug]\n**\n");
+	printf ("**     PARENT: \n");
+	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no ./test_01 [--debug]\n**\n");
+	printf ("**     CHILDREN: \n");
+	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
 	printf ("** Available tests: test_01, \n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
+
+	/* set starting process name */
+	turbulence_process_set_file_path ("../src/turbulence");
 
 	/* uncomment the following four lines to get debug */
 	while (argc > 0) {
@@ -4802,6 +4772,10 @@ int main (int argc, char ** argv)
 			only_python = axl_true;
 		if (axl_cmp (argv[argc], "--no-10a"))
 			 enable_10a = axl_false;
+		if (argv[argc] && axl_memcmp (argv[argc], "--child-cmd-prefix", 18)) { 
+			printf ("** Setting children cmd prefix: %s\n", argv[argc] + 19);
+			turbulence_process_set_child_cmd_prefix (argv[argc] + 19);
+		}
 		if (argv[argc] && axl_memcmp (argv[argc], "--run-test", 10)) {
 			run_test = argv[argc] + 11;
 			printf ("INFO: running test: %s\n", run_test);

@@ -244,6 +244,9 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* do not release the context (this is done by the caller) */
 	turbulence_log_cleanup (ctx);
 
+	/* release child if defined */
+	turbulence_child_unref (ctx->child);
+
 	/* terminate vortex */
 	msg ("now, terminate vortex library after turbulence cleanup..");
 	vortex_exit_ctx (vortex_ctx, free_vortex_ctx);

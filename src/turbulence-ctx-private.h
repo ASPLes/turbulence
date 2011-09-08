@@ -102,6 +102,7 @@ struct _TurbulenceCtx {
 
 	/*** turbulence config module ***/
 	axlDoc             * config;
+	char               * config_path;
 
 	/* turbulence loading modules module */
 	axlList            * registered_modules;
@@ -126,7 +127,6 @@ struct _TurbulenceCtx {
 	/*** turbulence process module ***/
 	axlHash                 * child_process;
 	VortexMutex               child_process_mutex;
-	VortexAsyncQueue        * child_wait;
 
 	/*** turbulence mediator module ***/
 	axlHash            * mediator_hash;
@@ -142,9 +142,11 @@ struct _TurbulenceChild {
 	TurbulenceCtx      * ctx;
 	TurbulencePPathDef * ppath;
 
-#if defined(AXL_OS_UNIX)
 	int                  child_connection;
+	TurbulenceLoop     * child_conn_loop;
+#if defined(AXL_OS_UNIX)
 	char               * socket_control_path;
+	char              ** init_string_items;
 #endif
 
 	/* connection management */

@@ -112,6 +112,8 @@ void turbulence_conn_mgr_unref (axlPointer data)
 
 	/* check if we have to initiate child process termination */
 	if (ctx->child) {
+		msg ("CHILD: Checking for process termination, current connections are: %d",
+		     axl_hash_items (ctx->conn_mgr_hash));
 		if (axl_hash_items (ctx->conn_mgr_hash) == 0) {
 			msg ("CHILD: Checking for process termination, current connections are: 0");
 			turbulence_process_check_for_finish (ctx);
@@ -238,6 +240,10 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	 * process is done on a child process */
 	TurbulenceChild        * child = ctx->child;
 	VortexConnection       * temp;
+
+	/* skip connection that should be registered at conn mgr */
+	if (vortex_connection_get_data (conn, "tbc:conn:mgr:!")) 
+		return 1;
 
 	/* NOTE REFERECE 002: check if we are a child process and the
 	 * connection isn't the result of the temporal listener to

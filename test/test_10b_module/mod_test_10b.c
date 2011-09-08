@@ -65,7 +65,7 @@ void mod_test_10b_frame_received (VortexChannel    * channel,
 		}
 
 		/* now check role */
-		if (vortex_connection_get_role (child->conn_mgr) != VortexRoleListener) {
+		if (vortex_connection_get_role (child->conn_mgr) != VortexRoleInitiator) {
 			vortex_channel_send_err (channel, "Found child conn mgr has unexpected role..", 42, vortex_frame_get_msgno (frame));
 			return;
 		}
