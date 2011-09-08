@@ -349,6 +349,10 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 
 	if (! vortex_connection_is_ok (child->conn_mgr, axl_false)) 
 		error ("CHILD: failed to create master<->child BEEP link..");
+	else {
+		/* connection ok, now unregister */
+		turbulence_conn_mgr_unregister (ctx, child->conn_mgr);
+	}
 
 	/* register connection handled by parent */
 	if (! __turbulence_child_post_init_register_conn (ctx, /* conn_socket */ child->init_string_items[0],
