@@ -2377,9 +2377,6 @@ axl_bool test_10_c (void) {
 	if (! test_common_init (&vCtx, &tCtxTest10prev, "test_10c.conf")) 
 		return axl_false;
 
-	/* register here all profiles required by tests */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
-
 	/* run configuration */
 	if (! turbulence_run_config (tCtxTest10prev)) 
 		return axl_false;
