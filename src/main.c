@@ -379,13 +379,14 @@ int main (int argc, char ** argv)
 	exarg_end ();
 
 	/* free context (the very last operation) */
-	turbulence_ctx_free (ctx);
 	vortex_ctx_free (vortex_ctx);
 
 	if (! exarg_is_defined ("child")) {
 		/* remote pid state file */
 		turbulence_remove_pidfile ();
 	} /* end if */
+
+	turbulence_ctx_free (ctx);
 
 	return 0;
 }
