@@ -260,6 +260,85 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
 	return;
 }
 
+axl_bool turbulence_run_config_start_listeners (TurbulenceCtx * ctx, axlDoc * doc)
+{
+	axlNode          * listener;
+	axl_bool           at_least_one_listener = axl_false;
+	axlNode          * name;
+	axlNode          * port;
+	VortexConnection * con_listener;
+	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
+
+	/* check if this is a child process (it has no listeners, only
+	 * master process do) */
+	if (ctx->child)
+		return axl_true;
+
+	/* get reference to the first listener defined */
+	listener = axl_doc_get (doc, "/turbulence/global-settings/listener");
+	while (listener != NULL) {
+
+		/* get the listener name configuration */
+		name = axl_node_get_child_called (listener, "name");
+		
+		/* get ports to be allocated */
+		port = axl_doc_get (doc, "/turbulence/global-settings/ports/port");
+		while (port != NULL) {
+
+			/* start the listener */
+			con_listener = vortex_listener_new (
+				/* the context where the listener will
+				 * be started */
+				vortex_ctx,
+				/* listener name */
+				axl_node_get_content (name, NULL),
+				/* port to use */
+				axl_node_get_content (port, NULL),
+				/* on ready callbacks */
+				NULL, NULL);
+			
+			/* check the listener started */
+			if (! vortex_connection_is_ok (con_listener, axl_false)) {
+				/* unable to start the server configuration */
+				error ("unable to start listener at %s:%s...", 
+				       /* server name */
+				       axl_node_get_content (name, NULL),
+				       /* server port */
+				       axl_node_get_content (port, NULL));
+
+				/* check clean start */ 
+				CLEAN_START (ctx);
+
+				goto next;
+			} /* end if */
+
+			msg ("started listener at %s:%s...",
+			     axl_node_get_content (name, NULL),
+			     axl_node_get_content (port, NULL));
+
+			/* flag that at least one listener was
+			 * created */
+			at_least_one_listener = axl_true;
+		next:
+			/* get the next port */
+			port = axl_node_get_next_called (port, "port");
+			
+		} /* end while */
+		
+		/* get the next listener */
+		listener = axl_node_get_next_called (listener, "listener");
+
+	} /* end if */
+
+	if (! at_least_one_listener) {
+		error ("Unable to start turbulence, no listener configuration was started, either due to configuration error or to startup problems. Terminating..");
+		return axl_false;
+	}
+
+	/* listeners ok */
+	return axl_true;
+}
+
 /** 
  * @internal Takes current configuration, and starts all settings
  * required to run the server.
@@ -273,11 +352,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 {
 	/* get the document configuration */
 	axlDoc           * doc        = turbulence_config_get (ctx);
-	axlNode          * port;
-	axlNode          * listener;
-	axlNode          * name;
 	axlNode          * node;
-	VortexConnection * con_listener;
 	VortexCtx        * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* mod turbulence dtd */
@@ -288,7 +363,6 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	int                int_aux;
 #endif
 	axlError         * error;
-	int                at_least_one_listener = axl_false;
 
 	/* check ctx received */
 	if (ctx == NULL) 
@@ -407,64 +481,8 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	turbulence_log_manager_start (ctx);
 
 	/* get the first listener configuration */
-	listener = axl_doc_get (doc, "/turbulence/global-settings/listener");
-	while (listener != NULL) {
-		/* get the listener name configuration */
-		name = axl_node_get_child_called (listener, "name");
-		
-		/* get ports to be allocated */
-		port = axl_doc_get (doc, "/turbulence/global-settings/ports/port");
-		while (port != NULL) {
-
-			/* start the listener */
-			con_listener = vortex_listener_new (
-				/* the context where the listener will
-				 * be started */
-				vortex_ctx,
-				/* listener name */
-				axl_node_get_content (name, NULL),
-				/* port to use */
-				axl_node_get_content (port, NULL),
-				/* on ready callbacks */
-				NULL, NULL);
-			
-			/* check the listener started */
-			if (! vortex_connection_is_ok (con_listener, axl_false)) {
-				/* unable to start the server configuration */
-				error ("unable to start listener at %s:%s...", 
-				       /* server name */
-				       axl_node_get_content (name, NULL),
-				       /* server port */
-				       axl_node_get_content (port, NULL));
-
-				/* check clean start */ 
-				CLEAN_START (ctx);
-
-				goto next;
-			} /* end if */
-
-			msg ("started listener at %s:%s...",
-			     axl_node_get_content (name, NULL),
-			     axl_node_get_content (port, NULL));
-
-			/* flag that at least one listener was
-			 * created */
-			at_least_one_listener = axl_true;
-		next:
-			/* get the next port */
-			port = axl_node_get_next_called (port, "port");
-			
-		} /* end while */
-		
-		/* get the next listener */
-		listener = axl_node_get_next_called (listener, "listener");
-
-	} /* end if */
-
-	if (! at_least_one_listener) {
-		error ("Unable to start turbulence, no listener configuration was started, either due to configuration error or to startup problems. Terminating..");
+	if (! turbulence_run_config_start_listeners (ctx, doc))
 		return axl_false;
-	}
 
 	/* turbulence started properly */
 	return axl_true;

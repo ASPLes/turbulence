@@ -1097,7 +1097,8 @@ void mod_radmin_internal_frame_received  (VortexChannel    * channel,
 		mod_radmin_handle_command_reply (status, doc, conn, channel, frame);
 	} else if (axl_cmp ("kill child", command)) {
 		msg ("Received request from parent to kill current process, starting..");
-		vortex_async_queue_push (ctx->child_wait, INT_TO_PTR (axl_true));
+		/* unlock the current listener */
+		vortex_listener_unlock (TBC_VORTEX_CTX (ctx));
 		
 		/* no need for reply because the process will end */
 	} else if (axl_memcmp ("kill conn", command, 9)) {

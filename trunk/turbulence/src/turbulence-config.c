@@ -207,6 +207,9 @@ axl_bool  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 		return axl_false;
 	} /* end if */
 
+	/* get a reference to the configuration path used for this context */
+	ctx->config_path = axl_strdup (config);
+
 	/* load the file */
 	ctx->config = axl_doc_parse_from_file (config, &error);
 	if (ctx->config == NULL) {
@@ -437,6 +440,9 @@ void turbulence_config_cleanup (TurbulenceCtx * ctx)
 	if (ctx->config)
 		axl_doc_free (ctx->config);
 	ctx->config = NULL;
+	if (ctx->config_path)
+		axl_free (ctx->config_path);
+	ctx->config_path = NULL;
 
 	return;
 } 

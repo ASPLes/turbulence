@@ -74,6 +74,23 @@ void              turbulence_process_check_for_finish (TurbulenceCtx * ctx);
 void              turbulence_process_cleanup      (TurbulenceCtx * ctx);
 
 /* internal API */
+axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop, 
+					   TurbulenceCtx  * ctx,
+					   int              descriptor, 
+					   axlPointer       ptr, 
+					   axlPointer       ptr2);
+
+void              turbulence_process_set_file_path (const char * path);
+
+void              turbulence_process_set_child_cmd_prefix (const char * cmd_prefix);
+
+axl_bool          __turbulence_process_create_parent_connection (TurbulenceChild * child);
+
+axl_bool          __turbulence_process_handle_connection_received (TurbulenceCtx      * ctx, 
+								   TurbulencePPathDef * ppath,
+								   VORTEX_SOCKET        socket, 
+								   char               * conn_status);
+
 char *           turbulence_process_connection_status_string (axl_bool          handle_start_reply,
 							      int               channel_num,
 							      const char      * profile,
@@ -96,5 +113,10 @@ void             turbulence_process_connection_recover_status (char            *
 							       int             * seq_no,
 							       int             * seq_no_expected,
 							       int             * ppath_id);
+
+axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket, 
+					 TurbulenceChild * child, 
+					 const char      * ancillary_data, 
+					 int               size);
 
 #endif

@@ -92,7 +92,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 	result->ctx   = ctx;
 
 	/* create listener connection used for child management */
-	result->conn_mgr = vortex_listener_new_full2 (ctx->vortex_ctx, "0.0.0.0", "0", axl_false, NULL, NULL);
+	result->conn_mgr = vortex_listener_new_full (ctx->vortex_ctx, "0.0.0.0", "0", NULL, NULL);
 	if (! vortex_connection_is_ok (result->conn_mgr, axl_false)) {
 		error ("Failed to connection child connection management, unable to create child process");
 
@@ -102,6 +102,9 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 
 		return NULL;
 	}
+
+	/* flag this listener as master<->child link */
+	vortex_connection_set_data (result->conn_mgr, "tbc:mc-link", result);
 
 	/* unregister conn mgr */
 	turbulence_conn_mgr_unregister (ctx, result->conn_mgr);
@@ -170,15 +173,19 @@ void              turbulence_child_unref (TurbulenceChild * child)
 	axl_free (child->socket_control_path);
 	child->socket_control_path = NULL;
 	vortex_close_socket (child->child_connection);
+	axl_freev (child->init_string_items);
 #endif
 
 	/* finish child connection */
-	msg ("CHILD: Finishing child connection manager id=%d (refs: %d, role %d)", vortex_connection_get_id (child->conn_mgr), 
+	msg ("PARENT: Finishing child connection manager id=%d (refs: %d, role %d)", vortex_connection_get_id (child->conn_mgr), 
 	     vortex_connection_ref_count (child->conn_mgr), vortex_connection_get_role (child->conn_mgr));
 	
 	/* release reference if it is either initiator or listener */
 	vortex_connection_shutdown (child->conn_mgr);
 	vortex_connection_unref (child->conn_mgr, "free data"); 
+
+	/* finish child conn loop */
+	turbulence_loop_close (child->child_conn_loop, axl_true);
 
 	/* nullify */
 	child->conn_mgr = NULL;
@@ -189,5 +196,172 @@ void              turbulence_child_unref (TurbulenceChild * child)
 	axl_free (child);
 
 	return;
+}
+
+/** 
+ * @internal Function used to recover child status from the provided
+ * init string.
+ */
+axl_bool          turbulence_child_build_from_init_string (TurbulenceCtx * ctx, 
+							   const char    * socket_control_path)
+{
+	TurbulenceChild   * child;
+	char                child_init_string[4096];
+	char                child_init_length[30];
+	int                 iterator;
+	int                 size;
+	axl_bool            found;
+
+	/* create empty child object */
+	child = axl_new (TurbulenceChild, 1);
+
+	/* set child as not started yet */
+	ctx->started = axl_false;
+
+	/* set socket control path */
+	child->socket_control_path = axl_strdup (socket_control_path);
+
+	/* connect to the socket control path */
+	if (! __turbulence_process_create_parent_connection (child)) {
+		error ("CHILD: unable to create parent control connection, finishing child");
+		return axl_false;
+	}
+
+	/* get the amount of bytes to read from parent */
+	iterator = 0;
+	found    = axl_false;
+	while (iterator < 30 && recv (child->child_connection, child_init_length + iterator, 1, 0) == 1) {
+		if (child_init_length[iterator] == '\n') {
+			found = axl_true;
+			break;
+		} /* end if */
+		
+		/* next position */
+		iterator++;
+	}
+
+	if (! found) {
+		error ("CHILD: expected to find init child string length indication termination (\\n) but not found, finishing child");
+		return axl_false;
+	}
+	child_init_length[iterator + 1] = 0;
+	size = atoi (child_init_length);
+	msg ("CHILD: init child string length is: %d", size);
+
+	if (size > 4095) {
+		error ("CHILD: unable to process child init string, found length indicator bigger than 4095");
+		return axl_false;
+	}
+
+	/* now receive child init string */
+	size = recv (child->child_connection, child_init_string, size, 0);
+	if (size > 0)
+		child_init_string[size] = 0;
+	else {
+		error ("CHILD: received empty or wrong init child string from parent, finishing child");
+		return axl_false;
+	}
+
+	msg ("Building child from init string: %s", child_init_string);
+
+	/* build items */
+	child->init_string_items = axl_split (child_init_string, 1, ";_;");
+	if (child->init_string_items == NULL)
+		return axl_false;
+
+	/* set child on context */
+	ctx->child = child;
+	child->ctx = ctx;
+
+	/* set default reference counting */
+	child->ref_count = 1;
+	vortex_mutex_create (&child->mutex);	
+
+	/* return child structure properly recovered */
+	return axl_true;
+}
+
+axl_bool __turbulence_child_post_init_openlogs (TurbulenceCtx  * ctx, 
+						char          ** init_string_items)
+{
+	
+
+	return axl_true;
+}
+
+axl_bool __turbulence_child_post_init_register_conn (TurbulenceCtx * ctx, const char * conn_socket, char * conn_status)
+{
+	msg ("CHILD: restoring connection to be handled at child, socket: %s, connection status: %s", conn_socket, conn_status);
+	
+	if (! __turbulence_process_handle_connection_received (ctx, ctx->child->ppath, atoi (conn_socket), conn_status + 1)) 
+		return axl_false;
+	msg ("CHILD: conn registered..");
+
+	return axl_true;
+} 
+
+/** 
+ * @internal Function used to complete child startup.
+ */
+axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
+{
+	TurbulencePPathDef  * def;
+	TurbulenceChild     * child;
+
+	/*** NOTE: indexes used for child->init_string_items[X] are defined inside
+	 * turbulence_process_create_child.c, around line 1392 ***/
+	msg ("CHILD: doing post init");
+
+	/* get child reference */
+	child = ctx->child;
+
+	/* define profile path */
+	msg ("Setting profile path id for child %d", child->init_string_items[10]);
+	def = turbulence_ppath_find_by_id (ctx, atoi (child->init_string_items[10]));
+	if (def == NULL) {
+		error ("Unable to find profile path associated to id %d, unable to complete post init", atoi (child->init_string_items[10]));
+		return axl_false;
+	}
+	msg ("  Set profile path: '%s'", turbulence_ppath_get_name (def));
+	ctx->child->ppath = def;
+
+	/* check here to change root path, in the case it is defined
+	 * now we still have priviledges */
+	turbulence_ppath_change_root (ctx, def);
+
+	/* check here for setuid support */
+	turbulence_ppath_change_user_id (ctx, def);
+
+	/* create loop to watch child->child_connection */
+	child->child_conn_loop = turbulence_loop_create (ctx);
+	turbulence_loop_watch_descriptor (child->child_conn_loop, child->child_connection, 
+					  turbulence_process_parent_notify, child, NULL);
+	msg ("CHILD: started socket watch on (%d)", child->child_connection);
+
+	/* open connection management (child->conn_mgr) */
+	msg ("CHILD: starting master<->child BEEP link on %s:%s", child->init_string_items[12], child->init_string_items[13]);
+	child->conn_mgr = vortex_connection_new (ctx->vortex_ctx, 
+						 /* host */
+						 child->init_string_items[12], 
+						 /* port */
+						 child->init_string_items[13],
+						 NULL, NULL);
+
+	if (! vortex_connection_is_ok (child->conn_mgr, axl_false)) 
+		error ("CHILD: failed to create master<->child BEEP link..");
+
+	/* register connection handled by parent */
+	if (! __turbulence_child_post_init_register_conn (ctx, /* conn_socket */ child->init_string_items[0],
+							  /* conn_status */ child->init_string_items[11])) {
+		error ("CHILD: failed to register starting connection at child process, finishing..");
+		return axl_false;
+	} /* end if */
+	
+	/* open logs */
+	if (! __turbulence_child_post_init_openlogs (ctx, child->init_string_items)) 
+		return axl_false;
+
+	msg ("CHILD: post init phase done, child running");
+	return axl_true;
 }
 

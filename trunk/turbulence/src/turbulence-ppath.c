@@ -830,27 +830,56 @@ void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx,
  */
 axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * connection, axlPointer data)
 {
-	TurbulenceCtx * ctx        = data;
+	TurbulenceCtx     * ctx        = data;
+	VortexConnection  * conn_mgr;
+	VORTEX_SOCKET       session;
+	VortexConnection  * listener;
+	TurbulenceChild   * child;
+
+	/* get listener reference */
+	listener = vortex_connection_get_listener (connection);
 
 	/* check if we are in a child process to find a preselected
 	 * profile path (and caused creation of this child)  */
-	if (ctx->child) {
+	if (vortex_connection_get_data (listener, "tbc:mc-link")) {
 		/* check especial case where master process is
 		 * connecting this child: this is the especial BEEP
 		 * connection that exists linking master process with
 		 * each child. */
-		if (vortex_connection_get_listener (connection) == ctx->child->conn_mgr) {
-			msg ("CHILD: detected connection from master process: %s:%s..accepting",
-			     vortex_connection_get_host (connection), vortex_connection_get_port (connection));
-			/* do not configure any mask */
-			return axl_true;
+		child = vortex_connection_get_data (listener, "tbc:mc-link");
+
+		msg ("PARENT: detected connection from child process: %s:%s..accepting",
+		     vortex_connection_get_host (connection), vortex_connection_get_port (connection));
+
+		/* configure conn mgr: the connection received
+		 * is the result and the connection we
+		 * want. Now we have to drop the master
+		 * listener that made possible this connection
+		 * which is in child_conn_mgr */
+		conn_mgr = child->conn_mgr;
+		child->conn_mgr = connection;
+
+		/* acquire a reference */
+		vortex_connection_ref (connection, "master<->child");
+			
+		/* get socket */
+		session = vortex_connection_get_socket (conn_mgr);
+		vortex_connection_set_close_socket (conn_mgr, axl_false);
+			
+		/* now send socket to the child so it does not
+		 * take a socket bucket in the master  */ 
+		if (! turbulence_process_send_socket (session, child, "s", 1))  {
+			error ("PARENT: Unable to send socket associated to the management connection associated to the child process");
+			return axl_false;
 		} /* end if */
 
-		msg ("CHILD: Detected call to select a profile path on a connection id=%d inside a process with a preselected profile path %s, setting..",
-		     vortex_connection_get_id (connection), turbulence_ppath_get_name (ctx->child->ppath));
-		/* restore child profile path */
-		__turbulence_ppath_set_state (ctx, connection, 
-					      turbulence_ppath_get_id (ctx->child->ppath), NULL);
+		/* close old master listener */
+		vortex_connection_shutdown (conn_mgr);
+
+		/* flag this connection to be not registered in conn mgr */
+		vortex_connection_set_data (connection, "tbc:conn:mgr:!", INT_TO_PTR (axl_true));
+
+		/* do not configure any mask */
 		return axl_true;
 	} /* end if */
 

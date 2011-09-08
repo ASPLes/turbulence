@@ -1,4 +1,4 @@
-SUBDIRS = test_06a test_11_module test_15_module test_10b_module
+SUBDIRS = test_06a test_10_prev test_10b_module test_11_module test_15_module
 
 INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 	$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -Wall -ansi  \

@@ -303,6 +303,7 @@ tools/tbc-dblist-mgr/Makefile
 tools/tbc-ctl/Makefile
 test/Makefile
 test/test_06a/Makefile
+test/test_10_prev/Makefile
 test/test_10b_module/Makefile
 test/test_11_module/Makefile
 test/test_15_module/Makefile

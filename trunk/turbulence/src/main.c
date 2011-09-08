@@ -53,6 +53,9 @@ TurbulenceCtx * ctx;
  */
 int  main_init_exarg (int argc, char ** argv)
 {
+	/* set starting process name */
+	turbulence_process_set_file_path (argv[0]);
+
 	/* install headers for help */
 	exarg_add_usage_header  (HELP_HEADER);
 	exarg_add_help_header   (HELP_HEADER);
@@ -94,6 +97,9 @@ int  main_init_exarg (int argc, char ** argv)
 
 	exarg_install_arg ("detach", NULL, EXARG_NONE,
 			   "Makes turbulence to detach from console, starting in background.");
+
+	exarg_install_arg ("child", NULL, EXARG_STRING,
+			   "Interna flag used to create childs by the master process.");
 
 	exarg_install_arg ("disable-sigint", NULL, EXARG_NONE,
 			   "Allows to disable SIGINT handling done by Turbulence. This option is only useful for debugging purposes..");
@@ -271,19 +277,44 @@ int main (int argc, char ** argv)
 	ctx        = turbulence_ctx_new ();
 	vortex_ctx = vortex_ctx_new ();
 
-	/*** configure signal handling ***/
-	turbulence_signal_install (ctx, 
-				   /* signal sigint handling according to console options */
-				   ! exarg_is_defined ("disable-sigint"), 
-				   /* enable sighup handling */
-				   axl_true,
-				   /* enable sigchild */
-				   axl_true,
-				   /* signal received */
-				   main_signal_received);
+	/* check for child flag */
+	if (exarg_is_defined ("child")) {
+		/* reconfigure signals */
+		turbulence_signal_install (ctx, 
+					   /* disable sigint */
+					   axl_false, 
+					   /* signal sighup */
+					   axl_false,
+					   /* enable sigchild */
+					   axl_false,
+					   main_signal_received);		
+
+	} else {
+		/*** configure signal handling ***/
+		turbulence_signal_install (ctx, 
+					   /* signal sigint handling according to console options */
+					   ! exarg_is_defined ("disable-sigint"), 
+					   /* enable sighup handling */
+					   axl_true,
+					   /* enable sigchild */
+					   axl_true,
+					   /* signal received */
+					   main_signal_received);
+	} /* end if */
 
 	/* check and enable console debug options */
 	main_common_enable_debug_options (ctx, vortex_ctx);
+
+	/* show some debug info */
+	if (exarg_is_defined ("child")) {
+		msg ("CHILD: starting child with init string: %s", exarg_get_string ("child"));
+
+		/* recover child information */
+		if (! turbulence_child_build_from_init_string (ctx, exarg_get_string ("child"))) {
+			error ("Failed to recover child information from init child string received");
+			return -1;
+		}
+ 	}
 
 	/* check and get config location */
 	config = main_common_get_config_location (ctx, vortex_ctx);
@@ -294,8 +325,10 @@ int main (int argc, char ** argv)
 		/* caller do not follow */
 	}
 
-	/* check here if the user has asked to place the pidfile */
-	turbulence_place_pidfile ();
+	if (! exarg_is_defined ("child")) {
+		/* check here if the user has asked to place the pidfile */
+		turbulence_place_pidfile ();
+	}
 
 	/* init libraries */
 	if (! turbulence_init (ctx, vortex_ctx, config)) {
@@ -315,13 +348,23 @@ int main (int argc, char ** argv)
 	/* not required to free config var, already done by previous
 	 * function */
 	msg ("about to startup configuration found..");
-	if (! turbulence_run_config (ctx))
+	if (! turbulence_run_config (ctx)) {
+		error ("Failed to run current config, finishing process: %d", getpid ());
 		return -1;
+	}
 
+	/* post init child operations */
+	if (exarg_is_defined ("child")) {
+		if (! turbulence_child_post_init (ctx)) {
+			error ("Failed to complete post init child operations, unable to start child process, killing: %d", getpid ());
+			return -1;
+		}
+	}
 
 	/* drop a log */
 	msg ("Turbulence STARTED OK (pid: %d, vortex ctx refs: %d)", getpid (),
 	     vortex_ctx_ref_count (vortex_ctx));
+
 	/* flag that the server started ok */
 	ctx->started = axl_true;
 
@@ -339,8 +382,10 @@ int main (int argc, char ** argv)
 	turbulence_ctx_free (ctx);
 	vortex_ctx_free (vortex_ctx);
 
-	/* remote pid state file */
-	turbulence_remove_pidfile ();
+	if (! exarg_is_defined ("child")) {
+		/* remote pid state file */
+		turbulence_remove_pidfile ();
+	} /* end if */
 
 	return 0;
 }
