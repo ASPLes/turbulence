@@ -3199,14 +3199,6 @@ axl_bool test_13 (void) {
 	if (! test_common_init (&vCtx, &tCtx, "test_13.conf")) 
 		return axl_false;
 
-	/* configure test path to locate appropriate sasl.conf files */
-	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
-						   vortex_support_build_filename ("test_12_module", NULL));
-
-	/* configure test path to locate appropriate sasl.conf files */
-	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("python"), 
-						   vortex_support_build_filename ("test_13_module", NULL));
-
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;

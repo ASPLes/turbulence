@@ -209,6 +209,11 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 	axlHashCursor       * profiles;
 	char                * uri2;
 
+	if (ppath_items == NULL) {
+		error ("Found no items inside profile path item, rejecting");
+		return axl_false;
+	}
+
 	/** 
 	 * NOTE: about profile filtering
 	 *
@@ -231,7 +236,6 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 	 * might allow the requested profile. To perform that task,
 	 * the function calls recursively to itself.
 	 */
-	
 	/* FIRST PART: first check all <allow> and <if-success> nodes on this first level. */
 	iterator = 0;
 	while (ppath_items[iterator]) {
@@ -768,9 +772,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 		msg ("finished turbulence_process_create_child (parent view)..");
 	} else {
 
-		/* notify profile path selected in the case no child
-		   is created because turbulence_process_create_child
-		   already do it */
+		/* notify profile path selected in the case no child is created */
 		if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, connection, NULL)) {
 			CLEAN_START(ctx); /* check to terminate child if clean start is defined */
 		}
@@ -1038,6 +1040,9 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		definition->id              = ctx->ppath_next_id;
 		ctx->ppath_next_id++;
 
+		/* set node */
+		definition->node = pdef;
+
 		/* catch all data from the profile path def header */
 		if (HAS_ATTR (pdef, "path-name")) {
 			/* catch the ppath name */
@@ -1124,17 +1129,40 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		 * expression found is an <if-success>, it is managed
 		 * as an <allow> node, but providing more content if
 		 * the profile negotiation success.  */
-		node                    = axl_node_get_first_child (pdef);
-		iterator2               = 0;
-		definition->ppath_items = axl_new (TurbulencePPathItem *, axl_node_get_child_num (pdef) + 1);
+		node = axl_node_get_first_child (pdef);
+
+		/* count items */
+		iterator2 = 0;
 		while (node != NULL) {
-			/* get the first definition */
-			definition->ppath_items[iterator2] = __turbulence_ppath_get_item (ctx, node);
-			
-			/* next profile path item */
+			/* check for if-success and allow */
+			if (NODE_CMP_NAME (node, "if-success") && NODE_CMP_NAME (node, "allow"))
+				iterator2++;
+
+			/* next node */
 			node = axl_node_get_next (node);
-			iterator2++;
+		}
+
+		/* if there are items to process alloc and process */
+		if (iterator2 > 0) {
+			definition->ppath_items = axl_new (TurbulencePPathItem *, iterator2 + 1);
+
+			iterator2 = 0;
+			node = axl_node_get_first_child (pdef);
+			while (node != NULL) {
+				/* check for if-success and allow */
+				if (! NODE_CMP_NAME (node, "if-success") && ! NODE_CMP_NAME (node, "allow")) {
+					node = axl_node_get_next (node);
+					continue;
+				} /* end if */
+
+				/* get the first definition */
+				definition->ppath_items[iterator2] = __turbulence_ppath_get_item (ctx, node);
+				
+				/* next profile path item */
+				node = axl_node_get_next (node);
+				iterator2++;
 			
+			} /* end if */
 		} /* end if */
 		
 		/* get next profile path def */

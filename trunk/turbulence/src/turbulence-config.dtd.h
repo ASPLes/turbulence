@@ -112,10 +112,12 @@
                                                                                           \
 <!-- profile-path-configuration support -->                                               \
 <!ELEMENT profile-path-configuration  (path-def+)>                                        \
-<!ELEMENT path-def        (if-success | allow)*>                                          \
+<!ELEMENT path-def        (search | if-success | allow)*>                                 \
                                                                                           \
 <!ELEMENT if-success      (if-success | allow)*>                                          \
 <!ELEMENT allow           (if-success | allow)*>                                          \
+<!-- search path nodes -->                                                                \
+<!ELEMENT search           EMPTY>                                                         \
                                                                                           \
 <!ATTLIST path-def                                                                        \
           path-name      CDATA #IMPLIED                                                   \
@@ -142,6 +144,11 @@
           profile      CDATA #REQUIRED                                                    \
    max-per-conn CDATA #IMPLIED                                                            \
           preconnmark  CDATA #IMPLIED >                                                   \
+                                                                                          \
+<!ATTLIST search                                                                          \
+   domain       CDATA #IMPLIED                                                            \
+          path         CDATA #IMPLIED >                                                   \
+                                                                                          \
                                                                                           \
                                                                                           \
                                                                                           \
