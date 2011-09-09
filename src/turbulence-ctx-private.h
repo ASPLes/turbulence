@@ -250,6 +250,18 @@ struct _TurbulencePPathDef {
 	 * value.
 	 */
 	int childs_running;
+
+	/** 
+	 * reference to the <ppath-def> that where this profile path was loaded.
+	 */
+	axlNode * node;
+
+	/** 
+	 * In the case profile <path-def> has search nodes configured,
+	 * this flag signal if they were loaded previously (to avoid
+	 * loading them twice).
+	 */
+	axl_bool  search_nodes_loaded;
 };
 
 /** 
