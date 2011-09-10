@@ -367,7 +367,7 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 		msg ("Socket %d sent to child via %d, closing (status: %d)..", 
 		     socket, child->child_connection, rv);
 		/* close the socket  */
-		/* vortex_close_socket (socket); */
+		vortex_close_socket (socket); 
 	} else {
 		error ("Failed to send socket, error code %d, textual was: %s", rv, vortex_errno_get_error (errno));
 	}
