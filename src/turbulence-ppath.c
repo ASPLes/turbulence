@@ -66,7 +66,7 @@
  *  the mask handler that implements the profile path once selected.
  *
  *  3) If a profile path can't be selected yet because all of them are
- *  declared using a serverName and the client still didn't opeend a
+ *  declared using a serverName and the client still didn't opened a
  *  channel requesting a particular serverName, then a temporal
  *  profile path mask is used: __turbulence_ppath_mask_temporal.
  *
@@ -94,8 +94,8 @@
  *
  * For example, this code is used to handle connections at
  * __turbulence_ppath_handle_connection_on_connect when it is detected
- * the connection is notified at at function due to a tuning profile
- * process in process.
+ * the connection is notified at a function due to a tuning profile
+ * process in process (currently only TLS).
  *
  */
 
@@ -884,6 +884,13 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 		/* do not configure any mask */
 		return axl_true;
 	} /* end if */
+	
+	if (ctx->child) {
+		msg ("CHILD: Detected on connect on child process having a predefined profile path..");
+		/* set profile path currently selected on child */
+		__turbulence_ppath_set_state (ctx, connection, turbulence_ppath_get_id (ctx->child->ppath), NULL);
+		return axl_true;
+	}
 
 	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
 	msg ("Call to select a profile path at connection time (pre <greetings />), conn-id=%d", 
@@ -1135,7 +1142,7 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		iterator2 = 0;
 		while (node != NULL) {
 			/* check for if-success and allow */
-			if (NODE_CMP_NAME (node, "if-success") && NODE_CMP_NAME (node, "allow"))
+			if (NODE_CMP_NAME (node, "if-success") || NODE_CMP_NAME (node, "allow"))
 				iterator2++;
 
 			/* next node */
@@ -1462,6 +1469,31 @@ void                 __turbulence_ppath_set_selected (VortexConnection   * conn,
 	/* get current state and replace profile path */
 	state     = vortex_connection_get_data (conn, TURBULENCE_PPATH_STATE);
 	state->path_selected = ppath_def;
+	return;
+}
+
+void  __turbulence_ppath_load_search_nodes (TurbulenceCtx * ctx, TurbulencePPathDef * def)
+{
+	axlNode * node;
+	if (def->search_nodes_loaded)
+		return;
+
+	/* find search nodes */
+	node = axl_node_get_child_called (def->node, "search");
+	while (node) {
+
+		/* call to register search path on the provided domain */
+		msg ("Registering search path=%s under context domain=%s", 
+		     ATTR_VALUE (node, "path"), ATTR_VALUE (node, "domain"));
+		vortex_support_add_domain_search_path (TBC_VORTEX_CTX(ctx), 
+						       ATTR_VALUE (node, "domain"), ATTR_VALUE (node, "path"));
+
+		/* get next search */
+		node = axl_node_get_next_called (node, "search");
+	} /* end while */
+
+	/* flag search nodes as loaded */
+	def->search_nodes_loaded = axl_true;
 	return;
 }
 

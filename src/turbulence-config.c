@@ -124,7 +124,8 @@ void turbulence_config_load_expand_nodes (TurbulenceCtx * ctx)
 		} else if (HAS_ATTR (node, "dir")) {
 			msg ("Opening directory: %s", ATTR_VALUE (node, "dir"));
 			dir    = opendir (ATTR_VALUE (node, "dir"));
-			while ((dirent = readdir (dir))) {
+			
+			while (dir && (dirent = readdir (dir))) {
 
 				/* build path */
 				full_path = axl_strdup_printf ("%s/%s", ATTR_VALUE (node, "dir"), dirent->d_name);

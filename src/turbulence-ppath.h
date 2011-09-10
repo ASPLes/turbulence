@@ -66,6 +66,9 @@ const char         * turbulence_ppath_get_server_name (VortexConnection * conn);
 void                 __turbulence_ppath_set_selected (VortexConnection   * conn,
 						      TurbulencePPathDef * ppath_def);
 
+void                 __turbulence_ppath_load_search_nodes (TurbulenceCtx      * ctx, 
+							   TurbulencePPathDef * def);
+
 void                 turbulence_ppath_add_profile_attr_alias (TurbulenceCtx * ctx,
 							      const char    * profile,
 							      const char    * conn_attr);

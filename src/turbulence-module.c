@@ -488,10 +488,15 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 						  axlPointer              data3)
 {
 	/* get turbulence context */
-	TurbulenceModule * module;
-	int                iterator = 0;
+	TurbulenceModule   * module;
+	int                  iterator = 0;
 
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
+
+	/* load search paths here in case of TBC_PPATH_SELECTED_HANDLER */
+	if (handler == TBC_PPATH_SELECTED_HANDLER)
+		__turbulence_ppath_load_search_nodes (ctx, data);
+
 	while (iterator < axl_list_length (ctx->registered_modules)) {
 		/* get the module */
 		module = axl_list_get_nth (ctx->registered_modules, iterator);
