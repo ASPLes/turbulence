@@ -2733,10 +2733,26 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 
 	/* close connection */
 	vortex_connection_close (conn);
-	printf ("Test 12: connection closed..\n");
+	printf ("Test 12: connection closed..waiting conn mgr to release connection\n");
 
-	/* wait sometime to ensure conlist is removed */
-	vortex_async_queue_timedpop (queue, 10000);
+	/* now wait a bit 1seg */
+	iterator = 0;
+	while (iterator < 500) {
+		
+		/* wait a bit */
+		turbulence_sleep (tCtx, 10000);
+
+		/* check child count */
+		connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
+		if (axl_list_length (connList) == connections_after_close) {
+			axl_list_free (connList);
+			break;
+		} /* end if */
+		axl_list_free (connList);
+
+		/* next */
+		iterator++;
+	}
 
 	/* at this point we must have 1 connections registered (the master listener) */
 	connList = turbulence_conn_mgr_conn_list (tCtx, -1, NULL);
@@ -2789,6 +2805,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-11");
 	if (channel == NULL) {
 		printf ("ERROR (14): expected to find proper channel creation but a failure was found..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 
@@ -3734,30 +3751,6 @@ axl_bool test_15 (void) {
 	return axl_true;
 }
 
-void test_16_received (VortexChannel    * channel, 
-		       VortexConnection * connection, 
-		       VortexFrame      * frame, 
-		       axlPointer         user_data)
-{
-	char * result;
-	if (vortex_frame_get_type (frame) == VORTEX_FRAME_TYPE_MSG) {
-		if (axl_cmp (vortex_frame_get_payload (frame), "process-id")) {
-			result = axl_strdup_printf ("%d", getpid ());
-			vortex_channel_send_rpy (channel, result, strlen (result), vortex_frame_get_msgno (frame));
-			axl_free (result);
-			return;
-		}
-		/* do echo */
-		vortex_channel_send_rpy (channel, 
-					 vortex_frame_get_payload (frame), 
-					 vortex_frame_get_payload_size (frame), 
-					 vortex_frame_get_msgno (frame));
-		return;
-	} /* end if */
-
-	return;
-}
-
 /** 
  * @brief Test that a server with a set of connections already handled
  * by the main process, are closed when a profile path is activated
@@ -3780,12 +3773,6 @@ axl_bool test_16 (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_16.conf")) 
 		return axl_false;
-
-	/* register profile to use */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-16");
-
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-16", 
-					      test_16_received, NULL);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -3937,9 +3924,6 @@ axl_bool test_17 (void) {
 	if (! test_common_init (&vCtx, &tCtx, "test_17.conf")) 
 		return axl_false;
 
-	/* register profile to use */
-	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-17");
-
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
@@ -3961,10 +3945,24 @@ axl_bool test_17 (void) {
 		}
 
 		/* open a channel */
+		if (iterator == 499) {
+			vortex_log_enable (vCtx, axl_true);
+			vortex_color_log_enable (vCtx, axl_true);
+			vortex_log2_enable (vCtx, axl_true);
+		}
 		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-17");
 		if (channel == NULL) {
-			printf ("ERROR (2): expected to find proper channel creation but a failure was found..\n");
+			printf ("ERROR (2): expected to find proper channel creation but a failure was found during iterator=%d..\n",
+				iterator);
+			printf ("           showing errors:\n");
+			show_conn_errors (conn);
 			return axl_false;
+		}
+
+		if (iterator == 499) {
+			vortex_log_enable (vCtx, axl_false);
+			vortex_color_log_enable (vCtx, axl_false);
+			vortex_log2_enable (vCtx, axl_false);
 		}
 
 		/* setup the connection */
@@ -4128,12 +4126,14 @@ axl_bool test_20_check_child_profile_path (TurbulenceCtx * tCtx, VortexCtx * vCt
 
 	queue = vortex_async_queue_new ();
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+
+	printf ("Test 20: sending get-profile-path-name command..\n");
 	vortex_channel_send_msg (channel, "get-profile-path-name", 21, NULL);
 	frame = vortex_channel_get_reply (channel, queue);
 
 	/* check frame content */
 	if (! axl_cmp ((const char *) vortex_frame_get_payload (frame), "test 20 profile path")) {
-		printf ("ERROR (5): Expected to find profile path name %s but found %s\n",
+		printf ("ERROR (5): Expected to find profile path name '%s' but found '%s'\n",
 			"test 20 profile path", (const char *) vortex_frame_get_payload (frame));
 		return axl_false;
 	} /* end if */
@@ -4144,38 +4144,6 @@ axl_bool test_20_check_child_profile_path (TurbulenceCtx * tCtx, VortexCtx * vCt
 
 	return axl_true;
 }
-
-void test_20_frame_received (VortexChannel    * channel, 
-			     VortexConnection * conn,
-			     VortexFrame      * frame,
-			     axlPointer         user_data)
-{
-	const char         * profile_path;
-	TurbulencePPathDef * ppath;
-	if (axl_cmp ((const char *) vortex_frame_get_payload (frame),
-		     "get-profile-path-name")) {
-		/* get profile path */
-		ppath = turbulence_ppath_selected (conn);
-		if (ppath == NULL) {
-			vortex_channel_send_rpy (channel, "no profile path selected!!!", 27, vortex_frame_get_msgno (frame));
-			return;
-		} /* end if */
-
-		/* get profile path name */
-		profile_path = turbulence_ppath_get_name (ppath);
-		if (profile_path == NULL) {
-			vortex_channel_send_rpy (channel, "no profile path name defined", 28, vortex_frame_get_msgno (frame));
-			return;
-		}
-
-		/* set profile path name */
-		vortex_channel_send_rpy (channel, profile_path, strlen (profile_path), vortex_frame_get_msgno (frame));
-		return;
-	}
-
-	return;
-}
-			     
 
 axl_bool test_20 (void) {
 
@@ -4189,12 +4157,6 @@ axl_bool test_20 (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_20.conf")) 
 		return axl_false;
-
-	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:1");
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-20:1",
-					      test_20_frame_received, NULL);
-	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:2");
-	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:3");
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -4272,17 +4234,6 @@ axl_bool test_20 (void) {
 	return axl_true;
 }
 
-void test_21_frame_received (VortexChannel    * channel,
-			     VortexConnection * conn,
-			     VortexFrame      * frame,
-			     axlPointer         user_data)
-{
-	char * conn_id = axl_strdup_printf ("%d", vortex_connection_get_id (conn));
-	vortex_channel_send_rpy (channel, conn_id, strlen (conn_id), vortex_frame_get_msgno (frame));
-	axl_free (conn_id);
-	return;
-}
-
 axl_bool test_21 (void) {
 
 	VortexAsyncQueue * queue = NULL;
@@ -4299,10 +4250,6 @@ axl_bool test_21 (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_20.conf")) 
 		return axl_false;
-
-	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-20:1");
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-20:1",
-					      test_21_frame_received, NULL);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -4368,27 +4315,6 @@ axl_bool test_21 (void) {
 	test_common_exit (vCtx, tCtx);
 	
 	return axl_true;
-}
-
-void test_22_frame_received (VortexChannel    * channel,
-			     VortexConnection * conn,
-			     VortexFrame      * frame,
-			     axlPointer         user_data)
-{
-	const char * payload = (const char *) vortex_frame_get_payload (frame);
-
-	if (axl_cmp (payload, "getServerName")) {
-		/* get servername or empty string */
-		payload = vortex_connection_get_server_name (conn);
-		if (payload == NULL)
-			payload = "";
-		vortex_channel_send_rpy (channel, payload, strlen (payload), vortex_frame_get_msgno (frame));
-		return;
-	} /* end if */
-
-	/* send rpy */
-	vortex_channel_send_rpy (channel, vortex_frame_get_payload (frame), vortex_frame_get_payload_size (frame), vortex_frame_get_msgno (frame));
-	return;
 }
 
 axl_bool test_22_operations (VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue, axl_bool do_sasl_before) {
@@ -4558,19 +4484,6 @@ axl_bool test_22 (void) {
 	if (! test_common_init (&vCtx, &tCtx, "test_22.conf")) 
 		return axl_false;
 
-	/* add a search path to allow reg test to find tls.conf file */
-	vortex_support_add_domain_search_path (vCtx, "tls", "test_22_datadir");
-
-	/* configure test path to locate appropriate sasl.conf files */
-	vortex_support_add_domain_search_path (vCtx, "sasl", "test_12_module");
-
-	/* register a profile for testing */
-	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
-
-	/* register a frame received handler */
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-22:1",
-					      test_22_frame_received, NULL);
-
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
@@ -4579,18 +4492,22 @@ axl_bool test_22 (void) {
 	queue = vortex_async_queue_new ();
 
 	/* call to test against test-22.server */
+	printf ("Test 22: checking TLS with: test-22.server..\n");
 	if (! test_22_operations (vCtx, "test-22.server", queue, axl_false)) 
 		return axl_false;  
 
 	/* call to test against test-22.server.nochild */
+	printf ("Test 22: checking TLS with: test-22.server.nochild..\n");
 	if (! test_22_operations (vCtx, "test-22.server.nochild", queue, axl_false)) 
 		return axl_false;
 
 	/* call to test against test-22.server.sasl ( */
+	printf ("Test 22: checking TLS with: test-22.server.sasl..\n");
 	if (! test_22_operations (vCtx, "test-22.server.sasl", queue, axl_true)) 
 		return axl_false;
 
 	/* call to test against test-22.server.sasl.nochild */
+	printf ("Test 22: checking TLS with: test-22.server.sasl.nochild..\n");
 	if (! test_22_operations (vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
 		return axl_false;
 
@@ -4615,25 +4532,6 @@ axl_bool test_23 (void) {
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_23.conf")) 
 		return axl_false;
-
-	/* add a search path to allow reg test to find tls.conf file */
-	vortex_support_add_domain_search_path (vCtx, "tls", "test_22_datadir");
-
-	/* configure test path to locate appropriate sasl.conf files:
-	 * THIS IS NOT REQUIRED for this test, but we need this files
-	 * until we find a way to notify turbulence which modules
-	 * should be enabled according to some criteria which we
-	 * suspect it is a lot of work to handle a very especial
-	 * case */
-	vortex_support_add_domain_search_path (vCtx, "sasl", "test_12_module");
-
-
-	/* register a profile for testing */
-	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
-
-	/* register a frame received handler */
-	vortex_profiles_set_received_handler (vCtx, "urn:aspl.es:beep:profiles:reg-test:profile-22:1",
-					      test_22_frame_received, NULL);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 

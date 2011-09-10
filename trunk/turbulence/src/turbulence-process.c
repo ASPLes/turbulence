@@ -367,7 +367,7 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 		msg ("Socket %d sent to child via %d, closing (status: %d)..", 
 		     socket, child->child_connection, rv);
 		/* close the socket  */
-		vortex_close_socket (socket);
+		/* vortex_close_socket (socket); */
 	} else {
 		error ("Failed to send socket, error code %d, textual was: %s", rv, vortex_errno_get_error (errno));
 	}
@@ -424,8 +424,8 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * socket,
 
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if (cmsg == NULL) {
-		error ("Received empty control message from parent, unable to receive socket (code %d): %s",
-		       errno, vortex_errno_get_last_error ());
+		error ("Received empty control message from parent (status: %d), unable to receive socket (code %d): %s",
+		       status, errno, vortex_errno_get_last_error ());
 		(*socket) = -1;
 		if (ancillary_data)
 			(*ancillary_data) = NULL;
@@ -530,10 +530,6 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 
 		/* release ancillary data */
 		axl_free (conn_status);
-
-		/* lets wait a bit to rehandle this connection
-		 * unlocking this master process */
-
 
 		/* close connection */
 		vortex_connection_shutdown (conn);
