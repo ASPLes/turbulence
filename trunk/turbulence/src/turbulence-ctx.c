@@ -336,7 +336,7 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	 * modules unloading them. This will allow having usable code
 	 * mapped into modules address which is usable until the last
 	 * time.  */
-	turbulence_module_cleanup (ctx);
+	turbulence_module_cleanup (ctx); 
 
 	/* include a error warning */
 	if (ctx->vortex_ctx) {
@@ -344,7 +344,7 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 			error ("ERROR: current process is attempting to release vortex context more times than references supported");
 		else {
 			/* release vortex reference acquired */
-			msg ("Finishing VortexCtx (%p)", ctx->vortex_ctx);
+			msg ("Finishing VortexCtx (%p, ref count: %d)", ctx->vortex_ctx, vortex_ctx_ref_count (ctx->vortex_ctx));
 			vortex_ctx_unref (&(ctx->vortex_ctx));
 		}
 	}

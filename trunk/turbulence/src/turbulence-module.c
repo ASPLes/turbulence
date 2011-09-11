@@ -54,6 +54,8 @@
 #include <dlfcn.h>
 #endif
 
+axl_bool __turbulence_module_no_unmap = axl_false;
+
 struct _TurbulenceModule {
 	/* module attributes */
 	char             * path;
@@ -444,12 +446,17 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
  */
 void               turbulence_module_free (TurbulenceModule * module)
 {
+	TurbulenceCtx * ctx;
 	/* check values received */
 	v_return_if_fail (module);
 
+	ctx = module->ctx;
+
+	msg ("Unmapping module (%d)?: %s", ! __turbulence_module_no_unmap, module->path);
+
 	axl_free (module->path);
 	/* call to unload the module */
-	if (module->handle) {
+	if (module->handle && ! __turbulence_module_no_unmap) {
 #if defined(AXL_OS_UNIX)
 		dlclose (module->handle);
 #elif defined(AXL_OS_WIN32)
@@ -586,6 +593,11 @@ void               turbulence_module_notify_close (TurbulenceCtx * ctx)
 	turbulence_module_notify (ctx, TBC_CLOSE_HANDLER, NULL, NULL, NULL);
 
 	return;
+}
+
+void               turbulence_module_set_no_unmap_modules (axl_bool status)
+{
+	__turbulence_module_no_unmap = status;
 }
 
 /** 
