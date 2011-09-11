@@ -78,6 +78,15 @@ void show_conn_errors (VortexConnection * conn)
 	return;
 }
 
+void show_next_fd (const char * label)
+{
+	VORTEX_SOCKET _socket = socket (AF_UNIX, SOCK_STREAM, 0);
+
+	printf ("%s next socket available: %d\n", label, _socket);
+	vortex_close_socket (_socket);
+	return;
+}
+
 typedef struct _Test01FinishConn {
 	VortexConnection * conn;
 	int                pid;
@@ -3945,11 +3954,6 @@ axl_bool test_17 (void) {
 		}
 
 		/* open a channel */
-		if (iterator == 499) {
-			vortex_log_enable (vCtx, axl_true);
-			vortex_color_log_enable (vCtx, axl_true);
-			vortex_log2_enable (vCtx, axl_true);
-		}
 		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-17");
 		if (channel == NULL) {
 			printf ("ERROR (2): expected to find proper channel creation but a failure was found during iterator=%d..\n",
@@ -3957,12 +3961,6 @@ axl_bool test_17 (void) {
 			printf ("           showing errors:\n");
 			show_conn_errors (conn);
 			return axl_false;
-		}
-
-		if (iterator == 499) {
-			vortex_log_enable (vCtx, axl_false);
-			vortex_color_log_enable (vCtx, axl_false);
-			vortex_log2_enable (vCtx, axl_false);
 		}
 
 		/* setup the connection */

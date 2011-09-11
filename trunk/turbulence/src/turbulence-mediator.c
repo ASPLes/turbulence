@@ -83,6 +83,7 @@ void turbulence_mediator_init        (TurbulenceCtx * ctx)
 {
 	/* init mutex */
 	vortex_mutex_create (&ctx->mediator_hash_mutex);
+
 	/* init hash */
 	if (ctx->mediator_hash == NULL) {
 		/* init hash */

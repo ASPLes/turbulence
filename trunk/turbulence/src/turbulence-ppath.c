@@ -866,7 +866,6 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 			
 		/* get socket */
 		session = vortex_connection_get_socket (conn_mgr);
-		vortex_connection_set_close_socket (conn_mgr, axl_false);
 			
 		/* now send socket to the child so it does not
 		 * take a socket bucket in the master  */ 
