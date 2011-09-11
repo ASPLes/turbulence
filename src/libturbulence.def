@@ -171,6 +171,7 @@ turbulence_module_notify_reload_conf
 turbulence_module_open
 turbulence_module_open_and_register
 turbulence_module_register
+turbulence_module_set_no_unmap_modules
 turbulence_module_unload
 turbulence_module_unregister
 turbulence_msg

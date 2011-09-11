@@ -4315,7 +4315,7 @@ axl_bool test_21 (void) {
 	return axl_true;
 }
 
-axl_bool test_22_operations (VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue, axl_bool do_sasl_before) {
+axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue, axl_bool do_sasl_before) {
 	VortexConnection * conn;
 	VortexChannel    * channel;
 	VortexFrame      * frame;
@@ -4332,7 +4332,7 @@ axl_bool test_22_operations (VortexCtx * vCtx, const char * serverName, VortexAs
 			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
 		return axl_false;
 	} /* end if */
-	
+
 	/* enable TLS */
 	conn = vortex_tls_start_negotiation_sync (conn, serverName, &status, &status_message);
 	if (status != VortexOk) {
@@ -4417,6 +4417,9 @@ axl_bool test_22_operations (VortexCtx * vCtx, const char * serverName, VortexAs
 	/* close connection */
 	vortex_connection_close (conn);
 
+	/* wait a bit to ensure all handlers are run */
+	turbulence_sleep (ctx, 10000);
+
 	return axl_true;
 }
 
@@ -4491,26 +4494,56 @@ axl_bool test_22 (void) {
 
 	/* call to test against test-22.server */
 	printf ("Test 22: checking TLS with: test-22.server..\n");
-	if (! test_22_operations (vCtx, "test-22.server", queue, axl_false)) 
-		return axl_false;  
+	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false)) 
+		return axl_false;   
 
 	/* call to test against test-22.server.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.nochild..\n");
-	if (! test_22_operations (vCtx, "test-22.server.nochild", queue, axl_false)) 
-		return axl_false;
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.nochild", queue, axl_false))  
+		return axl_false;   
 
 	/* call to test against test-22.server.sasl ( */
 	printf ("Test 22: checking TLS with: test-22.server.sasl..\n");
-	if (! test_22_operations (vCtx, "test-22.server.sasl", queue, axl_true)) 
-		return axl_false;
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl", queue, axl_true)) 
+		return axl_false;   
 
 	/* call to test against test-22.server.sasl.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.sasl.nochild..\n");
-	if (! test_22_operations (vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
-		return axl_false;
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
+		return axl_false;   
 
 	/* check unfinished tls */
 	if (! test_22_unfinished (vCtx, "test-22.server", queue))
+		return axl_false;   
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+	
+	return axl_true;
+}
+
+axl_bool test_22_a (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_22.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* call to test against test-22.server.sasl.nochild */
+	printf ("Test 22: checking TLS with: test-22.server.sasl.nochild..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
 		return axl_false;
 
 	/* finish turbulence */
@@ -4539,7 +4572,7 @@ axl_bool test_23 (void) {
 	queue = vortex_async_queue_new ();
 
 	/* call to test against test-22.server */
-	if (! test_22_operations (vCtx, "test-22.server", queue, axl_false)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false)) 
 		return axl_false;  
 
 	/* finish turbulence */
@@ -4660,6 +4693,10 @@ int main (int argc, char ** argv)
 		if (argv[argc] && axl_memcmp (argv[argc], "--child-cmd-prefix", 18)) { 
 			printf ("** Setting children cmd prefix: %s\n", argv[argc] + 19);
 			turbulence_process_set_child_cmd_prefix (argv[argc] + 19);
+		}
+		if (argv[argc] && axl_memcmp (argv[argc], "--no-unmap-modules", 18)) { 
+			printf ("** Setting no unmap modules: True\n");
+			turbulence_module_set_no_unmap_modules (axl_true);
 		}
 		if (argv[argc] && axl_memcmp (argv[argc], "--run-test", 10)) {
 			run_test = argv[argc] + 11;
@@ -4792,6 +4829,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_22")
 	run_test (test_22, "Test 22: check TLS module.."); 
+
+	CHECK_TEST("test_22a")
+	run_test (test_22_a, "Test 22-a: check TLS module (no child).."); 
 
 	CHECK_TEST("test_23")
 	run_test (test_23, "Test 23: check TLS module on child process without serverName.."); 

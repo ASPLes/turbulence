@@ -58,6 +58,8 @@ const char * turbulence_bin_path         = NULL;
  */
 const char * turbulence_child_cmd_prefix = NULL;
 
+extern axl_bool __turbulence_module_no_unmap;
+
 /** 
  * @internal Function used to init process module (for its internal
  * handling).
@@ -161,7 +163,7 @@ void turbulence_process_check_for_finish (TurbulenceCtx * ctx)
 	msg ("CHILD: initiated child termination (checking for rogue connections..");
 	if (! vortex_thread_create (&thread,
 				    (VortexThreadFunc) __turbulence_process_finished,
-				    ctx, VORTEX_THREAD_CONF_END)) {
+				    ctx, VORTEX_THREAD_CONF_DETACHED, VORTEX_THREAD_CONF_END)) {
 		error ("Failed to create thread to watch reader state and notify process termination (code %d) %s",
 		       errno, vortex_errno_get_last_error ());
 	}
@@ -565,7 +567,7 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 						     VortexFrame        * frame)
 {
 	VortexChannel * channel0;
-	axl_bool        result = axl_false;
+	axl_bool        result = axl_true;
 
 	/* now notify profile path selected after dropping
 	   priviledges */
@@ -625,9 +627,9 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 			       vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
 			turbulence_conn_mgr_unregister (ctx, conn);
 			vortex_connection_shutdown (conn);
+			result = axl_false;
 		} else {
 			msg ("Channel start accepted on child profile=%s, serverName=%s accepted on child", profile, serverName ? serverName : "");
-			result = axl_true;
 		}
 	} /* end if */
 
@@ -1117,7 +1119,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 	aux     = axl_strdup_printf ("%d\n", length);
 	length  = strlen (aux);
 
-	while (tries < 10) {
+	while (tries < 100) {
 		written = write (child->child_connection, aux, length);
 		if (written == length)
 			break;
@@ -1355,7 +1357,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			iterator++;
 
 		/* expand to include additional commands */
-		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 9));
+		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 10 + 1));
 
 		cmds[iterator] = (char *) turbulence_bin_path;
 		iterator++;
@@ -1383,6 +1385,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			cmds[iterator] = "--color-debug";
 			iterator++;
 		}
+		if (__turbulence_module_no_unmap) {
+			cmds[iterator] = "--no-unmap-modules";
+			iterator++;
+		}
 		cmds[iterator] = NULL;
 
 		/* run command with prefix */
@@ -1400,6 +1406,8 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			turbulence_log2_enabled (ctx) ? "--debug2" : "", 
 			turbulence_log3_enabled (ctx) ? "--debug3" : "", 
 			ctx->console_color_debug ? "--color-debug" : "",
+			/* unmap modules support */
+			__turbulence_module_no_unmap ? "--no-unmap-modules" : "",
 			/* always last parameter */
 			NULL);
 	}

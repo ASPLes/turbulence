@@ -74,6 +74,8 @@ void               turbulence_module_notify_reload_conf (TurbulenceCtx * ctx);
 
 void               turbulence_module_notify_close (TurbulenceCtx * ctx);
 
+void               turbulence_module_set_no_unmap_modules (axl_bool status);
+
 void               turbulence_module_cleanup      (TurbulenceCtx * ctx);
 
 #endif

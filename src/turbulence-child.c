@@ -367,7 +367,7 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	if (! __turbulence_child_post_init_openlogs (ctx, child->init_string_items)) 
 		return axl_false;
 
-	msg ("CHILD: post init phase done, child running");
+	msg ("CHILD: post init phase done, child running (vortex.ctx refs: %d)", vortex_ctx_ref_count (child->ctx->vortex_ctx));
 	return axl_true;
 }
 

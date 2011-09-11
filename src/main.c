@@ -104,6 +104,9 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("disable-sigint", NULL, EXARG_NONE,
 			   "Allows to disable SIGINT handling done by Turbulence. This option is only useful for debugging purposes..");
 
+	exarg_install_arg ("no-unmap-modules", NULL, EXARG_NONE,
+			   "Makes turbulence to no unmap module after exit (useful for debugging because symbols are available). This option is only useful for debugging purposes..");
+
 	/* call to parse arguments */
 	exarg_parse (argc, argv);
 
@@ -357,7 +360,7 @@ int main (int argc, char ** argv)
 	if (exarg_is_defined ("child")) {
 		if (! turbulence_child_post_init (ctx)) {
 			error ("Failed to complete post init child operations, unable to start child process, killing: %d", getpid ());
-			return -1;
+			goto release_resources;
 		}
 	}
 
@@ -372,6 +375,7 @@ int main (int argc, char ** argv)
 	vortex_listener_wait (vortex_ctx);
 	
 	/* terminate turbulence execution */
+ release_resources:
 	turbulence_exit (ctx, axl_false, axl_false);
 
 	/* terminate exarg */

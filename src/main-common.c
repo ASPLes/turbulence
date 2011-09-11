@@ -35,7 +35,7 @@
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #include <main-common.h>
-
+#include <turbulence-ctx-private.h>
 
 /** 
  * @internal Common function used by turbulence server and logger
@@ -65,6 +65,12 @@ void main_common_enable_debug_options (TurbulenceCtx * ctx,
 	 * --color-debug */
 	if (exarg_is_defined ("color-debug"))
 		turbulence_log_enable (ctx, axl_true);
+
+	/* configure no unmap module if defined */
+	if (exarg_is_defined ("no-unmap-modules")) {
+		msg ("Setting no unmap modules = True");
+		turbulence_module_set_no_unmap_modules (axl_true);
+	}
 
 	return;
 }
