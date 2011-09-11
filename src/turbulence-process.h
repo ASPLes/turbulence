@@ -86,10 +86,10 @@ void              turbulence_process_set_child_cmd_prefix (const char * cmd_pref
 
 axl_bool          __turbulence_process_create_parent_connection (TurbulenceChild * child);
 
-axl_bool          __turbulence_process_handle_connection_received (TurbulenceCtx      * ctx, 
-								   TurbulencePPathDef * ppath,
-								   VORTEX_SOCKET        socket, 
-								   char               * conn_status);
+VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCtx      * ctx, 
+								    TurbulencePPathDef * ppath,
+								    VORTEX_SOCKET        socket, 
+								    char               * conn_status);
 
 char *           turbulence_process_connection_status_string (axl_bool          handle_start_reply,
 							      int               channel_num,

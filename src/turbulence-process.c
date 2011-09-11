@@ -553,18 +553,19 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
  * @internal Function used to implement common functions for a new
  * connection that is accepted into a child process.
  */
-void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
-						 VortexConnection   * conn,
-						 TurbulencePPathDef * def,
-						 axl_bool             handle_start_reply,
-						 int                  channel_num,
-						 const char         * profile,
-						 const char         * profile_content,
-						 VortexEncoding       encoding,
-						 const char         * serverName,
-						 VortexFrame        * frame)
+axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
+						     VortexConnection   * conn,
+						     TurbulencePPathDef * def,
+						     axl_bool             handle_start_reply,
+						     int                  channel_num,
+						     const char         * profile,
+						     const char         * profile_content,
+						     VortexEncoding       encoding,
+						     const char         * serverName,
+						     VortexFrame        * frame)
 {
 	VortexChannel * channel0;
+	axl_bool        result = axl_false;
 
 	/* now notify profile path selected after dropping
 	   priviledges */
@@ -575,13 +576,13 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		/* check if clean start is activated to close the
 		 * connection */
 		CLEAN_START(ctx); /* check to terminate child if clean start is defined */
-		return;
+		return axl_false;
 	}
 
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		error ("Connection id=%d is not working after notifying ppath selected handler..", vortex_connection_get_id (conn));
 		vortex_connection_close (conn);
-		return;
+		return axl_false;
 	}
 
 	/* check if the connection was received during on connect
@@ -626,13 +627,14 @@ void __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 			vortex_connection_shutdown (conn);
 		} else {
 			msg ("Channel start accepted on child profile=%s, serverName=%s accepted on child", profile, serverName ? serverName : "");
+			result = axl_true;
 		}
 	} /* end if */
 
 	/* unref connection since it is registered */
 	vortex_connection_unref (conn, "turbulence process, conn registered");
 
-	return;
+	return result;
 }
 
 int __get_next_field (char * conn_status, int _iterator)
@@ -735,10 +737,10 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 	return;
 }
 
-axl_bool __turbulence_process_handle_connection_received (TurbulenceCtx      * ctx, 
-							  TurbulencePPathDef * ppath,
-							  VORTEX_SOCKET        socket, 
-							  char               * conn_status)
+VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCtx      * ctx, 
+								    TurbulencePPathDef * ppath,
+								    VORTEX_SOCKET        socket, 
+								    char               * conn_status)
 {
 	axl_bool           handle_start_reply = axl_false;
 	int                channel_num        = -1;
@@ -797,14 +799,17 @@ axl_bool __turbulence_process_handle_connection_received (TurbulenceCtx      * c
 	}
 
 	/* call to register */
-	__turbulence_process_common_new_connection (ctx, conn, ppath,
-						    handle_start_reply, channel_num,
-						    profile, profile_content,
-						    encoding, serverName,
-						    frame);
+	if (! __turbulence_process_common_new_connection (ctx, conn, ppath,
+							  handle_start_reply, channel_num,
+							  profile, profile_content,
+							  encoding, serverName, frame)) {
+		/* nullify conn on error */
+		conn = NULL;
+	}
+	    
 	/* unref frame here */
 	vortex_frame_unref (frame);
-	return axl_true;
+	return conn;
 }
 
 /** 

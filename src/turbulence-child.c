@@ -291,11 +291,13 @@ axl_bool __turbulence_child_post_init_openlogs (TurbulenceCtx  * ctx,
 
 axl_bool __turbulence_child_post_init_register_conn (TurbulenceCtx * ctx, const char * conn_socket, char * conn_status)
 {
+	VortexConnection * conn;
 	msg ("CHILD: restoring connection to be handled at child, socket: %s, connection status: %s", conn_socket, conn_status);
 	
-	if (! __turbulence_process_handle_connection_received (ctx, ctx->child->ppath, atoi (conn_socket), conn_status + 1)) 
+	if (! (conn = __turbulence_process_handle_connection_received (ctx, ctx->child->ppath, atoi (conn_socket), conn_status + 1))) 
 		return axl_false;
-	msg ("CHILD: conn registered..");
+	msg ("CHILD: child starting conn-id=%d (socket: %d, ref: %p) registered..", 
+	     vortex_connection_get_id (conn), vortex_connection_get_socket (conn), conn);
 
 	return axl_true;
 } 
@@ -354,7 +356,7 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 		turbulence_conn_mgr_unregister (ctx, child->conn_mgr);
 	}
 
-	/* register connection handled by parent */
+	/* register connection handled now by child  */
 	if (! __turbulence_child_post_init_register_conn (ctx, /* conn_socket */ child->init_string_items[0],
 							  /* conn_status */ child->init_string_items[11])) {
 		error ("CHILD: failed to register starting connection at child process, finishing..");
