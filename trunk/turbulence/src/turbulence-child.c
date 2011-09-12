@@ -296,8 +296,12 @@ axl_bool __turbulence_child_post_init_register_conn (TurbulenceCtx * ctx, const 
 	
 	if (! (conn = __turbulence_process_handle_connection_received (ctx, ctx->child->ppath, atoi (conn_socket), conn_status + 1))) 
 		return axl_false;
-	msg ("CHILD: child starting conn-id=%d (socket: %d, ref: %p) registered..", 
-	     vortex_connection_get_id (conn), vortex_connection_get_socket (conn), conn);
+
+	/* drop a log in case of success */
+	if (conn) {
+		msg ("CHILD: child starting conn-id=%d (socket: %d, ref: %p) registered..", 
+		     vortex_connection_get_id (conn), vortex_connection_get_socket (conn), conn);
+	} /* end if */
 
 	return axl_true;
 } 

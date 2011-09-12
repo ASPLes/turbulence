@@ -19,7 +19,8 @@
                     system-paths?,                                                        \
                     notify-failures?,                                                     \
                     allow-start-without-profiles?,                                        \
-                    global-child-limit?)>                                                 \
+                    global-child-limit?,                                                  \
+                    close-conn-on-start-failure?)>                                        \
                                                                                           \
 <!ELEMENT ports           (port+)>                                                        \
 <!ELEMENT port            (#PCDATA)>                                                      \
@@ -72,6 +73,9 @@
                                                                                           \
 <!ELEMENT global-child-limit   EMPTY>                                                     \
 <!ATTLIST global-child-limit   value  CDATA #REQUIRED>                                    \
+                                                                                          \
+<!ELEMENT close-conn-on-start-failure   EMPTY>                                            \
+<!ATTLIST close-conn-on-start-failure   value  (yes|no) #REQUIRED>                        \
                                                                                           \
 <!ELEMENT file-socket EMPTY>                                                              \
 <!ATTLIST file-socket value  CDATA #REQUIRED                                              \

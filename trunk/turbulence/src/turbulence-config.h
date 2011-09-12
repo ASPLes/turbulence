@@ -51,6 +51,26 @@ axl_bool        turbulence_config_set      (TurbulenceCtx * ctx,
 					    const char    * attr_name,
 					    const char    * attr_value);
 
+/** 
+ * @brief Allows to get the node associated on a particular path on
+ * inside turbulence configuration.
+ *
+ * @param path The path that will be used to search the node inside
+ * the turbulence configuration file (turbulence.conf).
+ *
+ * @return A reference to the node pointing to the path or NULL if
+ * nothing is found.
+ *
+ * <b>Examples:</b>
+ *
+ * To know if a particular variable is enabled at the turbulence
+ * configuration file use something like:
+ * \code
+ * value = turbulence_config_is_attr_positive (ctx, TBC_CONFIG_PATH ("/turbulence/global-settings/close-conn-on-start-failure"), "value");
+ * \endcode
+ */
+#define TBC_CONFIG_PATH(path) axl_doc_get (turbulence_config_get (ctx), path)
+
 axl_bool        turbulence_config_is_attr_positive (TurbulenceCtx * ctx,
 						    axlNode       * node,
 						    const char    * attr_name);

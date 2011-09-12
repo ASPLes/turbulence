@@ -623,11 +623,16 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 			/* because this connection is being handled at
 			 * the child and the child did not accepted
 			 * it, shutdown to force its removal */
-			error ("   shutting down connection id=%d (refs: %d) because it was not accepted on child process due to start handle negative reply", 
-			       vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
-			turbulence_conn_mgr_unregister (ctx, conn);
-			vortex_connection_shutdown (conn);
-			result = axl_false;
+			if (turbulence_config_is_attr_positive (
+				    ctx, 
+				    TBC_CONFIG_PATH ("/turbulence/global-settings/close-conn-on-start-failure"), "value")) {
+				/* close connection */
+				error ("   shutting down connection id=%d (refs: %d) because it was not accepted on child process due to start handle negative reply", 
+				       vortex_connection_get_id (conn), vortex_connection_ref_count (conn));
+				turbulence_conn_mgr_unregister (ctx, conn);
+				vortex_connection_shutdown (conn); 
+				result = axl_false; 
+			}
 		} else {
 			msg ("Channel start accepted on child profile=%s, serverName=%s accepted on child", profile, serverName ? serverName : "");
 		}

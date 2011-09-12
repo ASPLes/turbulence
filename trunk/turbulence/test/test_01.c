@@ -2807,6 +2807,8 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 
 	if (status != VortexOk) {
 		printf ("ERROR (13): expected to not find auth failure for aspl2 user under test-12.another-server, but error found was: (%d) %s..\n", status, status_message);
+		printf ("            showing connection errors: \n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
