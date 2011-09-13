@@ -73,6 +73,7 @@ void test_10_a_received (VortexChannel    * channel,
 	FailStructure * structure = user_data;
 
 	/*** begin: FORCED SEG FAULT ACCESS ***/
+	printf ("**\n** Test 10-a: causing simulated failure...\n**\n");
 	printf ("This will fail: %s\n", structure->value);
 	/*** end: FORCED SEG FAULT ACCESS ***/
 

@@ -48,6 +48,12 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 int turbulence_signal_received (TurbulenceCtx * ctx, 
 				int            _signal);
 
+axl_bool turbulence_signal_block   (TurbulenceCtx * ctx,
+				    int             signal);
+
+axl_bool turbulence_signal_unblock (TurbulenceCtx * ctx,
+				    int             signal);
+
 void turbulence_signal_exit    (TurbulenceCtx * ctx, 
 				int            _signal);
 

@@ -162,6 +162,64 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 } while (0)
 
 /** 
+ * @internal Common implementation.
+ */
+axl_bool __turbulence_signal_common_block (TurbulenceCtx * ctx,
+					   int             signal,
+					   axl_bool        block_signal)
+{
+	sigset_t     intmask;
+	const char * label = block_signal ? "blocking" : "unblocking";
+
+	/* msg ("Starting %s of signal %d", label, signal); */
+
+	sigemptyset (&intmask);
+	if ((sigemptyset(&intmask) == -1) || (sigaddset(&intmask, SIGCHLD) == -1)){  
+		error ("Failed to initialize the signal=%d mask", signal);
+		return axl_false;
+	}
+
+	if (sigprocmask (block_signal ? SIG_BLOCK : SIG_UNBLOCK, &intmask, NULL) == -1) {
+		error ("Failed while %s signal=%d, errno=%d:%s", label, signal, errno, vortex_errno_get_last_error ());
+		return axl_false;
+	}
+
+	return axl_true;
+}
+
+/** 
+ * @brief Allows to block the provided signal delaying its delivery.
+ *
+ * @param ctx The turbulence context.
+ * @param signal The signal to block.
+ *
+ * @return axl_true if signal was blocked, otherwise axl_false is
+ * returned.
+ */
+axl_bool turbulence_signal_block   (TurbulenceCtx * ctx,
+				    int             signal)
+{
+	/* call to block */
+	return __turbulence_signal_common_block (ctx, signal, axl_true);
+}
+
+/** 
+ * @brief Allows to unblock the provided signal delaying its delivery.
+ *
+ * @param ctx The turbulence context.
+ * @param signal The signal to unblock.
+ *
+ * @return axl_true if signal was unblocked, otherwise axl_false is
+ * returned.
+ */
+axl_bool turbulence_signal_unblock (TurbulenceCtx * ctx,
+				    int             signal)
+{
+	/* call to unblock */
+	return __turbulence_signal_common_block (ctx, signal, axl_false);
+}
+
+/** 
  * @internal Terminates the turbulence excution, returing the exit signal
  * provided as first parameter. This function is used to notify a
  * context that a signal was received.
@@ -251,8 +309,10 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 			/* release backtrace */
 			axl_free (backtrace_file);
 		}
-		
-		/* let turbulence to exit */
+
+		/* signal vortex to not terminate threads (to avoid
+		 * deadlocks) */
+		exit (-1);
 		break;
 	default:
 		msg ("terminating turbulence..");
