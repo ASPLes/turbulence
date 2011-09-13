@@ -47,6 +47,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 {
 	TurbulenceChild * result;
 	char            * temp_dir;
+	struct timeval    now;
 
 	result        = axl_new (TurbulenceChild, 1);
 	/* check allocation */
@@ -57,13 +58,16 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 	 * flag it as started): this is used to control clean start */
 	ctx->started = axl_false;
 
+	/* get current time */
+	gettimeofday (&now, NULL);
+
 	/* create socket path: socket used to transfer file descriptors from parent to child */
-	result->socket_control_path = axl_strdup_printf ("%s%s%s%s%p.tbc",
+	result->socket_control_path = axl_strdup_printf ("%s%s%s%s%p%d%d.tbc",
 							 turbulence_runtime_datadir (ctx),
 							 VORTEX_FILE_SEPARATOR,
 							 "turbulence",
 							 VORTEX_FILE_SEPARATOR,
-							 result);
+							 result, now.tv_sec, now.tv_usec);
 	/* check result */
 	if (result->socket_control_path == NULL) {
 		axl_free (result);

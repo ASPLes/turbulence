@@ -2501,8 +2501,8 @@ axl_bool test_10_a (void) {
 		return axl_false;
 	} /* end if */
 
-	printf ("Test 10-a: now wait to create another connection..\n");
-	test_common_microwait (300000);
+	printf ("Test 10-a: now wait to create another connection (300ms)..\n");
+	turbulence_sleep (tCtxTest10a, 1000000);
 
 	/* close connection */
 	vortex_connection_shutdown (conn);
