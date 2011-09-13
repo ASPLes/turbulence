@@ -198,6 +198,34 @@ void              turbulence_child_unref (TurbulenceChild * child)
 	return;
 }
 
+#define TURBULENCE_CHILD_CONF_LOG(logw,logr,level) do {			\
+	log_descriptor = atoi (logw);                                   \
+	if (log_descriptor > 0) {                                       \
+		turbulence_log_configure (ctx, level, log_descriptor);  \
+		vortex_close_socket (atoi (logr));                      \
+	}                                                               \
+} while(0)
+
+axl_bool __turbulence_child_post_init_openlogs (TurbulenceCtx  * ctx, 
+						char          ** items)
+{
+	int log_descriptor;
+
+	/* configure general_log */
+	TURBULENCE_CHILD_CONF_LOG (items[2], items[1], LOG_REPORT_GENERAL);
+
+	/* configure error_log */
+	TURBULENCE_CHILD_CONF_LOG (items[4], items[3], LOG_REPORT_ERROR);
+
+	/* configure access_log */
+	TURBULENCE_CHILD_CONF_LOG (items[6], items[5], LOG_REPORT_ACCESS);
+
+	/* configure vortex_log */
+	TURBULENCE_CHILD_CONF_LOG (items[8], items[7], LOG_REPORT_VORTEX);
+
+	return axl_true;
+}
+
 /** 
  * @internal Function used to recover child status from the provided
  * init string.
@@ -277,15 +305,11 @@ axl_bool          turbulence_child_build_from_init_string (TurbulenceCtx * ctx,
 	child->ref_count = 1;
 	vortex_mutex_create (&child->mutex);	
 
+	/* open logs */
+	if (! __turbulence_child_post_init_openlogs (ctx, child->init_string_items)) 
+		return axl_false;
+
 	/* return child structure properly recovered */
-	return axl_true;
-}
-
-axl_bool __turbulence_child_post_init_openlogs (TurbulenceCtx  * ctx, 
-						char          ** init_string_items)
-{
-	
-
 	return axl_true;
 }
 
@@ -367,10 +391,6 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 		return axl_false;
 	} /* end if */
 	
-	/* open logs */
-	if (! __turbulence_child_post_init_openlogs (ctx, child->init_string_items)) 
-		return axl_false;
-
 	msg ("CHILD: post init phase done, child running (vortex.ctx refs: %d)", vortex_ctx_ref_count (child->ctx->vortex_ctx));
 	return axl_true;
 }
