@@ -548,7 +548,7 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	vortex_mutex_destroy (&mod_python_top_init);
 
 	msg ("Calling to finalize python engine (Py_Finalize)..");
-	Py_Finalize ();
+	/* Py_Finalize (); */
 
 	/* not required to release the GIL */
 	return;
