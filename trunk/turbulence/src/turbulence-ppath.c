@@ -1346,7 +1346,7 @@ TurbulencePPathDef * turbulence_ppath_find_by_id (TurbulenceCtx * ctx, int ppath
 
 	/* for each profile path item iterator */
 	iterator = 0;
-	while (ctx->paths->items[iterator] != NULL) {
+	while (ctx->paths && ctx->paths->items && ctx->paths->items[iterator] != NULL) {
 		/* check profile path id */
 		if (ctx->paths->items[iterator]->id == ppath_id)
 			return ctx->paths->items[iterator];

@@ -454,22 +454,6 @@ void mod_python_close_module (axlNode * node, axlNode * location)
 	return;
 }
 
-void mod_python_finalize (axlPointer _ctx) {
-	TurbulenceCtx * ctx = _ctx;
-	PyGILState_STATE    state;
-	
-	msg ("mod-python: calling to finalize engine..");
-
-	/* acquire the GIL */
-	state = PyGILState_Ensure();
-
-	Py_Finalize ();
-
-	msg ("mod-python: engine finalization...done");
-
-	return;
-}
-
 /* mod_python close handler */
 static void mod_python_close (TurbulenceCtx * _ctx) {
 	axlNode           * node;
@@ -536,19 +520,12 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 
 	axl_doc_free (mod_python_site_conf);
 	mod_python_site_conf = NULL;
-
-	/* install finaliztion handler */
-	/* turbulence_ctx_set_data_full (_ctx, "mod:python:finalize", ctx, 
-	   NULL, mod_python_finalize); */
  
 	/* unlock */
 	vortex_mutex_unlock (&mod_python_top_init);
 
 	/* destroy */
 	vortex_mutex_destroy (&mod_python_top_init);
-
-	msg ("Calling to finalize python engine (Py_Finalize)..");
-	/* Py_Finalize (); */
 
 	/* not required to release the GIL */
 	return;

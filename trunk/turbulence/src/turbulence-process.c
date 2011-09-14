@@ -592,6 +592,14 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 	VortexChannel * channel0;
 	axl_bool        result = axl_true;
 
+	/* avoid handling any connection if turbulence is finishing */
+	if (ctx->is_exiting) {
+		error ("Dropping connection=%d, turbulence is exiting..", vortex_connection_get_id (conn));
+		vortex_connection_shutdown (conn);
+		vortex_connection_close (conn);
+		return axl_false;
+	}
+
 	/* now notify profile path selected after dropping
 	   priviledges */
 	if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, conn, NULL)) {
