@@ -72,6 +72,12 @@ void main_common_enable_debug_options (TurbulenceCtx * ctx,
 		turbulence_module_set_no_unmap_modules (axl_true);
 	}
 
+	/* configure child cmd prefix */
+	if (exarg_is_defined ("child-cmd-prefix")) {
+		msg ("Setting child cmd prefix: %s", exarg_get_string ("child-cmd-prefix"));
+		turbulence_process_set_child_cmd_prefix (exarg_get_string ("child-cmd-prefix"));
+	}
+
 	return;
 }
 
