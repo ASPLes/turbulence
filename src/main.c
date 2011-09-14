@@ -99,13 +99,17 @@ int  main_init_exarg (int argc, char ** argv)
 			   "Makes turbulence to detach from console, starting in background.");
 
 	exarg_install_arg ("child", NULL, EXARG_STRING,
-			   "Interna flag used to create childs by the master process.");
+			   "Internal flag used to create childs by the master process.");
+
+	exarg_install_arg ("child-cmd-prefix", NULL, EXARG_STRING,
+			   "Allows to configure an optional command prefix appended to the child starting command");
 
 	exarg_install_arg ("disable-sigint", NULL, EXARG_NONE,
 			   "Allows to disable SIGINT handling done by Turbulence. This option is only useful for debugging purposes..");
 
 	exarg_install_arg ("no-unmap-modules", NULL, EXARG_NONE,
 			   "Makes turbulence to no unmap module after exit (useful for debugging because symbols are available). This option is only useful for debugging purposes..");
+
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);

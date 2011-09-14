@@ -353,6 +353,7 @@ typedef void (*ModRadminChildCommandHandler) (TurbulenceCtx * ctx, const char * 
 VortexFrame * mod_radmin_run_command_on_child (TurbulenceCtx * ctx, TurbulenceChild * child, VortexAsyncQueue * queue, const char * command)
 {
 	VortexChannelPool * pool;
+	VortexConnection  * conn;
 	VortexChannel     * channel;
 	VortexFrame       * reply;
 	axl_bool            release_queue = (queue == NULL);
@@ -361,11 +362,22 @@ VortexFrame * mod_radmin_run_command_on_child (TurbulenceCtx * ctx, TurbulenceCh
 	if (queue == NULL)
 		queue = vortex_async_queue_new ();
 
+	/* acquire a reference to the child connection and use local
+	   reference to avoid having child closed in the middle (kill
+	   child) */
+	conn  = child->conn_mgr;
+	if (! vortex_connection_ref (conn, "begin mod-radmin run child cmd")) {
+		error ("Failed to create channel pool to send commands to childs..");
+		if (release_queue)
+			vortex_async_queue_unref (queue);
+		return NULL;
+	}
+
 	/* check if we have a pool created */
-	pool = vortex_connection_get_channel_pool (child->conn_mgr, 1);
+	pool = vortex_connection_get_channel_pool (conn, 1);
 	if (pool == NULL) {
 		/* pool not created, create one */
-		pool = vortex_channel_pool_new (child->conn_mgr, 
+		pool = vortex_channel_pool_new (conn, 
 						RADMIN_URI_INTERNAL,
 						/* one channel initially */
 						1, 
@@ -379,6 +391,9 @@ VortexFrame * mod_radmin_run_command_on_child (TurbulenceCtx * ctx, TurbulenceCh
 			error ("Failed to create channel pool to send commands to childs..");
 			if (release_queue)
 				vortex_async_queue_unref (queue);
+
+			/* release connection */
+			vortex_connection_unref (conn, "end mod-radmin run child cmd");
 			return NULL;
 		} /* end if */
 	} /* end if */
@@ -389,6 +404,8 @@ VortexFrame * mod_radmin_run_command_on_child (TurbulenceCtx * ctx, TurbulenceCh
 		error ("Unable to get a channel ready from the pool to send command to child..");
 		if (release_queue)
 			vortex_async_queue_unref (queue);
+		/* release connection */
+		vortex_connection_unref (conn, "end mod-radmin run child cmd");
 		return NULL;
 	} /* end if */
 
@@ -400,6 +417,9 @@ VortexFrame * mod_radmin_run_command_on_child (TurbulenceCtx * ctx, TurbulenceCh
 		error ("Unable to send command to child process..");
 		if (release_queue)
 			vortex_async_queue_unref (queue);
+
+		/* release connection */
+		vortex_connection_unref (conn, "end mod-radmin run child cmd");
 		return NULL;
 	} /* end if */
 
@@ -412,6 +432,8 @@ VortexFrame * mod_radmin_run_command_on_child (TurbulenceCtx * ctx, TurbulenceCh
 	if (release_queue)
 		vortex_async_queue_unref (queue);
 
+	/* release connection */
+	vortex_connection_unref (conn, "end mod-radmin run child cmd");
 	return reply;
 }
 
@@ -746,9 +768,6 @@ axlDoc * mod_radmin_command_kill_child (const char * line, axlPointer user_data,
 		/* send kill child command */
 		frame = mod_radmin_run_command_on_child (ctx, child, NULL, "kill child");
 
-		/* unref child */
-		turbulence_child_unref (child);
-
 		/* check for errors */
 		if (vortex_frame_get_type (frame) == VORTEX_FRAME_TYPE_ERR) {
 			/* found error, reply to caller */
@@ -762,7 +781,12 @@ axlDoc * mod_radmin_command_kill_child (const char * line, axlPointer user_data,
 		vortex_frame_unref (frame);
 
 		/* reached this point, child kill command was sent */
+	} else {
+		error ("Child %d not found, unable to kill child", child_pid);
+		(*status) = axl_false;
+		return mod_radmin_error_msg (550, "Child not found, unable to kill child. Operation cancelled");
 	} /* end if */
+
 
 	/* notify child killed */
 	(*status) = axl_true;

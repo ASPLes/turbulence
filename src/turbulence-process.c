@@ -1653,7 +1653,7 @@ TurbulenceChild * turbulence_process_child_by_id (TurbulenceCtx * ctx, int pid)
 	/* unlock */
 	TBC_PROCESS_UNLOCK_CHILD ();
 
-	return NULL; /* no child found */
+	return child; /* no child found */
 }
 
 /** 

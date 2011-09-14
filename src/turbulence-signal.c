@@ -86,7 +86,7 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 
 		/* get child to reduce childs running */
 		child = axl_hash_get (ctx->child_process, INT_TO_PTR (pid));
-		if (child) {
+		if (child && child->ppath) {
 			/* decrease number of childs running */
 			child->ppath->childs_running--;
 		} /* end if */
