@@ -1397,7 +1397,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			iterator++;
 
 		/* expand to include additional commands */
-		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 10 + 1));
+		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 13 + 1));
 
 		cmds[iterator] = (char *) turbulence_bin_path;
 		iterator++;
@@ -1429,6 +1429,19 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			cmds[iterator] = "--no-unmap-modules";
 			iterator++;
 		}
+		if (vortex_log_is_enabled (ctx->vortex_ctx)) {
+			cmds[iterator] = "--vortex-debug";
+			iterator++;
+		}
+		if (vortex_log2_is_enabled (ctx->vortex_ctx)) {
+			cmds[iterator] = "--vortex-debug2";
+			iterator++;
+		}
+		if (vortex_color_log_is_enabled (ctx->vortex_ctx)) {
+			cmds[iterator] = "--vortex-debug-color";
+			iterator++;
+		}
+
 		cmds[iterator] = NULL;
 
 		/* run command with prefix */
@@ -1446,6 +1459,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			turbulence_log2_enabled (ctx) ? "--debug2" : "", 
 			turbulence_log3_enabled (ctx) ? "--debug3" : "", 
 			ctx->console_color_debug ? "--color-debug" : "",
+			/* pass vortex debug options */
+			vortex_log_is_enabled (ctx->vortex_ctx) ? "--vortex-debug" : "",
+			vortex_log2_is_enabled (ctx->vortex_ctx) ? "--vortex-debug2" : "",
+			vortex_color_log_is_enabled (ctx->vortex_ctx) ? "--vortex-debug-color" : "",
 			/* unmap modules support */
 			__turbulence_module_no_unmap ? "--no-unmap-modules" : "",
 			/* always last parameter */
