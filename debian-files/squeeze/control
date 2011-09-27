@@ -1,0 +1,94 @@
+Source: turbulence
+Priority: extra
+Maintainer: Francis Brosnan <francis@aspl.es>
+Build-Depends: debhelper (>= 5), autotools-dev, pkg-config, 
+  libaxl-dev (>= 0.6.2), axl-knife (>= 0.6.2), libreadline5-dev, 
+  libssl-dev, libgsasl7-dev, libvortex-1.1-dev (>= 1.1.4),
+  python-vortex-dev, python-vortex-sasl-dev, libvortex-tls-1.1-dev,
+  libvortex-tunnel-1.1-dev, libvortex-xml-rpc-1.1-dev,
+  libpcre3-dev  
+Standards-Version: 3.7.2
+Section: libs
+
+Package: libturbulence
+Section: libs
+Architecture: any
+Depends: libc6, libaxl1 (>= 0.5.6), libvortex-1.1 (>= 1.1.4),
+  libpcre3
+Description: BEEP application server built on top of Vortex Library
+  Turbulence is an extensible and configurable general purpose 
+  BEEP application server built on top of Vortex Library. 
+  It provides out of the box support for profile administration,
+  SASL users, system logging and more.
+
+Package: libturbulence-dev
+Section: libs
+Architecture: any
+Depends: libc6, libaxl-dev (>= 0.5.6), libvortex-1.1-dev (>= 1.1.4)
+Description: BEEP application server built on top of Vortex Library
+  Development headers required to create turbulence modules or
+  tools.
+
+Package: turbulence-server
+Section: libs
+Architecture: any
+Depends: libturbulence (>= ${Source-Version})
+Description: BEEP application server built on top of Vortex Library
+  Turbulence is an extensible and configurable general purpose 
+  BEEP application server built on top of Vortex Library. 
+  It provides out of the box support for profile administration,
+  SASL users, system logging and more.
+
+Package: libturbulence-mod-tunnel
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-tunnel-1.1 (>= 1.1.4)
+Description: TUNNEL profile implementation for Turbulence
+  Configurable TUNNEL profile for Turbulence: an appliation level
+  gateway for any BEEP profile.
+
+Package: libturbulence-mod-sasl
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-sasl-1.1 (>= 1.1.4), libvortex-xml-rpc-1.1 (>= 1.1.4)
+Description: SASL profile implementation for Turbulence
+  Server side SASL module for Turbulence. BEEP authentication.
+
+Package: libturbulence-mod-sasl-mysql
+Section: libs
+Architecture: any
+Depends: libturbulence-mod-sasl, libmysqlclient16
+Description: MySQL support for Turbulence SASL module
+  This provides MySQL support so it is possible to store and auth
+  users from a MySQL database.
+
+Package: libturbulence-mod-tls
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-tls-1.1 (>= 1.1.4)
+Description: TLS profile implementation for Turbulence
+  Server side TLS module for Turbulence. BEEP session security.
+
+Package: libturbulence-mod-python
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  python-vortex (>= 1.1.4), libpython2.6 | python2.5
+Recommends: python-vortex-sasl, python-vortex-tls
+Description: SASL profile implementation for Turbulence
+  Server side SASL module for Turbulence. BEEP authentication.
+
+Package: turbulence-utils
+Section: libs
+Architecture: any
+Depends: libturbulence (>= ${Source-Version})
+Description: Tubulence utils
+  Utils to manage turbulence features.
+
+
+
+
+
