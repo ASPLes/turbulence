@@ -32,7 +32,7 @@ configuration_files = \
 
 
 
-EXTRA_DIST = $(configuration_files) test_05_a_passwd
+EXTRA_DIST = $(configuration_files) test_05_a_passwd test_12b.sql
 
 # replace with bin_PROGRAMS to check performance
 bin_PROGRAMS = test_01 

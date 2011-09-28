@@ -2134,6 +2134,7 @@ TurbulenceChild * test_10_b_get_first_child (TurbulenceCtx * ctx)
 	axlHashCursor   * cursor;
 	TurbulenceChild * result;
 
+	printf ("Test 10-b: child process hash reference is: %p\n", ctx->child_process);
 	cursor = axl_hash_cursor_new (ctx->child_process);
 	axl_hash_cursor_first (cursor);
 	
@@ -2349,19 +2350,19 @@ VortexConnection * test_10_c_connect_and_check (VortexCtx * vCtx, TurbulenceCtx 
 	if (channel_should_fail) {
 		printf ("Test 10-c: channel should fail...checking: %p\n", channel);
 		if (channel != NULL) {
-			printf ("ERROR (2): expected to find NULL channel reference (creation ok) but found failure..\n");
+			printf ("ERROR (2): test-10-c: expected to find NULL channel reference (creation ok) but found failure..\n");
 			exit (-1);
 		}
 	} else {
 		printf ("Test 10-c: channel should NOT fail...checking: %p\n", channel);
 		if (channel == NULL) {
-			printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+			printf ("ERROR (2): test-10-c: expected to NOT find NULL channel reference (creation ok) but found failure..\n");
 			exit (-1);
 		}
 
 		/* check connection after created it */
 		if (! vortex_connection_is_ok (conn, axl_false)) {
-			printf ("ERROR (4): expected to find proper connection after turbulence startup..\n");
+			printf ("ERROR (4): test-10-c: expected to find proper connection after turbulence startup..\n");
 			exit (-1);
 		} /* end if */
 
@@ -2413,10 +2414,7 @@ axl_bool test_10_c (void) {
 	vortex_connection_close (conn2);
 
 	printf ("Test 10-c: changing run time settings to accept 3 childs and check profile path limits..\n");
-	if (! turbulence_config_set (tCtxTest10prev, "/turbulence/global-settings/global-child-limit", "value", "3")) {
-		printf ("ERROR (9): expected to change global child limit but found failure..\n");
-		return axl_false;
-	}
+	tCtxTest10prev->global_child_limit = 3;
 
 	printf ("Test 10-c: CREATING SECOND CONNECTION(3): creating a second connection again (it should work..)\n");
 
@@ -2484,7 +2482,7 @@ axl_bool test_10_a (void) {
 	printf ("Test 10-a: opening channel...\n");
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1-failed");
 	if (channel == NULL) {
-		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+		printf ("ERROR (2): test-10-c: expected to NOT find NULL channel reference (creation ok) but found failure..\n");
 		return axl_false;
 	}
 
@@ -2949,6 +2947,8 @@ axl_bool test_12a (void) {
 axl_bool test_12b (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
+
+	printf ("Test 12-b: PLEASE, ensure you have a database created with data found in: test_12b.sql\n");
 
 	/* FIRST PART: init vortex and turbulence (same test as
 	   test_12a but change databases to be managed by a mysql

@@ -1023,20 +1023,11 @@ axl_bool turbulence_process_check_child_limit (TurbulenceCtx      * ctx,
 					       VortexConnection   * conn,
 					       TurbulencePPathDef * def)
 {
-	int                global_child_limit;
+	msg ("Checking global child limit: %d before creating process.", ctx->global_child_limit);
 
-	/* check limits here before continue */
-	global_child_limit = turbulence_config_get_number (ctx, "/turbulence/global-settings/global-child-limit", "value");
-
-	/* check for default or undefined */
-	if (global_child_limit == -3 || global_child_limit == -1)
-		global_child_limit = 100;
-
-	msg ("Checking global child limit: %d before creating process.", global_child_limit);
-
-	if (axl_hash_items (ctx->child_process) >= global_child_limit) {
+	if (axl_hash_items (ctx->child_process) >= ctx->global_child_limit) {
 		error ("Child limit reached (%d), unable to accept connection on child process, closing conn-id=%d", 
-		       global_child_limit, vortex_connection_get_id (conn));
+		       ctx->global_child_limit, vortex_connection_get_id (conn));
 
 		vortex_connection_shutdown (conn);
 		return axl_true; /* limit reached */

@@ -69,6 +69,74 @@ int fsync (int fd);
  * @{
  */
 
+void __turbulence_thread_pool_conf (TurbulenceCtx * ctx)
+{
+	int        max_limit   = 40;
+	int        step_period = 5;
+	int        step_add    = 1;
+	int        value;
+
+	/* get max limit for the pool */
+	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/thread-pool", "max-limit");
+	if (value > 0)
+		max_limit = value;
+
+	/* get step period */
+	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/thread-pool", "step-period");
+	if (value > 0)
+		step_period = value;
+
+	/* get step-add */
+	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/thread-pool", "step-add");
+	if (value > 0)
+		step_add = value;
+
+	/* configure the pool */
+	msg ("Setting thread pool to max-limit=%d, step-add=%d, step-period=%d", max_limit, step_add, step_period);
+	vortex_thread_pool_setup (ctx->vortex_ctx, max_limit, step_add, step_period, axl_true);
+
+	return;
+}
+
+/* configure here back log */
+void __turbulence_server_backlog (TurbulenceCtx * ctx)
+{
+	int        backlog     = 50;
+	int        value;
+
+	/* get max limit for the pool */
+	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/server-backlog", "value");
+	if (value > 0)
+		backlog = value;
+
+	/* configure backlog */
+	msg ("Configuring server TCP backlog: %d", backlog);
+	vortex_conf_set (ctx->vortex_ctx, VORTEX_LISTENER_BACKLOG, backlog, NULL);
+	return;
+}
+
+/* configure serveral limits */
+void __turbulence_acquire_limits (TurbulenceCtx * ctx)
+{
+	int        value;
+
+	/* get global child limit */
+	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/global-child-limit", "value");
+	if (value > 0)
+		ctx->global_child_limit = value;
+	else
+		ctx->global_child_limit = 100;
+
+	/* get global child limit */
+	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/max-incoming-complete-frame-limit", "value");
+	if (value > 0)
+		ctx->max_complete_flag_limit = value;
+	else
+		ctx->max_complete_flag_limit = 32768;
+
+	return;
+}
+
 /** 
  * @brief Starts turbulence execution, initializing all libraries
  * required by the server application.
@@ -115,6 +183,15 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 #endif
 	vortex_support_add_domain_search_path     (vortex_ctx, "turbulence-data", ".");
 
+	/* load current turbulence configuration */
+	if (! turbulence_config_load (ctx, config)) {
+		/* unable to load configuration */
+		return axl_false;
+	}
+
+	/* configure here back log */
+	__turbulence_server_backlog (ctx);
+
 	/*** init the vortex library ***/
 	if (! vortex_init_ctx (vortex_ctx)) {
 		abort_error ("unable to start vortex library, terminating turbulence execution..");
@@ -140,11 +217,11 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	/* init turbulence-proces.c: reinit=axl_false */
 	turbulence_process_init (ctx, axl_false);
 
-	/* load current turbulence configuration */
-	if (! turbulence_config_load (ctx, config)) {
-		/* unable to load configuration */
-		return axl_false;
-	}
+	/* configure thread pool here */
+	__turbulence_thread_pool_conf (ctx);
+
+	/* configure serveral limits */
+	__turbulence_acquire_limits (ctx);
 
 	/* init profile path module: this initialization must be done
 	 * before calling to turbulence_run_config to avoid third
