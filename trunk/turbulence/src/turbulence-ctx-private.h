@@ -124,6 +124,10 @@ struct _TurbulenceCtx {
 	 * pointers */
 	axlDtd             * module_dtd;
 
+	/* several limits */
+	int                  global_child_limit;
+	int                  max_complete_flag_limit;
+
 	/*** turbulence process module ***/
 	axlHash                 * child_process;
 	VortexMutex               child_process_mutex;

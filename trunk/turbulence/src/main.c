@@ -337,6 +337,8 @@ int main (int argc, char ** argv)
 		turbulence_place_pidfile ();
 	}
 
+	
+
 	/* init libraries */
 	if (! turbulence_init (ctx, vortex_ctx, config)) {
 		/* free config */
@@ -346,6 +348,7 @@ int main (int argc, char ** argv)
 		turbulence_ctx_free (ctx);
 		return -1;
 	} /* end if */
+
 	
 	msg ("initial turbulence initialization ok, reading configuration files..");
 

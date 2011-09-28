@@ -14,6 +14,9 @@
 	                   notify-failures?,
 	                   allow-start-without-profiles?,
 	                   global-child-limit?,
+	                   server-backlog?,
+	                   max-incoming-complete-frame-limit?,
+	                   thread-pool?,
 	                   close-conn-on-start-failure?)>
 
 <!ELEMENT ports           (port+)>
@@ -67,6 +70,17 @@
 
 <!ELEMENT global-child-limit   EMPTY>
 <!ATTLIST global-child-limit   value  CDATA #REQUIRED>
+
+<!ELEMENT server-backlog   EMPTY>
+<!ATTLIST server-backlog   value  CDATA #REQUIRED>
+
+<!ELEMENT max-incoming-complete-frame-limit   EMPTY>
+<!ATTLIST max-incoming-complete-frame-limit   value  CDATA #REQUIRED>
+
+<!ELEMENT thread-pool   EMPTY>
+<!ATTLIST thread-pool   max-limit   CDATA #REQUIRED
+                        step-period CDATA #REQUIRED
+                        step-add    CDATA #REQUIRED>
 
 <!ELEMENT close-conn-on-start-failure   EMPTY>
 <!ATTLIST close-conn-on-start-failure   value  (yes|no) #REQUIRED>

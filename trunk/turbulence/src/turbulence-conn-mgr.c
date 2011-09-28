@@ -161,6 +161,9 @@ void turbulence_conn_mgr_added_handler (VortexChannel * channel, axlPointer user
 	msg ("updating channels runnning %d profile %s", count, running_profile);
 	axl_hash_insert_full (state->profiles_running, (axlPointer) running_profile, axl_free, INT_TO_PTR (count), NULL);
 
+	/* configure here channel complete flag limit */
+	vortex_channel_set_complete_frame_limit (channel, ctx->max_complete_flag_limit);
+
 	/* release the lock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
