@@ -158,12 +158,15 @@ void turbulence_process_check_for_finish (TurbulenceCtx * ctx)
 
 	/* do not implement any notification if the turbulence process
 	   is itself finishing */
-	if (ctx->is_exiting)
+	if (ctx->is_exiting) {
+	        msg ("CHILD: process already called to finish turbulence..");
 		return;
+	}
 
 	/* check if the child process was configured with a reuse
 	   flag, if not, notify exist right now */
 	if (! ctx->child->ppath->reuse) {
+	        msg ("CHILD: unlocking listener to finish: %p..", ctx->vortex_ctx);
 		/* so it is a child process without reuse flag
 		   activated, exit now */
 		vortex_listener_unlock (TBC_VORTEX_CTX (ctx));
