@@ -1571,7 +1571,7 @@ int      turbulence_process_child_count  (TurbulenceCtx * ctx)
 	count = axl_hash_items (ctx->child_process);
 	TBC_PROCESS_UNLOCK_CHILD ();
 
-	msg ("child process count: %d..", count);
+	/* msg ("child process count: %d..", count); */
 	return count;
 }
 
