@@ -111,9 +111,9 @@ void turbulence_conn_mgr_unref (axlPointer data)
 	axl_free (state);
 
 	/* check if we have to initiate child process termination */
-	if (ctx->child) {
-		msg ("CHILD: Checking for process termination, current connections are: %d",
-		     axl_hash_items (ctx->conn_mgr_hash));
+	if (ctx->child && ctx->started) {
+		/* msg ("CHILD: Checking for process termination, current connections are: %d",
+		   axl_hash_items (ctx->conn_mgr_hash)); */
 		if (axl_hash_items (ctx->conn_mgr_hash) == 0) {
 			msg ("CHILD: Checking for process termination, current connections are: 0");
 			turbulence_process_check_for_finish (ctx);
