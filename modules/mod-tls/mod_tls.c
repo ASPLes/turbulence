@@ -383,4 +383,14 @@ END_C_DECLS
  * application profiles. This is done like follows:
  *
  * \htmlinclude tls-sasl-example.xml-tmp
+ *
+ * \section turbulence_mod_tls_search_path Configuring mod-tls search path
+ *
+ * Currently, mod-tls searches for tls.conf looking for it in the following other:
+ *
+ * - First is checked, if the user provided a \ref turbulence_profile_path_search "&lt;search> path" declaration using the domain <b>"tls"</b>. In that case, the path configure is used.
+ *
+ * - Then is checked if profile path has a <b>work-dir</b> attribute. If so, this is used.
+ *
+ * - Finally default location is used (in Linux it is /etc/turbulence/tls). Run turbulence --conf-location to know where is the base directory located by looking where is found the default configuration file.
  */
