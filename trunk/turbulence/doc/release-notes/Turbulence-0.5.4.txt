@@ -1,0 +1,220 @@
+                     -= Turbulence 0.5.4 =-
+                         "Binary stars"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce Turbulence
+  0.5.4 "Binary stars" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules which allows
+  to implement server side profiles that are used and combined later
+  with other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://code.google.com/p/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  CODE MORE ROBUST: rewritten child process creation to use fork/exec
+  pair instead of plain fork. Fixed several bugs inside child process
+  creation making Turbulence more stable and robust on high loads.
+
+  NEW RUN TIME OPTIONS: now it is possible to configure several
+  options like thread pool automatic resize, max child limit for the
+  master or for a particular profile path, default max frame size
+  limit among others...
+
+  BUG FIXES AND DOC UPDATES: several bugs were fixed (including some
+  leaks). Documentation was also updated to include examples on how to
+  use new features.
+
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.5.3
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Fixed conceptual bug which was storing child process using
+  profile path id instead the child pid causing to not have all
+  children tracked when a profile path was declared with
+  separate="yes" and reuse="no".
+
+* [new] Added support to control child process that can be created
+  globally by the master process. Also added support to limit child
+  process at profile path configuration. Added regression test
+  test_10-c to check feature introduced.
+
+* [new] Updated turbulence config module to include some functions to
+  allow getting or setting values into run time configuration easily.
+  API added:
+
+   - turbulence_config_set
+   - turbulence_config_get_number
+
+* [fix] Making child idle auto close period to be longer than now (9
+  seconds).
+
+* [new] Added support to turbulence configuration file to support
+  having it splitted across several files, to ease
+  administration. Added reg test 06-a to check support added.
+
+* [new] Added support to load configuration files pieces from a
+  directory placing the content found directly into the
+  turbulence.conf file.  Updated test06-a reg test to check this
+  support.
+
+* [fix] Fixed memory leak in turbulence_conn_mgr_added_handler when
+  the turbulence process is in process of finishing...
+
+* [fix] Fixed memory leak inside mod-python when loading site
+  configuration.
+
+* [fix] Updated documentation to explain how to use <include src="" />
+  and <include dir="" />
+
+* [fix] General rewrite of turbulence child creation to use fork/exec
+  instead of plain fork. General code reorganization to fit into new
+  design.
+
+* [fix] Unregistering master<->child link on child from conn mgr
+  module. Now test_10prev passes.
+
+* [fix] Making turbulence_ctx_free to be the last instruction in main.c
+  (test_10c showed some races..). 
+
+* [new] Added support for <search> path nodes inside profile path
+  which allows to configure additional search path for config files
+  used by modules (mod-sasl, mod-python...). Working on test 13..
+
+* [fix] Making turbulence_process_receive_socket to report a particular
+  error when it is detected file descriptor limit reached when 
+  CMSG_FIRSTHDR call fails.
+
+* [fix] Several cleanups in turbulence process module (removed old
+  child creation code).
+
+* [fix] Added some debug info for connections accepted on child
+  processes.
+
+* [new] Added new option that allows signaling turbulence module to 
+  not unmap module code (useful for debugging). Option added:
+
+   --no-unmap-modules
+
+* [fix] Making child process to release all resources on connection
+  failure.
+
+* [fix] Added detached flag for the thread that is created by
+  turbulence process to check process finish (thread releases all its
+  resources when done).
+
+* [new] Added support to allow controlling what to do with a
+  connection when channel start failures happens. Global option added:
+   
+    - /turbulence/global-settings/close-conn-on-start-failure
+
+* [fix] Fixed wrong access to connection reference when connection was
+  not accepted on child process.
+
+* [fix] Completed log handling at child process (was pending due to
+  last fork/exec change).
+
+* [fix] Updated child process creation and associated query child
+  functions to block/unblock SIGCHLD signal handling during axlHash
+  access to avoid dead-lock produced by a signal fired during the
+  lock. Added new support functions to block and unblock signals:
+
+    - turbulence_signal_block
+    - turbulence_signal_unblock
+
+* [fix] Updated child socket path constructor to use output of
+  gettimeofday to randomize even more.
+
+* [fix] Updated turbulence_signal_received to also check ppath
+  structure before accessing it.
+
+* [new] Added --child-cmd-prefix option to support configuring child
+  command prefix.
+
+* [fix] Fixed turbulence_process_child_by_id (it was returning NULL ?)
+  
+* [fix] Fixed mod_radmin_run_command_on_child. Now the function
+  acquires a reference to the function to avoid loosing it during kill
+  child command.
+
+* [fix] Updated mod-radmin kill child to report a failure if a child
+  pid to kill is not found.
+
+* [fix] Removed call to Py_Finalize from mod_python (is causing lot of
+  problems on termination..).
+
+* [fix] Updated turbulence process module to stop handling new
+  connections on children when turbulence is in process of finishing..
+
+* [fix] Several updates to mod-python to remove Py_Finalize calls.
+
+* [fix] Making child process to inherit command lines to activate
+  vortex debug when provided to parent.
+
+* [new] Updated server to allow configuring TCP stack's backlog using
+  turbulence global setting:
+  /turbulence/global-settings/server-backlog
+
+* [new] Updated server allow configuring vortex thread pool associated
+  through: /turbulence/global-settings/thread-pool. Set default
+  configuration to max thread limit 40, thread step period 5 seconds
+  and thread step to 1.
+
+* [new] Updated channel handling to set default max complete frame
+  size limit to 32k if nothing is configured.
+  
+* [fix] Fixed test_12b.sql file used by reg tests.
+
+* [fix] Making child process finalization code to be not started until
+  the child completes its start up.
+
+About Us
+~~~~~~~~
+
+  Advanced Software Production Line provides GNU/Linux support and
+  consulting services to help organizations to introduce GNU/Linux
+  inside its process.
+
+  Contact us, using English or Spanish, to get commercial support
+  and/or BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  Enjoy Turbulence!  
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+26th oct 2011, Madrid (Spain)
+  
+

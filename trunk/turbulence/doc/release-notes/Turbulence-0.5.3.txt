@@ -1,0 +1,194 @@
+                     -= Turbulence 0.5.3 =-
+                      "Memories of Green"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce Turbulence
+  0.5.3 "Memories of Green" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules which allows
+  to implement server side profiles that are used and combined later
+  with other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://www.sf.net/projects/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  Many updates to mod-python like allowing loading python applications
+  using python.conf files located at the profile path working
+  directory. This allows easy application installation delegation
+  because working directory is usually owned by the user running the
+  profile path.
+
+  Added initial fully working mod-radmin module that allows getting
+  instant information about turbulence runtime status (including its
+  children) so you can view all connections handled (parent and children)
+  and other useful information.
+
+  This release also includes several bug fixes and new regression
+  tests to check turbulence function.
+  
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.5.2
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Updated internal log handling to support log reloading after
+  SIGHUP received (closing and reopen file descriptors). Added
+  turbulence-logrotate.d base file to implement rotation. Updated
+  turbulence-init.d to properly notify start/stop.
+
+* [fix] Adding restart cmd into debian post inst installer.
+
+* [fix] Committing debian changes..
+
+* [fix] Making mod-python to allow loading site python.conf
+  applications along with applications defined at
+  /etc/turbulence/python/python.conf Nice!!
+
+* [fix] Several memory allocation checks at the message logging
+  code.
+
+* [fix] Updated mod-python documentation to explain how to use site
+  python.conf declaration.
+
+* [fix] Updating version files..
+
+* [fix] Making turbulence_signal_install to remove signal handlers
+  installed when enable flag is false to avoid inheriting handlers
+  installed on parent.
+
+* [fix] Fixed memory leak inside mod-mysql-sasl when ip filter is
+  empty. Ensured SASL dtd is cleared when a failure is found.
+
+* [fix] Updated mod-python documentation to explain how to get profile
+  path working dir once python app is activated.
+
+* [fix] Several updates to tbc-ctl tool to process incoming command
+  results. Still more work is required.
+
+* [new] General engine update to allow creating a BEEP connection
+  between parent and children created. This connection is generic (is a
+  BEEP connection!) and at this moment is being used by mod-radmin to
+  implement turbulence management and status notification. GREAT!
+
+  Added turbulence regression test to check connection creation and
+  its status: test_10-b.
+
+* [new] Added first fully working/checked mod-radmin and
+  turbulence-ctl tool that allows getting real-time state for a
+  running turbulence process. For now, the tandem supports:
+
+    - showing connections on master parent and all children
+    - showing all children
+    - getting turbulence process status
+    - killing children and connections (on master and children process: nice!!).
+
+* [fix] General engine work to ensure regression tests releases all
+  parent memory at child process to allow easy memory leak and proper
+  memory access using valgrind.  Until know there where too many
+  errors to make valgrind reports to be usable (mainly due to python
+  and valgrind interaction).  Fixed many bugs and memory wrong access
+  (and some leaks ;-).
+
+* [new] Added new module to handle turbulence child process object
+  (and related elements). API added:
+
+  - turbulence_child_new
+  - turbulence_child_ref
+  - turbulence_child_unref
+
+* [fix] General update at the turbulence context module to acquire a
+  reference to the vortex ctx object associated and to release it at
+  the very end. Updated API to include a method that allows checking
+  if the current turbulence context is associated (or it is) a
+  child. API added:
+
+   - turbulence_ctx_is_child
+
+* [fix] Updated turbulence finalization to do module cleanup at the
+  very last step to allow module code to be available until the end of
+  the turbulence context.  Also updated the code to not release vortex
+  context associated when it is detected not enough references (which
+  shows wrong module/turbulence engine programming) but instead of
+  breaking, drop an error log.
+
+* [fix] Several updates on turbulence conn mgr module to avoid using
+  state object and to start using TurbulenceCtx as a step before
+  getting such object which is more safe (fixes memory wrong access
+  and some races showed by valgrind).
+
+* [fix] Updated mod-sasl to allow loading extension.modules file from
+  "sasl" domain context defined
+  (vortex_support_domain_find_data_file). Also updated the module to
+  release mod_msyql_sasl dtd on close.
+
+* [fix] Making mod-python to detect if some python app was loaded at
+  the parent (causing the python engine to be initialized as well) to
+  avoid starting on child process.  There is no way to make python to
+  work after a fork without an execve operation.  Instead of breaking
+  mysteriously, making the module to refuse loading giving a concrete
+  error message.
+
+* [fix] Added --version support to show current turbulence compiled
+  version.
+
+* [fix] Reorganized mod-python loading code to load site and system
+  config files before initializing python (to avoid problems at the
+  children).
+
+* [fix] Making turbulence_ctx_free to check if internal vortex_ctx
+  reference is defined to avoid using it to drop warnings..
+
+* [fix] Updated mod-python to avoid calling clean start at application
+  initialization.
+
+* [fix] Changed log on mod-sasl-mysql reporting IP not filtered.
+
+About Us
+~~~~~~~~
+
+  Advanced Software Production Line provides GNU/Linux support and
+  consulting services to help organizations to introduce GNU/Linux
+  inside its process.
+
+  Contact us, using English or Spanish, to get commercial support
+  and/or BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  Enjoy Turbulence!  
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+23th aug 2011, Madrid (Spain)
+  
+
