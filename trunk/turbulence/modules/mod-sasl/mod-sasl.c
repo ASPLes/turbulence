@@ -329,6 +329,7 @@ TurbulenceModDef module_def = {
  * - \ref turbulence_mod_sasl_ramdin
  * - \ref turbulence_mod_sasl_mysql
  * - \ref turbulence_mod_sasl_creating_password
+ * - \ref turbulence_mod_sasl_search_path
  *
  * \section turbulence_mod_sasl_intro Introduction
  *
@@ -621,4 +622,16 @@ TurbulenceModDef module_def = {
  * \code
  * >> gen-mod-sasl-pass.py md5 YOUR_PASSWORD
  * \endcode
+ *
+ * \section turbulence_mod_sasl_search_path Configuring mod-sasl search path
+ *
+ * Currently, mod-sasl searches for sasl.conf and associated files
+ * looking for them in the following other:
+ *
+ * - First is checked, if the user provided a \ref turbulence_profile_path_search "&lt;search> path" declaration using the domain <b>"sasl"</b>. In that case, the path configure is used.
+ *
+ * - Then is checked if profile path has a <b>work-dir</b> attribute. If so, this is used.
+ *
+ * - Finally default location is used (in Linux it is /etc/turbulence/sasl). Run turbulence --conf-location to know where is the base directory located by looking where is found the default configuration file.
+ *
  */

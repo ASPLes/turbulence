@@ -868,6 +868,15 @@ END_C_DECLS
  * 
  * \htmlinclude python.module.example.5.xml-tmp
  * 
+ * \section turbulence_mod_python_search_path Configuring mod-python search path
+ *
+ * Currently, mod-python searches for python.conf looking for it in the following other:
+ *
+ * - First is checked, if the user provided a \ref turbulence_profile_path_search "&lt;search> path" declaration using the domain <b>"python"</b>. In that case, the path configure is used.
+ *
+ * - Then is checked if profile path has a <b>work-dir</b> attribute. If so, this is used.
+ *
+ * - Finally default location is used (in Linux it is /etc/turbulence/python). Run turbulence --conf-location to know where is the base directory located by looking where is found the default configuration file.
  */
 
 /** 
