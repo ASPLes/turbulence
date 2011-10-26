@@ -1,3 +1,4 @@
+EXTRA_DIST = mod_test_10_prev.xml mod_test_10_prev.win32.xml
 INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
 	$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS)
