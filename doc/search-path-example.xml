@@ -1,0 +1,12 @@
+   <!-- profile path for all connections coming from localhost -->
+    <path-def server-name="test-13.another-server" src="127.*" path-name="test-13.server services" separate="yes" >
+      <!-- additional search path to be added when profile path is activated -->
+      <search domain="sasl" path="test_12_module" />
+      <search domain="python" path="test_13_module" />
+
+      <!-- request sasl auth first -->
+      <if-success profile="http://iana.org/beep/SASL/.*" connmark="sasl:is:authenticated" >
+        <allow profile="urn:aspl.es:beep:profiles:reg-test:profile-11" />
+        <allow profile="urn:aspl.es:beep:profiles:python-test-2" />
+      </if-success>
+    </path-def>

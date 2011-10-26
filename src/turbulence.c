@@ -1539,6 +1539,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref profile_path_expressions_examples
  *   - \ref turbulence_execution_model
  *   - \ref turbulence_starting_without_profiles
+ *   - \ref turbulence_profile_path_search
  *
  * <b>Section 4: Turbulence module management</b> 
  *
@@ -2049,6 +2050,23 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * To control or change this behaviour check
  * <b><allow-start-without-profiles value="yes or no" /></b> inside
  * <global-settings> node.
+ *
+ * \section turbulence_profile_path_search 3.6 Declaring additional search paths inside profile paths
+ *
+ * Some modules, like mod-sasl, mod-python, etc, may use a search path
+ * to find configuration files. This search path uses default values
+ * (profile path working directory or global system configuration
+ * directory) but it is possible to declare alternative paths for
+ * those files by using <b>&lt;search></b> node declarations inside
+ * profile path.
+ *
+ * Here is an example:
+ *
+ * \htmlinclude search-path-example.xml-tmp
+ *
+ * The detail about what domain and what files are found with those
+ * declarations is module especific. Check the particular module
+ * documentation to find out how to use this.
  *
  * \section turbulence_modules_configuration 4.1 Turbulence modules configuration
  * 
