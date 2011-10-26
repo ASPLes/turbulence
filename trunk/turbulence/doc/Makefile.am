@@ -19,7 +19,8 @@ tmp_xml_examples = \
 	tls-sasl-example.xml-tmp \
 	notify-failures.xml-tmp \
 	include-from-file.xml-tmp \
-	include-from-dir.xml-tmp
+	include-from-dir.xml-tmp \
+	search-path-example.xml-tmp
 
 xml_examples = \
 	global-settings.xml \
@@ -41,7 +42,8 @@ xml_examples = \
 	tls-sasl-example.xml \
 	notify-failures.xml \
 	include-from-file.xml \
-	include-from-dir.xml
+	include-from-dir.xml \
+	search-path-example.xml
 
 drafts_and_docs = \
 	draft-brosnan-beep-limit-close.txt \
