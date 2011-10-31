@@ -40,6 +40,7 @@
 
 /* include support for tls */
 #include <vortex_tls.h>
+#include <openssl/err.h>
 
 /* use this declarations to avoid c++ compilers to mangle exported
  * names. */
@@ -190,6 +191,22 @@ char * mod_tls_private_key_handler (VortexConnection * conn,
 	return file;
 }
 
+void mod_tls_failure_handler (VortexConnection * conn, const char * error_message, axlPointer _ctx)
+{
+	char          log_buffer [512];
+	unsigned long err;
+
+	TurbulenceCtx * ctx = _ctx;
+
+	error ("Found connection id=%d (from %s:%s) TLS error: %s", vortex_connection_get_id (conn), 
+	       vortex_connection_get_host (conn), vortex_connection_get_port (conn), error_message);
+	while ((err = ERR_get_error()) != 0) {
+		ERR_error_string_n (err, log_buffer, sizeof (log_buffer));
+		error ("tls stack: %s (find reason(code) at openssl/ssl.h)", log_buffer);
+	}
+	return;
+}
+
 /* mod_tls init handler */
 static axl_bool  mod_tls_init (TurbulenceCtx * _ctx) {
 
@@ -216,6 +233,11 @@ static axl_bool  mod_tls_init (TurbulenceCtx * _ctx) {
 	 * at the profile path configuration even after connection
 	 * tuning reset */
 	turbulence_ppath_add_profile_attr_alias (ctx, VORTEX_TLS_PROFILE_URI, "tls-fication:status");
+
+	/* configure tls failure handler */
+	vortex_tls_set_failure_handler (TBC_VORTEX_CTX (_ctx),
+					mod_tls_failure_handler,
+					_ctx);
 
 	/* return tls initialization ok */
 	return axl_true;
