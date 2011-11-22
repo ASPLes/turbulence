@@ -253,7 +253,7 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
 	}
 
 	/* build connection reference */
-	return py_vortex_connection_find_reference (conn, self->py_vortex_ctx);
+	return py_vortex_connection_find_reference (conn);
 }
 
 /** 
@@ -276,7 +276,7 @@ static axl_bool  py_turbulence_ctx_broadcast_msg_bridge (VortexConnection * conn
 		ctx = py_ctx->ctx;
 
 	/* get connection reference */
-	py_conn = py_vortex_connection_find_reference (conn, py_ctx->py_vortex_ctx);
+	py_conn = py_vortex_connection_find_reference (conn);
 	if (py_conn == NULL) {
 		error ("Failed to find PyConn connection reference, null returned after providing conn=%p and py_ctx=%p", conn, invoke_data->py_ctx);
 		return axl_true; /* filter on failure */
