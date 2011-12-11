@@ -110,6 +110,9 @@ int  main_init_exarg (int argc, char ** argv)
 	exarg_install_arg ("no-unmap-modules", NULL, EXARG_NONE,
 			   "Makes turbulence to no unmap module after exit (useful for debugging because symbols are available). This option is only useful for debugging purposes..");
 
+	exarg_install_arg ("wait-thread-pool", NULL, EXARG_NONE,
+			   "Makes turbulence to configure its vortex context to wait for threads from the pool to finish. By default turbulence will not wait. This option is only useful for debugging purposes..");
+
 
 	/* call to parse arguments */
 	exarg_parse (argc, argv);

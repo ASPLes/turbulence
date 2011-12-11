@@ -1213,6 +1213,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	int                error_code;
 	char            ** cmds;
 	int                iterator = 0;
+	axl_bool           skip_thread_pool_wait = axl_false;
 
 	/* check if we are main process (only main process can create
 	 * childs, at least for now) */
@@ -1391,7 +1392,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			iterator++;
 
 		/* expand to include additional commands */
-		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 13 + 1));
+		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 14 + 1));
 
 		cmds[iterator] = (char *) turbulence_bin_path;
 		iterator++;
@@ -1423,6 +1424,13 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			cmds[iterator] = "--no-unmap-modules";
 			iterator++;
 		}
+		/* get skip thread pool wait */
+		vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_SKIP_THREAD_POOL_WAIT, &skip_thread_pool_wait);
+		if (! skip_thread_pool_wait) {
+			cmds[iterator] = "--wait-thread-pool";
+			iterator++;
+		}
+
 		if (vortex_log_is_enabled (ctx->vortex_ctx)) {
 			cmds[iterator] = "--vortex-debug";
 			iterator++;

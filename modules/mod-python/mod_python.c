@@ -388,6 +388,13 @@ void mod_python_exception (const char * exception_msg)
 	return;
 }
 
+void mod_python_too_long_notifier (const char * msg_string, axlPointer data)
+{
+	/* report */
+	wrn ("Found too long notification, check it: %s", msg_string);
+	return;
+}
+
 /* mod_python init handler */
 static int  mod_python_init (TurbulenceCtx * _ctx) {
 	/* configure the module */
@@ -405,10 +412,12 @@ static int  mod_python_init (TurbulenceCtx * _ctx) {
 		} /* end if */
 	} /* end if */
 	
-
 	/* init mutex and flag (always: parent or child) */
 	vortex_mutex_create (&mod_python_top_init);
 	mod_python_py_init = axl_false;
+
+	/* start handler watcher here */
+	py_vortex_ctx_start_handler_watcher (TBC_VORTEX_CTX (_ctx), 5, mod_python_too_long_notifier, _ctx);
 
 	return axl_true;
 } /* end mod_python_init */
