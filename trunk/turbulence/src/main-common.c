@@ -72,6 +72,10 @@ void main_common_enable_debug_options (TurbulenceCtx * ctx,
 		turbulence_module_set_no_unmap_modules (axl_true);
 	}
 
+	/* configure no unmap module if defined */
+	msg ("Setting wait for pool threads = %s", exarg_is_defined ("wait-thread-pool") ? "True" : "False");
+	vortex_conf_set (vortex_ctx, VORTEX_SKIP_THREAD_POOL_WAIT, ! exarg_is_defined ("wait-thread-pool"), NULL);
+
 	/* configure child cmd prefix */
 	if (exarg_is_defined ("child-cmd-prefix")) {
 		msg ("Setting child cmd prefix: %s", exarg_get_string ("child-cmd-prefix"));
