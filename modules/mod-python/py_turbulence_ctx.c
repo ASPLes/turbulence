@@ -262,7 +262,7 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
  */
 static axl_bool  py_turbulence_ctx_broadcast_msg_bridge (VortexConnection * conn, axlPointer user_data)
 {
-	PyGILState_STATE           state;
+	/* PyGILState_STATE           state; */
 	PyObject                 * py_conn = NULL;
 	PyTurbulenceInvokeData   * invoke_data = user_data;
 	PyObject                 * args;
@@ -283,7 +283,7 @@ static axl_bool  py_turbulence_ctx_broadcast_msg_bridge (VortexConnection * conn
 	} /* end if */
 
 	/* acquire the GIL */
-	state = PyGILState_Ensure();
+	/* state = PyGILState_Ensure(); */
 
 	/* create a tuple to contain arguments */
 	args = PyTuple_New (2);
@@ -308,7 +308,7 @@ static axl_bool  py_turbulence_ctx_broadcast_msg_bridge (VortexConnection * conn
 	Py_DECREF (args);
 
 	/* release the GIL */
-	PyGILState_Release (state);
+	/* PyGILState_Release (state); */
 
 	/* filter according state */
 	return result_value;
@@ -323,6 +323,7 @@ static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObj
 	PyObject               * handler     = NULL;
 	PyObject               * data        = NULL;
 	PyTurbulenceInvokeData * invoke_data = NULL;
+	axl_bool                 result;
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "zis|OO", &message, &size, &profile, &handler, &data))
@@ -343,19 +344,21 @@ static PyObject * py_turbulence_ctx_broadcast_msg (PyTurbulenceCtx * self, PyObj
 		if (invoke_data->data == NULL)
 			invoke_data->data = Py_None;
 	} /* end if */
-	
+
 	/* get the connection */
-	if (! turbulence_conn_mgr_broadcast_msg (ctx, message, size, profile, 
-						 /* invoke bridge */
-						 invoke_data ? py_turbulence_ctx_broadcast_msg_bridge : NULL, 
-						 /* invoke data */
-						 invoke_data)) {
-		Py_INCREF (Py_False);
-		return Py_False;
-	} /* end if */
+	result = turbulence_conn_mgr_broadcast_msg (ctx, message, size, profile, 
+						    /* invoke bridge */
+						    invoke_data ? py_turbulence_ctx_broadcast_msg_bridge : NULL, 
+						    /* invoke data */
+						    invoke_data);
 
 	/* release invoke data if any */
 	axl_free (invoke_data);
+
+	if (! result) {
+		Py_INCREF (Py_False);
+		return Py_False;
+	}
 
 	/* return proper result */
 	Py_INCREF (Py_True);
