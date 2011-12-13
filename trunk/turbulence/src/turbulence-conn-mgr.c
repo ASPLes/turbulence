@@ -549,6 +549,7 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	int                      conn_id;
 	TurbulenceBroadCastMsg * broadcast;
 	TurbulenceConnMgrState * state;
+	axl_bool                 should_filter;
 
 	v_return_val_if_fail (message, axl_false);
 	v_return_val_if_fail (message_size >= 0, axl_false);
@@ -583,27 +584,33 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 		} /* end if */
 
 		/* check filter function */
-		if (filter_conn != NULL && filter_conn (conn, filter_data)) {
 
-			msg ("Broadcast on connection id=%d filtered", conn_id);
+		if (filter_conn) {
+			/* unlock during the filter call to allow
+			 * conn-mgr reentrancy from inside filter
+			 * handler */
+			vortex_mutex_unlock (&ctx->conn_mgr_mutex); 
 
-			/* connection filtered */
-			axl_hash_cursor_next (cursor);
-			continue;
+			/* get filtering result */
+			should_filter = filter_conn (conn, filter_data);
+
+			/* lock */
+			vortex_mutex_lock (&ctx->conn_mgr_mutex); 
+
+			if (should_filter) {
+				msg ("Broadcast on connection id=%d filtered", conn_id);
+
+				/* connection filtered */
+				axl_hash_cursor_next (cursor);
+				continue;
+			} /* end if */
 		} /* end if */
 
 		msg ("Doing broadcasting on connection id=%d (%p)", conn_id, conn);
 
-		/* unlock during the broad cast because the broadcast
-		 * handler may renter into conn-mgr API  */
-		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
-
 		/* search for channels running the profile provided */
 		if (! vortex_connection_foreach_channel (conn, _turbulence_conn_mgr_broadcast_msg_foreach, broadcast))
 			error ("failed to broacast message over connection id=%d", vortex_connection_get_id (conn));
-
-		/* lock */
-		vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 		/* next cursor */
 		axl_hash_cursor_next (cursor);

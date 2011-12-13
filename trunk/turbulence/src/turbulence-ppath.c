@@ -508,7 +508,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 {
 	TurbulencePPathState * state;
 	TurbulenceCtx        * ctx;
-	
+
 	/* get current state */
 	state = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
 	ctx   = state->ctx;
@@ -752,6 +752,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 		
 	/* check for process separation and apply operation here */
 	if (def->separate) {
+
 		/* call to create process */
 		turbulence_process_create_child (ctx, connection, def, 
 						 /* signal to handle start request reply */

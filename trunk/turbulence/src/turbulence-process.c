@@ -1169,7 +1169,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 
 	/* get child init string length (again) */
 	length = strlen (child_init_string);
-	msg ("PARENT: sent init child string length %d, now send content..", length);
+	/* msg ("PARENT: sending init child string length %d: %s", length, child_init_string); */
 
 	/* send content */
 	written = write (child->child_connection, child_init_string, length);

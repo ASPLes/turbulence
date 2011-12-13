@@ -1682,7 +1682,7 @@ axl_bool test_09 (void) {
 	/* create connection to local server */
 	printf ("Test 09: testing services provided to test-09.server domain..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-09.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-09.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -1716,7 +1716,7 @@ axl_bool test_09 (void) {
 	/* create connection to local server: request for test-09.second.server domain */
 	printf ("Test 09: testing services provided to test-09.second.server domain..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-09.second.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-09.second.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (5): expected to find proper connection after turbulence startup..\n");
@@ -1750,7 +1750,7 @@ axl_bool test_09 (void) {
 	/* create connection to local server: request for test.wilcard.com domain */
 	printf ("Test 09: testing services provided to test.wilcard.com domain..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test.wildcard.com"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test.wildcard.com", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (9): expected to find proper connection after turbulence startup..\n");
@@ -1835,7 +1835,7 @@ axl_bool test_10 (void) {
 	/* create connection to local server */
 	printf ("Test 10: testing services provided to test-10.server domain..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2042,7 +2042,7 @@ axl_bool test_10_prev (void) {
 	/* create connection to local server */
 	printf ("Test 10-prev: creating child process..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2167,7 +2167,7 @@ axl_bool test_10_b (void) {
 	/* create connection to local server */
 	printf ("Test 10-b: creating child process..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2335,7 +2335,7 @@ VortexConnection * test_10_c_connect_and_check (VortexCtx * vCtx, TurbulenceCtx 
 
 	/* create connection */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2451,6 +2451,115 @@ axl_bool test_10_c (void) {
 	return axl_true;
 }
 
+
+int test_10_d_filter_conn (VortexConnection *conn, axlPointer user_data)
+{
+	VortexConnection * temp;
+	TurbulenceCtx    * ctx = user_data;
+
+	if (user_data == NULL) {
+		printf ("ERROR: failed to filter connection, expected to find user_data pointer defined..\n");
+		return axl_true;
+	}
+
+	/* get access to the conn mgr API to ensure we don't lock */
+	printf ("Test 10-d: called broadcast filter handler (user_data: %p)..\n", user_data);
+
+	/* get connection */
+	temp = turbulence_conn_mgr_find_by_id (ctx, vortex_connection_get_id (conn));
+
+	/* check reference */
+	if (temp == NULL) {
+		printf ("ERROR: expected to find connection reference at filter handler but found NULL\n");
+		return axl_true; /* filter to make test fail */
+	}
+	
+	if (conn != temp) {
+		printf ("ERROR: expected to find connection reference %p, but found %p\n", conn, temp);
+		return axl_true; /* filter to make test fail */
+	}
+
+	/* do not filter */
+	return axl_false;
+}
+
+axl_bool test_10_d (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	VortexAsyncQueue * queue;
+	VortexFrame      * frame;
+	
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_10d.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* create connection to local server */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find NOT NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	} /* end if */
+
+	/* create async queue and configure frame received handler */
+	queue = vortex_async_queue_new ();
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+
+	/* now call to broadcast a message */
+	printf ("Test 10-d: sending broadcast message..\n");
+	if (! turbulence_conn_mgr_broadcast_msg (tCtx, 
+						 "This is a test",
+						 14, 
+						 "urn:aspl.es:beep:profiles:reg-test:profile-1",
+						 test_10_d_filter_conn, 
+						 tCtx)) {
+		printf ("ERROR (3): failed to broadcast message...\n");
+		return axl_false;
+	}
+
+	/* get reply */
+	printf ("Test 10-d: getting reply message..\n");
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (4): expected to find a frame reference defined but NULL value was found...\n");
+		return axl_false;
+	}
+
+	/* check value */
+	if (! axl_cmp (vortex_frame_get_payload (frame), "This is a test")) {
+		printf ("ERROR (5): expected to find content 'This is a test' but found: '%s'\n", (const char *) vortex_frame_get_payload (frame));
+		return axl_false;
+	} /* end if */
+
+	/* release frame */
+	vortex_frame_unref (frame);
+	vortex_async_queue_unref (queue);
+
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_10_a (void) {
 
 	VortexCtx        * vCtx;
@@ -2471,7 +2580,7 @@ axl_bool test_10_a (void) {
 	/* create connection to local server */
 	printf ("Test 10-a: creating connection..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2508,7 +2617,7 @@ axl_bool test_10_a (void) {
 
 	printf ("Test 10-a: creating (AGAIN) the connection..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2558,7 +2667,7 @@ axl_bool test_11 (void) {
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-11.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-11.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2644,7 +2753,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -2772,7 +2881,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 
 	/*** now connect using test-12.another-server to use another database **/
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.another-server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.another-server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (10): expected to find proper connection after turbulence startup..\n");
@@ -2826,7 +2935,7 @@ axl_bool test_12_common (VortexCtx     * vCtx,
 	if (test_local_sasl) {
 		printf ("Test 12: testing test-12.third-server, user defined SASL database..\n");
 		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.third-server"),
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-12.third-server", VORTEX_OPTS_END),
 						   NULL, NULL);
 		if (! vortex_connection_is_ok (conn, axl_false)) {
 			printf ("ERROR (15): expected to find proper connection after turbulence startup..\n");
@@ -2980,7 +3089,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -3047,7 +3156,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	/* --- TEST: test wrong initialization --- */
 	printf ("Test 13: checking wrong initialization..\n");
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.wrong.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.wrong.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (8): expected to find proper connection after turbulence startup..\n");
@@ -3065,7 +3174,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	printf ("Test 13: testing second python app..\n");
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.another-server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.another-server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (9): expected to find proper connection after turbulence startup..\n");
@@ -3144,7 +3253,7 @@ axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_t
 	/* now open connection to localhost */
 	queue = vortex_async_queue_new ();
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.third-server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.third-server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (16): expected to find proper connection after turbulence startup..\n");
@@ -3291,7 +3400,7 @@ axl_bool test_13_b (void) {
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-13.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
@@ -3430,7 +3539,7 @@ axl_bool test_14 (void) {
 
 	/* create a connection to the local sever */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-14.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-14.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection but found an error..\n");
@@ -3517,7 +3626,7 @@ axl_bool test_15a (void) {
 
 	/* connect to local server */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 
 	if (! vortex_connection_is_ok (conn, axl_false)) {
@@ -3560,7 +3669,7 @@ axl_bool test_15a (void) {
 	   check that the child process created is reused */
 	/* connect to local server */
 	conn2 = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server"),
+					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server", VORTEX_OPTS_END),
 					    NULL, NULL);
 
 	if (! vortex_connection_is_ok (conn2, axl_false)) {
@@ -3612,7 +3721,7 @@ axl_bool test_15a (void) {
 	   check that the child process created is reused */
 	/* connect to local server */
 	conn3 = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server"),
+					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-15.server", VORTEX_OPTS_END),
 					    NULL, NULL);
 
 	if (! vortex_connection_is_ok (conn3, axl_false)) {
@@ -3794,7 +3903,7 @@ axl_bool test_16 (void) {
 	while (iterator < connections) {
 		/* create a connection */
 		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-16.server"),
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-16.server", VORTEX_OPTS_END),
 						   NULL, NULL);
 		conns[iterator] = conn;
 		
@@ -3827,7 +3936,7 @@ axl_bool test_16 (void) {
 
 	/* now create a connections that will be handled by a child process */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-16.server.child"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-16.server.child", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (1): expected to find proper connection but found an error..\n");
@@ -3889,7 +3998,7 @@ axlPointer test_17_thread (VortexCtx * ctx)
 
 	while (iterator < 4) {
 		conn = vortex_connection_new_full (ctx, "127.0.0.1", "44010",
-						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-17.server"),
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-17.server", VORTEX_OPTS_END),
 						   NULL, NULL);
 		/* check connection */
 		if (! vortex_connection_is_ok (conn, axl_false)) {
@@ -3946,7 +4055,7 @@ axl_bool test_17 (void) {
 
 		/* open a connection */
 		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-17.server"),
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-17.server", VORTEX_OPTS_END),
 						   NULL, NULL);
 		/* check connection */
 		if (! vortex_connection_is_ok (conn, axl_false)) {
@@ -4165,7 +4274,7 @@ axl_bool test_20 (void) {
 	/* FIRST: open a connection to force the second connection to be passed to an already created child. */ 
 	/* now connect to local host and open a channel */
 	conn2 = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server"),
+					    CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server", VORTEX_OPTS_END),
 					    NULL, NULL);
 	if (! vortex_connection_is_ok (conn2, axl_false)) {
 		printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
@@ -4182,7 +4291,7 @@ axl_bool test_20 (void) {
 
 	/* SECOND: no create the second connection (reusing child) */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server"),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server", VORTEX_OPTS_END),
 					   NULL, NULL);
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (3): expected proper connection creation (%d, %s)\n", 
@@ -4259,7 +4368,7 @@ axl_bool test_21 (void) {
 	iterator = 0;
 	while (iterator < 10) {
 		conn[iterator] = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server"),
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-20.server", VORTEX_OPTS_END),
 						   NULL, NULL);
 		if (! vortex_connection_is_ok (conn[iterator], axl_false)) {
 			printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
@@ -4326,7 +4435,7 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 
 	/* connect and enable TLS */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName, VORTEX_OPTS_END),
 					   NULL, NULL);
 
 	if (! vortex_connection_is_ok (conn, axl_false)) {
@@ -4431,7 +4540,7 @@ axl_bool test_22_unfinished (VortexCtx * vCtx, const char * serverName, VortexAs
 
 	/* connect and enable TLS */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName),
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName, VORTEX_OPTS_END),
 					   NULL, NULL);
 
 	if (! vortex_connection_is_ok (conn, axl_false)) {
@@ -4771,7 +4880,10 @@ int main (int argc, char ** argv)
 	run_test (test_10_b, "Test 10-b: check master-child BEEP link)");
 
 	CHECK_TEST("test_10c")
-	run_test (test_10_c, "Test 10-c: check global child limit and profile path limit)");
+	run_test (test_10_c, "Test 10-c: check global child limit and profile path limit");
+
+	CHECK_TEST("test_10d")
+	run_test (test_10_d, "Test 10-d: unlock turbulence conn-mgr while broadcasing");
 
 	CHECK_TEST("test_11")
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
