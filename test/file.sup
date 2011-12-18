@@ -431,4 +431,12 @@
    fun:Py_InitializeEx
    ...
 }
+{
+   Python leak 56
+   Memcheck:Leak
+   fun:malloc
+   obj:*
+   fun:PyThread_set_key_value
+   ...
+}
 
