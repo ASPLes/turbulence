@@ -421,7 +421,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 	ctx = child->ctx;
 	
 	iov.iov_base = buf;
-	iov.iov_len = 8192;
+	iov.iov_len = 1023;
 
 	memset (&msg, 0, sizeof (struct msghdr));	
 	msg.msg_name       = 0;
