@@ -5,7 +5,7 @@ INCLUDES = -DCOMPILATION_DATE=`date +%s` -I ../../src \
 
 bin_PROGRAMS           = tbc-dblist-mgr
 tbc_dblist_mgr_SOURCES = tbc-dblist-mgr.c
-tbc_dblist_mgr_LDADD   = $(AXL_LIBS) $(EXARG_LIBS) ../../src/libturbulence.la
+tbc_dblist_mgr_LDADD   = $(AXL_LIBS) $(EXARG_LIBS) $(VORTEX_LIBS) ../../src/libturbulence.la
 
 
 

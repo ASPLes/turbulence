@@ -1849,7 +1849,6 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 					       VortexMutex      * mutex)
 {
 	/* get a reference to the turbulence context */
-	TurbulenceCtx * ctx = NULL;
 	axlNode       * node;
 	SaslAuthDb    * db;
 	axlDoc        * auth_db;
@@ -1858,9 +1857,6 @@ int       common_sasl_user_edit_auth_id       (SaslAuthBackend  * sasl_backend,
 	/* return if minimum parameters aren't found. */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL)
 		return axl_false;
-
-	/* get a reference to the context */
-	ctx = sasl_backend->ctx;
 
 	/* change if both user ids are equal */
 	if (axl_cmp (auth_id, new_auth_id))
@@ -2218,7 +2214,6 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 					    int                enable,
 					    VortexMutex      * mutex)
 {
-	TurbulenceCtx  * ctx = NULL;
 	axlNode        * node;
 	SaslAuthDb     * db;
 	axlDoc         * auth_db;
@@ -2230,9 +2225,6 @@ int       common_sasl_enable_remote_admin  (SaslAuthBackend  * sasl_backend,
 	    auth_id           == NULL  ||
 	    sasl_backend->ctx == NULL)
 		return axl_false;
-
-	/* get a reference to the context */
-	ctx = sasl_backend->ctx;
 
 	/* lock the mutex */
 	LOCK;
@@ -2325,7 +2317,6 @@ int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 					       const char       * serverName,
 					       VortexMutex      * mutex)
 {
-	TurbulenceCtx    * ctx = NULL;
 	axlNode          * node;
 	SaslAuthDb       * db;
 	axlDoc           * auth_db;
@@ -2338,9 +2329,6 @@ int       common_sasl_is_remote_admin_enabled (SaslAuthBackend  * sasl_backend,
 	    sasl_backend->ctx == NULL)
 		return axl_false;
 
-	/* get a reference to the context */
-	ctx = sasl_backend->ctx;
-	
 	/* lock the mutex */
 	LOCK;
 

@@ -90,7 +90,6 @@ const char * get_out_dir ()
 
 int  tbc_mod_gen_template_create ()
 {
-	const char * outdir = NULL;
 	axlDoc     * doc;
 	axlNode    * node;
 	axlNode    * nodeAux;
@@ -98,7 +97,6 @@ int  tbc_mod_gen_template_create ()
 	msg ("producing a template definition at the location provided");
 	
 	/* get out dir */
-	outdir  = get_out_dir ();
 	doc     = axl_doc_create (NULL, NULL, axl_true);
 	
 	node    = axl_node_create ("mod-def");

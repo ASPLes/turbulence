@@ -290,7 +290,6 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 	int                length;
 	int                length2;
 	int                total;
-	int                write_result;
 
 	/* do not report if log description is not defined */
 	if (log < 0)
@@ -330,15 +329,19 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 	memcpy (result, string, length);
 	memcpy (result + length, string2, length2);
 	memcpy (result + length + length2, "\n", 1);
+
+	axl_free (string);
+	axl_free (string2);
 	
 	/* write content: do it in a single operation to avoid mixing
 	 * content from different logs at the log file. */
-	write_result = write (log, result, total);
+	if (write (log, result, total) == -1) {
+		axl_free (result);
+		return;
+	}
 	
 	/* release memory used */
 	axl_free (result);
-	axl_free (string);
-	axl_free (string2);
 	return;
 } 
 

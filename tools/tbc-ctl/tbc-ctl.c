@@ -464,7 +464,6 @@ void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 	int          length;
 	int          col_lengths[20];
 	int          iterator;
-	const char * content;   
 
 	/* print title */
 	node = axl_doc_get (doc, "/table/title");
@@ -500,7 +499,6 @@ void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 		iterator = 0;
 		node2    = axl_node_get_child_called (node, "d");
 		while (node2) {
-			content = axl_node_get_content (node2, &size);
 			if (size > col_lengths[iterator]) {
 				col_lengths[iterator] = size;
 			}
