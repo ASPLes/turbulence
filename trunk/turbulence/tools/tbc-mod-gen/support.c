@@ -175,7 +175,6 @@ char * next_line (FILE * file)
 	char   value;
 	char * result;
 	char   temp[1024];
-	int    bytes;
 
 	/* check end of file */
 	if (feof (file) != 0) {
@@ -225,7 +224,8 @@ char * next_line (FILE * file)
 
 		if (feof (file) == 0) {
 			/* consume the latest \n */
-			bytes = fread (&value, 1, 1, file);
+			if (fread (&value, 1, 1, file) == 0)
+				return result;
 		} /* end if */
 	} else {
 		memset (temp, 0, 1024);

@@ -536,6 +536,9 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	/* destroy */
 	vortex_mutex_destroy (&mod_python_top_init);
 
+	/* release state */
+	PyGILState_Release (state); 
+
 	/* not required to release the GIL */
 	return;
 

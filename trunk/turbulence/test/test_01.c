@@ -107,7 +107,6 @@ axl_bool test_01_finish_channel (axlPointer _channel_num, axlPointer _channel, a
 
 void test_01_finish_conn (axlPointer _data)
 {
-	int                refs;
 	Test01FinishConn * data = _data;
 
 	if (data->pid == vortex_getpid ()) {
@@ -120,7 +119,6 @@ void test_01_finish_conn (axlPointer _data)
 	__vortex_ctx_set_cleanup (CONN_CTX (data->conn));
 
 	/* check which pid to see if we are in the child */
-	refs = vortex_connection_ref_count (data->conn);
 	printf ("Test 01 finish conn: finish connection id=%d on child, refs: %d\n",
 	     vortex_connection_get_id (data->conn), vortex_connection_ref_count (data->conn));
 	

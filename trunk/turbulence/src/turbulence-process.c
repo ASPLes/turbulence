@@ -1503,14 +1503,12 @@ axl_bool __terminate_child (axlPointer key, axlPointer data, axlPointer user_dat
  */ 
 void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
 {
-	axlDoc  * doc;
 	axlNode * node;
 	int       pid;
 	int       status;
 	int       childs;
 
 	/* get user doc */
-	doc  = turbulence_config_get (ctx);
 	node = axl_doc_get (ctx->config, "/turbulence/global-settings/kill-childs-on-exit");
 	if (node == NULL) {
 		error ("Unable to find kill-childs-on-exit node, doing nothing..");
