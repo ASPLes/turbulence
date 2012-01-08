@@ -24,6 +24,10 @@ FRANCIS WORK
       stdout) and mod-radmin (adding more commands to manage and check
       turbulence state).
 
+* Complete turbulence reload signal to reload configuration file
+  and limits associated. In the case a definition doesn't exit, kill
+  all childs that shouldn't be running.
+
 IDEAS & USEFUL HINTS
 
 * It would be great to allow turbulence configuring which kind of
