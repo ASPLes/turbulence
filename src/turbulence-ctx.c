@@ -142,6 +142,9 @@ void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx,
 	/* configure vortex ctx */
 	ctx->vortex_ctx = vortex_ctx;
 
+	/* configure reference on vortex ctx */
+	vortex_ctx_set_data (vortex_ctx, "tbc:ctx", ctx);
+
 	return;
 }
 
