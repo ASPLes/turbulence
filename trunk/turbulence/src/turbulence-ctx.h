@@ -67,7 +67,18 @@ void            turbulence_ctx_set_vortex_ctx (TurbulenceCtx * ctx,
  * 
  * @return A reference to the vortex context associated.
  */
-#define TBC_VORTEX_CTX(_ctx) (turbulence_ctx_get_vortex_ctx (_ctx))
+#define TBC_VORTEX_CTX(_tbc_ctx) (turbulence_ctx_get_vortex_ctx (_tbc_ctx))
+
+/** 
+ * @brief As oposse to \ref TBC_VORTEX_CTX, this macro returns the
+ * TurbulenceCtx object associated to the VortexCtx object.
+ *
+ * @param _vortex_ctx The vortex context (\ref VortexCtx) which is required to return the
+ * turbulence context associated.
+ * 
+ * @return A reference to the turbulence context associated (\ref TurbulenceCtx).
+ */
+#define VORTEX_TBC_CTX(_vortex_ctx) (vortex_ctx_get_data (_vortex_ctx, "tbc:ctx"))
 
 VortexCtx     * turbulence_ctx_get_vortex_ctx (TurbulenceCtx * ctx);
 
