@@ -81,6 +81,24 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 	return;
 }
 
+void __turbulence_conn_mgr_unref_show_errors (TurbulenceCtx * ctx, VortexConnection *conn)
+{
+	int    code;
+	char * message;
+	while (vortex_connection_pop_channel_error (conn, &code, &message)) {
+		switch (code) {
+		case VortexOk:
+		case VortexConnectionCloseCalled:
+		case VortexUnnotifiedConnectionClose:
+			break;
+		default:
+			error ("  error: %d, %s", code, message);
+			axl_free (message);
+			break;
+		}
+	}
+	return;
+}
 
 void turbulence_conn_mgr_unref (axlPointer data)
 {
@@ -96,6 +114,9 @@ void turbulence_conn_mgr_unref (axlPointer data)
 
 		/* uninstall on close full handler to avoid race conditions */
 		vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, ctx);
+
+		/* drop errors found on the connection */
+		__turbulence_conn_mgr_unref_show_errors (ctx, state->conn);
 		
 		/* unref the connection */
 		msg ("Unregistering connection: %d (%p, socket: %d)", 
