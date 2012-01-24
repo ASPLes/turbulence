@@ -1558,6 +1558,9 @@ axl_bool test_08 (void) {
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
 	VortexChannel    * channel;
+	int                code;
+	char             * msg;
+	axl_bool           found;
 
 	/* FIRST PART: init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_08.conf")) 
@@ -1643,11 +1646,22 @@ axl_bool test_08 (void) {
 	} /* end if */
 
 	/* check status */
-	if (vortex_connection_get_status (conn) != VortexGreetingsFailure) {
-		printf ("ERROR (8): expected to find connection status VortexGreetingsFailure (10) but found: %d:%s..\n",
-			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
-		return axl_false;
+	found = axl_false;
+	while (vortex_connection_pop_channel_error (conn, &code, &msg)) {
+		printf ("Test 08: found channel code error: %d\n", code);
+		if (code == VortexGreetingsFailure) {
+			found = axl_true;
+			axl_free (msg);
+			break;
+		}
+		axl_free (msg);
 	} /* end if */
+
+	if (! found) {
+		printf ("ERROR (8): expected to find VortexGreetingsFailure (%d) but it wasn't found..\n",
+			code);
+		return axl_false;
+	}
 
 	/* close connection */
 	vortex_connection_close (conn);
@@ -1894,7 +1908,7 @@ axl_bool test_10 (void) {
 	vortex_frame_unref (frame);
 
 	/* close the connection and check child process */
-	printf ("Test 10: closing connection and checking childs..\n");
+	printf ("Test 10: closing connection and checking childs (parent pid: %d)..\n", getpid ());
 	vortex_connection_close (conn);
 
 	/* do a micro wait */
