@@ -237,7 +237,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	/* lock the mutex and check */
 	vortex_mutex_lock (&ctx->exit_mutex);
 	if (ctx->is_exiting) {
-		msg ("process already existing, doing nothing..."); 
+		msg ("process already existing, signal received=%d, doing nothing...", _signal);
 
 		/* other thread is already cleaning */
 		vortex_mutex_unlock (&ctx->exit_mutex);
@@ -274,7 +274,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 		/* check current termination option */
 		doc  = turbulence_config_get (ctx);
 		node = axl_doc_get (doc, "/turbulence/global-settings/on-bad-signal");
-		error ("applyinng configured action %s", HAS_ATTR (node, "action") ? ATTR_VALUE (node, "action") : "not defined");
+		error ("applyinng configured action %s", (node && HAS_ATTR (node, "action")) ? ATTR_VALUE (node, "action") : "not defined");
 		if (HAS_ATTR_VALUE (node, "action", "ignore")) {
 			/* do notify if enabled */
 			CHECK_AND_REPORT_MAIL_TO ("Bad signal received at turbulence process, default action: ignore",
