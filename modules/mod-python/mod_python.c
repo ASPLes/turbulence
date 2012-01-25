@@ -493,7 +493,6 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 	/* call to notify close on all apps */
 	node = axl_doc_get (mod_python_conf, "/mod-python/application");
 	while (node) {
-
 		/* check for initialized applications */
 		if (! PTR_TO_INT (axl_node_annotate_get (node, "app-started", axl_false))) {
 			/* found application already loaded */
@@ -519,7 +518,7 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 
 		/* get next node */
 		node = axl_node_get_next_called (node, "application");
-	}
+	} /* end while */
 
 	msg ("mod_python_close: apps close notification finished..");
 
@@ -538,6 +537,8 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 
 	/* release state */
 	PyGILState_Release (state); 
+
+	/* Py_Finalize ();*/
 
 	/* not required to release the GIL */
 	return;
@@ -568,15 +569,16 @@ void mod_python_initialize (void)
 		msg ("    init py-turbulence..");
 		py_turbulence_init ();
 
-		/* configure exception handler */
-		msg ("    configure exception handler..");
-		py_vortex_set_exception_handler (mod_python_exception);
-
 		/* signal python initialized */
 		mod_python_py_init = axl_true;
 	} else {
 		msg ("Python engine already initialized..");
 	} /* end if */
+
+	/* configure exception handler */
+	msg ("    configure exception handler..");
+	py_vortex_set_exception_handler (mod_python_exception);
+
 	return;
 }
 

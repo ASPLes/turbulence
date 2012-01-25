@@ -4791,7 +4791,7 @@ void terminate_contexts (void) {
  */
 int main (int argc, char ** argv)
 {
-	axl_bool disable_python_tests = axl_false;
+	axl_bool enable_python_tests = axl_false;
 	char * run_test = NULL;
 	axl_bool enable_10a = axl_true;
 	axl_bool only_python = axl_false;
@@ -4805,7 +4805,7 @@ int main (int argc, char ** argv)
 	printf ("**                   axl:        %s\n**\n",
 		AXL_VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     time ./test_01 [--help] [--debug] [--no-python] [--python-tests] [--run-test=NAME] [--no-10a] [--child-cmd-prefix]\n**\n");
+	printf ("**     time ./test_01 [--help] [--debug] [--python-tests] [--python-tests] [--run-test=NAME] [--no-10a] [--child-cmd-prefix]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     PARENT: \n");
 	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no ./test_01 [--debug]\n**\n");
@@ -4825,10 +4825,13 @@ int main (int argc, char ** argv)
 			exit (0);
 		if (axl_cmp (argv[argc], "--debug")) 
 			test_common_enable_debug = axl_true;
-		if (axl_cmp (argv[argc], "--no-python"))
-			disable_python_tests = axl_true;
-		if (axl_cmp (argv[argc], "--python-tests"))
+		if (axl_cmp (argv[argc], "--python-tests")) {
+			enable_python_tests = axl_true;
+		}
+		if (axl_cmp (argv[argc], "--only-python-tests")) {
 			only_python = axl_true;
+			enable_python_tests = axl_true;
+		}
 		if (axl_cmp (argv[argc], "--no-10a"))
 			 enable_10a = axl_false;
 		if (argv[argc] && axl_memcmp (argv[argc], "--child-cmd-prefix", 18)) { 
@@ -4927,7 +4930,7 @@ int main (int argc, char ** argv)
 	CHECK_TEST("test_12b")
 	run_test (test_12b, "Test 12-b: check mod sasl mysql");
 
-	if (! disable_python_tests) {
+	if (enable_python_tests) {
 	python_test:
 		CHECK_TEST("test_13")
 		run_test (test_13, "Test 13: Check mod python");
