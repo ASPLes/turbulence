@@ -62,6 +62,9 @@ void               turbulence_module_unregister  (TurbulenceModule * module);
 TurbulenceModule * turbulence_module_open_and_register (TurbulenceCtx * ctx, 
 							const char * location);
 
+void               turbulence_module_skip_unmap  (TurbulenceCtx * ctx, 
+						  const char * mod_name);
+
 void               turbulence_module_free        (TurbulenceModule  * module);
 
 axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx, 

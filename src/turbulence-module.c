@@ -61,6 +61,7 @@ struct _TurbulenceModule {
 	char             * path;
 	void             * handle;
 	TurbulenceModDef * def;
+	axl_bool           skip_unmap;
 
 	/* context that loaded the module */
 	TurbulenceCtx    * ctx;
@@ -440,6 +441,47 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
 }
 
 /** 
+ * @brief Allows to mark a module to not be unmapped when module is
+ * closed.
+ * @param ctx The context that will be configured.
+ * @param mod_name The module name to skip unmapping.
+ */
+void               turbulence_module_skip_unmap  (TurbulenceCtx * ctx, 
+						  const char * mod_name)
+{
+	int                iterator;
+	TurbulenceModule * mod_added;
+
+	/* check values received */
+	v_return_if_fail (ctx);
+	v_return_if_fail (mod_name);
+
+	/* register the module */
+	vortex_mutex_lock (&ctx->registered_modules_mutex);
+
+	/* check first that the module is not already added */
+	iterator = 0;
+	while (iterator < axl_list_length (ctx->registered_modules)) {
+		/* get module in position */
+		mod_added = axl_list_get_nth (ctx->registered_modules, iterator);
+
+		/* check mod name */
+		if (axl_cmp (mod_added->def->mod_name, mod_name)) {
+			/* flag skip */
+			mod_added->skip_unmap = axl_true;
+			vortex_mutex_unlock (&ctx->registered_modules_mutex);
+			return;
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	} /* end while */
+
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+	return;
+}
+
+/** 
  * @brief Closes and free the module reference.
  * 
  * @param module The module reference to free and close.
@@ -452,11 +494,11 @@ void               turbulence_module_free (TurbulenceModule * module)
 
 	ctx = module->ctx;
 
-	msg ("Unmapping module (%d)?: %s", ! __turbulence_module_no_unmap, module->path);
+	msg ("Unmapping module (%d)?: %s (%s)", ! __turbulence_module_no_unmap && ! module->skip_unmap, module->def ? module->def->mod_name : "undef", module->path);
 
 	axl_free (module->path);
 	/* call to unload the module */
-	if (module->handle && ! __turbulence_module_no_unmap) {
+	if (module->handle && ! __turbulence_module_no_unmap && ! module->skip_unmap) {
 #if defined(AXL_OS_UNIX)
 		dlclose (module->handle);
 #elif defined(AXL_OS_WIN32)

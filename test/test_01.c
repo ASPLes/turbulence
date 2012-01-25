@@ -3053,6 +3053,9 @@ axl_bool test_12a (void) {
 	if (! test_common_init (&vCtx, &tCtx, "test_12a.conf")) 
 		return axl_false;
 
+	/* remove signal handler */
+	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, NULL);
+
 	/* configure test path to locate appropriate sasl.conf files */
 	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
 						   vortex_support_build_filename ("test_12_module", NULL));
@@ -3352,6 +3355,11 @@ axl_bool test_13 (void) {
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
 
+	/* flag mod python to be not unloaded from memory because it
+	 * breaks if it is unloaded and reloaded again on next python
+	 * tests */
+	turbulence_module_skip_unmap (tCtx, "mod_python");
+
 	/* call to test common python functions */
 	if (! test_13_common (vCtx, tCtx, axl_false))
 		return axl_false;
@@ -3378,6 +3386,11 @@ axl_bool test_13_a (void) {
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
+
+	/* flag mod python to be not unloaded from memory because it
+	 * breaks if it is unloaded and reloaded again on next python
+	 * tests */
+	turbulence_module_skip_unmap (tCtx, "mod_python");
 
 	/* call to test common python functions */
 	if (! test_13_common (vCtx, tCtx, axl_true))
@@ -3409,6 +3422,11 @@ axl_bool test_13_b (void) {
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
+
+	/* flag mod python to be not unloaded from memory because it
+	 * breaks if it is unloaded and reloaded again on next python
+	 * tests */
+	turbulence_module_skip_unmap (tCtx, "mod_python");
 
 	/* now open connection to localhost */
 	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
