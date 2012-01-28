@@ -90,6 +90,7 @@ void __turbulence_conn_mgr_unref_show_errors (TurbulenceCtx * ctx, VortexConnect
 		case VortexOk:
 		case VortexConnectionCloseCalled:
 		case VortexUnnotifiedConnectionClose:
+			axl_free (message);
 			break;
 		default:
 			error ("  error: %d, %s", code, message);
