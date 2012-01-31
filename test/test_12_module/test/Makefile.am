@@ -1,0 +1,1 @@
+EXTRA_DIST = sasl.conf auth-db.xml

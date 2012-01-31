@@ -306,6 +306,8 @@ test/test_06a/Makefile
 test/test_10_prev/Makefile
 test/test_10b_module/Makefile
 test/test_11_module/Makefile
+test/test_12_module/Makefile
+test/test_12_module/test/Makefile
 test/test_15_module/Makefile
 turbulence.pc
 turbulence-config

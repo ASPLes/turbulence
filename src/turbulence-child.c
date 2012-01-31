@@ -54,10 +54,6 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 	if (result == NULL)
 		return NULL;
 
-	/* flag child context as not started (until turbulence-process
-	 * flag it as started): this is used to control clean start */
-	ctx->started = axl_false;
-
 	/* get current time */
 	gettimeofday (&now, NULL);
 
@@ -246,9 +242,6 @@ axl_bool          turbulence_child_build_from_init_string (TurbulenceCtx * ctx,
 
 	/* create empty child object */
 	child = axl_new (TurbulenceChild, 1);
-
-	/* set child as not started yet */
-	ctx->started = axl_false;
 
 	/* set socket control path */
 	child->socket_control_path = axl_strdup (socket_control_path);

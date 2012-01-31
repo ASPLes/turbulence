@@ -44,6 +44,7 @@
 <!ATTLIST on-bad-signal action (hold|ignore|backtrace|quit|exit) #REQUIRED>
 <!ATTLIST on-bad-signal mail-to CDATA #IMPLIED>
 
+<!-- this is deprecated and no longer used -->
 <!ELEMENT clean-start       EMPTY>
 <!ATTLIST clean-start   value  (yes|no) #REQUIRED>
 <!ATTLIST on-bad-signal action (yes|no) #REQUIRED>

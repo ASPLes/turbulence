@@ -297,7 +297,6 @@ TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx)
 				    VORTEX_THREAD_CONF_END)) {
 		axl_free (loop);
 		error ("unable to start loop manager, checking clean start..");
-		CLEAN_START (ctx);
 		return NULL;
 	} /* end if */
 

@@ -51,32 +51,6 @@
  */
 
 /** 
- * @brief Allows to check if <b>/turbulence/global-settings/clean-start</b>
- * is activated, causing the Turbulence server to refuse to start in
- * the case something is not properly configured.
- *
- * @param ctx The Turbulence context.
- */
-void turbulence_run_check_clean_start (TurbulenceCtx * ctx)
-{
-	if (ctx == NULL)
-		return;
-
-	if (ctx->clean_start) {
-		/* check to implement clean start only when we start, not after working */
-		if (ctx->started) {
-			wrn ("Clean start activated but server is already running, skipping server close");
-			return;
-		} /* end if */
-
-		error ("Clean start activated, stopping turbulence due to a startup failure found"); 
-		turbulence_exit (ctx, axl_true, axl_true);
-		exit (-1);
-	}
-	return;
-}
-
-/** 
  * @internal Function used to check a module name or a base module
  * name to be not loaded by a no-load directive.
  */
@@ -306,9 +280,6 @@ axl_bool turbulence_run_config_start_listeners (TurbulenceCtx * ctx, axlDoc * do
 				       /* server port */
 				       axl_node_get_content (port, NULL));
 
-				/* check clean start */ 
-				CLEAN_START (ctx);
-
 				goto next;
 			} /* end if */
 
@@ -368,10 +339,6 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	/* check ctx received */
 	if (ctx == NULL) 
 		return axl_false;
-
-	/* check clean start */
-	node                   = axl_doc_get (doc, "/turbulence/global-settings/clean-start");
-	ctx->clean_start       = (HAS_ATTR_VALUE (node, "value", "yes"));
 
 	/* check log configuration */
 	node = axl_doc_get (doc, "/turbulence/global-settings/log-reporting");

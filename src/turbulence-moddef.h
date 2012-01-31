@@ -174,8 +174,7 @@ typedef void (*ModReconfFunc) (TurbulenceCtx * ctx);
  *
  * @return Like \ref ModInitFunc "init" function, if this handler
  * returns axl_false the connection is closed. Keep in mind returning
- * axl_false may also terminate current child process (according to
- * \ref turbulence_clean_start "clean start" configuration).
+ * axl_false will terminate current process.
  */
 typedef axl_bool (*ModPPathSelected) (TurbulenceCtx * ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn);
 
