@@ -116,8 +116,7 @@ struct _TurbulenceCtx {
 	axlHash            * data;
 	VortexMutex          data_mutex;
 
-	/* turbulence run  module */
-	axl_bool             clean_start;
+	/* used to signal if the server was started */
 	axl_bool             started;
 
 	/* DTd used by the turbulence-run module to validate module

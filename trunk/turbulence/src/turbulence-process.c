@@ -609,9 +609,6 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		/* close the connection */
 		TBC_FAST_CLOSE (conn);
 
-		/* check if clean start is activated to close the
-		 * connection */
-		CLEAN_START(ctx); /* check to terminate child if clean start is defined */
 		return axl_false;
 	}
 

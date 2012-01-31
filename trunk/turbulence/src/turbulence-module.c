@@ -419,7 +419,6 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
 	/* check init */
 	if (! init (ctx)) {
 		wrn ("init module: %s have failed, skiping", location);
-		CLEAN_START(ctx);
 		
 		/* close the module */
 		turbulence_module_free (module);

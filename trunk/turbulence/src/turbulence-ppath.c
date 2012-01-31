@@ -775,8 +775,9 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 
 		/* notify profile path selected in the case no child is created */
 		if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, connection, NULL)) {
-			CLEAN_START(ctx); /* check to terminate child if clean start is defined */
+			wrn ("  turbulence profile path selected notification failed");
 		}
+
 	} /* end if */
 	
 	return axl_true;

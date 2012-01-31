@@ -290,7 +290,7 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* do not perform any change if a null context is received */
 	v_return_if_fail (ctx);
 
-	msg ("cleaning up..");
+	msg ("Finishing turbulence up (VortexCtx: %p)..", ctx);
 
 	/* check to kill childs */
 	turbulence_process_kill_childs (ctx);
@@ -1526,7 +1526,6 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *   - \ref configuring_turbulence
  *   - \ref turbulence_config_location
  *   - \ref turbulence_ports
- *   - \ref turbulence_clean_start
  *   - \ref turbulence_smtp_notifications
  *   - \ref turbulence_configuring_log_files
  *   - \ref turbulence_db_list_management "2.7 Turbulence Db-List management"
@@ -1684,18 +1683,6 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * href="beep-applications-and-ports.html">Building wrong port
  * oriented network applications</a>). 
  *
- * \section turbulence_clean_start 2.4 Debugging turbulence and clean start
- *
- * During turbulence configuration you can use the <b>clean-start</b>
- * feature to ensure your turbulence configuration loads a server with
- * all features requested, failing to start if something goes
- * wrong. This is really useful to ensure a proper startup: for
- * example all ports are allocated. 
- *
- * This is configured inside the <b>global-settings</b> section:
- *
- * \htmlinclude clean-start.xml-tmp
- *
  * 
  * Alternatively, during development or when it is found a turbulence
  * bug, it is handy to configure the default action to take on server
@@ -1717,7 +1704,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * Inside production environment it is recommended <b>"ignore"</b>.
  *
- * \section turbulence_smtp_notifications 2.5 Receiving SMTP notification on failures and error conditions
+ * \section turbulence_smtp_notifications 2.4 Receiving SMTP notification on failures and error conditions
  *
  * Turbulence includes a small SMTP client that allows to report
  * critical or interesting conditions. For example, this is used to
@@ -1733,7 +1720,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * attribute or because the declaration is flagged with an
  * <b>is-default=yes</b>. 
  *
- * \section turbulence_configuring_log_files 2.6 Configuring turbulence log files
+ * \section turbulence_configuring_log_files 2.5 Configuring turbulence log files
  *
  * Turbulence logs is sent to a set of files that are configured at
  * the <b>&lt;global-settings></b> section:
@@ -1782,7 +1769,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * the appropriate file but also will send the same log to the
  * console.
  *
- * \section turbulence_configure_system_paths 2.8 Alter default turbulence base system paths
+ * \section turbulence_configure_system_paths 2.7 Alter default turbulence base system paths
  *
  * By default Turbulence has 3 built-in system paths used to locate
  * configuration files (<b>sysconfdir</b>), find data files (<b>datadir</b>) and directories used at run
@@ -1804,7 +1791,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * - <b>datadir</b>: base dir where static turbulence data files are located (${datadir}/turbulence).
  * - <b>runtime_datadir</b>: base directory where run time files are created (${runtime_datadir}/turbulence).
  *
- * \section turbulence_configure_splitting 2.9 Splitting turbulence configuration
+ * \section turbulence_configure_splitting 2.8 Splitting turbulence configuration
  *
  * As we saw, turbulence has a main configuration file which is
  * <b>turbulence.conf</b>. However, it is possible to split this file
@@ -2111,6 +2098,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *    \endcode
  *   ..and restart turbulence.
  *   </li>
+ * </ul>
  * 
  *   
  *

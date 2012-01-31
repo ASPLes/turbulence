@@ -49,18 +49,6 @@ int  turbulence_run_config    (TurbulenceCtx * ctx);
 void turbulence_run_cleanup   (TurbulenceCtx * ctx);
 
 /** 
- * @brief Simple macro that is used to stop Turbulence startup by
- * calling to \ref turbulence_run_check_clean_start in the cases where
- * the main file or module configuration is not properly setup.
- * @param ctx The context to be checked for clean start.
- *
- * NOTE: This macro and its associated function \ref
- * turbulence_run_check_clean_start must not be used by turbulence
- * modules.
- */
-#define CLEAN_START(ctx) turbulence_run_check_clean_start(ctx)
-
-/** 
  * @brief Shutdown and closes the connection.
  * @param conn The connection to shutdown and close.
  */
@@ -71,8 +59,6 @@ void turbulence_run_cleanup   (TurbulenceCtx * ctx);
 	vortex_connection_close    (conn);                                         \
         conn = NULL;                                                               \
 	} while (0);
-
-void turbulence_run_check_clean_start (TurbulenceCtx * ctx);
 
 axl_bool turbulence_run_check_no_load_module (TurbulenceCtx * ctx, 
 					      const char    * module_to_check);

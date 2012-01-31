@@ -811,11 +811,10 @@ END_C_DECLS
  *   - <b>serverName</b>: optional serverName under which the
  *       application will be served. If this value is not provided,
  *       the application will be started on turbulence start and will
- *       be available to all connections. See also \ref "execution
- *       notes" for clarifications about this. If the value is
- *       provided, python app will only be started if and only if a
- *       connection with a channel under the provided serverName is
- *       started.
+ *       be available to all connections. See also \ref turbulence_execution_model "execution notes"
+ *       for clarifications about this. If the value is provided,
+ *       python app will only be started if and only if a connection
+ *       with a channel under the provided serverName is started.
  *
  *   - <b>close-conn-on-failure</b>: [yes|no] default [no]. While
  *       writing BEEP python apps it may be desirable to shutdown the

@@ -135,8 +135,6 @@ static int  mod_sasl_init (TurbulenceCtx * _ctx)
 	/* check for SASL support */
 	if (!vortex_sasl_init (TBC_VORTEX_CTX(_ctx))) {
 		error ("Unable to start SASL support, init function failed");
-		/* call to check clean start */
-		CLEAN_START(ctx);
 		return axl_false;
 	} /* end if */
 
@@ -144,8 +142,6 @@ static int  mod_sasl_init (TurbulenceCtx * _ctx)
 	/* initialize backends */
 	if (! mod_sasl_load_extension_modules (ctx)) {
 		error ("Unable to load SASL extension modules, init function failed");
-		/* call to check clean start */
-		CLEAN_START(ctx);
 		return axl_false;
 	} /* end if */
 

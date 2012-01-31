@@ -375,14 +375,17 @@ int main (int argc, char ** argv)
 	}
 
 	/* drop a log */
-	msg ("Turbulence STARTED OK (pid: %d, vortex ctx refs: %d)", getpid (),
+	msg ("%sTurbulence STARTED OK (pid: %d, vortex ctx refs: %d)", exarg_is_defined ("child") ? "CHILD: " : "", getpid (),
 	     vortex_ctx_ref_count (vortex_ctx));
 
-	/* flag that the server started ok */
-	ctx->started = axl_true;
-
 	/* look main thread until finished */
+	ctx->started = axl_true;
 	vortex_listener_wait (vortex_ctx);
+
+	msg ("   %sFinishing turbulence process, vortex_listener_wait unlocked (pid: %d, vortex ctx refs: %d)", 
+	     exarg_is_defined ("child") ? "CHILD: " : "",
+	     getpid (),
+	     vortex_ctx_ref_count (vortex_ctx));
 	
 	/* terminate turbulence execution */
  release_resources:

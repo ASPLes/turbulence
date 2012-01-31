@@ -2068,6 +2068,7 @@ axl_bool test_10_prev (void) {
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
 	if (channel == NULL) {
 		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	}
 
@@ -2077,6 +2078,7 @@ axl_bool test_10_prev (void) {
 	/* check connection after created it */
 	if (! vortex_connection_is_ok (conn, axl_false)) {
 		printf ("ERROR (4): expected to find proper connection after turbulence startup..\n");
+		show_conn_errors (conn);
 		return axl_false;
 	} /* end if */
 
