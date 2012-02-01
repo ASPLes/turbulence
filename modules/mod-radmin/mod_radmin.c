@@ -1230,8 +1230,21 @@ TurbulenceModDef module_def = {
  * the hability to check internal turbulence status and to do some
  * administrative tasks like reloading.
  *
+ * \section turbulence_mod_radmin_configuration Fast mod-radmin module configuration
+ *
+ * The following allows to setup a secure mod-radmin configuration
+ * that will allow root users to connect to local server.
+ *
+ * To do, so just run the following script bundled with turbulence. It
+ * is assumed you have turbulence installed on the system. 
+ *
+ * \code
+ * >> tbc-setup-mod-radmin.py
+ * \endcode
+ *
+ * After this command is successfully run (follow all instructions), \ref turbulence_mod_radmin_using "you can start turbulence-ctl as usual".
  * 
- * \section turbulence_mod_radmin_configuration Configuring the mod-radmin module (server side)
+ * \section turbulence_mod_radmin_configuration Configuring mod-radmin module (server side), long version
  *
  * After enabling the module (see \ref turbulence_modules_activation),
  * you need to configure a profile path inside turbulence.conf file to
@@ -1239,10 +1252,10 @@ TurbulenceModDef module_def = {
  * want. 
  *
  * Maybe the simpliest way to enable mod-radmin is to allow its usage
- * without passwords only from localhost. This is the best method when
+ * without passwords only from localhost. <b>This is the best method when
  * developing, but it is really insecure when using Turbulence in
- * production environment (even only allowing connections from
- * locations, because that address is accesible to code that runs
+ * production/hostile environment</b> (even only allowing connections from
+ * localhost, because that address is accesible to code that runs
  * Turbulence). 
  *
  * Here is how to enable mod-radmin for localhost. Add the following
