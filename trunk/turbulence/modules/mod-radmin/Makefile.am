@@ -14,7 +14,7 @@ mod_radmin_la_LDFLAGS  = -module -ldl
 libdir = `../../turbulence-config --mod-dir`
 
 # configure site module installation
-modconfdir   = `turbulence-config --mod-xml`
+modconfdir   = `../../turbulence-config --mod-xml`
 modconf_DATA = mod_radmin.xml
 
 mod_radmin.xml mod_radmin.win32.xml:
