@@ -3,6 +3,7 @@
 import os
 import commands
 import termios
+import sys
 
 def enable_echo(fd, enabled):
     (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr (fd)
@@ -117,6 +118,19 @@ if not os.path.exists ("%s/turbulence/radmin/auth-db.xml" % baseconfdir):
     open ("%s/turbulence/radmin/auth-db.xml" % baseconfdir, "w").write ("<sasl-auth-db>\n\
     <auth user_id='%s' password='%s' disabled='no'/>\n\
 </sasl-auth-db>" % (user, password))
+
+# try to enable module if not
+if not os.path.exists ("%s/turbulence/mods-enabled/mod_radmin.xml" % baseconfdir):
+    print ("INFO: enabling mod-radmin module")
+    (status, output) = commands.getstatusoutput ("ln -s %s/turbulence/mods-available/mod_radmin.xml %s/turbulence/mods-enabled/mod_radmin.xml" % (baseconfdir, baseconfdir))
+    if status:
+        print ("INFO: failed to enable module, ln command failed: %s" % output)
+        sys.exit (-1)
+
+    # flag you should reboot
+    should_reboot = True
+
+print ("INFO: configuration done!")
 
 if should_reboot:
     print ("INFO: you must reboot your turbulence server to make changes effective")

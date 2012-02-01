@@ -1243,7 +1243,7 @@ TurbulenceModDef module_def = {
  * \endcode
  *
  * After this command is successfully run (follow all instructions), \ref turbulence_mod_radmin_using "you can start turbulence-ctl as usual".
- * 
+ *
  * \section turbulence_mod_radmin_configuration Configuring mod-radmin module (server side), long version
  *
  * After enabling the module (see \ref turbulence_modules_activation),
