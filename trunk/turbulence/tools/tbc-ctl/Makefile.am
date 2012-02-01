@@ -4,6 +4,7 @@ INCLUDES = -DCOMPILATION_DATE=`date +%s` -I ../../src \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) -g -Wall -ansi
 
 bin_PROGRAMS    = turbulence-ctl
+bin_SCRIPTS     = tbc-setup-mod-radmin.py
 turbulence_ctl_SOURCES = tbc-ctl.c
 turbulence_ctl_LDADD   = $(AXL_LIBS) $(EXARG_LIBS) $(VORTEX_SASL_LIBS) -L$(READLINE_PATH)/lib -lreadline ../../src/libturbulence.la
 

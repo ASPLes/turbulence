@@ -66,7 +66,6 @@ VortexCtx        * vortex_ctx;
 VortexConnection * conn;
 
 axlList          * commands = NULL;
-
 axl_bool           debug_was_enabled = axl_false;
 
 typedef struct _TbcCtlCommand {
@@ -179,24 +178,74 @@ void tbc_ctl_connection_closed (VortexConnection * conn)
 	return;
 }
 
+char * tbc_ctl_get_radmin_conf_serverName (void){
+
+	char     * path = axl_strdup_printf ("%s/turbulence/profile.d/radmin.conf", turbulence_sysconfdir (NULL));
+	axlDoc   * doc;
+	axlNode  * node;
+	char     * result = NULL;
+	
+	/* try to load document */
+	doc = axl_doc_parse_from_file (path, NULL);
+	axl_free (path);
+	if (doc == NULL)
+		return NULL;
+
+	/* find node with the servername configured */
+	node = axl_doc_get (doc, "/path-def");
+	if (node == NULL) {
+		/* release document */
+		axl_doc_free (doc);
+		return NULL;
+	} /* end if */
+
+	if (ATTR_VALUE (node, "server-name")) {
+		result = axl_strdup (ATTR_VALUE (node, "server-name"));
+		msg ("Found serverName declaration %s", result);
+	}
+
+	/* release document and return result */
+	axl_doc_free (doc);
+	return result;
+}
+
+axl_bool tbc_ctl_radmin_conf_exists (void) {
+	/* return if radmin.conf exists inside profile.d directory */
+	return turbulence_file_test_v ("%s/turbulence/profile.d/radmin.conf", FILE_EXISTS, turbulence_sysconfdir (NULL));
+}
 
 axl_bool tbc_ctl_do_connection (void) {
 
 	const char * host = "localhost";
 	const char * port = "602";
+	char * serverName = NULL;
 
 	/* try first to create a connection using default values or
 	   user provided values */
 	if (exarg_is_defined ("host"))
 		host = exarg_get_string ("host");
+	else if (tbc_ctl_radmin_conf_exists ()) {
+		/* get serverName value */
+		serverName = tbc_ctl_get_radmin_conf_serverName ();
+	}
+	
 	if (exarg_is_defined ("port"))
 		port = exarg_get_string ("port");
+
 	
-	msg ("connecting turbulence at %s:%s..", host, port);
-	conn = vortex_connection_new (vortex_ctx, 
-				      host, 
-				      port,
-				      NULL, NULL);
+	if (serverName) {
+		msg ("connecting turbulence at %s:%s (with serverName: %s)..", host, port, serverName);
+		conn = vortex_connection_new_full (vortex_ctx, 
+						   host, port,
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName, VORTEX_OPTS_END),
+						   NULL, NULL);
+	} else {
+		msg ("connecting turbulence at %s:%s..", host, port);
+		conn = vortex_connection_new (vortex_ctx, 
+					      host, 
+					      port,
+					      NULL, NULL);
+	}
 	/* check connection returned */
 	if (! vortex_connection_is_ok (conn, axl_false))
 		return axl_false;
@@ -333,6 +382,15 @@ axl_bool  tbc_ctl_create_management_channel (void) {
 	VortexChannel * channel;
 	char          * msg;
 	int             code;
+
+	/* check if we are connected because we have an radmin.conf
+	 * file in place */
+	if (tbc_ctl_radmin_conf_exists ()) {
+		/* do SASL first */
+		if (! tbc_ctl_enable_sasl ()) {
+			return axl_false;
+		}
+	}
 
  create_channel:
 	/* try first to create the channel without using SASL first */

@@ -624,7 +624,7 @@ TurbulenceModDef module_def = {
  * Currently, mod-sasl searches for sasl.conf and associated files
  * looking for them in the following other:
  *
- * - First is checked, if the user provided a \ref turbulence_profile_path_search "&lt;search> path" declaration using the domain <b>"sasl"</b>. In that case, the path configure is used.
+ * - First is checked if the user provided a \ref turbulence_profile_path_search "&lt;search> path" declaration using the domain <b>"sasl"</b>. In that case, the path configure is used.
  *
  * - Then is checked if profile path has a <b>work-dir</b> attribute. If so, this is used.
  *
