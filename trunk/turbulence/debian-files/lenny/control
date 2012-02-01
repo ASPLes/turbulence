@@ -51,8 +51,7 @@ Description: TUNNEL profile implementation for Turbulence
 Package: libturbulence-mod-radmin
 Section: libs
 Architecture: any
-Depends: turbulence-server (>= ${Source-Version}), 
-  libvortex-tunnel-1.1 (>= 1.1.4)
+Depends: turbulence-server (>= ${Source-Version})
 Description: Remote admin support for Turbulence (mod-radmin)
   A module that provides access to a remote administrative
   interface to turbulence main server.
