@@ -48,6 +48,15 @@ Description: TUNNEL profile implementation for Turbulence
   Configurable TUNNEL profile for Turbulence: an appliation level
   gateway for any BEEP profile.
 
+Package: libturbulence-mod-radmin
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-tunnel-1.1 (>= 1.1.4)
+Description: Remote admin support for Turbulence (mod-radmin)
+  A module that provides access to a remote administrative
+  interface to turbulence main server.
+
 Package: libturbulence-mod-sasl
 Section: libs
 Architecture: any
