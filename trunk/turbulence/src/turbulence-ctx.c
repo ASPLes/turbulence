@@ -67,10 +67,17 @@
  */
 TurbulenceCtx * turbulence_ctx_new ()
 {
-	TurbulenceCtx * ctx;
+	TurbulenceCtx   * ctx;
+	struct timeval    tv;
 
 	/* create the context */
 	ctx        = axl_new (TurbulenceCtx, 1);
+	if (ctx == NULL)
+		return NULL;
+
+	/* get current stamp */
+	gettimeofday (&tv, NULL);
+	ctx->running_stamp = tv.tv_sec;
 
 	/* create hash */
 	ctx->data  = axl_hash_new (axl_hash_string, axl_hash_equal_string);
