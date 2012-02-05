@@ -513,7 +513,7 @@ void tbc_ctl_update_commands_available (void)
 	return;
 }
 
-void tbc_ctl_pritn_content_received_table (axlDoc * doc)
+void tbc_ctl_print_content_received_table (axlDoc * doc)
 {
 	axlNode    * node;
 	axlNode    * node2;
@@ -522,6 +522,7 @@ void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 	int          length;
 	int          col_lengths[20];
 	int          iterator;
+	char       * content;
 
 	/* print title */
 	node = axl_doc_get (doc, "/table/title");
@@ -557,6 +558,11 @@ void tbc_ctl_pritn_content_received_table (axlDoc * doc)
 		iterator = 0;
 		node2    = axl_node_get_child_called (node, "d");
 		while (node2) {
+			/* get size */
+			content = axl_node_get_content_trans (node2, NULL);
+			size    = content ? strlen (content) : 0;
+			axl_free (content);
+
 			if (size > col_lengths[iterator]) {
 				col_lengths[iterator] = size;
 			}
@@ -657,7 +663,7 @@ void tbc_ctl_print_content_received (axlDoc * doc)
 
 	/* check result type */
 	if (NODE_CMP_NAME (node, "table")) {
-		tbc_ctl_pritn_content_received_table (doc);
+		tbc_ctl_print_content_received_table (doc);
 	}
 	
 	return;

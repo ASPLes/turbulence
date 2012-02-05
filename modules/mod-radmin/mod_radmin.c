@@ -197,7 +197,7 @@ void mod_radmin_handle_command_reply (axl_bool           status,
 	if (! axl_doc_dump (result, &str_result, &str_size)) {
 		vortex_channel_send_errv (channel, 
 					  vortex_frame_get_msgno (frame),
-					  "<error code=\"8\"><msg>Command handler returned an xml document that failed to be dumped.</msg><content></content></error>");
+					  "<error code=\"8\">Command handler returned an xml document that failed to be dumped.</error>");
 		/* free document returned by command handler */
 		axl_doc_free (result);
 		return;
@@ -254,7 +254,7 @@ void mod_radmin_handle_command (VortexConnection * conn,
 	if (cmd == NULL) {
 		vortex_channel_send_errv (channel,
 					  vortex_frame_get_msgno (frame),
-					  "<error code='5'><msg>No command handler was found associated to %s</msg><content></content></error>",
+					  "<error code='5'>No command handler was found associated to %s</error>",
 					  command);
 		return;
 	} /* end if */
@@ -295,22 +295,44 @@ axlDoc * mod_radmin_command_reload (const char * line, axlPointer user_data, axl
 
 axlDoc * mod_radmin_command_status (const char * line, axlPointer user_data, axl_bool * status)
 {
-	axlDoc   * doc;
-	axlError * err = NULL;
+	axlDoc        * doc;
+	axlError      * err = NULL;
+	axlNode       * node;
+	int             running_threads;
+	int             waiting_threads;
+	int             pending_tasks;
+	struct timeval  tv;
 
 	/* signal command returned proper status */
 	(*status) = axl_true;
 
+	/* get pool stats */
+	vortex_thread_pool_stats (TBC_VORTEX_CTX (ctx), &running_threads, &waiting_threads, &pending_tasks);
+
+	/* get time of day */
+	gettimeofday (&tv, NULL);
+ 
 	/* result document */
 	doc = axl_doc_parse_strings (&err, 
 				     "<table>",
 				     " <title>Status</title>",
 				     " <column-description>",
-				     "   <column name='code' description='Status code' />",
-				     "   <column name='message' description='Status message' />",
+				     "   <column name='Indicator' description='Status code' />",
+				     "   <column name='Value' description='Status message' />",
 				     " </column-description>",
-				     " <content><row><d>0</d><d>running ok</d></row></content>",
+				     " <content>", 
+				     " </content>",
 				     "</table>", NULL);
+	node = axl_doc_get (doc, "/table/content");
+	if (node) {
+		/* add info */
+		axl_node_set_child (node, axl_node_parse (NULL, "<row><d>Childs</d><d>%d</d></row>", turbulence_process_child_count (ctx)));
+		axl_node_set_child (node, axl_node_parse (NULL, "<row><d>Connections</d><d>%d</d></row>", turbulence_conn_mgr_count (ctx)));
+		axl_node_set_child (node, axl_node_parse (NULL, "<row><d>Thread pool size</d><d>%d</d></row>", running_threads));
+		axl_node_set_child (node, axl_node_parse (NULL, "<row><d>Waiting threads</d><d>%d</d></row>", waiting_threads));
+		axl_node_set_child (node, axl_node_parse (NULL, "<row><d>Pending tasks</d><d>%d</d></row>", pending_tasks));
+		axl_node_set_child (node, axl_node_parse (NULL, "<row><d>Secs. running</d><d>%ld</d></row>", (tv.tv_sec - ctx->running_stamp)));
+	} /* end if */
 
 	return doc;
 }
@@ -653,6 +675,110 @@ axlDoc * mod_radmin_command_show_connections (const char * line, axlPointer user
 	return doc;
 }
 
+axl_bool mod_radmin_command_show_channels_foreach (axlPointer key, axlPointer data, axlPointer user_data)
+{
+	axlNode          * content = user_data;
+	axlNode          * node;
+	VortexChannel    * channel = data;
+	VortexConnection * conn = vortex_channel_get_connection (channel);
+
+	/* build node */
+	node = axl_node_parse (NULL, "<row><d>%d</d><d>%d</d><d>%d</d><d>%s</d><d>%s</d><d>%s</d></row>", 
+			       /* proc-id */
+			       vortex_getpid (),
+			       /* conn-id */
+			       vortex_connection_get_id (conn),
+			       /* channel number */
+			       PTR_TO_INT (key),
+			       /* channel profile */
+			       vortex_channel_get_profile (channel),
+			       /* recv-ready */
+			       vortex_channel_get_next_reply_no (channel) == -1 ? "ready" : "busy",
+			       /* send-ready */
+			       vortex_channel_is_ready (channel) ? "ready" : "busy");
+
+	/* add node to the content */
+	axl_node_set_child (content, node);
+	
+	return axl_false; /* do not stop foreach process */
+}
+
+axlDoc * mod_radmin_command_show_channels (const char * line, axlPointer user_data, axl_bool * status)
+{
+	axlDoc           * doc;
+	axlError         * err       = NULL;
+	axlList          * conn_list = NULL;
+	axlNode          * content;
+	axlListCursor    * cursor;
+	VortexConnection * conn;
+
+	/* get the list of connections */
+	conn_list = turbulence_conn_mgr_conn_list (ctx, -1, NULL);
+	
+	if (conn_list == NULL) {
+		(* status) = axl_false;
+		return NULL;
+	} /* end if */
+
+	/* result document */
+	doc = axl_doc_parse_strings (&err, 
+				     "<table>",
+				     " <title>Connection list</title>",
+				     " <column-description>",
+				     "   <column name='proc-id' description='Process ID' />",
+				     "   <column name='conn-id' description='Conn ID' />",
+				     "   <column name='chann num' description='Channel number' />",
+				     "   <column name='profile' description='Source' />",
+				     "   <column name='recv-ready' description='Ready to receive' />",
+				     "   <column name='send-ready' description='Ready to send' />",
+				     " </column-description>",
+				     " <content></content>",
+				     "</table>", NULL);
+
+	if (doc == NULL) {
+		/* free list */
+		axl_list_free (conn_list);
+
+		(* status) = axl_false;
+		return NULL;
+	} /* end if */
+
+	/* get the content node and populate it */
+	content = axl_doc_get (doc, "/table/content");
+	cursor  = axl_list_cursor_new (conn_list);
+	while (axl_list_cursor_has_item (cursor)) {
+
+		/* get item */
+		conn = axl_list_cursor_get (cursor);
+
+		/* add separator to see channels from same connection */
+		axl_node_set_child (content, axl_node_parse (NULL, "<row><d></d><d></d><d></d><d>---- conn-id: %d from: %s:%s ----</d><d></d><d></d></row>", 
+							     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn)));
+
+		/* now, for each connection, show each channel */
+		vortex_connection_foreach_channel (conn, mod_radmin_command_show_channels_foreach, content);
+
+		/* next item */
+		axl_list_cursor_next (cursor);
+	}
+
+	/* free list and cursor */
+	axl_list_cursor_free (cursor);
+	axl_list_free (conn_list);
+
+	/* now get connections on childs */
+	if (! turbulence_ctx_is_child (ctx)) {
+		/* now get channels from childs */
+		mod_radmin_run_command_on_childs (ctx, "show channels", 
+						  mod_radmin_child_show_connections_handler, doc);
+	} /* end if */
+
+	/* signal command returned proper status */
+	(*status) = axl_true;
+
+	return doc;
+}
+
 
 axl_bool mod_radmin_add_childs (axlPointer item, axlPointer user_data) 
 {
@@ -987,6 +1113,9 @@ void mod_radmin_install_default_commands (void) {
 	mod_radmin_install_command ("show connections",
 				    "Allows to get all connections being handled by turbulence at this moment", 
 				    mod_radmin_command_show_connections, NULL);
+	mod_radmin_install_command ("show channels",
+				    "Allows to get all channels being handled by turbulence at this moment", 
+				    mod_radmin_command_show_channels, NULL);
 	mod_radmin_install_command ("kill child", 
 				    "Allows to terminate the child identified with the provided pid:\n               Usage:\n                 > kill child [pid]\n                 Get child pids using:\n                 > show childs", 
 				    mod_radmin_command_kill_child, NULL);
@@ -1116,6 +1245,12 @@ void mod_radmin_internal_frame_received  (VortexChannel    * channel,
 	if (axl_cmp ("show connections", command)) {
 		/* reuse function */
 		doc = mod_radmin_command_show_connections (NULL, NULL, &status);
+
+		/* now handle reply */
+		mod_radmin_handle_command_reply (status, doc, conn, channel, frame);
+	} else if (axl_cmp ("show channels", command)) {
+		/* reuse function */
+		doc = mod_radmin_command_show_channels (NULL, NULL, &status);
 
 		/* now handle reply */
 		mod_radmin_handle_command_reply (status, doc, conn, channel, frame);

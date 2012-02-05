@@ -61,6 +61,12 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 					    VortexPeerRole             role,
 					    const char               * filter);
 
+axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx, 
+					    VortexPeerRole             role,
+					    const char               * filter);
+
+int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx);
+
 VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 						   int             conn_id);
 

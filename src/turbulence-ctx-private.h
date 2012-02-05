@@ -46,6 +46,9 @@ struct _TurbulenceCtx {
 	/* default signal handlers */
 	TurbulenceSignalHandler signal_handler;
 
+	/* track when turbulence was started (at least this context) */
+	long                    running_stamp;
+
 	/* Controls if messages must be send to the console log.
 	 */
 	int                  console_enabled;

@@ -721,6 +721,30 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 }
 
 /** 
+ * @brief Allows to get number of connections currently handled by
+ * this process.
+ * @param ctx The context where the query will be served.
+ * @return The number of connections or -1 if it fails.
+ */
+int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx)
+{
+	int result;
+
+	v_return_val_if_fail (ctx, -1);
+
+	/* lock and send */
+	vortex_mutex_lock (&ctx->conn_mgr_mutex);
+
+	/* get hash list */
+	result = axl_hash_items (ctx->conn_mgr_hash);
+
+	/* unlock */
+	vortex_mutex_unlock (&ctx->conn_mgr_mutex);	
+
+	return result;
+}
+
+/** 
  * @brief Allows to get a reference to the registered connection with
  * the provided id. The function will return a reference to a
  * VortexConnection owned by the turbulence connection
