@@ -751,6 +751,12 @@ axlDoc * mod_radmin_command_show_channels (const char * line, axlPointer user_da
 		/* get item */
 		conn = axl_list_cursor_get (cursor);
 
+		/* skip master listeners */
+		if (vortex_connection_get_role (conn) == VortexRoleMasterListener) {
+			axl_list_cursor_next (cursor);
+			continue;
+		}
+
 		/* add separator to see channels from same connection */
 		axl_node_set_child (content, axl_node_parse (NULL, "<row><d></d><d></d><d></d><d>---- conn-id: %d from: %s:%s ----</d><d></d><d></d></row>", 
 							     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn)));
