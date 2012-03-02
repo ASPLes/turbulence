@@ -342,6 +342,7 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 	} /* end if */
 
 	/* read reply */
+	msg ("SMTP: data command sent..");
 	if (! turbulence_support_smtp_send_receive_reply_and_check (ctx, conn, buffer, 1024, 
 								    "Failed to receive data start section confirmation"))
 		return axl_false;
@@ -388,6 +389,8 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 	
 	/* check subject */
 	if (subject) {
+	        msg ("SMTP: subject command sent..");
+
 		/* send subject content */
 		if (send (conn, "Subject: ", 9, 0) != 9) {
 			error ("Unable to send mail message, failed to send subject section..");
@@ -413,6 +416,8 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 	/* now send body */
 	if (body) {
+	        msg ("SMTP: body command sent..");
+
 		if (send (conn, body, strlen (body), 0) != strlen (body)) {
 			error ("Unable to send mail message, failed to send body content..");
 			vortex_close_socket (conn);
@@ -429,6 +434,8 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 	/* check for body from file */
 	if (body_file) {
+   	        msg ("SMTP: sending body file %s..", body_file);
+
 		body_ffile = fopen (body_file, "r");
 		if (body_ffile) {
 			/* read and send content */
@@ -449,20 +456,37 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 				bytes_read = fread (buffer, 1, 1024, body_ffile);
 			} /* end while */
 			fclose (body_ffile);
+
+			/* send termination */
+			if (send (conn, "\r\n", 2, 0) != 2) {
+			        error ("Unable to send mail message, failed to send mail from content (address)..");
+				vortex_close_socket (conn);
+				return axl_false;
+			} /* end if */
 		} /* end if */
 	} /* end if */
 
 	/* send termination */
-	if (send (conn, ".\r\nquit\r\n", 8, 0) != 8) {
+	if (send (conn, ".\r\n", 3, 0) != 3) {
 		error ("Unable to send mail message, failed to send termination message..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
 
 	/* read reply */
+	msg ("(.) finished command sent, now wait for reply..");
 	if (! turbulence_support_smtp_send_receive_reply_and_check (ctx, conn, buffer, 1024, 
 								    "Failed to receive end message confirmation"))
 		return axl_false;
+
+	/* send termination */
+	msg ("Now sending quit..");
+	if (send (conn, "quit\r\n", 6, 0) != 6) {
+		error ("Unable to send mail message, failed to send termination message..");
+		vortex_close_socket (conn);
+		return axl_false;
+	} /* end if */
+	vortex_close_socket (conn);
 
 	return axl_true;
 }
