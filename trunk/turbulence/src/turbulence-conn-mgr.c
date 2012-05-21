@@ -597,7 +597,6 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 		state   = axl_hash_cursor_get_value (cursor);
 		conn    = state->conn;
 
-		msg ("Check for broadcast on connection id=%d", conn_id);
 		/* check if connection is nullified */
 		if (conn == NULL) {
 			/* connection filtered */
@@ -620,15 +619,11 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 			vortex_mutex_lock (&ctx->conn_mgr_mutex); 
 
 			if (should_filter) {
-				msg ("Broadcast on connection id=%d filtered", conn_id);
-
 				/* connection filtered */
 				axl_hash_cursor_next (cursor);
 				continue;
 			} /* end if */
 		} /* end if */
-
-		msg ("Doing broadcasting on connection id=%d (%p)", conn_id, conn);
 
 		/* search for channels running the profile provided */
 		if (! vortex_connection_foreach_channel (conn, _turbulence_conn_mgr_broadcast_msg_foreach, broadcast))
