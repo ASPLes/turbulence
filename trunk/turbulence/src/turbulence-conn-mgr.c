@@ -180,7 +180,7 @@ void turbulence_conn_mgr_added_handler (VortexChannel * channel, axlPointer user
 	/* get channel count for the profile */
 	count = PTR_TO_INT (axl_hash_get (state->profiles_running, (axlPointer) running_profile));
 	count++;
-	msg ("updating channels runnning %d profile %s", count, running_profile);
+
 	axl_hash_insert_full (state->profiles_running, (axlPointer) running_profile, axl_free, INT_TO_PTR (count), NULL);
 
 	/* configure here channel complete flag limit */
@@ -765,7 +765,7 @@ VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (conn_id));
 	
 	/* set conection */
-	msg ("Connection find_by_id for conn id=%d returned pointer %p (conn: %p)", conn_id, state, state ? state->conn : NULL);
+	/* msg ("Connection find_by_id for conn id=%d returned pointer %p (conn: %p)", conn_id, state, state ? state->conn : NULL); */
 	if (state)
 		conn = state->conn;
 
