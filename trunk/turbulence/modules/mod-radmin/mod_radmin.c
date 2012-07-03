@@ -938,6 +938,11 @@ axlDoc * mod_radmin_command_kill_connection (const char * line, axlPointer user_
 	char              * cmd;
 
 	msg ("Splitting command line received: '%s'", line);
+
+	/* check the command have a : */
+	if (strstr (line, ":") == NULL)
+		return mod_radmin_error_msg (550, "Not provided a pid and connection id to kill, format: pid:conn-id");
+
 	items = axl_split (line, 1, " ");
 	
 	if (items[2] == NULL)
@@ -948,7 +953,7 @@ axlDoc * mod_radmin_command_kill_connection (const char * line, axlPointer user_
 	axl_freev (items);
 
 	child_pid = atoi(aux[0]);
-	conn_id  = atoi(aux[1]);
+	conn_id  = atoi(aux[1]); 
 	axl_freev (aux);
 
 	/* release items */
