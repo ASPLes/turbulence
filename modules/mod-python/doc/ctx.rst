@@ -22,7 +22,14 @@ Module API
    
       Allows to record a turbulence info message (using turbulence msg ()). This is sent to the configured log and showed on the console according to the configuration.
 
-      :param msg: The message to record
+      :param content: The message to record
+      :type  content: String
+
+   .. method:: msg2 (content)
+   
+      Allows to record a turbulence info message (using turbulence msg2 ()). This is sent to the configured log and showed on the console according to the configuration.
+
+      :param content: The message to record
       :type  content: String
 
    .. method:: error (content)

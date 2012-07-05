@@ -503,16 +503,16 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
 {
 	VortexChannel          * channel   = data;
 	TurbulenceBroadCastMsg * broadcast = user_data;
-	TurbulenceCtx          * ctx       = broadcast->ctx;
+	TurbulenceCtx          * ctx       = broadcast->ctx; 
 
 	/* check the channel profile */
 	if (! axl_cmp (vortex_channel_get_profile (channel), broadcast->profile)) 
 		return axl_false;
 
 	/* channel found send the message */
-	msg ("sending notification on channel=%d, conn=%d running profile: %s", 
-	     vortex_channel_get_number (channel), vortex_connection_get_id (vortex_channel_get_connection (channel)),
-	     broadcast->profile);
+	msg2 ("sending notification on channel=%d, conn=%d running profile: %s", 
+	      vortex_channel_get_number (channel), vortex_connection_get_id (vortex_channel_get_connection (channel)),
+	      broadcast->profile); 
 	vortex_channel_send_msg (channel, broadcast->message, broadcast->message_size, NULL);
 
 	/* always return axl_true to make the process to continue */
