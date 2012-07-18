@@ -143,6 +143,10 @@ MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx,
 	return mysql_store_result (conn);
 }
 
+
+/** 
+ *
+ */
 axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
 					       const char        * query, 
 					       VortexConnection  * conn,
@@ -167,13 +171,13 @@ axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
 	row     = mysql_fetch_row (result);
 	if (row == NULL) {
 		mysql_free_result (result);
-		return axl_false;
+		return axl_true; /* do not filter (user unknown, so let login fail) */
 	} /* end if */
 
 	/* check for empty filter string */
 	if (row[0] == NULL || strlen (row[0]) == 0) {
 		mysql_free_result (result);
-		return axl_true;
+		return axl_true; /* do not filter */
 	}
 	msg ("Checking to apply ip filter with expression: %s (ip: %s:%s)", row[0], 
 	     vortex_connection_get_host (conn), vortex_connection_get_host_ip (conn));
