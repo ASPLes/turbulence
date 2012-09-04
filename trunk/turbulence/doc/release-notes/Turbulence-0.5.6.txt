@@ -1,0 +1,164 @@
+                     -= Turbulence 0.5.6 =-
+                        "Shake it out"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce Turbulence
+  0.5.6 "Shake it out" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules which allows
+  to implement server side profiles that are used and combined later
+  with other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.aspl.es/vortex
+      [Vortex Library homepage]
+ 
+    - http://code.google.com/p/vortexlibrary
+      [Sources and binaries]
+
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+
+    - http://www.aspl.es/xml
+      [Axl Library, XML 1.0 implementation]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  New stable release that includes bug fixings
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.5.5
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [new] Updated turbulence context handler to record a reference to
+  the context itself into the vortex context. Also added new macro to
+  get VortexCtx from TurbulenceCtx. API added:
+
+   - VORTEX_TBC_CTX
+
+* [fix] Making turbulence conn mgr to log errors found on connections
+  that are closed. Skipped typical errors to avoid logging frequent
+  errors (like connection closed by remote peer, and similar).
+
+* [fix] Fixed turbulence reg tests to conform latest vortex changes..
+
+* [new] Updated turbulence module API to include a function that
+  allows configuring if a particular module should be unmapped when
+  close.  Used this to avoid unmapping mod-python, which later gives
+  problems if it is loaded again into the same process. Updated
+  regression test to use this. API added:
+
+   - turbulence_module_skip_unmap
+
+* [fix] Making python tests to be executed only if requested by the
+  tester. This is to avoid python poor support to init and finalize
+  several times the engine.
+  
+* [fix] Fixed wrong reference to libmysqlclient16, replaced by
+  libmysqlclient15off in debian lenny.
+
+* [fix] Fixed memory leak inside turbulence-conn-mgr module when
+  connections errors are showed.
+
+* [fix] Several updates to remove clean start concept which was
+  providing more problems than solving them. Updated base
+  configuration and documentation to remove all references to this
+  concept. Checked regression tests and updated them accordingly to
+  reflect the change. This won't break deployed/working
+  configurations...
+
+* [new] Updated turbulence-ctl command to read current radmin.conf
+  file found inside /etc/turbulence/profile.d to detect declared
+  serverName so now it is possible to use a random serverName value to
+  better integrate with deployed profile paths. Also updated the tool
+  to detect if SASL is enabled (as declared inside radmin.conf) so the
+  tool directly start SASL before proceeding creating radmin-ctl
+  channel.
+
+* [new] Added new script that properly setup the radmin module, creating
+  all files and user databases. Script added:
+
+  - tbc-setup-mod-radmin.py
+
+* [fix] Updated tbc-setup-mod-radmin.py to also detect and enable
+  mod-radmin in case it isn't.
+
+* [fix] Updated debian files to include libturbulence-mod-radmin.
+
+* [fix] Adding debian missing files..
+
+* [fix] Fixed wrong reference to turbulence-config from mod-radmin.
+
+* [fix] More debian updates..
+
+* [new] Updated turbulence context creation to track when it was
+  created. Now this value is used by mod-radmin status to report how
+  long (in seconds) was the server running.
+
+* [fix] Updated mod-radmin status command to report more info about
+  run time server status.
+
+* [new] Updated mod-radmin to include a new command (show channels) to
+  show all channels running in all connections handled by the server
+  (including their children).
+
+ * [fix] Fixed console table size calculation at turbulence-ctl
+   command.
+
+* [fix] Skipping master listener connections from be showed by "show
+  channels" command inside mod-radmin.
+
+* [fix] Fixed turbulence_support_smtp_send to include an additional
+  \r\n when sending files.
+
+* [fix] Removed unuseful info from conn mgr module..
+
+* [fix] Removed debug messages from conn mgr modules..
+
+* [fix] Making kill conn command to check if : is present in the kill
+  spec.
+
+* [fix] Updated PyTurbulenceCtx to include a new function msg2 that
+  wraps turbulence's msg2.
+
+* [fix] Making mod-sasl-mysql to not filter auth request for users
+  that aren't available so no "auth filtered" message is shown when
+  non existent users..
+
+About Us
+~~~~~~~~
+
+  Advanced Software Production Line provides GNU/Linux support and
+  consulting services to help organizations to introduce GNU/Linux
+  inside its process.
+
+  Contact us, using English or Spanish, to get commercial support
+  and/or BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  Enjoy Turbulence!  
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+04th Sep 2012, Madrid (Spain)
+  
+

@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://fact.aspl.es
 dnl
 
-AC_INIT(turbulence,0.5.5.b4978.g4989)
+AC_INIT(turbulence,0.5.6.b5015.g5024)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
