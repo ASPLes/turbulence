@@ -3,6 +3,7 @@ tmp_xml_examples = \
 	clean-start.xml-tmp \
 	on-bad-signal.xml-tmp \
 	log-reporting.xml-tmp \
+	log-reporting.syslog.xml-tmp \
 	tbc-modules.xml-tmp \
 	module-conf.xml-tmp \
 	path-def.xml-tmp \
@@ -27,6 +28,7 @@ xml_examples = \
 	clean-start.xml \
 	on-bad-signal.xml \
 	log-reporting.xml \
+	log-reporting.syslog.xml \
 	tbc-modules.xml \
 	module-conf.xml \
 	path-def.xml \

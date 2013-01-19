@@ -35,6 +35,7 @@
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
 #include <turbulence-child.h>
+#include <syslog.h>
 
 /* local private include */
 #include <turbulence-ctx-private.h>
@@ -210,6 +211,11 @@ axl_bool __turbulence_child_post_init_openlogs (TurbulenceCtx  * ctx,
 						char          ** items)
 {
 	int log_descriptor;
+
+	if (ctx->use_syslog) {
+		openlog ("turbulence", LOG_PID, LOG_DAEMON);
+		return axl_true;
+	} /* end if */
 
 	/* configure general_log */
 	TURBULENCE_CHILD_CONF_LOG (items[2], items[1], LOG_REPORT_GENERAL);

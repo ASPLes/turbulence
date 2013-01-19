@@ -36,6 +36,7 @@
  */
 #include <turbulence.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 /* local include */
 #include <turbulence-ctx-private.h>
@@ -67,6 +68,16 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 		msg ("log reporting to file disabled");
 		return;
 	}
+
+	/* check for syslog usage */
+	ctx->use_syslog = HAS_ATTR_VALUE (node, "use-syslog", "yes");
+	msg ("Checking for usage of syslog %d", ctx->use_syslog);
+	if (ctx->use_syslog) {
+		/* open syslog */
+		openlog ("turbulence", LOG_PID, LOG_DAEMON);
+		msg ("Using syslog facility for logging");
+		return;
+	} /* end if */
 
 	/* open all logs */
 	node      = axl_node_get_child_called (node, "general-log");
@@ -209,6 +220,10 @@ void turbulence_log_manager_start (TurbulenceCtx * ctx)
 		return;
 	}
 
+	/* skip starting log manager if we are using syslog */
+	if (ctx->use_syslog)
+		return;
+
 	/* crear manager */
 	ctx->log_manager = turbulence_loop_create (ctx);
 
@@ -273,7 +288,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
  * @internal macro that allows to report a message to the particular
  * log, appending date information.
  */
-void REPORT (int log, const char * message, va_list args, const char * file, int line) 
+void REPORT (axl_bool use_syslog, int log, const char * message, va_list args, const char * file, int line) 
 {
 	/* get turbulence context */
 	time_t             time_val;
@@ -284,6 +299,15 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 	int                length;
 	int                length2;
 	int                total;
+
+	if (use_syslog) {
+		string = axl_strdup_printfv (message, args);
+		if (string == NULL)
+			return;
+		syslog (LOG_INFO, string);
+		axl_free (string);
+		return;
+	} /* end if */
 
 	/* do not report if log description is not defined */
 	if (log < 0)
@@ -309,6 +333,7 @@ void REPORT (int log, const char * message, va_list args, const char * file, int
 		axl_free (string);
 		return;
 	}
+
 	length2 = strlen (string2);
 
 	/* build final log message */
@@ -357,17 +382,21 @@ void turbulence_log_report (TurbulenceCtx   * ctx,
 			    int               line)
 {
 	/* according to the type received report */
-	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) 
-		REPORT (ctx->general_log, message, args, file, line);
+	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) {
+		REPORT (ctx->use_syslog, ctx->general_log, message, args, file, line);
+	}
 	
-	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) 
-		REPORT (ctx->error_log, message, args, file, line);
+	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) {
+		REPORT (ctx->use_syslog, ctx->error_log, message, args, file, line);
+	}
 	
-	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) 
-		REPORT (ctx->access_log, message, args, file, line);
+	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) {
+		REPORT (ctx->use_syslog, ctx->access_log, message, args, file, line);
+	}
 
-	if ((type & LOG_REPORT_VORTEX) == LOG_REPORT_VORTEX) 
-		REPORT (ctx->vortex_log, message, args, file, line);
+	if ((type & LOG_REPORT_VORTEX) == LOG_REPORT_VORTEX) {
+		REPORT (ctx->use_syslog, ctx->vortex_log, message, args, file, line);
+	}
 	return;
 }
 
@@ -397,6 +426,13 @@ axl_bool   turbulence_log_is_enabled    (TurbulenceCtx * ctx)
 
 void __turbulence_log_close (TurbulenceCtx * ctx)
 {
+
+	/* check if we are running with syslog support */
+	if (ctx->use_syslog) {
+		closelog ();
+		return;
+	}
+
 	/* close the general log */
 	if (ctx->general_log >= 0)
 		close (ctx->general_log);
