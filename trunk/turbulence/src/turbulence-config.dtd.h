@@ -30,6 +30,7 @@
                                                                                           \
 <!ELEMENT log-reporting (general-log, error-log, access-log, vortex-log) >                \
 <!ATTLIST log-reporting enabled (yes|no) #REQUIRED>                                       \
+<!ATTLIST log-reporting use-syslog (yes|no) #REQUIRED>                                    \
                                                                                           \
 <!ELEMENT general-log        EMPTY>                                                       \
 <!ATTLIST general-log file   CDATA #REQUIRED>                                             \

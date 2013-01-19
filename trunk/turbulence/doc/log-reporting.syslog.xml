@@ -1,0 +1,7 @@
+<!-- log reporting configuration -->
+<log-reporting enabled="yes" use-syslog="yes">
+  <general-log file="/var/log/turbulence/main.log" />
+  <error-log  file="/var/log/turbulence/error.log" />
+  <access-log file="/var/log/turbulence/access.log" />
+  <vortex-log file="/var/log/turbulence/vortex.log" />
+</log-reporting>

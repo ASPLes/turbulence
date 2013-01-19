@@ -102,6 +102,7 @@ struct _TurbulenceCtx {
 	int                  vortex_log;
 	int                  access_log;
 	TurbulenceLoop     * log_manager;
+	axl_bool             use_syslog;
 
 	/*** turbulence config module ***/
 	axlDoc             * config;

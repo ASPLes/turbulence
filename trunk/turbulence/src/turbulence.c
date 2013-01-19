@@ -1769,6 +1769,13 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * the appropriate file but also will send the same log to the
  * console.
  *
+ * In the case you want to handle all logs through syslog, just
+ * declare as follows. Note that once syslog is enabled, general-log,
+ * error-log, access-log and vortex-log declarations will be ignored,
+ * making all information to be sent to syslog.
+ *
+ * \htmlinclude log-reporting.syslog.xml-tmp
+ *
  * \section turbulence_configure_system_paths 2.7 Alter default turbulence base system paths
  *
  * By default Turbulence has 3 built-in system paths used to locate
