@@ -44,7 +44,8 @@ void      turbulence_log_init         (TurbulenceCtx * ctx);
 typedef enum {LOG_REPORT_GENERAL = 1, 
 	      LOG_REPORT_ACCESS  = 1 << 2, 
 	      LOG_REPORT_VORTEX  = 1 << 3,
-	      LOG_REPORT_ERROR   = 1 << 4
+	      LOG_REPORT_ERROR   = 1 << 4,
+	      LOG_REPORT_WARNING = 1 << 5
 } LogReportType;
 
 void      turbulence_log_report (TurbulenceCtx * ctx,

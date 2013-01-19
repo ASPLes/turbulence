@@ -143,6 +143,7 @@ void      turbulence_log_configure (TurbulenceCtx * ctx,
 		ctx->general_log = descriptor;
 		break;
 	case LOG_REPORT_ERROR:
+	case LOG_REPORT_WARNING:
 		/* configure new error log descriptor */
 		ctx->error_log = descriptor;
 		break;
@@ -175,6 +176,7 @@ axl_bool __turbulence_log_manager_transfer_content (TurbulenceLoop * loop,
 		output_sink = ctx->general_log;
 		break;
 	case LOG_REPORT_ERROR:
+	case LOG_REPORT_WARNING:
 		output_sink = ctx->error_log;
 		break;
 	case LOG_REPORT_ACCESS:
@@ -256,6 +258,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 						  NULL);
 		break;
 	case LOG_REPORT_ERROR:
+	case LOG_REPORT_WARNING:
 		/* configure error log watcher */
 		turbulence_loop_watch_descriptor (ctx->log_manager,
 						  descriptor,
@@ -288,7 +291,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
  * @internal macro that allows to report a message to the particular
  * log, appending date information.
  */
-void REPORT (axl_bool use_syslog, int log, const char * message, va_list args, const char * file, int line) 
+void REPORT (axl_bool use_syslog, LogReportType type, int log, const char * message, va_list args, const char * file, int line) 
 {
 	/* get turbulence context */
 	time_t             time_val;
@@ -304,8 +307,25 @@ void REPORT (axl_bool use_syslog, int log, const char * message, va_list args, c
 		string = axl_strdup_printfv (message, args);
 		if (string == NULL)
 			return;
-		syslog (LOG_INFO, string);
+		string2 = string;
+		if (type == LOG_REPORT_ERROR) {
+			string  = axl_strdup_printf ("**ERROR**: %s", string);
+			syslog (LOG_ERR, string);
+		} else if (type == LOG_REPORT_WARNING) {
+			string  = axl_strdup_printf ("warning: %s", string);
+			syslog (LOG_INFO, string);
+		} else if (type == LOG_REPORT_ACCESS) {
+			string  = axl_strdup_printf ("access: %s", string);
+			syslog (LOG_INFO, string);
+		} else if (type == LOG_REPORT_VORTEX) {
+			string  = axl_strdup_printf ("vortex: %s", string);
+			syslog (LOG_INFO, string);
+		} else {
+			string2 = NULL;
+			syslog (LOG_INFO, string);
+		}
 		axl_free (string);
+		axl_free (string2);
 		return;
 	} /* end if */
 
@@ -382,20 +402,20 @@ void turbulence_log_report (TurbulenceCtx   * ctx,
 			    int               line)
 {
 	/* according to the type received report */
-	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) {
-		REPORT (ctx->use_syslog, ctx->general_log, message, args, file, line);
-	}
+	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) 
+		REPORT (ctx->use_syslog, LOG_REPORT_GENERAL, ctx->general_log, message, args, file, line);
 	
-	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) {
-		REPORT (ctx->use_syslog, ctx->error_log, message, args, file, line);
-	}
+	/* handle error and warning through the same log file */
+	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) 
+		REPORT (ctx->use_syslog, LOG_REPORT_ERROR, ctx->error_log, message, args, file, line);
+	if ((type & LOG_REPORT_WARNING) == LOG_REPORT_WARNING) 
+		REPORT (ctx->use_syslog, LOG_REPORT_WARNING, ctx->error_log, message, args, file, line);
 	
-	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) {
-		REPORT (ctx->use_syslog, ctx->access_log, message, args, file, line);
-	}
+	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) 
+		REPORT (ctx->use_syslog, LOG_REPORT_ACCESS, ctx->access_log, message, args, file, line);
 
 	if ((type & LOG_REPORT_VORTEX) == LOG_REPORT_VORTEX) {
-		REPORT (ctx->use_syslog, ctx->vortex_log, message, args, file, line);
+		REPORT (ctx->use_syslog, LOG_REPORT_VORTEX, ctx->vortex_log, message, args, file, line);
 	}
 	return;
 }
