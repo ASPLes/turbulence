@@ -750,7 +750,7 @@ void turbulence_wrn (TurbulenceCtx * ctx, const char * file, int line, const cha
 	va_end (args);
 	va_start (args, format);
 
-	turbulence_log_report (ctx, LOG_REPORT_ERROR, format, args, file, line);
+	turbulence_log_report (ctx, LOG_REPORT_WARNING, format, args, file, line);
 
 	va_end (args);
 
