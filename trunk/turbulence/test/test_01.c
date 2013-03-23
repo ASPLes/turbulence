@@ -4727,6 +4727,62 @@ axl_bool test_23 (void) {
 	return axl_true;
 }
 
+axl_bool test_24 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexChannel    * channel;
+	VortexChannel    * channel2;
+	VortexConnection * conn;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_22.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) {
+		printf ("ERROR: failed to start configuration..\n");
+		return axl_false;
+	}
+
+	/* create connection to local server */
+	printf ("**\n** Test 24: attempting to create connection to the SERVER: test-22.server\n**\n");
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-22.server", VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+	
+	/* create TLS channel to simulate unfinished TLS handshake */
+	printf ("**\n** Test 24: connection ok, now attempt to create TLS channel (http://iana.org/beep/TLS\n**\n");
+	channel = vortex_channel_new_full (conn, 0, "test-22.server", 
+					   "http://iana.org/beep/TLS", 
+					   EncodingNone, "<ready />", 9,
+					   NULL, NULL, 
+					   NULL, NULL, 
+					   NULL, NULL);
+	if (channel == NULL) {
+		printf ("ERROR (1.1): expected to find proper channel creation, but found a failure\n");
+		return axl_false;
+	} /* end if */
+
+	/* now try to create a protected (unallowed channel inside) */
+	channel2 = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+	if (channel2 != NULL) {
+		printf ("ERROR (1.2): SECURTY BREACH: expected to not be able to open TLS protected channel, but the channel was created\n");
+		return axl_false;
+	} /* end if */
+
+	/* close the connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 /** 
  * @brief Helper handler that allows to execute the function provided
  * with the message associated.
@@ -4814,7 +4870,10 @@ int main (int argc, char ** argv)
 	printf ("**     CHILDREN: \n");
 	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
-	printf ("** Available tests: test_01, \n");
+	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_04, test_05, test_05a, test_06, test_06a\n");
+	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_11, test_12,\n");
+	printf ("**                  test_12a, test_12b, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
+	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
@@ -4984,6 +5043,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_23")
 	run_test (test_23, "Test 23: check TLS module on child process without serverName.."); 
+
+	CHECK_TEST("test_24")
+	run_test (test_24, "Test 24: try to trick TLS profile.."); 
 
 	printf ("All tests passed OK!\n");
 
