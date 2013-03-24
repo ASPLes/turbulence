@@ -102,6 +102,13 @@ AC_SUBST(VORTEX_TLS_LIBS)
 VORTEX_TLS_VERSION=`pkg-config --modversion vortex-tls-1.1`
 AC_SUBST(VORTEX_TLS_VERSION)
 
+dnl external dependencies: vortex-sasl
+PKG_CHECK_MODULES(VORTEX_WEBSOCKET, vortex-websocket-1.1 >= 1.1.4) 
+AC_SUBST(VORTEX_WEBSOCKET_CFLAGS)
+AC_SUBST(VORTEX_WEBSOCKET_LIBS)
+VORTEX_WEBSOCKET_VERSION=`pkg-config --modversion vortex-websocket-1.1`
+AC_SUBST(VORTEX_WEBSOCKET_VERSION)
+
 dnl define a m4 macro to check for perl regular expresion support
 AC_DEFUN([CHECK_LIB_PCRE],[dnl
 AC_MSG_CHECKING([lib pcre])
@@ -297,6 +304,7 @@ modules/mod-python/doc/Makefile
 modules/mod-python/doc/conf.py
 modules/mod-radmin/Makefile
 modules/mod-tls/Makefile
+modules/mod-websocket/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile
