@@ -193,17 +193,37 @@ char * mod_tls_private_key_handler (VortexConnection * conn,
 
 void mod_tls_failure_handler (VortexConnection * conn, const char * error_message, axlPointer _ctx)
 {
-	char          log_buffer [512];
-	unsigned long err;
-
+	char            log_buffer [512];
+	unsigned long   err;
+	const char    * serverName = vortex_connection_get_server_name (conn);
 	TurbulenceCtx * ctx = _ctx;
+	axlNode       * node = mod_tls_find_certificate_node (conn, serverName);
+	axl_bool        close_on_failure = HAS_ATTR_VALUE (node, "close-on-failure", "yes");
 
-	error ("Found connection id=%d (from %s:%s) TLS error: %s", vortex_connection_get_id (conn), 
-	       vortex_connection_get_host (conn), vortex_connection_get_port (conn), error_message);
+	error ("Found connection id=%d (from %s:%s, serverName: %s, close-on-failure: %d) TLS error: %s", vortex_connection_get_id (conn), 
+	       vortex_connection_get_host (conn), vortex_connection_get_port (conn), serverName ? serverName : "", close_on_failure,
+	       error_message);
 	while ((err = ERR_get_error()) != 0) {
 		ERR_error_string_n (err, log_buffer, sizeof (log_buffer));
 		error ("tls stack: %s (find reason(code) at openssl/ssl.h)", log_buffer);
 	}
+
+	/* if the node is defined, but close failure is false and
+	 * close-on-failure is not defined in the xml node, then
+	 * assume yes for security reasons. It is better to close the
+	 * connection after a TLS connection handling failure to avoid
+	 * any possibility of tricking the server */
+	if (node && ! close_on_failure && ! HAS_ATTR (node, "close-on-failure")) {
+		error ("TLS failure found, assuing close-on-failure='yes' because it wasn't defined");
+		close_on_failure = axl_true;
+	} /* end if */
+
+	/* fulminate this connection if signaled */
+	if (close_on_failure) {
+		error ("Shutting down connection id=%d due to TLS failure found", vortex_connection_get_id (conn));
+		vortex_connection_shutdown (conn);
+	} /* end if */
+
 	return;
 }
 
