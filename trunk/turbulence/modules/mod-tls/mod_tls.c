@@ -414,11 +414,14 @@ END_C_DECLS
  * profile. Only when TLS is properly enabled, the custom profile
  * inside it is allowed.
  * 
- * Due the way TLS profile is designed, it is not required to place
- * "connmarks" requiring some value stored on the connection to flag
- * that the TLS session is really established (like it happens with
- * SASL). Here you only place the TLS profile uri, as showed in the
- * example, to protect profiles running inside.
+ * <b>SECURITY CLARIFICATION:</b> Due the way TLS profile is designed,
+ * it is not required to place "connmarks" requiring some value stored
+ * on the connection to flag that the TLS session is really
+ * established (like it happens with SASL). Here you only place the
+ * TLS profile uri, as showed in the example, to protect profiles
+ * running inside. This is because the module installs an internal
+ * alias value to check the TLS profile successful activation and that value is only
+ * available when the connection is completed. Moreover, mod-tls closes the connection if a failure is found to avoid any confusion or implementation failure that may let the channel open (the TLS one) causing the profile path to accept the inner profiles (which could be a problem). That's why it is recommended the close-on-failure="yes" declaration (or not place any declaration about this which in turn will cause the same effect). 
  *
  * Another typical escenario is to first secure the conection with
  * TLS, then require proper SASL authentication, and the provide

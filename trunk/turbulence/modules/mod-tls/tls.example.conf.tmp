@@ -3,8 +3,15 @@
    <span class="comment">&lt;!--  -*- nxml -*-  --></span>
    <span class="comment">&lt;!--  place one certificate select for each serverName to match.  Use
        serverName="*" to provide the same certificate for all serverNames
-       requested.  --></span>
-   &lt;<span class="node">certificate-select</span> key=<span class="attrvalue">"private.key"</span> 
+       requested. 
+
+       The close-on-failure="yes" attribute allows to control if the
+       module should close the connection after a TLS handshake
+       failure or leave the connection as is. Leave this setting as is
+       for a have recommended secure configuration.
+   --></span>
+   &lt;<span class="node">certificate-select</span> close-on-failure=<span class="attrvalue">"yes"</span> 
+                       key=<span class="attrvalue">"private.key"</span> 
                        cert=<span class="attrvalue">"certificate.crt"</span> 
                        serverName=<span class="attrvalue">"tls.example.com"</span> />
 &lt;/<span class="node">mod-tls</span>>
