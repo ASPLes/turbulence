@@ -86,6 +86,7 @@ initial_build_doc:
 	@test -e doc.stamp || touch doc.stamp
 
 build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_examples)
+	cd ../modules/mod-tls; make ; cd -
 	@echo "Generating module documentation..";
 	doxygen turbulence-doc.doxygen
 	cp main-page-logo.png html/
