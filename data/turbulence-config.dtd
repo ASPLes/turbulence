@@ -53,7 +53,7 @@
 <!ELEMENT kill-childs-on-exit   EMPTY>
 <!ATTLIST kill-childs-on-exit   value  (yes|no) #REQUIRED>
 
-<!ELEMENT system-paths   (path*)>
+<!ELEMENT system-paths   (path|search)*)>
 <!ELEMENT path        EMPTY>
 <!ATTLIST path        name  CDATA #REQUIRED
                       value CDATA #REQUIRED>

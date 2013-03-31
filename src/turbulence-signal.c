@@ -110,13 +110,30 @@ int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 	return 0;	
 }
 
+
+/** 
+ * @brief Allows to enable sigchild handling.
+ */
+void turbulence_signal_sigchld (TurbulenceCtx * ctx, axl_bool enable)
+{
+	msg ("Enabling SIGCHLD handling at turbulence main process");
+
+	/* check for sigchild */
+	if (enable)
+		signal (SIGCHLD, ctx->signal_handler);
+	else
+		signal (SIGCHLD, NULL);	
+
+	return;
+}
+
+
 /** 
  * @brief Allows to install default signal handling.
  */
 void turbulence_signal_install (TurbulenceCtx           * ctx, 
 				axl_bool                  enable_sigint, 
 				axl_bool                  enable_sighup,
-				axl_bool                  enable_sigchild,
 				TurbulenceSignalHandler   signal_handler)
 {
 	/* install default handlers */
@@ -128,12 +145,6 @@ void turbulence_signal_install (TurbulenceCtx           * ctx,
 	signal (SIGSEGV, signal_handler);
 	signal (SIGABRT, signal_handler);
 	signal (SIGTERM, signal_handler); 
-
-	/* check for sigchild */
-	if (enable_sigchild)
-		signal (SIGCHLD, signal_handler);
-	else
-		signal (SIGCHLD, NULL);
 
 #if defined(AXL_OS_UNIX)
 /*	signal (SIGKILL, signal_handler); */

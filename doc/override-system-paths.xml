@@ -5,5 +5,9 @@
     <path name="runtime_datadir" value="path/to/runtime-datadir" />
     <path name="sysconfdir" value="path/to/sysconfdir" />
     <path name="datadir" value="path/to/datadir" />
+
+    <!-- additional domain search paths -->
+    <search domain="websocket" path="__some_directory__" />
+    <search domain="sasl" path="__some_directory__" />
   </system-paths>
 </global-settings>

@@ -431,6 +431,17 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 
 	} /* end if */
 
+	/* load search paths */
+	node = axl_doc_get (doc, "/turbulence/global-settings/system-paths/search");
+	while (node) {
+		/* add search path */
+		msg ("Adding domain (%s) search path: %s", ATTR_VALUE (node, "domain"), ATTR_VALUE (node, "path"));
+		vortex_support_add_domain_search_path (TBC_VORTEX_CTX (ctx), ATTR_VALUE (node, "domain"), ATTR_VALUE (node, "path"));
+
+		/* get next search node */
+		node = axl_node_get_next_called (node, "search");
+	} /* end if */
+
 	/* now load all modules found */
 	turbulence_run_load_modules (ctx, doc);
 

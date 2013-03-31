@@ -42,8 +42,9 @@
 void turbulence_signal_install (TurbulenceCtx           * ctx, 
 				axl_bool                  enable_sigint, 
 				axl_bool                  enable_sighup,
-				axl_bool                  enable_sigchild,
 				TurbulenceSignalHandler   signal_handler);
+
+void turbulence_signal_sigchld (TurbulenceCtx * ctx, axl_bool enable);
 
 int turbulence_signal_received (TurbulenceCtx * ctx, 
 				int            _signal);
