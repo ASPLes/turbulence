@@ -44,6 +44,11 @@
 /* local include to check mod-sasl */
 #include <common-sasl.h>
 
+#if defined(ENABLE_WEBSOCKET_SUPPORT)
+/* support for websocket */
+#include <vortex_websocket.h>
+#endif
+
 /* turbulence context */
 TurbulenceCtx * ctx = NULL;
 
@@ -84,6 +89,38 @@ void show_next_fd (const char * label)
 
 	printf ("%s next socket available: %d\n", label, _socket);
 	vortex_close_socket (_socket);
+	return;
+}
+
+void test_set_run_time_path (TurbulenceCtx * tCtx, const char * runtime_datadir)
+{
+	/* find the first node configuring the provided system path */
+	axlNode * node = axl_doc_get (tCtx->config, "/turbulence/global-settings/system-paths/path");
+
+	while (node) {
+		printf ("**** checking runtime node: %s = %s\n", ATTR_VALUE (node, "name"), ATTR_VALUE (node, "value"));
+		if (HAS_ATTR_VALUE (node, "name", "runtime_datadir")) {
+			printf ("***** !found attribute, update it..\n");
+			/* remove and configure the new attribute */
+			axl_node_remove_attribute (node, "value");
+			axl_node_set_attribute (node, "value", runtime_datadir);
+
+			printf ("**** now it has: %s = %s\n", ATTR_VALUE (node, "name"), ATTR_VALUE (node, "value"));
+			return;
+		}
+
+		/* get next node */
+		node = axl_node_get_next_called (node, "path");
+	} /* end while */
+
+	/* reached this point, it was configured the attribute, create a new node */
+	node = axl_node_create ("path");
+	axl_node_set_attribute (node, "name", "runtime-datadir");
+	axl_node_set_attribute (node, "value", runtime_datadir);
+
+	/* now add the node */
+	axl_node_set_child (axl_doc_get (tCtx->config, "/turbulence/global-settings/system-paths"), node);
+
 	return;
 }
 
@@ -3592,10 +3629,12 @@ axl_bool test_14 (void) {
 					   NULL, NULL,
 					   /* on channel created */
 					   NULL, NULL);
-	if (channel != NULL) {
-		printf ("ERROR (3): expected to not find proper channel creation but found valid reerence..\n");
+
+	/* check servername again */
+	if (! axl_cmp (vortex_connection_get_server_name (conn), "test-14.server")) {
+		printf ("ERROR (3): expected to find test-14.server serverName but found: %s..\n", vortex_connection_get_server_name (conn));
 		return axl_false;
-	}
+	} /* end if */
 
 	/* ok, now create a channel without signaling nothing */
 	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-14");
@@ -4458,31 +4497,55 @@ axl_bool test_21 (void) {
 	return axl_true;
 }
 
-axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue, axl_bool do_sasl_before) {
-	VortexConnection * conn;
+axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char * serverName, VortexAsyncQueue * queue, axl_bool do_sasl_before, axl_bool use_ws) {
+	VortexConnection * conn = NULL;
 	VortexChannel    * channel;
 	VortexFrame      * frame;
 	VortexStatus       status;
 	char             * status_message = NULL;
 
-	/* connect and enable TLS */
-	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName, VORTEX_OPTS_END),
-					   NULL, NULL);
+#if defined(ENABLE_WEBSOCKET_SUPPORT)
+	VortexWebsocketSetup * wss_setup;
 
-	if (! vortex_connection_is_ok (conn, axl_false)) {
-		printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
-			vortex_connection_get_status (conn), vortex_connection_get_message (conn));
-		return axl_false;
-	} /* end if */
+	if (use_ws) {
+		/* connect and enable TLS through websocket protocol */
+		wss_setup = vortex_websocket_setup_new (vCtx);
+		/* setup we want TLS enabled */
+		vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_TLS, INT_TO_PTR (axl_true));
+		/* setup Host: header to indicate the profile path or application we want */
+		vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_HOST, (axlPointer) serverName);
 
-	/* enable TLS */
-	conn = vortex_tls_start_negotiation_sync (conn, serverName, &status, &status_message);
-	if (status != VortexOk) {
-		printf ("ERROR (2): expected to find proper TLS activation but found a failure: %s\n",
-			status_message);
-		return axl_false;
-	} /* end if */
+		/* create Websocket connection */
+		msg ("Creating websocket connection (Host: %s): 127.0.0.1:1602", serverName);
+		conn = vortex_websocket_connection_new ("127.0.0.1", "1602", wss_setup, NULL, NULL);
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+				vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+			return axl_false;
+		} /* end if */
+	} else {
+#endif
+		/* connect and enable TLS */
+		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, serverName, VORTEX_OPTS_END),
+						   NULL, NULL);
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
+				vortex_connection_get_status (conn), vortex_connection_get_message (conn));
+			return axl_false;
+		} /* end if */
+		
+		/* enable TLS */
+		conn = vortex_tls_start_negotiation_sync (conn, serverName, &status, &status_message);
+		if (status != VortexOk) {
+			printf ("ERROR (2): expected to find proper TLS activation but found a failure: %s\n",
+				status_message);
+			return axl_false;
+		} /* end if */
+
+#if defined(ENABLE_WEBSOCKET_SUPPORT)
+	}
+#endif
 
 	printf ("Test 22: TLS activation finished: serverName %s..\n", serverName);
 	if (! vortex_connection_is_tlsficated (conn)) {
@@ -4637,22 +4700,22 @@ axl_bool test_22 (void) {
 
 	/* call to test against test-22.server */
 	printf ("Test 22: checking TLS with: test-22.server..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false, axl_false)) 
 		return axl_false;   
 
 	/* call to test against test-22.server.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.nochild..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.nochild", queue, axl_false))  
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.nochild", queue, axl_false, axl_false))  
 		return axl_false;   
 
 	/* call to test against test-22.server.sasl ( */
 	printf ("Test 22: checking TLS with: test-22.server.sasl..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl", queue, axl_true)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl", queue, axl_true, axl_false)) 
 		return axl_false;   
 
 	/* call to test against test-22.server.sasl.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.sasl.nochild..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true, axl_false)) 
 		return axl_false;   
 
 	/* check unfinished tls */
@@ -4686,7 +4749,7 @@ axl_bool test_22_a (void) {
 
 	/* call to test against test-22.server.sasl.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.sasl.nochild..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true, axl_false)) 
 		return axl_false;
 
 	/* finish turbulence */
@@ -4715,7 +4778,7 @@ axl_bool test_23 (void) {
 	queue = vortex_async_queue_new ();
 
 	/* call to test against test-22.server */
-	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false, axl_false)) 
 		return axl_false;  
 
 	/* finish turbulence */
@@ -4782,6 +4845,49 @@ axl_bool test_24 (void) {
 
 	return axl_true;
 }
+
+#if defined(ENABLE_WEBSOCKET_SUPPORT)
+axl_bool test_25 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+
+	printf ("Test 25: running websocket test..\n");
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_25.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* call to test against test-22.server.nochild */
+	printf ("Test 25: checking TLS with: test-25.server.nochild..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-25.server.nochild", queue, axl_false, axl_true))  
+		return axl_false;   
+
+	printf ("Test 25: complete OK\n");
+
+	/* call to test against test-22.server.sasl.nochild */
+	printf ("Test 25: checking TLS with: test-25.server.sasl.nochild..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-25.server.sasl.nochild", queue, axl_true, axl_true)) 
+		return axl_false;   
+
+	printf ("Test 25: complete OK\n");
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+	
+	return axl_true;
+}
+#endif
 
 /** 
  * @brief Helper handler that allows to execute the function provided
@@ -4873,7 +4979,7 @@ int main (int argc, char ** argv)
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_04, test_05, test_05a, test_06, test_06a\n");
 	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
-	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24\n");
+	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
@@ -5046,6 +5152,11 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_24")
 	run_test (test_24, "Test 24: try to trick TLS profile.."); 
+
+#if defined(ENABLE_WEBSOCKET_SUPPORT)
+	CHECK_TEST("test_25")
+	run_test (test_25, "Test 25: test connecting BEEP over secure websocket (1602) ..");   
+#endif
 
 	printf ("All tests passed OK!\n");
 

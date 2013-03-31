@@ -13,8 +13,12 @@ mod_websocket_la_LDFLAGS  = -module -ldl $(VORTEX_WEBSOCKET_LIBS)
 # reconfigure module installation directory
 libdir = `turbulence-config --mod-dir`
 
+# configure site module configuration installation
+etcdir   = $(sysconfdir)/turbulence/websocket
+etc_DATA = websocket.example.conf
+
 # configure site module installation
-modconfdir   = `turbulence-config --mod-xml`
+modconfdir   = $(sysconfdir)/turbulence/mods-available
 modconf_DATA = mod_websocket.xml mod_websocket.win32.xml
 
 mod_websocket.xml mod_websocket.win32.xml:

@@ -1798,6 +1798,14 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * - <b>datadir</b>: base dir where static turbulence data files are located (${datadir}/turbulence).
  * - <b>runtime_datadir</b>: base directory where run time files are created (${runtime_datadir}/turbulence).
  *
+ * Additionally many modules inside Turbulence and Vortex Library find
+ * configuration and data files by call to
+ * vortex_support_domain_find_data_file. That function works by
+ * finding the provided file under a particular search domain. Each
+ * module has it own search domain. To add new search elements into a
+ * particular domain to make your files available to each particular
+ * module then use the syntax found in the example above.
+ *
  * \section turbulence_configure_splitting 2.8 Splitting turbulence configuration
  *
  * As we saw, turbulence has a main configuration file which is

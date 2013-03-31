@@ -223,6 +223,7 @@ turbulence_signal_block
 turbulence_signal_exit
 turbulence_signal_install
 turbulence_signal_received
+turbulence_signal_sigchld
 turbulence_signal_unblock
 turbulence_sleep
 turbulence_support_get_backtrace

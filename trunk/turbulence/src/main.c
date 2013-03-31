@@ -295,8 +295,6 @@ int main (int argc, char ** argv)
 					   axl_false, 
 					   /* signal sighup */
 					   axl_false,
-					   /* enable sigchild */
-					   axl_false,
 					   main_signal_received);		
 
 	} else {
@@ -305,8 +303,6 @@ int main (int argc, char ** argv)
 					   /* signal sigint handling according to console options */
 					   ! exarg_is_defined ("disable-sigint"), 
 					   /* enable sighup handling */
-					   axl_true,
-					   /* enable sigchild */
 					   axl_true,
 					   /* signal received */
 					   main_signal_received);

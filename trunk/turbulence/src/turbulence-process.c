@@ -1228,6 +1228,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 	TBC_PROCESS_LOCK_CHILD ();
 
+	/* enable SIGCHLD handling */
+	turbulence_signal_sigchld (ctx, axl_true);
+
 	msg2 ("LOCK acquired: calling to create child process to handle profile path: %s..", ppath_name);
 	
 	/* check if child associated to the given profile path is

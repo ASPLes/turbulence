@@ -95,15 +95,24 @@ AC_SUBST(VORTEX_SASL_LIBS)
 VORTEX_SASL_VERSION=`pkg-config --modversion vortex-sasl-1.1`
 AC_SUBST(VORTEX_SASL_VERSION)
 
-dnl external dependencies: vortex-sasl
+dnl external dependencies: vortex-tls
 PKG_CHECK_MODULES(VORTEX_TLS, vortex-tls-1.1 >= 1.1.4) 
 AC_SUBST(VORTEX_TLS_CFLAGS)
 AC_SUBST(VORTEX_TLS_LIBS)
 VORTEX_TLS_VERSION=`pkg-config --modversion vortex-tls-1.1`
 AC_SUBST(VORTEX_TLS_VERSION)
 
-dnl external dependencies: vortex-sasl
-PKG_CHECK_MODULES(VORTEX_WEBSOCKET, vortex-websocket-1.1 >= 1.1.4) 
+dnl external dependencies: vortex-websocket
+AC_ARG_ENABLE(enable-websocket, [  --enable-websocket       Enable building WebSocket support (mod-websocket) (through noPoll) [default=yes]], 
+	      enable_websocket="$enableval", 
+	      enable_websocket=yes)
+VORTEX_WEBSOCKET_CFLAGS=""
+VORTEX_WEBSOCKET_LIBS=""
+if test x$enable_websocket = xyes ; then
+       PKG_CHECK_MODULES(VORTEX_WEBSOCKET, vortex-websocket-1.1 >= 1.1.4) 
+       dnl add additional flags
+       VORTEX_WEBSOCKET_CFLAGS="-DENABLE_WEBSOCKET_SUPPORT $VORTEX_WEBSOCKET_CFLAGS" 
+fi
 AC_SUBST(VORTEX_WEBSOCKET_CFLAGS)
 AC_SUBST(VORTEX_WEBSOCKET_LIBS)
 VORTEX_WEBSOCKET_VERSION=`pkg-config --modversion vortex-websocket-1.1`
@@ -302,9 +311,9 @@ modules/mod-sasl/sasl-radmin.pc
 modules/mod-python/Makefile
 modules/mod-python/doc/Makefile
 modules/mod-python/doc/conf.py
+modules/mod-websocket/Makefile
 modules/mod-radmin/Makefile
 modules/mod-tls/Makefile
-modules/mod-websocket/Makefile
 tools/Makefile
 tools/tbc-mod-gen/Makefile
 tools/tbc-dblist-mgr/Makefile
@@ -342,11 +351,17 @@ echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"
 echo "   Build tbc-ctl:                  [$enable_tbc_ctl]"
 echo "   Build mod-python:               [$python_devel_found]"
 if test "x$python_devel_found" = "xyes"; then
-echo "         (flags: $PYTHON_CFLAGS, libs: $PYTHON_LIBS)"
+echo "     flags: $PYTHON_CFLAGS"
+echo "     libs: $PYTHON_LIBS"
 fi
 echo "   Build with MySQL support:       [$mysql_devel_found]"
 if test "x$mysql_devel_found" = "xyes"; then
-echo "         (flags: $MYSQL_CFLAGS, libs: $MYSQL_LIBS)"
+echo "     flags: $MYSQL_CFLAGS"
+echo "     libs: $MYSQL_LIBS"
+fi
+echo "   Build  WebSocket support:   [$enable_websocket] (mod-websocket: WebSocket over BEEP!)"
+if test "x$enable_websocket" = "xyes"; then
+echo "     libs: $VORTEX_WEBSOCKET_LIBS"
 fi
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"

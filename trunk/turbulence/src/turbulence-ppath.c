@@ -75,7 +75,7 @@
  *
  * In all steps above, if the connection requests some value that do
  * not match administrative configuration, the connection is either
- * dropped or channel is defined (according its status: if it has a
+ * dropped or channel is denied (according its status: if it has a
  * temporal profile path mask or the definitive one).
  *
  * \section Profile path state
@@ -90,11 +90,11 @@
  * because it is in the context of a child with a profile path
  * selected or some similar reason, use the following code:
  *
- *  __turbulence_ppath_set_state (ctx, connection, turbulence_ppath_get_id (ctx->child_ppath), NULL);
+ *  __turbulence_ppath_set_state (ctx, connection, turbulence_ppath_get_id (ctx->child->ppath), NULL);
  *
  * For example, this code is used to handle connections at
  * __turbulence_ppath_handle_connection_on_connect when it is detected
- * the connection is notified at a function due to a tuning profile
+ * the connection notified at that function due to a tuning profile
  * process in process (currently only TLS).
  *
  */
@@ -208,6 +208,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 	TurbulencePPathItem * item;
 	axlHashCursor       * profiles;
 	char                * uri2;
+	const char          * profile_alias;
 
 	if (ppath_items == NULL) {
 		error ("Found no items inside profile path item, rejecting");
@@ -302,6 +303,8 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		return axl_false;
 	} /* end if */
 
+	msg2 ("  <allow>: anything matched in <allow> nodes at this level, let's see <if-success> nodes");
+
 	/* SECOND PART: now check for second level profile path configurations,
 	 * based on <if-success> */
 	iterator = 0;
@@ -322,16 +325,20 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 
 			/* check if we have a profile attr alias before continue */
 			if (axl_hash_exists (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile))) {
+				/* get profile alias associated */
+				profile_alias = axl_hash_get (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile));
+				msg2 ("  <if-success>: found profile alias %s => %s, checking it...", profile_alias, turbulence_expr_get_expression (item->profile));
+
 				/* found alias for expression, check attribute */
-				if (PTR_TO_INT (vortex_connection_get_data (connection, 
-									    /* get the alias */
-									    axl_hash_get (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile)))) > 0) {
+				if (PTR_TO_INT (vortex_connection_get_data (connection, profile_alias)) > 0) {
+					msg2 ("  <if-success>: found profile (%s) alias (%s) inside connection (match by alias))",
+					      turbulence_expr_get_expression (item->profile), profile_alias);
 					profiles = NULL;
 					goto match_by_alias;
-				}
-			}
-			
-
+				} /* end if */
+				msg2 ("  <if-success>: found profile alias %s => %s not found", profile_alias, turbulence_expr_get_expression (item->profile));
+			} /* end if */
+		
 			/* get current profiles running on the connection */
 			profiles = turbulence_conn_mgr_profiles_stats (ctx, connection);
 			axl_hash_cursor_first (profiles);
@@ -824,13 +831,33 @@ void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx,
 }
 
 /** 
- * @internal Server init handler that allows to check the connectio
+ * @internal Server init handler that allows to check the connection's
  * source and select the appropiate profile path to be used for the
  * connection. It also sets the required handler to enforce profile
  * path policy.
  *
+ * This handler is called before any socket exchange. Due to that it
+ * possible that the function is not able to find a profile path
+ * associated to the connection.
+ *
  * In the case a profile path definition is not found, the handler
  * just denies the connection.
+ *
+ * This function is configured by turbulence_ppath_init and it is the
+ * entry point for all connections accepted by a turbulence process
+ * with the target of find and set the profile path to be used.
+ *
+ * The function has tree parts:
+ *
+ * 1) The first where master<->child process connection is detect to
+ * handle it properly.
+ *
+ * 2) The second part where a connection is received in the context of
+ * a child process which by design causes to select a predefined
+ * profile path (according to the child).
+ *
+ * 3) The last part where the profile path selection code is called to
+ * find the appropriate profile path for a connection.
  */
 axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * connection, axlPointer data)
 {
@@ -840,26 +867,26 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 	VortexConnection  * listener;
 	TurbulenceChild   * child;
 
+	/*** FIRST PART ***/
 	/* get listener reference */
 	listener = vortex_connection_get_listener (connection);
 
 	/* check if we are in a child process to find a preselected
-	 * profile path (and caused creation of this child)  */
+	 * profile path (that caused the creation of this child)  */
 	if (vortex_connection_get_data (listener, "tbc:mc-link")) {
 		/* check especial case where master process is
-		 * connecting this child: this is the especial BEEP
-		 * connection that exists linking master process with
+		 * connecting to this child: this is the especial BEEP
+		 * connection that exists to link master process with
 		 * each child. */
 		child = vortex_connection_get_data (listener, "tbc:mc-link");
 
 		msg ("PARENT: detected connection from child process: %s:%s..accepting",
 		     vortex_connection_get_host (connection), vortex_connection_get_port (connection));
 
-		/* configure conn mgr: the connection received
-		 * is the result and the connection we
-		 * want. Now we have to drop the master
-		 * listener that made possible this connection
-		 * which is in child_conn_mgr */
+		/* configure conn mgr: the connection received is the
+		 * result and the connection we want. Now we have to
+		 * drop the master listener that made possible this
+		 * connection which is in child_conn_mgr */
 		conn_mgr = child->conn_mgr;
 		child->conn_mgr = connection;
 
@@ -885,14 +912,21 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 		/* do not configure any mask */
 		return axl_true;
 	} /* end if */
+
+	msg ("NEW CONN: received connection-id=%d from %s:%s on local port %s:%s",
+	     vortex_connection_get_id (connection), 
+	     vortex_connection_get_host (connection), vortex_connection_get_port (connection),
+	     vortex_connection_get_local_addr (connection), vortex_connection_get_local_port (connection));
 	
+	/*** SECOND PART ***/
 	if (ctx->child) {
-		msg ("CHILD: Detected on connect on child process having a predefined profile path..");
+		msg ("CHILD: Detected onConnect() on child process having a predefined profile path..");
 		/* set profile path currently selected on child */
 		__turbulence_ppath_set_state (ctx, connection, turbulence_ppath_get_id (ctx->child->ppath), NULL);
 		return axl_true;
 	}
 
+	/*** THIRD PART ***/
 	/* call to select a profile path: serverName = NULL ("") && on_connect = axl_true */
 	msg ("Call to select a profile path at connection time (pre <greetings />), conn-id=%d", 
 	     vortex_connection_get_id (connection));
