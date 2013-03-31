@@ -1872,7 +1872,7 @@ axl_bool test_10 (void) {
 	queue = vortex_async_queue_new ();
 
 	/* install signal handling */
-	turbulence_signal_install (tCtxTest10, axl_false, axl_false, axl_true, test_10_signal_handler);
+	turbulence_signal_install (tCtxTest10, axl_false, axl_false, test_10_signal_handler);
 
 	/* check process created at this point */
 	if (turbulence_process_child_count (tCtxTest10) != 0) {
@@ -2086,7 +2086,7 @@ axl_bool test_10_prev (void) {
 		return axl_false;
 
 	/* install signal handling (handle child processes) */
-	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, axl_true, test_10_prev_signal_handler);
+	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, test_10_prev_signal_handler);
 
 	/* create connection to local server */
 	printf ("Test 10-prev: creating child process..\n");
@@ -2213,7 +2213,7 @@ axl_bool test_10_b (void) {
 		return axl_false;
 
 	/* install signal handling (handle child processes) */
-	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, axl_true, test_10_prev_signal_handler);
+	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, test_10_prev_signal_handler);
 
 	/* create connection to local server */
 	printf ("Test 10-b: creating child process..\n");
@@ -2443,7 +2443,7 @@ axl_bool test_10_c (void) {
 		return axl_false;
 
 	/* install signal handling (handle child processes) */
-	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, axl_true, test_10_prev_signal_handler);
+	turbulence_signal_install (tCtxTest10prev, axl_false, axl_false, test_10_prev_signal_handler);
 
 	/* create connection to local server */
 	printf ("Test 10-c: CREATE FIRST CONNECTION(1): creating child process..\n");
@@ -2626,7 +2626,7 @@ axl_bool test_10_a (void) {
 		return axl_false;
 
 	/* install signal handling */
-	turbulence_signal_install (tCtxTest10a, axl_false, axl_false, axl_true, test_10_a_signal_handler);
+	turbulence_signal_install (tCtxTest10a, axl_false, axl_false, test_10_a_signal_handler);
 
 	/* create connection to local server */
 	printf ("Test 10-a: creating connection..\n");
@@ -3073,7 +3073,7 @@ axl_bool test_12 (void) {
 
 	/* configure signal handling */
 	test12Ctx = tCtx;
-	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, test_12_signal_received);
+	turbulence_signal_install (tCtx, axl_false, axl_false, test_12_signal_received);
 
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
@@ -3093,7 +3093,7 @@ axl_bool test_12a (void) {
 		return axl_false;
 
 	/* remove signal handler */
-	turbulence_signal_install (tCtx, axl_false, axl_false, axl_true, NULL);
+	turbulence_signal_install (tCtx, axl_false, axl_false, NULL);
 
 	/* configure test path to locate appropriate sasl.conf files */
 	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"), 
