@@ -138,7 +138,9 @@ struct _TurbulenceCtx {
 	/*** turbulence mediator module ***/
 	axlHash            * mediator_hash;
 	VortexMutex          mediator_hash_mutex;
-
+	
+	/*** support for proxy on parent ***/
+	TurbulenceLoop     * proxy_loop;
 };
 
 /** 

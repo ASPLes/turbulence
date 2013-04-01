@@ -58,6 +58,12 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 axl_bool         turbulence_expr_match   (TurbulenceExpr * expr, 
 					  const char     * subject);
 
+/** 
+ * @brief Alias definition associated to turbulence_expr_get_expression.
+ * @param expr The TurbulenceExpr where the associated string expression is being queried.
+ * @return A reference to the string expression.
+ */
+#define __TBC_EXP_STR__(expr) turbulence_expr_get_expression(expr)
 const char     * turbulence_expr_get_expression (TurbulenceExpr * expr);
 
 void             turbulence_expr_free    (TurbulenceExpr * expr);

@@ -8,9 +8,14 @@ int main (int argc, char ** argv) {
 	VortexConnection     * conn;
 	VortexChannel        * channel;
 	VortexWebsocketSetup * wss_setup;
-	const char           * serverName = "test-22.server";
+	const char           * serverName = "test-25.server.nochild";
 	VortexFrame          * frame;
 	VortexAsyncQueue     * queue;
+
+	if (argc > 1)
+		serverName = argv[1];
+
+	printf ("Test 25: running test with serverName: %s\n", serverName);
 
 	/* init vortex here */
 	vCtx = vortex_ctx_new ();
@@ -42,6 +47,7 @@ int main (int argc, char ** argv) {
 	} /* end if */
 
 	/* send some content */
+	printf ("Test 25: sending message..\n");
 	queue = vortex_async_queue_new ();
 	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
 
@@ -51,16 +57,21 @@ int main (int argc, char ** argv) {
 	} /* end if */
 
 	/* wait for the reply */
+	printf ("Test 25: message sent, now waiting for message..\n");
 	frame = vortex_async_queue_pop (queue);
 	if (frame == NULL) {
 		printf ("ERROR (2.4): expected to receive frame reference..\n");
 		return axl_false;
 	} /* end if */
 	
+
+	printf ("Test 25: reply received, checking it is what we expected..\n");
 	if (! axl_cmp (vortex_frame_get_payload (frame), "this is a test message..")) {
 		printf ("ERROR (2.5): expected to receive different content..\n");
 		return axl_false;
 	} /* end if */
+
+	printf ("Test 25: Test ok..\n");
 
 	/* close connection */
 	vortex_connection_close (conn);

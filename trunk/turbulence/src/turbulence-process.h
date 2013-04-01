@@ -100,7 +100,9 @@ char *           turbulence_process_connection_status_string (axl_bool          
 							      int               msg_no,
 							      int               seq_no,
 							      int               seq_no_expected,
-							      int               ppath_id);
+							      int               ppath_id,
+							      int               has_tls,
+							      int               skip_conn_recover);
 
 void             turbulence_process_connection_recover_status (char            * ancillary_data,
 							       axl_bool        * handle_start_reply,
@@ -112,7 +114,8 @@ void             turbulence_process_connection_recover_status (char            *
 							       int             * msg_no,
 							       int             * seq_no,
 							       int             * seq_no_expected,
-							       int             * ppath_id);
+							       int             * ppath_id,
+							       int             * has_tls);
 
 axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket, 
 					 TurbulenceChild * child, 
