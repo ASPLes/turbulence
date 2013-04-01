@@ -67,6 +67,10 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 
 int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx);
 
+axl_bool   turbulence_conn_mgr_proxy_on_parent (VortexConnection * conn);
+
+int        turbulence_conn_mgr_setup_proxy_on_parent (TurbulenceCtx * ctx, VortexConnection * conn);
+
 VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 						   int             conn_id);
 

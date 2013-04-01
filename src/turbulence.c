@@ -334,6 +334,9 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* cleanup process module */
 	turbulence_process_cleanup (ctx);
 
+	/* termiante proxy loop (if started) */
+	turbulence_loop_close (ctx->proxy_loop, axl_true);
+
 	/* free mutex */
 	vortex_mutex_destroy (&ctx->exit_mutex);
 

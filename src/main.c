@@ -274,6 +274,18 @@ void main_signal_received (int _signal) {
 	turbulence_signal_received (ctx, _signal);
 }
 
+void __turbulence_vortex_log_handler (const char       * file,
+				      int                line,
+				      VortexDebugLevel   log_level,
+				      const char       * message,
+				      va_list            args)
+{
+	if (log_level != VORTEX_LEVEL_CRITICAL)
+		return;
+	error ("(vortex) %s:%d: %s", file, line, message); 
+	return;
+}
+
 int main (int argc, char ** argv)
 {
 	char          * config;
@@ -313,7 +325,7 @@ int main (int argc, char ** argv)
 
 	/* show some debug info */
 	if (exarg_is_defined ("child")) {
-		msg ("CHILD: starting child with init string: %s", exarg_get_string ("child"));
+		msg ("CHILD: starting child with control path: %s", exarg_get_string ("child"));
 
 		/* recover child information */
 		if (! turbulence_child_build_from_init_string (ctx, exarg_get_string ("child"))) {
@@ -346,6 +358,18 @@ int main (int argc, char ** argv)
 		/* free turbulence ctx */
 		turbulence_ctx_free (ctx);
 		return -1;
+	} /* end if */
+
+	/* check if vortex log is enabled and if is not, catch critical messages */
+	if (! vortex_log_is_enabled (vortex_ctx)) {
+		/* notify we are enabling this to inform child process
+		 * to avoid enabling this on command line */
+		turbulence_ctx_set_data (ctx, "debug-was-not-requested", INT_TO_PTR (axl_true));
+
+		/* enable log */
+		vortex_log_enable (vortex_ctx, axl_true); 
+		vortex_log_set_prepare_log (vortex_ctx, axl_true);
+		vortex_log_set_handler (vortex_ctx, __turbulence_vortex_log_handler);
 	} /* end if */
 
 	

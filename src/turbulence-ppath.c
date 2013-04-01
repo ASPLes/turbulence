@@ -244,7 +244,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		item = ppath_items[iterator];
 
 		/* profile properly matched, including the serverName */
-		msg2 ("  <allow>: Checking profile path def (profile: %s == %s?)", turbulence_expr_get_expression (item->profile), uri);
+		msg2 ("  <allow level=%d>: Checking profile path def (profile: %s == %s?)", level, turbulence_expr_get_expression (item->profile), uri);
 
 		/* check the profile uri */
 		if (! turbulence_expr_match (item->profile, uri)) {
@@ -288,7 +288,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 			/* check the serverName value provided against
 			 * the configuration */
 			if (! turbulence_expr_match (state->path_selected->serverName, serverName ? serverName : "")) {
-				error ("  <allow>: serverName='%s' doesn't match current profile path conf (%s)", serverName ? serverName : "",
+				error ("  <allow level=%d>: serverName='%s' doesn't match current profile path conf (%s)", level, serverName ? serverName : "",
 				       turbulence_ppath_get_name (state->path_selected));
 				/* filter the channel creation because
 				 * the serverName provided doesn't
@@ -298,12 +298,12 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		} /* end if */
 
 		/* profile properly matched, including the serverName */
-		msg2 ("  <allow>: Profile path matched, including serverName at <allow> level: channel_num=%d, profile=%s, serverName=%s", 
-		      channel_num, uri, serverName ? serverName : "");
+		msg2 ("  <allow level=%d>: Profile path MATCHED, including serverName at <allow> level: channel_num=%d, profile=%s, serverName=%s", 
+		      level, channel_num, uri, serverName ? serverName : "");
 		return axl_false;
 	} /* end if */
 
-	msg2 ("  <allow>: anything matched in <allow> nodes at this level, let's see <if-success> nodes");
+	msg2 ("  <allow level=%d>: anything matched in <allow> nodes at this level, let's see <if-success> nodes", level);
 
 	/* SECOND PART: now check for second level profile path configurations,
 	 * based on <if-success> */
@@ -320,31 +320,33 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		if (item->type == PROFILE_IF) {
 
 			/* profile properly matched, including the serverName */
-			msg2 ("  <if-success>: found if branch, now checking if we have some profile accepted matching: %s?)", 
-			      turbulence_expr_get_expression (item->profile));
+			msg2 ("  <if-success level=%d>: found if branch, now checking if we have some profile accepted matching: %s?)", 
+			      level, turbulence_expr_get_expression (item->profile));
 
 			/* check if we have a profile attr alias before continue */
 			if (axl_hash_exists (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile))) {
 				/* get profile alias associated */
 				profile_alias = axl_hash_get (ctx->profile_attr_alias, (axlPointer) turbulence_expr_get_expression (item->profile));
-				msg2 ("  <if-success>: found profile alias %s => %s, checking it...", profile_alias, turbulence_expr_get_expression (item->profile));
+				msg2 ("  <if-success level=%d>: found profile alias %s => %s, checking it...", 
+				      level, profile_alias, turbulence_expr_get_expression (item->profile));
 
 				/* found alias for expression, check attribute */
 				if (PTR_TO_INT (vortex_connection_get_data (connection, profile_alias)) > 0) {
-					msg2 ("  <if-success>: found profile (%s) alias (%s) inside connection (match by alias))",
-					      turbulence_expr_get_expression (item->profile), profile_alias);
+					msg2 ("  <if-success level=%d>: found profile (%s) alias (%s) inside connection (MATCH by alias))",
+					      level, turbulence_expr_get_expression (item->profile), profile_alias);
 					profiles = NULL;
 					goto match_by_alias;
 				} /* end if */
-				msg2 ("  <if-success>: found profile alias %s => %s not found", profile_alias, turbulence_expr_get_expression (item->profile));
+				msg2 ("  <if-success level=%d>: profile alias %s => %s not found", 
+				      level, profile_alias, turbulence_expr_get_expression (item->profile));
 			} /* end if */
 		
 			/* get current profiles running on the connection */
 			profiles = turbulence_conn_mgr_profiles_stats (ctx, connection);
 			axl_hash_cursor_first (profiles);
 			
-			msg2 ("  <if-success>: connection id=%d profiles activated are %d, with %d channels working..", 
-			      vortex_connection_get_id (connection), axl_hash_items (axl_hash_cursor_hash (profiles)), 
+			msg2 ("  <if-success level=%d>: connection id=%d profiles activated are %d, with %d channels working..", 
+			      level, vortex_connection_get_id (connection), axl_hash_items (axl_hash_cursor_hash (profiles)), 
 			      vortex_connection_channels_count (connection));
 
 			/* for each profile running on the connection,
@@ -357,7 +359,8 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 				uri2 = axl_hash_cursor_get_key (profiles);
 
 				/* profile properly matched, including the serverName */
-				msg2 ("  <if-success>: Checking profile path def (profile: %s == %s?)", turbulence_expr_get_expression (item->profile), uri2);
+				msg2 ("  <if-success level=%d>: Checking profile path def (profile: %s == %s?)", 
+				      level, turbulence_expr_get_expression (item->profile), uri2);
 
 				/* try to match the profile expression against
 				   a concrete profile value */
@@ -683,10 +686,17 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	iterator = 0;
 	src      = vortex_connection_get_host (connection);
 	dst      = vortex_connection_get_local_addr (connection);
+	msg ("Checking %-30s %-30s Profile path match for conn-id=%d", "Ppath. serveName", "requested serverName", 
+	     vortex_connection_get_id (connection));
 	while (ctx->paths->items[iterator] != NULL) {
 		/* get the profile path def */
 		def = ctx->paths->items[iterator];
-		msg ("checking profile path def: %s", def->path_name ? def->path_name : "(no path name defined)");
+
+		msg ("checking %-30s %-30s %s",
+		     def->serverName ? __TBC_EXP_STR__(def->serverName) : "",
+		     serverName ? serverName : "",
+		     def->path_name  ? def->path_name : "(no path name defined)");
+		     
 
 		/* get src status */
 		src_status        = __turbulence_ppath_handle_connection_match_src (connection, def->src, src);
@@ -699,7 +709,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 
 		/* match found */
 		if (src_status && dst_status && serverName_status) {
-			msg ("profile path found, setting default state: %s, connection id=%d, src=%s local_addr=%s serverName=%s ", 
+			msg ("MATCH: profile path found, setting default state: %s, connection id=%d, src=%s local_addr=%s serverName=%s ", 
 			     def->path_name ? def->path_name : "(no path name defined)",
 			     vortex_connection_get_id (connection), src, dst, serverName ? serverName : "");
 			break;
@@ -880,24 +890,25 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 		 * each child. */
 		child = vortex_connection_get_data (listener, "tbc:mc-link");
 
-		msg ("PARENT: detected connection from child process: %s:%s..accepting",
+		msg ("PARENT: detected connection from child process: %s:%s..accepting (master <-> child)",
 		     vortex_connection_get_host (connection), vortex_connection_get_port (connection));
 
 		/* configure conn mgr: the connection received is the
 		 * result and the connection we want. Now we have to
-		 * drop the master listener that made possible this
+		 * drop the master listener that made posible this
 		 * connection which is in child_conn_mgr */
 		conn_mgr = child->conn_mgr;
 		child->conn_mgr = connection;
 
 		/* acquire a reference */
-		vortex_connection_ref (connection, "master<->child");
+		vortex_connection_ref (child->conn_mgr, "master<->child");
 			
 		/* get socket */
 		session = vortex_connection_get_socket (conn_mgr);
 			
 		/* now send socket to the child so it does not
 		 * take a socket bucket in the master  */ 
+		msg ("PARENT: sending socket %d to child because he already owns it and we don't want it at the parent process (master <-> child)", session);
 		if (! turbulence_process_send_socket (session, child, "s", 1))  {
 			error ("PARENT: Unable to send socket associated to the management connection associated to the child process");
 			return axl_false;

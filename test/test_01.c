@@ -3874,6 +3874,7 @@ axl_bool test_15 (void) {
 	int               seq_no;
 	int               seq_no_expected;
 	int               ppath_id;
+	int               has_tls;
 
 	/* build connection status */
 	conn_status = turbulence_process_connection_status_string (axl_true,
@@ -3882,7 +3883,7 @@ axl_bool test_15 (void) {
 								   NULL,
 								   EncodingNone,
 								   "test-15.server",
-								   17, 42301, 1234, 37);
+								   17, 42301, 1234, 37, 1, 0);
 	turbulence_process_connection_recover_status (conn_status + 1, /* skip initial n used to signal the command */
 						      &handle_start_reply,
 						      &channel_num,
@@ -3893,7 +3894,8 @@ axl_bool test_15 (void) {
 						      &msg_no,
 						      &seq_no, 
 						      &seq_no_expected, 
-						      &ppath_id);
+						      &ppath_id,
+						      &has_tls);
 	/* check data */
 	if (! handle_start_reply) {
 		printf ("ERROR (1): failed handle_start_reply (%d != %d) data\n", axl_true, handle_start_reply);

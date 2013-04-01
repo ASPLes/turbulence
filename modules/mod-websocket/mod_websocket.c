@@ -51,6 +51,32 @@ axl_bool mod_websocket_load_config (void) {
 	return axl_true;
 }
 
+/** 
+ * @internal Post action function called to prepare each websocket
+ * connection to support sending it to a child.
+ */
+int mod_websocket_post_configuration (VortexCtx               * _ctx, 
+				      VortexConnection        * conn, 
+				      VortexConnection       ** new_conn, 
+				      VortexConnectionStage     stage, 
+				      axlPointer                user_data)
+{
+	TurbulenceCtx * ctx = user_data;
+
+	/* do not configure anything that isn't an accepted listener connection */
+	if (vortex_connection_get_role (conn) != VortexRoleListener)
+		return 1;
+
+	/* do not change anything if it is not a websocket connection */
+	if (! vortex_websocket_connection_is (conn))
+		return 1;
+
+	/* prepare this connection to be proxied on parent if sent to a child */
+	msg ("WEBSOCKET: flagged connection-id=%d to be proxied on parent", vortex_connection_get_id (conn));
+	vortex_connection_set_data (conn, "tbc:proxy:conn", INT_TO_PTR (axl_true));
+
+	return 1;
+}
 
 /* mod_websocket init handler */
 static int  mod_websocket_init (TurbulenceCtx * _ctx) {
@@ -69,20 +95,20 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	/* configure the module */
 	TBC_MOD_PREPARE (_ctx);
 
+	/* add profile attr alias to allow detecting the TLS profile
+	 * using the same configuration as mod-tls so configuration
+	 * remains coherent */
+	turbulence_ppath_add_profile_attr_alias (ctx, "http://iana.org/beep/TLS", "tls-fication:status");
+
 	/* if this is a child process, we don't need to go through the
 	 * initialization */
 	if (turbulence_ctx_is_child (ctx)) 
-		return axl_false;
+		return axl_true;
 
 	/* ok, get current configuration and start listener ports
 	 * according to its configuration */
 	if (! mod_websocket_load_config ()) 
 		return axl_false;
-
-	/* add profile attr alias to allow detecting the TLS profile
-	 * using the same configuration as mod-tls so configuration
-	 * remains coherent */
-	turbulence_ppath_add_profile_attr_alias (ctx, "http://iana.org/beep/TLS", "tls-fication:status");
 
 	/* init context */
 	nopoll_ctx = nopoll_ctx_new ();
@@ -146,6 +172,9 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 		node = axl_node_get_next_called (node, "port");
 	} /* end while */
 
+	/* install post action function */
+	vortex_connection_set_connection_actions (TBC_VORTEX_CTX (_ctx), CONNECTION_STAGE_POST_CREATED, mod_websocket_post_configuration, _ctx);
+
 	return axl_true;
 } /* end mod_websocket_init */
 
@@ -176,9 +205,6 @@ static void mod_websocket_unload (TurbulenceCtx * _ctx) {
 
 /* mod_websocket ppath-selected handler */
 static axl_bool mod_websocket_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {
-	/* Place here the code to implement all provisioning that was
-	 * deferred because non enough data was available at init
-	 * method (connection and profile path selected) */
 	return axl_true;
 	
 } /* end mod_websocket_ppath_selected */

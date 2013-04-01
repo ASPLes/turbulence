@@ -740,6 +740,207 @@ int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx)
 }
 
 /** 
+ * @brief Allows to check if the provided connection has to be proxied
+ * on the parent master process in the case it is required to be sent
+ * to a child process due to profile path configuration.
+ *
+ * To flag a connection in such way will create an especial
+ * configuration at the parent process to read content over the
+ * provided connection and send it to a "representation" running on
+ * the child (as opposed to fully send the entire connection to be
+ * handled by the child).
+ *
+ * This is done to support some especiall cases (especially those
+ * where TLS is around) where it is not possible to store the state of a connection and resume it on a child process.
+ *
+ * NOTE: This function only flags! not actually send the connection a
+ * particular child (that only will happens when the site
+ * administrator configures the profile path to make it).
+ *
+ * @param conn The connection that is flagged to be proxied on parent. 
+ *
+ * @return axl_true in the case the connection was flagged to be
+ * proxied on on parent otherwise, axl_false is returned.
+ *
+ * NOTE TO DEVELOPERS: in the case you are creating a module that
+ * needs to activate this feature, just set the value as follows:
+ *
+ * \code
+ * // set up proxy configuration
+ * vortex_connection_set_data (conn, "tbc:proxy:conn", INT_TO_PTR (axl_true));
+ * \endcode
+ *
+ */
+axl_bool   turbulence_conn_mgr_proxy_on_parent (VortexConnection * conn)
+{
+	/* set up proxy configuration */
+	return PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:conn"));
+}
+
+/** 
+ * Function used to read content from the connection and write that
+ * content into the child socket.
+ *
+ *           Read                    Write
+ *  [ Proxied connection ] --> [ Child socket ]
+ */
+void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
+{
+	char               buffer[4096];
+	int                bytes_read;
+	/* TurbulenceCtx    * ctx = vortex_connection_get_data (conn, "tbc:ctx"); */
+	/* get socket associated */
+	int                _socket = PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:fd"));
+
+	/* check connection status */
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		vortex_close_socket (_socket);
+		return;
+	} /* end if */
+
+	/* check status and close the other connection if found that */
+	bytes_read = vortex_frame_receive_raw (conn, buffer, 4096);
+	/* msg ("PROXY-beep: Read %d bytes from conn-id=%d, sending them to child socket=%d (refs: %d, status: %d, errno=%d%s%s)",
+	     bytes_read, vortex_connection_get_id (conn), _socket,
+	     vortex_connection_ref_count (conn), vortex_connection_is_ok (conn, axl_false), errno,
+	     errno != 0 ? " : " : "",
+	     errno != 0 ? strerror (errno) : ""); */
+
+	/* check to shutdown connection */
+	if (errno == 9 || errno == 17) {
+		/* wrn ("PROXY-beep: Found socket read error (socket=%d, errno=%d), shutting down connection id=%d", 
+		   vortex_connection_get_socket (conn), errno, vortex_connection_get_id (conn)); */
+		vortex_connection_shutdown (conn);
+		return;
+	} /* end if */
+
+	if (bytes_read > 0) {
+		/* send content */
+		if (send (_socket, buffer, bytes_read, 0) != bytes_read) {
+			/* wrn ("PROXY-beep: closing conn-id=%d because socket=%d isn't working", 
+			   vortex_connection_get_id (conn), _socket); */
+
+			/* remove preread handler and shutdown */
+			vortex_connection_shutdown (conn);
+			return;
+		} /* end if */
+
+		/* buffer[bytes_read] = 0;
+		   msg ("PROXY-beep: sent content (beep conn-id=%d -> socket=%d): %s", vortex_connection_get_id (conn), _socket, buffer); */
+	} /* end if */
+
+	return;
+}
+
+/** 
+ * Function used to read content from the socket in the loop into the
+ * connection proxied.
+ *
+ *       Read                   Write
+ *  [ Loop socket ] --> [ Proxy connection ]
+ */
+axl_bool __turbulence_conn_proxy_reads_loop (TurbulenceLoop * loop, 
+					     TurbulenceCtx  * ctx,
+					     int              descriptor, 
+					     axlPointer       ptr, 
+					     axlPointer       ptr2)
+{
+	VortexConnection * conn = ptr;
+	char buffer[4096];
+	int  bytes_read;
+
+	/* read content */
+	bytes_read = recv (descriptor, buffer, 4096, 0);
+	/* msg ("PROXY: reading from socket=%d (bytes read=%d, errno=%d)", descriptor, bytes_read, errno); */
+	if (bytes_read <= 0) {
+		/* wrn ("PROXY-fd: child conn close, replicate on associated connection id=%d", vortex_connection_get_id (conn)); */
+		vortex_connection_shutdown (conn);
+		vortex_close_socket (descriptor);
+		return axl_false; /* notify to remove socket */
+	} /* end if */
+
+	/* send content */
+	if (! vortex_frame_send_raw (conn, buffer, bytes_read)) {
+		/* wrn ("PROXY-fd: connection-id=%d is falling (wasn't able to send %d bytes), closing associated socket=%d", vortex_connection_get_id (conn), descriptor); */
+		vortex_close_socket (descriptor);
+		vortex_connection_shutdown (conn);
+		return axl_false;
+	} /* end if */
+
+	/* buffer[bytes_read] = 0;
+	   msg ("PROXY-fd: sent content (socket=%d -> beep conn-id=%d): %s", descriptor, vortex_connection_get_id (conn), buffer); */
+
+	return axl_true; /* continue reading that socket */
+}
+
+/** 
+ * @brief Setups the necessary configuration to start proxing content
+ * of that connection passing all bytes into the returned socket.
+ *
+ * @param ctx The turbulence context where the operation will take place.
+ *
+ * @param conn The connection that will be proxied.
+ *
+ * @return The socket where all content will be proxied, remaining on
+ * the parent process all code to reading and writing the provided
+ * socket.
+ */
+int        turbulence_conn_mgr_setup_proxy_on_parent (TurbulenceCtx * ctx, VortexConnection * conn)
+{
+	int                     descf[2];
+
+	/* here you have the diagram about what is about to happen:
+	 *
+	 * +----------+                      +--------------+
+	 * |  remote  |   <----[ conn ]----> |  Turbulence  |
+	 * |          |                      |    loop      |
+	 * |  client  |                      +--------------+
+	 * +----------+                             ^
+         *                                          |    
+	 *                                       descf[1]
+	 *                                          ^
+         *                                          |
+         *                                          |
+	 *                                          v
+	 *                                       descf[0]
+	 *				     +-------------+
+         *                                   |   child     |
+         *                                   |  process    |
+         *                                   +-------------+
+	 *
+	 * read on [conn]     -> write in descf[1]
+	 * read on descf[1]   -> write in [conn]
+	 */
+	
+
+	/* init the portable pipe associated to this connection */
+	if (vortex_support_pipe (CONN_CTX (conn), descf) != 0) {
+		error ("Failed to create pipe to proxy connection on the parent, check vortex log to get more details");
+		return -1;
+	} /* end if */
+
+	/* create the proxy loop watcher if it wasn't created yet */
+	if (ctx->proxy_loop == NULL) 
+		ctx->proxy_loop = turbulence_loop_create (ctx);
+
+	/* watch the socket */
+	turbulence_loop_watch_descriptor (ctx->proxy_loop, descf[1], __turbulence_conn_proxy_reads_loop, conn, NULL);
+
+	/* configure links between both connections */
+	vortex_connection_set_data (conn,       "tbc:proxy:fd", INT_TO_PTR (descf[1]));
+	vortex_connection_set_data (conn,       "tbc:ctx", ctx);
+
+	/* now configure preread handlers to pass data from both
+	 * connections */
+	vortex_connection_set_preread_handler (conn, __turbulence_conn_mgr_proxy_reads);
+	
+	/* return the socket that will be using the child process */
+	msg ("PROXY: Activated proxy on parent conn-id=%d (socket: %d), parent socket %d <--> child socket: %d", 
+	     vortex_connection_get_id (conn), vortex_connection_get_socket (conn), descf[1], descf[0]);
+	return descf[0];
+}
+
+/** 
  * @brief Allows to get a reference to the registered connection with
  * the provided id. The function will return a reference to a
  * VortexConnection owned by the turbulence connection
