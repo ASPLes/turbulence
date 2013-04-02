@@ -526,8 +526,8 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 	/* the following is to avoid noisy output on greetings phase
 	 * (because it is called too many times) */
 	if (channel_num == -1)
-		msg2 ("Called to temporal profile mask on greetings phase, for connection id=%d (state %p, profile path selected: %p)", 
-		      vortex_connection_get_id (connection), state, state->path_selected);
+		msg2 ("Called to temporal profile mask on greetings phase, for connection id=%d (state %p, profile path selected: %s)", 
+		      vortex_connection_get_id (connection), state, state->path_selected ? turbulence_ppath_get_name (state->path_selected) : "<not defined>");
 	else 
 		msg ("Called to temporal mask profile=%s with serverName=%s mask on channel creation phase, for connection id=%d (state %p, profile path selected: %p)", 
 		     uri, serverName ? serverName : "", vortex_connection_get_id (connection), state, state->path_selected);
