@@ -40,7 +40,7 @@ configuration_files = \
 EXTRA_DIST = $(configuration_files) test_05_a_passwd test_12b.sql
 
 # replace with bin_PROGRAMS to check performance
-bin_PROGRAMS = test_01  test-websocket-client
+noinst_PROGRAMS = test_01  test-websocket-client
 
 test_01_SOURCES = test_01.c
 test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
