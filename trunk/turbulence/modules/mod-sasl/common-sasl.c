@@ -1263,7 +1263,8 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		/* unlock the mutex */
 		UNLOCK;
 
-		error ("no sasl <auth-db> was found for the provided serverName or no default <auth-db> was found, unable to perform SASL authentication.");
+		error ("no sasl <auth-db> was found for the provided serverName=%s or no default <auth-db> was found, unable to perform SASL authentication.",
+		       serverName ? serverName : "<not defined>");
 		return axl_false;
 	} /* end if */
 

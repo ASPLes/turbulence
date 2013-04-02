@@ -180,12 +180,17 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 
 /* mod_websocket close handler */
 static void mod_websocket_close (TurbulenceCtx * _ctx) {
+	msg ("WEBSOCKET: closing module..");
+
 	/* release module allocated memory */
 	axl_doc_free (mod_websocket_conf);
 	mod_websocket_conf = NULL;
 
 	nopoll_ctx_unref (nopoll_ctx);
 	nopoll_ctx = NULL;
+
+	/* cleanup library */
+	nopoll_cleanup_library ();
 
 	return;
 } /* end mod_websocket_close */

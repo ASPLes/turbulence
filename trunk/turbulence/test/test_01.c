@@ -3875,6 +3875,7 @@ axl_bool test_15 (void) {
 	int               seq_no_expected;
 	int               ppath_id;
 	int               has_tls;
+	int               fix_server_name;
 
 	/* build connection status */
 	conn_status = turbulence_process_connection_status_string (axl_true,
@@ -3883,7 +3884,7 @@ axl_bool test_15 (void) {
 								   NULL,
 								   EncodingNone,
 								   "test-15.server",
-								   17, 42301, 1234, 37, 1, 0);
+								   17, 42301, 1234, 37, 1, 0, 0);
 	turbulence_process_connection_recover_status (conn_status + 1, /* skip initial n used to signal the command */
 						      &handle_start_reply,
 						      &channel_num,
@@ -3895,6 +3896,7 @@ axl_bool test_15 (void) {
 						      &seq_no, 
 						      &seq_no_expected, 
 						      &ppath_id,
+						      &fix_server_name,
 						      &has_tls);
 	/* check data */
 	if (! handle_start_reply) {
@@ -4518,7 +4520,7 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 		vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_HOST, (axlPointer) serverName);
 
 		/* create Websocket connection */
-		msg ("Creating websocket connection (Host: %s): 127.0.0.1:1602", serverName);
+		msg ("Test --: Creating websocket connection (Host: %s): 127.0.0.1:1602", serverName);
 		conn = vortex_websocket_connection_new ("127.0.0.1", "1602", wss_setup, NULL, NULL);
 		if (! vortex_connection_is_ok (conn, axl_false)) {
 			printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
@@ -4549,16 +4551,17 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 	}
 #endif
 
-	printf ("Test 22: TLS activation finished: serverName %s..\n", serverName);
+	printf ("Test --: TLS activation finished: serverName %s..\n", serverName);
 	if (! vortex_connection_is_tlsficated (conn)) {
 		printf ("ERROR (2.1): expected to find proper TLS activation..\n");
 		return axl_false;
 	} /* end if */
 
-	printf ("Test 22: Creating channel to test TLS: serverName %s..\n", serverName);
+	printf ("Test --: Creating channel to test TLS: serverName %s..\n", serverName);
 
 	if (do_sasl_before) {
 		/* check that the channel is not available withtout SASL */
+		printf ("Test --: creating reg-test:profile-22:1 before activating SASL (expecting failure..)\n");
 		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
 		if (channel != NULL) {
 			printf ("ERROR (2.2): expected to NOT find proper channel creation but a proper reference was found..\n");
@@ -4567,6 +4570,7 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 
 		/* ok, do sasl */
 		/* enable SASL auth for current connection */
+		printf ("Test --: activating SASL user auth (aspl:test)\n");
 		vortex_sasl_set_propertie (conn,   VORTEX_SASL_AUTH_ID,  "aspl", NULL);
 		vortex_sasl_set_propertie (conn,   VORTEX_SASL_PASSWORD, "test", NULL);
 		vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
@@ -4889,6 +4893,48 @@ axl_bool test_25 (void) {
 	
 	return axl_true;
 }
+
+axl_bool test_26 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+
+
+	printf ("Test 26: running websocket test..\n");
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_25.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* call to test against test-26.server */
+	printf ("Test 26: checking TLS with: test-25.server..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-25.server", queue, axl_false, axl_true))  
+		return axl_false;   
+
+	printf ("Test 26: complete OK\n"); 
+
+	/* call to test against test-22.server.sasl */
+	printf ("Test 26: checking TLS with: test-25.server.sasl..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-25.server.sasl", queue, axl_true, axl_true)) 
+		return axl_false;   
+
+	printf ("Test 26: complete OK\n");
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+	
+	return axl_true;
+}
 #endif
 
 /** 
@@ -4981,7 +5027,7 @@ int main (int argc, char ** argv)
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_04, test_05, test_05a, test_06, test_06a\n");
 	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
-	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25\n");
+	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
@@ -5158,6 +5204,9 @@ int main (int argc, char ** argv)
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
 	CHECK_TEST("test_25")
 	run_test (test_25, "Test 25: test connecting BEEP over secure websocket (1602) ..");   
+
+	CHECK_TEST("test_26")
+	run_test (test_26, "Test 26: test connecting BEEP over secure websocket (1602) (child support) ..");   
 #endif
 
 	printf ("All tests passed OK!\n");
