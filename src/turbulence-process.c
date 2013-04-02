@@ -503,9 +503,11 @@ char * turbulence_process_connection_status_string (axl_bool          handle_sta
 						    int               seq_no_expected,
 						    int               ppath_id,
 						    int               has_tls,
+						    int               fix_server_name,
+						    /* the following must be the last parameter */
 						    int               skip_conn_recover)
 {
-	return axl_strdup_printf ("n%d;-;%d;-;%s;-;%s;-;%d;-;%s;-;%d;-;%d;-;%d;-;%d;-;%d;-;%d",
+	return axl_strdup_printf ("n%d;-;%d;-;%s;-;%s;-;%d;-;%s;-;%d;-;%d;-;%d;-;%d;-;%d;-;%d;-;%d",
 				  handle_start_reply,
 				  channel_num,
 				  profile ? profile : "",
@@ -516,6 +518,10 @@ char * turbulence_process_connection_status_string (axl_bool          handle_sta
 				  msg_no,
 				  seq_no,
 				  seq_no_expected, has_tls, 
+				  /* indicate the child that the serverName we are passing is the
+				   * serverName that must be setup and do not accept any change about
+				   * this serverName */
+				  fix_server_name,
 				  /* this must be the last always! */
 				  skip_conn_recover);
 }
@@ -548,6 +554,8 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 								   vortex_channel_get_next_expected_seq_no (channel0),
 								   turbulence_ppath_get_id (ppath),
 								   vortex_connection_is_tlsficated (conn),
+								   /* notify if we have to fix the serverName */
+								   axl_cmp (serverName, vortex_connection_get_server_name (conn)),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	
@@ -613,6 +621,8 @@ axl_bool turbulence_process_send_proxy_connection_to_child (TurbulenceCtx    * c
 								   vortex_channel_get_next_expected_seq_no (channel0),
 								   turbulence_ppath_get_id (ppath),
 								   vortex_connection_is_tlsficated (conn),
+								   /* notify if we have to fix the serverName */
+								   axl_cmp (serverName, vortex_connection_get_server_name (conn)),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	
@@ -705,7 +715,8 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		if (! vortex_channel_0_handle_start_msg_reply (TBC_VORTEX_CTX (ctx), conn, channel_num,
 							       profile, profile_content,
 							       encoding, serverName, frame)) {
-			error ("Channel start not accepted on child=%d process, closing conn id=%d..sending error reply",
+			error ("Channel start not (profile=%s) accepted on child=%d process, closing conn id=%d..sending error reply",
+			       profile,
 			       vortex_getpid (), vortex_connection_get_id (conn));
 
 			/* wait here so the error message reaches the
@@ -776,6 +787,7 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 						       int             * seq_no,
 						       int             * seq_no_expected,
 						       int             * ppath_id,
+						       int             * fix_server_name,
 						       int             * has_tls)
 {
 	int iterator = 0;
@@ -840,6 +852,11 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 	iterator           = next;
 	next               = __get_next_field (conn_status, iterator);
 	(*has_tls)         = atoi (conn_status + iterator);
+
+	/* get next position */
+	iterator           = next;
+	next               = __get_next_field (conn_status, iterator);
+	(*fix_server_name) = atoi (conn_status + iterator);
  
 	return;
 }
@@ -863,6 +880,7 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 	int                has_tls            = 0;
 	VortexFrame      * frame              = NULL;
 	VortexChannel    * channel0;
+	int                fix_server_name    = 0;
 
 	/* check connection status after continue */
 	if (conn_status == NULL || strlen (conn_status) == 0) {
@@ -885,16 +903,17 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 						      &seq_no,
 						      &seq_no_expected,
 						      &ppath_id,
-						      &has_tls);
+						      &has_tls,
+						      &fix_server_name);
 
-	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d",
+	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d",
 	     handle_start_reply, channel_num, 
 	     profile ? profile : "", 
 	     profile_content ? profile_content : "", encoding, 
 	     serverName ? serverName : "",
 	     msg_no,
 	     seq_no,
-	     ppath_id, has_tls);
+	     ppath_id, has_tls, fix_server_name);
 
 	/* create a connection and register it on local vortex
 	   reader */
@@ -904,8 +923,16 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 		return NULL;
 	}
 
+	/* notify about the connection received and setup serverName
+	 * if required by the parent server */
 	msg ("CHILD: New connection id=%d (%s:%s) accepted on child pid=%d", 
 	     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn), getpid ());
+	if (fix_server_name && serverName) {
+		msg ("CHILD: setting connection-id=%d serverName=%s as indicated by parent process", 
+		     vortex_connection_get_id (conn), serverName);
+		/* setup server name */
+		vortex_connection_set_server_name (conn, serverName);
+	} /* end if */
 
 	/* set profile path state */
 	__turbulence_ppath_set_state (ctx, conn, ppath_id, serverName);
@@ -913,7 +940,7 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 	/* set TLS status */
 	if (has_tls > 0) {
 		vortex_connection_set_data (conn, "tls-fication:status", INT_TO_PTR (axl_true));
-		msg ("CHILD: flagging the connection has tls enabled (for profile path activation, fake TLS socket), conn-id=%d (%d)",
+		msg ("CHILD: flagging the connection to have tls enabled (for profile path activation, fake TLS socket), conn-id=%d (%d)",
 		     vortex_connection_get_id (conn), vortex_connection_is_tlsficated (conn));
 	} 
 
@@ -1208,6 +1235,8 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 								   vortex_channel_get_next_expected_seq_no (channel0),
 								   turbulence_ppath_get_id (def),
 								   vortex_connection_is_tlsficated (conn),
+								   /* notify if we have to fix the serverName */
+								   axl_cmp (serverName, vortex_connection_get_server_name (conn)),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	if (conn_status == NULL) {
@@ -1232,8 +1261,8 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 	 * 11) conn_status : connection status description to recover it at the child
 	 * 12) conn_mgr_host : host where the connection mgr is locatd (BEEP master<->child link)
 	 * 13) conn_mgr_port : port where the connection mgr is locatd (BEEP master<->child link)
-	 * POSITION INDEX:                       0    1    2    3    4    5    6    7    8    9   10   11   12   13  14*/
- 	child_init_string = axl_strdup_printf ("%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%s;_;%d;_;%s;_;%s;_;%s;_;%d",
+	 * POSITION INDEX:                       0    1    2    3    4    5    6    7    8    9   10   11   12   13*/
+ 	child_init_string = axl_strdup_printf ("%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%s;_;%d;_;%s;_;%s;_;%s",
 					       /* 0  */ client_socket,
 					       /* 1  */ general_log[0],
 					       /* 2  */ general_log[1],
