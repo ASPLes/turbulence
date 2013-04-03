@@ -788,37 +788,28 @@ void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
 {
 	char               buffer[4096];
 	int                bytes_read;
-	/* TurbulenceCtx    * ctx = vortex_connection_get_data (conn, "tbc:ctx"); */
+	TurbulenceCtx    * ctx = vortex_connection_get_data (conn, "tbc:ctx");  
 	/* get socket associated */
 	int                _socket = PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:fd"));
 
 	/* check connection status */
-	if (! vortex_connection_is_ok (conn, axl_false)) {
-		vortex_close_socket (_socket);
+	if (! vortex_connection_is_ok (conn, axl_false)) 
 		return;
-	} /* end if */
 
 	/* check status and close the other connection if found that */
 	bytes_read = vortex_frame_receive_raw (conn, buffer, 4096);
+
 	/* msg ("PROXY-beep: Read %d bytes from conn-id=%d, sending them to child socket=%d (refs: %d, status: %d, errno=%d%s%s)",
 	     bytes_read, vortex_connection_get_id (conn), _socket,
 	     vortex_connection_ref_count (conn), vortex_connection_is_ok (conn, axl_false), errno,
 	     errno != 0 ? " : " : "",
-	     errno != 0 ? strerror (errno) : ""); */
-
-	/* check to shutdown connection */
-	if (errno == 9 || errno == 17) {
-		/* wrn ("PROXY-beep: Found socket read error (socket=%d, errno=%d), shutting down connection id=%d", 
-		   vortex_connection_get_socket (conn), errno, vortex_connection_get_id (conn)); */
-		vortex_connection_shutdown (conn);
-		return;
-	} /* end if */
+	     errno != 0 ? strerror (errno) : "");  */
 
 	if (bytes_read > 0) {
 		/* send content */
 		if (send (_socket, buffer, bytes_read, 0) != bytes_read) {
-			/* wrn ("PROXY-beep: closing conn-id=%d because socket=%d isn't working", 
-			   vortex_connection_get_id (conn), _socket); */
+			wrn ("PROXY-beep: closing conn-id=%d because socket=%d isn't working", 
+			     vortex_connection_get_id (conn), _socket); 
 
 			/* remove preread handler and shutdown */
 			vortex_connection_shutdown (conn);
@@ -851,26 +842,60 @@ axl_bool __turbulence_conn_proxy_reads_loop (TurbulenceLoop * loop,
 
 	/* read content */
 	bytes_read = recv (descriptor, buffer, 4096, 0);
-	/* msg ("PROXY: reading from socket=%d (bytes read=%d, errno=%d)", descriptor, bytes_read, errno); */
-	if (bytes_read <= 0) {
-		/* wrn ("PROXY-fd: child conn close, replicate on associated connection id=%d", vortex_connection_get_id (conn)); */
-		vortex_connection_shutdown (conn);
-		vortex_close_socket (descriptor);
-		return axl_false; /* notify to remove socket */
-	} /* end if */
+	/* msg ("PROXY: reading from socket=%d (bytes read=%d, errno=%d)", descriptor, bytes_read, errno);  */
 
 	/* send content */
-	if (! vortex_frame_send_raw (conn, buffer, bytes_read)) {
-		/* wrn ("PROXY-fd: connection-id=%d is falling (wasn't able to send %d bytes), closing associated socket=%d", vortex_connection_get_id (conn), descriptor); */
-		vortex_close_socket (descriptor);
-		vortex_connection_shutdown (conn);
+	if (bytes_read <= 0 || 
+	    ! vortex_connection_is_ok (conn, axl_false) || 
+	    ! vortex_frame_send_raw (conn, buffer, bytes_read)) {
+
+		/* close socket and unregister it and close associated conn */
+		wrn ("PROXY-fd: connection-id=%d is falling (wasn't able to send %d bytes, is zero?), closing associated socket=%d", 
+		     vortex_connection_get_id (conn), bytes_read, descriptor); 
+
+		/* check connection status to finish it */
+		if (vortex_connection_is_ok (conn, axl_false))
+			vortex_connection_shutdown (conn);
+		
 		return axl_false;
 	} /* end if */
 
-	/* buffer[bytes_read] = 0;
-	   msg ("PROXY-fd: sent content (socket=%d -> beep conn-id=%d): %s", descriptor, vortex_connection_get_id (conn), buffer); */
-
 	return axl_true; /* continue reading that socket */
+}
+
+axlPointer __turbulence_conn_mgr_release_proxy_conn (axlPointer conn)
+{
+	/* call to unref the connection */
+	vortex_connection_unref ((VortexConnection *) conn, "proxy-on-parent");
+	return NULL;
+}
+
+void __turbulence_conn_mgr_proxy_on_close (VortexConnection * conn, axlPointer _loop)
+{
+	TurbulenceLoop  * loop = _loop;
+	/* TurbulenceCtx   * ctx  = turbulence_loop_ctx (loop); */
+
+	/* get socket associated */
+	int               _socket = PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:fd"));	
+
+	/* msg ("PROXY: closing connection-id=%d, refs=%d, socket=%d", 
+	   vortex_connection_get_id (conn), vortex_connection_ref_count (conn), _socket); */
+
+	/* unregister socket from loop watcher */
+	/* msg ("PROXY: calling to unwatch descriptor from loop _socket=%d (finished watching=%d)", _socket, turbulence_loop_watching (loop)); */
+	turbulence_loop_unwatch_descriptor (loop, _socket, axl_true);
+	/* msg ("PROXY: calling to unwatch descriptor from loop _socket=%d (finished watching=%d)", _socket, turbulence_loop_watching (loop)); */
+
+	/* close socket */
+	vortex_close_socket (_socket);
+	
+	/* release and shutdown */
+	vortex_connection_set_preread_handler (conn, NULL);
+
+	/* reduce reference counting but do it out side the close handler */
+	vortex_thread_pool_new_task (CONN_CTX (conn), __turbulence_conn_mgr_release_proxy_conn, conn);
+
+	return;
 }
 
 /** 
@@ -911,11 +936,17 @@ int        turbulence_conn_mgr_setup_proxy_on_parent (TurbulenceCtx * ctx, Vorte
 	 * read on [conn]     -> write in descf[1]
 	 * read on descf[1]   -> write in [conn]
 	 */
-	
 
 	/* init the portable pipe associated to this connection */
 	if (vortex_support_pipe (CONN_CTX (conn), descf) != 0) {
 		error ("Failed to create pipe to proxy connection on the parent, check vortex log to get more details");
+		return -1;
+	} /* end if */
+
+	/* acquire a connection reference to ensure the loop's got it */
+	if (! vortex_connection_ref (conn, "proxy-on-parent")) {
+		vortex_close_socket (descf[0]);
+		vortex_close_socket (descf[1]);
 		return -1;
 	} /* end if */
 
@@ -933,6 +964,9 @@ int        turbulence_conn_mgr_setup_proxy_on_parent (TurbulenceCtx * ctx, Vorte
 	/* now configure preread handlers to pass data from both
 	 * connections */
 	vortex_connection_set_preread_handler (conn, __turbulence_conn_mgr_proxy_reads);
+
+	/* setup connection close to cleanup */
+	vortex_connection_set_on_close_full (conn, __turbulence_conn_mgr_proxy_on_close, ctx->proxy_loop);
 	
 	/* return the socket that will be using the child process */
 	msg ("PROXY: Activated proxy on parent conn-id=%d (socket: %d), parent socket %d <--> child socket: %d", 
