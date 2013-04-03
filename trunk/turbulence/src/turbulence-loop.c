@@ -82,6 +82,12 @@ typedef struct _TurbulenceLoopDescriptor {
 	/* second pointer associated to the descriptor and to be
 	   passed to the handler */
 	axlPointer           ptr2;
+
+	/* if set to axl_true, it is a request to remove this
+	 * descriptor.
+	 */
+	axl_bool             remove;
+	VortexAsyncQueue   * queue_reply;
 } TurbulenceLoopDescriptor;
 
 axl_bool __turbulence_loop_read_first (TurbulenceLoop * loop)
@@ -102,7 +108,7 @@ axl_bool __turbulence_loop_read_first (TurbulenceLoop * loop)
 
 axl_bool __turbulence_loop_read_pending (TurbulenceLoop * loop)
 {
-	TurbulenceLoopDescriptor * loop_descriptor;
+	TurbulenceLoopDescriptor * loop_descriptor, * aux;
 
 	while (axl_true) {
 		/* check if there are no pending items */
@@ -115,6 +121,31 @@ axl_bool __turbulence_loop_read_pending (TurbulenceLoop * loop)
 		/* check item received: if null received terminate loop */
 		if (PTR_TO_INT (loop_descriptor) == -4)
 			return axl_false;
+
+		/* support for removing loop descriptor */
+		if (loop_descriptor->remove) {
+			/* reset cursor to the first position */
+			axl_list_cursor_first (loop->cursor);
+			while (axl_list_cursor_has_item (loop->cursor)) {
+				/* get current descriptor */
+				aux = axl_list_cursor_get (loop->cursor);
+				if (aux && aux->descriptor == loop_descriptor->descriptor) {
+					/* element found, remove item */
+					axl_list_cursor_remove (loop->cursor);
+					break;
+				} /* end if */
+
+				/* next cursor */
+				axl_list_cursor_next (loop->cursor);
+			} /* end if */
+
+			/* notify caller if he is waiting */
+			if (loop_descriptor->queue_reply)
+				vortex_async_queue_push (loop_descriptor->queue_reply, INT_TO_PTR (axl_true));
+
+			axl_free (loop_descriptor);
+			continue;
+		} /* end if */
 
 		/* register loop_descriptor on the list */
 		axl_list_append (loop->list, loop_descriptor);       
@@ -286,9 +317,9 @@ TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx)
 	TurbulenceLoop * loop;
 
 	/* create loop instance */
-	loop        = axl_new (TurbulenceLoop, 1);
-	loop->ctx   = ctx;
-	loop->queue = vortex_async_queue_new ();
+	loop              = axl_new (TurbulenceLoop, 1);
+	loop->ctx         = ctx;
+	loop->queue       = vortex_async_queue_new ();
 
 	/* crear manager */
 	if (! vortex_thread_create (&loop->thread, 
@@ -302,6 +333,22 @@ TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx)
 
 	/* return loop created */
 	return loop;
+}
+
+/** 
+ * @brief Allows to get the \ref TurbulenceCtx associated to the provided \ref TurbulenceLoop
+ *
+ * @param loop The loop where the context is being queried.
+ *
+ * @return A reference to the context or NULL if it fails.
+ */
+TurbulenceCtx  * turbulence_loop_ctx    (TurbulenceLoop * loop)
+{
+	if (loop == NULL)
+		return NULL;
+
+	/* report current ctx associated */
+	return loop->ctx;
 }
 
 /** 
@@ -371,6 +418,69 @@ void             turbulence_loop_watch_descriptor (TurbulenceLoop        * loop,
 	vortex_async_queue_push (loop->queue, loop_descriptor);
 
 	return;
+}
+
+/** 
+ * @brief Allows to unwatch the provided descriptor from the provided
+ * loop.
+ *
+ * @param loop The loop where the descriptor will be unwatched (if found).
+ *
+ * @param descriptor The descriptor to be unwatched from the list.
+ *
+ * @param wait_until_unwatched If axl_true, the caller will be blocked
+ * until the descriptor is removed from the waiting list, otherwise,
+ * the unwatch operation will progress without blocking.
+ *
+ */
+void             turbulence_loop_unwatch_descriptor (TurbulenceLoop        * loop,
+						     int                     descriptor,
+						     axl_bool                wait_until_unwatched)
+{
+	TurbulenceLoopDescriptor * loop_descriptor;
+	VortexAsyncQueue         * queue = NULL;
+
+	v_return_if_fail (loop);
+
+	/* build loop descriptor */
+	loop_descriptor = axl_new (TurbulenceLoopDescriptor, 1);
+	
+	/* configure descriptor and flag we want it removed */
+	loop_descriptor->descriptor = descriptor; 
+	loop_descriptor->remove     = axl_true;
+
+	/* user requested to wait until removed descriptor, so create wait reply */
+	if (wait_until_unwatched) {
+		queue = vortex_async_queue_new ();
+		loop_descriptor->queue_reply = queue;
+	} /* end if */
+
+	/* notify loop_descriptor */
+	vortex_async_queue_push (loop->queue, loop_descriptor);
+
+	if (queue && wait_until_unwatched) {
+		/* wait for reply */
+		vortex_async_queue_pop (queue);
+		vortex_async_queue_unref (queue);
+	} /* end if */
+
+	return;
+}
+
+/** 
+ * @brief Allows to get how many descriptors are being watched on the
+ * provided loop.
+ *
+ * @param loop The loop that is queried about the number of descriptor watched.
+ *
+ * @return The number of descriptors watched. In case of failure 0 is returned.
+ */
+int              turbulence_loop_watching (TurbulenceLoop * loop)
+{
+	if (loop == NULL)
+		return 0;
+	/* return the current count */
+	return axl_list_length (loop->list);
 }
 
 /** 

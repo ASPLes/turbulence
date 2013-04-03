@@ -46,6 +46,8 @@
 
 TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx);
 
+TurbulenceCtx  * turbulence_loop_ctx    (TurbulenceLoop * loop);
+
 void             turbulence_loop_set_read_handler (TurbulenceLoop        * loop,
 						   TurbulenceLoopOnRead    on_read,
 						   axlPointer              ptr,
@@ -56,6 +58,12 @@ void             turbulence_loop_watch_descriptor (TurbulenceLoop        * loop,
 						   TurbulenceLoopOnRead    on_read,
 						   axlPointer              ptr,
 						   axlPointer              ptr2);
+
+void             turbulence_loop_unwatch_descriptor (TurbulenceLoop        * loop,
+						     int                     descriptor,
+						     axl_bool                wait_until_unwatched);
+
+int              turbulence_loop_watching (TurbulenceLoop * loop);
 
 void             turbulence_loop_close (TurbulenceLoop * loop, 
 					 axl_bool        notify);
