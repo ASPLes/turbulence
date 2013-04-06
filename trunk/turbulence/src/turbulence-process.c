@@ -1390,6 +1390,16 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 	TBC_PROCESS_LOCK_CHILD ();
 
+	/* recheck again if we are exiting */
+	if (ctx->is_exiting) {
+		/* unlock */
+		TBC_PROCESS_UNLOCK_CHILD ();
+
+		error ("Unable to create child process, turbulence is finishing..");
+		vortex_connection_shutdown (conn);
+		return;
+	} /* end if */
+
 	/* enable SIGCHLD handling */
 	turbulence_signal_sigchld (ctx, axl_true);
 
