@@ -120,6 +120,19 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 		nopoll_log_color_enable (nopoll_ctx, nopoll_true);
 	} /* end if */
 
+	/* read all certificates */
+	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/certificates/cert");
+	while (node) {
+		if (! nopoll_ctx_set_certificate (nopoll_ctx, ATTR_VALUE (node, "serverName"), ATTR_VALUE (node, "cert"), ATTR_VALUE (node, "key"), NULL))
+			error ("Failed to load certificate associated to serverName=%s, cert=%s, key=%s",
+			       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "",
+			       ATTR_VALUE (node, "cert") ? ATTR_VALUE (node, "cert") : "",
+			       ATTR_VALUE (node, "key") ? ATTR_VALUE (node, "key") : "");
+
+		/* next certificate */
+		node = axl_node_get_next_called (node, "cert");
+	} /* end if */
+
 	/* now for each listener start it */
 	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/ports/port");
 	while (node) {
@@ -129,19 +142,9 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 		if (! port) 
 			continue;
 
-		/* check if tls was requested */
-		cert = NULL;
-		key  = NULL;
-		if (enable_tls) {
-			if (! HAS_ATTR (node, "cert") || ! HAS_ATTR (node, "key")) {
-				error ("Unable to activate secure web socket server listesner, failed to get valid certificates to set it up");
-				return axl_false;
-			} /* end if */
-
-			/* get cert and key */
-			cert = ATTR_VALUE (node, "cert");
-			key  = ATTR_VALUE (node, "key");
-		} /* end if */
+		/* get cert and key */
+		cert = ATTR_VALUE (node, "cert");
+		key  = ATTR_VALUE (node, "key");
 
 		msg ("Websocket (noPoll): attempting to starting listener port on %s, enable-tls=%d%s%s%s%s", 
 		     port, enable_tls,
@@ -155,7 +158,8 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 			nopoll_listener = nopoll_listener_tls_new (nopoll_ctx, "0.0.0.0", port); 
 
 			/* set listener certificate */
-			nopoll_listener_set_certificate (nopoll_listener, cert, key, NULL);
+			if (cert && key)
+				nopoll_listener_set_certificate (nopoll_listener, cert, key, NULL);
 		} else
 			nopoll_listener = nopoll_listener_new (nopoll_ctx, "0.0.0.0", port);
 
@@ -174,6 +178,16 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 
 	/* install post action function */
 	vortex_connection_set_connection_actions (TBC_VORTEX_CTX (_ctx), CONNECTION_STAGE_POST_CREATED, mod_websocket_post_configuration, _ctx);
+
+	/* check and install port share config */
+	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/general-settings/port-sharing");
+	if (HAS_ATTR_VALUE (node, "enable", "yes")) {
+		/* call to enable port sharing */
+		if (! vortex_websocket_listener_port_sharing (TBC_VORTEX_CTX (_ctx), nopoll_ctx, NULL, NULL))
+			error ("Unable to activate PORT-SHARE configuration, failed to share BEEP and BEEP over WebSocket");
+		else
+			msg ("WEB-SOCKET: enable transport detection -> port sharing, ok");
+	} /* end if */
 
 	return axl_true;
 } /* end mod_websocket_init */
