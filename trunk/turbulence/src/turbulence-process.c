@@ -1368,6 +1368,12 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* get current proxy on parent setting */
 	axl_bool           proxy_on_parent = turbulence_conn_mgr_proxy_on_parent (conn);
 
+	if (ctx->is_exiting) {
+		error ("Unable to create child process, turbulence is finishing..");
+		vortex_connection_shutdown (conn);
+		return;
+	} /* end if */
+
 	/* check if we are main process (only main process can create
 	 * childs, at least for now) */
 	if (ctx->child) {
