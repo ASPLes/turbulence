@@ -80,6 +80,15 @@ Depends: turbulence-server (>= ${Source-Version}),
 Description: TLS profile implementation for Turbulence
   Server side TLS module for Turbulence. BEEP session security.
 
+Package: libturbulence-mod-websocket
+Section: libs
+Architecture: any
+Depends: turbulence-server (>= ${Source-Version}), 
+  libvortex-websocket-1.1 (>= 1.1.4)
+Description: BEEP over WebSocket support for Turbulence
+  Administrative module and integration support for libvortex-websocket-1.1
+  into Turbulence.
+
 Package: libturbulence-mod-python
 Section: libs
 Architecture: any
