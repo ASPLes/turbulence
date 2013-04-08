@@ -178,12 +178,16 @@ void              turbulence_child_unref (TurbulenceChild * child)
 #endif
 
 	/* finish child connection */
-	msg ("PARENT: Finishing child connection manager id=%d (refs: %d, role %d)", vortex_connection_get_id (child->conn_mgr), 
-	     vortex_connection_ref_count (child->conn_mgr), vortex_connection_get_role (child->conn_mgr));
-	
+	msg ("PARENT: Finishing child connection manager id=%d (refs: %d, role %d)", 
+	     vortex_connection_get_id (child->conn_mgr), 
+	     vortex_connection_ref_count (child->conn_mgr), 
+	     vortex_connection_get_role (child->conn_mgr));
+
 	/* release reference if it is either initiator or listener */
-	vortex_connection_shutdown (child->conn_mgr);
-	vortex_connection_unref (child->conn_mgr, "free data"); 
+	if (vortex_connection_get_role (child->conn_mgr) == VortexRoleListener) {
+		vortex_connection_shutdown (child->conn_mgr);
+		vortex_connection_unref (child->conn_mgr, "free data"); 
+	} /* end if */
 
 	/* finish child conn loop */
 	turbulence_loop_close (child->child_conn_loop, axl_true);

@@ -1222,6 +1222,13 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 		return axl_false;
 	}
 
+#if defined(__TURBULENCE_ENABLE_DEBUG_CODE__)
+	if (serverName && axl_cmp (serverName, "dk534jd.fail.aspl.es")) {
+		error ("PARENT: found serverName=%s that must trigger failure..", serverName);
+		return axl_false;
+	} /* end if */
+#endif
+
 	/* build connection status string */
 	channel0    = vortex_connection_get_channel (conn, 0);
 	conn_status = turbulence_process_connection_status_string (handle_start_reply, 
