@@ -221,7 +221,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 					/* implement a wait operation */
 					turbulence_sleep (ctx, delay);
 				} else {
-					error ("%s: Unexpected error found while creating child control connection: (code: %d) %s", 
+					error ("%s: Unexpected error found while creating child control connection: (errno: %d) %s", 
 					       is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error ());
 					break;
 				} /* end if */
@@ -292,6 +292,7 @@ axl_bool __turbulence_process_create_child_connection (TurbulenceChild * child)
 {
 	TurbulenceCtx    * ctx = child->ctx;
 	struct sockaddr_un socket_name = {0};
+	int    iterator = 0;
 
 	/* configure socket name to connect to (or to bind to) */
 	memset (&socket_name, 0, sizeof (struct sockaddr_un));
@@ -301,7 +302,23 @@ axl_bool __turbulence_process_create_child_connection (TurbulenceChild * child)
 	/* create the client connection making the child to do the
 	   bind (creating local file socket using child process
 	   permissions)  */
-	child->child_connection = __turbulence_process_local_unix_fd (child->socket_control_path, axl_true, ctx);
+	turbulence_sleep (ctx, 1000);
+	while (iterator < 25) {
+	    /* create child connection */
+	    child->child_connection = __turbulence_process_local_unix_fd (child->socket_control_path, axl_true, ctx);
+	    /* check if the file exists before returning error returned
+	       by previous function */
+	    if (vortex_support_file_test (child->socket_control_path, FILE_EXISTS)) 
+	      return (child->child_connection > 0);
+	 
+	    /* next position but wait a bit */
+	    iterator++;
+	    
+	    wrn ("PARENT: child is still not ready, waiting a bit...");
+	    turbulence_sleep (ctx, 200000);
+	}
+	  
+
 	return (child->child_connection > 0);
 }
 
