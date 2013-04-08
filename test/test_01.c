@@ -2611,6 +2611,49 @@ axl_bool test_10_d (void) {
 	return axl_true;
 }
 
+axl_bool test_10_e (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_10e.conf")) 
+		return axl_false;
+
+	/* register here all profiles required by tests */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-1");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+
+	/* create connection to local server */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "dk534jd.fail.aspl.es", VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* check to create profile 2 channel */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+	if (channel != NULL) {
+		printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
+		return axl_false;
+	} /* end if */
+
+	/* close the connection and check child process */
+	printf ("Test 10-e: closing connection and checking childs..\n");
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_10_a (void) {
 
 	VortexCtx        * vCtx;
@@ -5025,7 +5068,7 @@ int main (int argc, char ** argv)
 	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_04, test_05, test_05a, test_06, test_06a\n");
-	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_11, test_12,\n");
+	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_10e, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
 	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26\n");
 	printf ("** Report bugs to:\n**\n");
@@ -5132,6 +5175,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_10d")
 	run_test (test_10_d, "Test 10-d: unlock turbulence conn-mgr while broadcasing");
+
+	CHECK_TEST("test_10e")
+        run_test (test_10_e, "Test 10-e: test child failing at creation time");
 
 	CHECK_TEST("test_11")
 	run_test (test_11, "Test 11: Check turbulence profile path selected");
