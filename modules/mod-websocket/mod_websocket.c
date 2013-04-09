@@ -78,11 +78,67 @@ int mod_websocket_post_configuration (VortexCtx               * _ctx,
 	return 1;
 }
 
+void mod_websocket_import_certificate (noPollCtx * nopoll_ctx, axlNode * node)
+{
+        if (! nopoll_ctx_set_certificate (nopoll_ctx, ATTR_VALUE (node, "serverName"), ATTR_VALUE (node, "cert"), ATTR_VALUE (node, "key"), NULL)) {
+	        error ("Failed to load certificate associated to serverName=%s, cert=%s, key=%s",
+		       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "",
+		       ATTR_VALUE (node, "cert") ? ATTR_VALUE (node, "cert") : "",
+		       ATTR_VALUE (node, "key") ? ATTR_VALUE (node, "key") : "");
+	} else {
+	        msg ("Registered certificate serverName=%s, cert=%s, key=%s",
+		     ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "",
+		     ATTR_VALUE (node, "cert") ? ATTR_VALUE (node, "cert") : "",
+		     ATTR_VALUE (node, "key") ? ATTR_VALUE (node, "key") : "");
+	} /* end if */  
+
+	return;
+}
+
+void mod_websocket_load_certificate_locations (noPollCtx * nopoll_ctx) {
+        axlNode    * node;
+	axlDoc     * doc;
+	axlError   * err = NULL;
+	char       * path;
+
+	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/certificates/cert");
+	while (node) {
+	        /* load certificate */
+	        mod_websocket_import_certificate (nopoll_ctx, node);
+
+		/* next certificate */
+		node = axl_node_get_next_called (node, "cert");
+	} /* end if */
+
+	/* check if we have to import certificates from mod tls configuration */
+	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/certificates");
+	if (HAS_ATTR_VALUE (node, "import-mod-tls-certs", "yes")) {
+	  	path = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "tls", "tls.conf", NULL);
+                msg ("WEB-SOCKET: import certificates defined at mod-tls (%s)", path);
+	        doc  = axl_doc_parse_from_file (path, &err);
+
+		/* now, for each certificate, import it */
+		node = axl_doc_get (doc, "/mod-tls/certificate-select");
+		while (node) {
+		        /* load certificate */
+		        mod_websocket_import_certificate (nopoll_ctx, node);
+
+		        /* next node */
+		        node = axl_node_get_next_called (node, "certificate-select");
+		}
+		axl_free (path);
+		axl_doc_free (doc);
+	} /* end if */
+
+	return;
+}
+
 /* mod_websocket init handler */
 static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	axlNode    * node;
 	const char * port;
 	axl_bool     enable_tls;
+
 
 	/* cert and key path to be used on each particular host */
 	const char * cert;
@@ -121,17 +177,7 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	} /* end if */
 
 	/* read all certificates */
-	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/certificates/cert");
-	while (node) {
-		if (! nopoll_ctx_set_certificate (nopoll_ctx, ATTR_VALUE (node, "serverName"), ATTR_VALUE (node, "cert"), ATTR_VALUE (node, "key"), NULL))
-			error ("Failed to load certificate associated to serverName=%s, cert=%s, key=%s",
-			       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "",
-			       ATTR_VALUE (node, "cert") ? ATTR_VALUE (node, "cert") : "",
-			       ATTR_VALUE (node, "key") ? ATTR_VALUE (node, "key") : "");
-
-		/* next certificate */
-		node = axl_node_get_next_called (node, "cert");
-	} /* end if */
+	mod_websocket_load_certificate_locations (nopoll_ctx);
 
 	/* now for each listener start it */
 	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/ports/port");
