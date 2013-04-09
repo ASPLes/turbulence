@@ -4967,6 +4967,10 @@ axl_bool test_26 (void) {
 		return axl_false;   
 
 	printf ("Test 26: complete OK\n"); 
+	/* turbulence_log_enable (tCtx, axl_true);
+	turbulence_color_log_enable (tCtx, axl_true);
+	vortex_log_enable (vCtx, axl_true);
+	vortex_color_log_enable (vCtx, axl_true); */
 
 	/* call to test against test-22.server.sasl */
 	printf ("Test 26: checking TLS with: test-25.server.sasl..\n");
