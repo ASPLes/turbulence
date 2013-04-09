@@ -306,11 +306,15 @@ axl_bool __turbulence_process_create_child_connection (TurbulenceChild * child)
 	while (iterator < 25) {
 	    /* create child connection */
 	    child->child_connection = __turbulence_process_local_unix_fd (child->socket_control_path, axl_true, ctx);
+	    /* check child creation status */
+	    if (child->child_connection > 0)
+	         return axl_true;
+
 	    /* check if the file exists before returning error returned
 	       by previous function */
-	    if (vortex_support_file_test (child->socket_control_path, FILE_EXISTS)) 
-	      return (child->child_connection > 0);
-	 
+	    if (! vortex_support_file_test (child->socket_control_path, FILE_EXISTS)) 
+	         wrn ("PARENT: child still not ready, socket control path isn't found: %s", child->socket_control_path);
+
 	    /* next position but wait a bit */
 	    iterator++;
 	    

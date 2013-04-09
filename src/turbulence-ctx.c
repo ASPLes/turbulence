@@ -342,12 +342,6 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	/* release wait queue */
 	vortex_async_queue_unref (ctx->wait_queue);
 
-	/* now modules and vortex library is stopped, terminate
-	 * modules unloading them. This will allow having usable code
-	 * mapped into modules address which is usable until the last
-	 * time.  */
-	turbulence_module_cleanup (ctx); 
-
 	/* include a error warning */
 	if (ctx->vortex_ctx) {
 		if (vortex_ctx_ref_count (ctx->vortex_ctx) <= 0) 
@@ -358,6 +352,12 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 			vortex_ctx_unref (&(ctx->vortex_ctx));
 		}
 	}
+
+	/* now modules and vortex library is stopped, terminate
+	 * modules unloading them. This will allow having usable code
+	 * mapped into modules address which is usable until the last
+	 * time.  */
+	turbulence_module_cleanup (ctx); 
 
 	/* release the node itself */
 	msg ("Finishing TurbulenceCtx (%p)", ctx);
