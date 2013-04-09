@@ -471,6 +471,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 		} else {
 			error ("Received empty control message from parent (status: %d), unable to receive socket (code %d): %s",
 			       status, errno, vortex_errno_get_last_error ());
+			error ("Reached socket process limit?");
 		} /* end if */
 
 		(*_socket) = -1;

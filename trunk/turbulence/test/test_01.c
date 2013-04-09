@@ -4166,6 +4166,11 @@ axl_bool test_17 (void) {
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
 
+	/* turbulence_log_enable (tCtx, axl_true);
+	  turbulence_color_log_enable (tCtx, axl_true);  */
+	/* vortex_log_enable (vCtx, axl_true);
+	vortex_log2_enable (vCtx, axl_true);
+	vortex_color_log_enable (vCtx, axl_true); */
 	
 	printf ("Test 17: creating %d connections with an opened channel..\n", connections);
 	iterator = 0;
