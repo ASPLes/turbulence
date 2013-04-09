@@ -1339,6 +1339,12 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 				break;
 			} /* end if */
 		}
+
+		/* if fails, check if the parent process is finishing to avoid waiting */
+		if (ctx->is_exiting) {
+			axl_free (aux);
+			return axl_false;
+		}
 	} /* end while */
 	axl_free (aux);
 
