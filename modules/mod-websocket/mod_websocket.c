@@ -133,6 +133,20 @@ void mod_websocket_load_certificate_locations (noPollCtx * nopoll_ctx) {
 	return;
 }
 
+void __mod_websocket_check_and_enable_port_sharing (TurbulenceCtx * _ctx, axlDoc * mod_websocket_conf)
+{
+	axlNode * node = axl_doc_get (mod_websocket_conf, "/mod-websocket/general-settings/port-sharing");
+	if (HAS_ATTR_VALUE (node, "enable", "yes")) {
+		/* call to enable port sharing */
+		if (! vortex_websocket_listener_port_sharing (TBC_VORTEX_CTX (_ctx), nopoll_ctx, NULL, NULL))
+			error ("Unable to activate PORT-SHARE configuration, failed to share BEEP and BEEP over WebSocket");
+		else
+			msg ("WEB-SOCKET: enable transport detection -> port sharing, ok");
+	} /* end if */
+
+	return;
+}
+
 /* mod_websocket init handler */
 static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	axlNode    * node;
@@ -160,6 +174,9 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	 * initialization */
 	if (turbulence_ctx_is_child (ctx)) 
 		return axl_true;
+
+	/* check and install port share config (even in child) */
+	__mod_websocket_check_and_enable_port_sharing (_ctx, mod_websocket_conf);
 
 	/* ok, get current configuration and start listener ports
 	 * according to its configuration */
@@ -225,16 +242,6 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	/* install post action function */
 	vortex_connection_set_connection_actions (TBC_VORTEX_CTX (_ctx), CONNECTION_STAGE_POST_CREATED, mod_websocket_post_configuration, _ctx);
 
-	/* check and install port share config */
-	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/general-settings/port-sharing");
-	if (HAS_ATTR_VALUE (node, "enable", "yes")) {
-		/* call to enable port sharing */
-		if (! vortex_websocket_listener_port_sharing (TBC_VORTEX_CTX (_ctx), nopoll_ctx, NULL, NULL))
-			error ("Unable to activate PORT-SHARE configuration, failed to share BEEP and BEEP over WebSocket");
-		else
-			msg ("WEB-SOCKET: enable transport detection -> port sharing, ok");
-	} /* end if */
-
 	return axl_true;
 } /* end mod_websocket_init */
 
@@ -270,6 +277,7 @@ static void mod_websocket_unload (TurbulenceCtx * _ctx) {
 
 /* mod_websocket ppath-selected handler */
 static axl_bool mod_websocket_ppath_selected (TurbulenceCtx * _ctx, TurbulencePPathDef * ppath_selected, VortexConnection * conn) {
+	msg ("WEBSOCKET: profile path selected for conn-id=%d", vortex_connection_get_id (conn));
 	return axl_true;
 	
 } /* end mod_websocket_ppath_selected */

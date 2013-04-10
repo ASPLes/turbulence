@@ -4987,6 +4987,48 @@ axl_bool test_26 (void) {
 	
 	return axl_true;
 }
+
+axl_bool test_27 (void) {
+
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+
+	printf ("Test 27: running websocket port sharing detected on child..\n");
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_27.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* call to test against test-26.server */
+	printf ("Test 26: checking TLS with: test-25.server..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-25.server", queue, axl_false, axl_true))  
+		return axl_false;   
+
+	printf ("Test 26: complete OK\n");
+
+	/*	printf ("Test 26: checking TLS with: test-25.server..\n");
+	if (! test_22_operations (tCtx, vCtx, "test-25.server", queue, axl_false, axl_true))  
+		return axl_false;   
+
+		printf ("Test 26: complete OK\n"); */
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+	
+	return axl_true;
+}
+
 #endif
 
 /** 
@@ -5262,6 +5304,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_26")
 	run_test (test_26, "Test 26: test connecting BEEP over secure websocket (1602) (child support) ..");   
+
+	CHECK_TEST("test_27")
+	run_test (test_27, "Test 27: Checking port sharing on child process..");   
 #endif
 
 	printf ("All tests passed OK!\n");

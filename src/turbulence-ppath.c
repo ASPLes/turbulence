@@ -662,7 +662,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 		   still BEEP listener greetings wasn't sent so we can
 		   only select if all profile path references to src=
 		   and dst= */
-		msg ("Profile path selection called with on_connect signled and all_rules_address_based:%d", 
+		msg ("Profile path selection called at <on connect> (before any BEEP exchange) signaled and all_rules_address_based:%d", 
 		     ctx->all_rules_address_based);
 		if (! ctx->all_rules_address_based)  {
 			/* configure a profile mask to select an appropriate ppath state in the next channel
