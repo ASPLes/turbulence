@@ -34,7 +34,9 @@ configuration_files = \
 	test_19.conf  \
 	test_20.conf  \
 	test_22.conf  \
-	test_23.conf  
+	test_23.conf  \
+	test_25.conf  \
+	test_27.conf
 
 
 
