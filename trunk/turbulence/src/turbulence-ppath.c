@@ -622,6 +622,31 @@ void                 turbulence_ppath_add_profile_attr_alias (TurbulenceCtx * ct
 }
 
 /** 
+ * @internal Function used to flag the connection that "we still didn't
+ * agree about the profile path to be used ;-)".
+ */
+void __turbulence_ppath_still_not_selected (TurbulenceCtx * ctx, VortexConnection * connection)
+{
+	TurbulencePPathState * state;
+
+	/* create state object */
+	state                = axl_new (TurbulencePPathState, 1);
+	if (state == NULL)
+		return;
+
+	state->path_selected = NULL; /* still no profile path selected */
+	state->ctx           = ctx;
+	vortex_connection_set_data_full (connection, 
+					 /* the key and its associated value */
+					 TURBULENCE_PPATH_STATE, state,
+					 /* destroy functions */
+					 NULL, __turbulence_ppath_state_free);
+	vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask_temporal, state);
+
+	return;
+}
+	
+/** 
  * @internal Function that allows to select a profile path for a
  * connection. The variable on_connect signals if the connection
  * notified is on server accept or because client greetings was
@@ -667,15 +692,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 		if (! ctx->all_rules_address_based)  {
 			/* configure a profile mask to select an appropriate ppath state in the next channel
 			   start request where the remote BEEP peer has a chance to select a serverName value */
-			state                = axl_new (TurbulencePPathState, 1);
-			state->path_selected = NULL; /* still no profile path selected */
-			state->ctx           = ctx;
-			vortex_connection_set_data_full (connection, 
-							 /* the key and its associated value */
-							 TURBULENCE_PPATH_STATE, state,
-							 /* destroy functions */
-							 NULL, __turbulence_ppath_state_free);
-			vortex_connection_set_profile_mask (connection, __turbulence_ppath_mask_temporal, state);
+			__turbulence_ppath_still_not_selected (ctx, connection);
 
 			return axl_true; /* signal no profile path still selected */
 		} /* end if */
@@ -686,15 +703,15 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	iterator = 0;
 	src      = vortex_connection_get_host (connection);
 	dst      = vortex_connection_get_local_addr (connection);
-	msg ("Checking %-30s %-30s Profile path match for conn-id=%d", "Ppath. serveName", "requested serverName", 
+	msg ("Checking: %-30s %-30s Profile path match for conn-id=%d", "Ppath. serveName", "requested serverName", 
 	     vortex_connection_get_id (connection));
 	while (ctx->paths->items[iterator] != NULL) {
 		/* get the profile path def */
 		def = ctx->paths->items[iterator];
 
-		msg ("checking %-30s %-30s %s",
-		     def->serverName ? __TBC_EXP_STR__(def->serverName) : "",
-		     serverName ? serverName : "",
+		msg ("checking: %-30s %-30s %s",
+		     def->serverName ? __TBC_EXP_STR__(def->serverName) : "''",
+		     serverName && strlen (serverName) > 0 ? serverName : "''",
 		     def->path_name  ? def->path_name : "(no path name defined)");
 		     
 
@@ -733,6 +750,16 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 		error ("no profile path def match, rejecting connection: id=%d, src=%s", 
 		       vortex_connection_get_id (connection), src);
 		return axl_false;
+	} /* end if */
+
+	if (on_connect && def->separate) {
+		if (axl_cmp (__TBC_EXP_STR__(def->serverName), ".*") && (serverName == NULL || strlen (serverName) == 0)) {
+			wrn ("  turbulence profile path selected with serverName is a wild card and serverName received isn't defined, lets wait for next profile path selection");
+			/* configure a profile mask to select an appropriate ppath state in the next channel
+			   start request where the remote BEEP peer has a chance to select a serverName value */
+			__turbulence_ppath_still_not_selected (ctx, connection);
+			return axl_true;
+		} /* end if */
 	} /* end if */
 
 	/* check if this function was called to select a path with an

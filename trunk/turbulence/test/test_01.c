@@ -1377,8 +1377,8 @@ axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * valu
 axl_bool test_05_a (void) {
 	int value;
 	TurbulenceCtx * ctx = turbulence_ctx_new ();
-	turbulence_log_enable       (ctx, axl_true);
-	turbulence_color_log_enable (ctx, axl_true);
+	/* turbulence_log_enable       (ctx, axl_true);
+	   turbulence_color_log_enable (ctx, axl_true); */
 
 	/* check to load and check user ids */
 	if (! __turbulence_get_system_id_info (ctx, "libuuid", &value, "test_05_a_passwd"))
@@ -4159,12 +4159,18 @@ axl_bool test_17 (void) {
 	VortexThread       thread, thread2, thread3, thread4;
 
 	/* FIRST PART: init vortex and turbulence */
-	if (! test_common_init (&vCtx, &tCtx, "test_17.conf")) 
+	if (! test_common_init (&vCtx, &tCtx, "test_17.conf")) {
+		printf ("ERROR: failed to init Turbulence Engine or Vortex Engine..\n");
 		return axl_false;
+	}
 
 	/* run configuration */
-	if (! turbulence_run_config (tCtx)) 
+	/* turbulence_log_enable (tCtx, axl_true);
+	   turbulence_color_log_enable (tCtx, axl_true);   */
+	if (! turbulence_run_config (tCtx)) {
+		printf ("ERROR: failed to start running Turbulence Engine..\n");
 		return axl_false;
+	}
 
 	/* turbulence_log_enable (tCtx, axl_true);
 	  turbulence_color_log_enable (tCtx, axl_true);  */
@@ -4555,21 +4561,46 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 	VortexFrame      * frame;
 	VortexStatus       status;
 	char             * status_message = NULL;
+	int                iterator;
 
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
 	VortexWebsocketSetup * wss_setup;
 
 	if (use_ws) {
-		/* connect and enable TLS through websocket protocol */
-		wss_setup = vortex_websocket_setup_new (vCtx);
-		/* setup we want TLS enabled */
-		vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_TLS, INT_TO_PTR (axl_true));
-		/* setup Host: header to indicate the profile path or application we want */
-		vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_HOST, (axlPointer) serverName);
-
 		/* create Websocket connection */
 		msg ("Test --: Creating websocket connection (Host: %s): 127.0.0.1:1602", serverName);
-		conn = vortex_websocket_connection_new ("127.0.0.1", "1602", wss_setup, NULL, NULL);
+		iterator = 0;
+		while (iterator < 2) {
+
+			/* connect and enable TLS through websocket protocol */
+			wss_setup = vortex_websocket_setup_new (vCtx);
+			/* setup we want TLS enabled */
+			vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_TLS, INT_TO_PTR (axl_true));
+			/* setup Host: header to indicate the profile path or application we want */
+			vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_HOST, (axlPointer) serverName);
+
+			if (iterator > 0) {
+				/* enable log at nopoll */
+				vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_ENABLE_DEBUG, INT_TO_PTR (axl_true));
+
+				/* enable log */
+				vortex_log_enable (vCtx, axl_true);
+				vortex_color_log_enable (vCtx, axl_true); 
+			} /* end if */
+
+			/* create new connection */
+			conn = vortex_websocket_connection_new ("127.0.0.1", "1602", wss_setup, NULL, NULL);
+			if (vortex_connection_is_ok (conn, axl_false))
+				break;
+			/* release connection */
+			vortex_connection_close (conn);
+
+			iterator++;
+			turbulence_sleep (ctx, 10000);
+			printf ("Test --: ...failed to create Web-Socket connection, trying again..\n");
+		} /* end while */
+		
+		/* check connection again */
 		if (! vortex_connection_is_ok (conn, axl_false)) {
 			printf ("ERROR (1): expected proper connection creation (%d, %s)\n", 
 				vortex_connection_get_status (conn), vortex_connection_get_message (conn));
@@ -4901,6 +4932,35 @@ axl_bool test_24 (void) {
 }
 
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
+axl_bool test_websocket_listener_disabled (const char * server, const char * port)
+{
+	VortexCtx      * ctx = vortex_ctx_new ();
+	VORTEX_SOCKET    _socket;
+	int              tries;
+
+	while (axl_true) {
+		_socket = vortex_connection_sock_connect (ctx, server, port, NULL, NULL);
+		if (_socket <= 0)
+			break;
+
+		if (_socket > 0 && tries > 10) {
+			printf ("ERROR: expected to not to find port %s:%s to be running, but it was found a complete connect socket=%d\n",
+				server, port, _socket);
+			return axl_false;
+		} /* end if */
+
+		/* close socket and release context */
+		vortex_close_socket (_socket);
+		tries++;
+		turbulence_sleep (NULL, 100000);
+	}  /* end while */
+
+	/* release context */
+	vortex_ctx_unref (&ctx);
+
+	return axl_true;
+}
+
 axl_bool test_25 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -4938,6 +4998,10 @@ axl_bool test_25 (void) {
 
 	/* finish queue */
 	vortex_async_queue_unref (queue);
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
 	
 	return axl_true;
 }
@@ -4946,6 +5010,10 @@ axl_bool test_26 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexAsyncQueue * queue;
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
 
 
 	printf ("Test 26: running websocket test..\n");
@@ -4974,16 +5042,24 @@ axl_bool test_26 (void) {
 
 	/* call to test against test-22.server.sasl */
 	printf ("Test 26: checking TLS with: test-25.server.sasl..\n");
+	/* turbulence_log_enable (tCtx, axl_true);
+	   turbulence_color_log_enable (tCtx, axl_true); */
 	if (! test_22_operations (tCtx, vCtx, "test-25.server.sasl", queue, axl_true, axl_true)) 
 		return axl_false;   
 
 	printf ("Test 26: complete OK\n");
 
 	/* finish turbulence */
+	printf ("Test 26: finishing turbulence (%p) and vortex context (%p)..\n",
+		vCtx, tCtx);
 	test_common_exit (vCtx, tCtx);
 
 	/* finish queue */
 	vortex_async_queue_unref (queue);
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
 	
 	return axl_true;
 }
@@ -4993,6 +5069,10 @@ axl_bool test_27 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexAsyncQueue * queue;
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
 
 	printf ("Test 27: running websocket port sharing detected on child..\n");
 
@@ -5008,11 +5088,16 @@ axl_bool test_27 (void) {
 	queue = vortex_async_queue_new ();
 
 	/* call to test against test-26.server */
-	printf ("Test 26: checking TLS with: test-25.server..\n");
+	printf ("Test 27: checking TLS with: test-25.server..\n");
+	/* turbulence_log_enable (tCtx, axl_true);
+	   turbulence_color_log_enable (tCtx, axl_true); */
+
+	/* vortex_log_enable (vCtx, axl_true);
+	   vortex_color_log_enable (vCtx, axl_true);   */
 	if (! test_22_operations (tCtx, vCtx, "test-25.server", queue, axl_false, axl_true))  
 		return axl_false;   
 
-	printf ("Test 26: complete OK\n");
+	printf ("Test 27: complete OK\n");
 
 	/*	printf ("Test 26: checking TLS with: test-25.server..\n");
 	if (! test_22_operations (tCtx, vCtx, "test-25.server", queue, axl_false, axl_true))  
@@ -5025,11 +5110,17 @@ axl_bool test_27 (void) {
 
 	/* finish queue */
 	vortex_async_queue_unref (queue);
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
 	
 	return axl_true;
 }
 
 #endif
+
+typedef axl_bool (* TurbulenceTestHandler) (void);
 
 /** 
  * @brief Helper handler that allows to execute the function provided
@@ -5037,14 +5128,16 @@ axl_bool test_27 (void) {
  * @param function The handler to be called (test)
  * @param message The message value.
  */
-#define run_test(function, message) do{           \
-    if (function ()) {                            \
-          printf ("%s [   OK   ]\n", message);    \
-    } else {                                      \
-          printf ("%s [ FAILED ]\n", message);    \
-          return -1;                              \
-    }                                             \
-}while(0);
+int run_test (TurbulenceTestHandler function, const char * message) {
+
+	if (function ()) {
+		printf ("%s [   OK   ]\n", message);
+	} else {
+		printf ("%s [ FAILED ]\n", message);
+		exit (-1);
+	}
+	return 0;
+}
 
 void test_with_context_init (void) {
 
@@ -5089,7 +5182,7 @@ void terminate_contexts (void) {
 	return;
 }
 
-#define CHECK_TEST(name) if (run_test == NULL || axl_cmp (run_test, name))
+#define CHECK_TEST(name) if (run_test_name == NULL || axl_cmp (run_test_name, name))
 
 /** 
  * @brief General regression test to check all features inside
@@ -5098,7 +5191,7 @@ void terminate_contexts (void) {
 int main (int argc, char ** argv)
 {
 	axl_bool enable_python_tests = axl_false;
-	char * run_test = NULL;
+	char * run_test_name = NULL;
 	axl_bool enable_10a = axl_true;
 	axl_bool only_python = axl_false;
 
@@ -5152,8 +5245,8 @@ int main (int argc, char ** argv)
 			turbulence_module_set_no_unmap_modules (axl_true);
 		}
 		if (argv[argc] && axl_memcmp (argv[argc], "--run-test", 10)) {
-			run_test = argv[argc] + 11;
-			printf ("INFO: running test: %s\n", run_test);
+			run_test_name = argv[argc] + 11;
+			printf ("INFO: running test: %s\n", run_test_name);
 		}
 		argc--;
 	} /* end if */
