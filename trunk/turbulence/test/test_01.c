@@ -4936,7 +4936,7 @@ axl_bool test_websocket_listener_disabled (const char * server, const char * por
 {
 	VortexCtx      * ctx = vortex_ctx_new ();
 	VORTEX_SOCKET    _socket;
-	int              tries;
+	int              tries = 0;
 
 	while (axl_true) {
 		_socket = vortex_connection_sock_connect (ctx, server, port, NULL, NULL);
