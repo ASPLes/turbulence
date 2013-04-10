@@ -371,9 +371,9 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 		if (! vortex_conf_set (vortex_ctx, VORTEX_HARD_SOCK_LIMIT, int_aux, NULL)) {
 			error ("failed to set hard limit to=%s (int value=%d), error: %s, terminating turbulence..",
 			       string_aux, int_aux, vortex_errno_get_last_error ());
-			return axl_false;
+		} else {
+			msg ("configured max connections hard limit to: %s", string_aux);
 		} /* end if */
-		msg ("configured max connections hard limit to: %s", string_aux);
 
 		/* set soft limit */
 		string_aux = (char*) ATTR_VALUE (node, "soft-limit");
@@ -381,9 +381,9 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 		if (! vortex_conf_set (vortex_ctx, VORTEX_SOFT_SOCK_LIMIT, int_aux, NULL)) {
 			error ("failed to set soft limit to=%s (int value=%d), terminating turbulence..",
 			       string_aux, int_aux);
-			return axl_false;
+		} else {
+			msg ("configured max connections soft limit to: %s", string_aux);			
 		} /* end if */
-		msg ("configured max connections soft limit to: %s", string_aux);
 	} /* end if */
 #endif 
 
