@@ -3921,6 +3921,7 @@ axl_bool test_15 (void) {
 	int               fix_server_name;
 	const char      * remote_host = "localhost";
 	const char      * remote_port = "1233";
+	const char      * remote_host_ip = "127.0.0.1";
 
 	/* build connection status */
 	conn_status = turbulence_process_connection_status_string (axl_true,
@@ -3929,7 +3930,7 @@ axl_bool test_15 (void) {
 								   NULL,
 								   EncodingNone,
 								   "test-15.server",
-								   17, 42301, 1234, 37, 1, 0, remote_host, remote_port, 0);
+								   17, 42301, 1234, 37, 1, 0, remote_host, remote_port, remote_host_ip, 0);
 	turbulence_process_connection_recover_status (conn_status + 1, /* skip initial n used to signal the command */
 						      &handle_start_reply,
 						      &channel_num,
@@ -3942,7 +3943,7 @@ axl_bool test_15 (void) {
 						      &seq_no_expected, 
 						      &ppath_id,
 						      &fix_server_name,
-						      &remote_host, &remote_port,
+						      &remote_host, &remote_port, &remote_host_ip,
 						      &has_tls);
 	/* check data */
 	if (! handle_start_reply) {

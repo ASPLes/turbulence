@@ -535,10 +535,11 @@ char * turbulence_process_connection_status_string (axl_bool          handle_sta
 						    int               fix_server_name,
 						    const char      * remote_host,
 						    const char      * remote_port,
+						    const char      * remote_host_ip,
 						    /* the following must be the last parameter */
 						    int               skip_conn_recover)
 {
-	return axl_strdup_printf ("n%d;-;%d;-;%s;-;%s;-;%d;-;%s;-;%d;-;%d;-;%d;-;%d;-;%d;-;%d;-;%s;-;%s;-;%d",
+	return axl_strdup_printf ("n%d;-;%d;-;%s;-;%s;-;%d;-;%s;-;%d;-;%d;-;%d;-;%d;-;%d;-;%d;-;%s;-;%s;-;%s;-;%d",
 				  handle_start_reply,
 				  channel_num,
 				  profile ? profile : "",
@@ -558,6 +559,7 @@ char * turbulence_process_connection_status_string (axl_bool          handle_sta
 				   * port to be restored on the parent. */
 				  remote_host, 
 				  remote_port,
+				  remote_host_ip,
 				  /* this must be the last always! */
 				  skip_conn_recover);
 }
@@ -592,8 +594,9 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 								   vortex_connection_is_tlsficated (conn),
 								   /* notify if we have to fix the serverName */
 								   axl_cmp (serverName, vortex_connection_get_server_name (conn)),
-								   /* get host and port */
-								   vortex_connection_get_host (conn), vortex_connection_get_port (conn),
+								   /* get host, port and host ip */
+								   vortex_connection_get_host (conn), vortex_connection_get_port (conn), 
+								   vortex_connection_get_host_ip (conn),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	
@@ -663,6 +666,7 @@ axl_bool turbulence_process_send_proxy_connection_to_child (TurbulenceCtx    * c
 								   axl_cmp (serverName, vortex_connection_get_server_name (conn)),
 								   /* host and port */
 								   vortex_connection_get_host (conn), vortex_connection_get_port (conn),
+								   vortex_connection_get_host_ip (conn),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	
@@ -830,6 +834,7 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 						       int             * fix_server_name,
 						       const char     ** remote_host,
 						       const char     ** remote_port,
+						       const char     ** remote_host_ip,
 						       int             * has_tls)
 {
 	int iterator = 0;
@@ -939,6 +944,7 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 	int                fix_server_name    = 0;
 	const char       * remote_host        = NULL;
 	const char       * remote_port        = NULL;
+	const char       * remote_host_ip     = NULL;
 
 	/* check connection status after continue */
 	if (conn_status == NULL || strlen (conn_status) == 0) {
@@ -964,6 +970,7 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 						      &has_tls,
 						      &remote_host,
 						      &remote_port,
+						      &remote_host_ip,
 						      &fix_server_name);
 
 	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d",
@@ -986,7 +993,7 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 	/* setup host and port manually */
 	if (remote_host && remote_port) {
 		/* call to setup host and port */
-		vortex_connection_set_host_and_port (conn, remote_host, remote_port);
+		vortex_connection_set_host_and_port (conn, remote_host, remote_port, remote_host_ip);
 	}
 
 	/* notify about the connection received and setup serverName
@@ -1316,6 +1323,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 								   axl_cmp (serverName, vortex_connection_get_server_name (conn)),
 								   /* provide host and port */
 								   vortex_connection_get_host (conn), vortex_connection_get_port (conn),
+								   vortex_connection_get_host_ip (conn),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	if (conn_status == NULL) {
