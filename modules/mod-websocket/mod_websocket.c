@@ -11,8 +11,9 @@ BEGIN_C_DECLS
 TurbulenceCtx * ctx = NULL;
 
 /* reference to the module configuration */
-axlDoc * mod_websocket_conf = NULL;
+axlDoc     * mod_websocket_conf = NULL;
 noPollCtx  * nopoll_ctx = NULL;
+axl_bool     __mod_websocket_nopoll_log_enabled = axl_false;
 
 /** 
  * @internal Load websocket.conf file.
@@ -80,18 +81,73 @@ int mod_websocket_post_configuration (VortexCtx               * _ctx,
 	return 1;
 }
 
-void mod_websocket_import_certificate (noPollCtx * nopoll_ctx, axlNode * node)
+axl_bool   mod_websocket_find_and_fix_certificate_routes (axlNode    * node, 
+							  const char * attr, 
+							  const char * file,
+							  axl_bool     import_from_tls)
 {
-        if (! nopoll_ctx_set_certificate (nopoll_ctx, ATTR_VALUE (node, "serverName"), ATTR_VALUE (node, "cert"), ATTR_VALUE (node, "key"), NULL)) {
+	char       * path;
+	
+	/* try to find cert into web-socket directory */
+	path    = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "websocket", file);
+	if (vortex_support_file_test (path, FILE_EXISTS)) {
+		axl_node_remove_attribute (node, attr);
+		axl_node_set_attribute (node, attr, path);
+		axl_free (path);
+		return axl_true;
+	}
+	axl_free (path);
+
+	/* reached this point, file wasn't found and no import from tls is allowed */
+	if (! import_from_tls)
+		return axl_false;
+
+	/* now try to find cert into tls directory */
+	path    = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "tls", file, NULL);
+	if (vortex_support_file_test (path, FILE_EXISTS)) {
+		axl_node_remove_attribute (node, attr);
+		axl_node_set_attribute (node, attr, path);
+		axl_free (path);
+		return axl_true;
+	}
+	axl_free (path);
+
+	return axl_false; /* file not found */
+}
+
+void mod_websocket_import_certificate (noPollCtx * nopoll_ctx, axlNode * node, axl_bool import_from_tls)
+{
+	const char * cert       = ATTR_VALUE (node, "cert");
+	const char * key        = ATTR_VALUE (node, "key");
+	const char * serverName = ATTR_VALUE (node, "serverName");
+
+	if (cert == NULL || key == NULL || strlen (cert) == 0 || strlen (key) == 0)
+		return;
+
+	/* check cert file */
+	if (! vortex_support_file_test (cert, FILE_EXISTS)) {
+		if (! mod_websocket_find_and_fix_certificate_routes (node, "cert", cert, import_from_tls))
+			return;
+		cert = ATTR_VALUE (node, "cert");
+	} /* end if */
+
+	/* check key file */
+	if (! vortex_support_file_test (key, FILE_EXISTS)) {
+		if (! mod_websocket_find_and_fix_certificate_routes (node, "key", key, import_from_tls))
+			return;
+		key = ATTR_VALUE (node, "key");
+	} /* end if */
+
+        if (! nopoll_ctx_set_certificate (nopoll_ctx, serverName, cert, key, NULL)) {
 	        error ("Failed to load certificate associated to serverName=%s, cert=%s, key=%s",
-		       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "",
-		       ATTR_VALUE (node, "cert") ? ATTR_VALUE (node, "cert") : "",
-		       ATTR_VALUE (node, "key") ? ATTR_VALUE (node, "key") : "");
+		       serverName ? serverName : "",
+		       cert ? cert : "",
+		       key ? key : "");
 	} else {
 	        msg ("Registered certificate serverName=%s, cert=%s, key=%s",
-		     ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "",
-		     ATTR_VALUE (node, "cert") ? ATTR_VALUE (node, "cert") : "",
-		     ATTR_VALUE (node, "key") ? ATTR_VALUE (node, "key") : "");
+		     serverName ? serverName : "",
+		     cert ? cert : "",
+		     key ? key : "");
 	} /* end if */  
 
 	return;
@@ -106,7 +162,7 @@ void mod_websocket_load_certificate_locations (noPollCtx * nopoll_ctx) {
 	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/certificates/cert");
 	while (node) {
 	        /* load certificate */
-	        mod_websocket_import_certificate (nopoll_ctx, node);
+	        mod_websocket_import_certificate (nopoll_ctx, node, axl_false);
 
 		/* next certificate */
 		node = axl_node_get_next_called (node, "cert");
@@ -118,12 +174,19 @@ void mod_websocket_load_certificate_locations (noPollCtx * nopoll_ctx) {
 	  	path = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "tls", "tls.conf", NULL);
                 msg ("WEB-SOCKET: import certificates defined at mod-tls (%s)", path);
 	        doc  = axl_doc_parse_from_file (path, &err);
+		if (doc == NULL) {
+			error ("Unable to import certificates from path %s, error was: %s",
+			       path, axl_error_get (err));
+			axl_error_free (err);
+			return;
+		} /* end if */
 
 		/* now, for each certificate, import it */
 		node = axl_doc_get (doc, "/mod-tls/certificate-select");
 		while (node) {
+
 		        /* load certificate */
-		        mod_websocket_import_certificate (nopoll_ctx, node);
+		        mod_websocket_import_certificate (nopoll_ctx, node, axl_true);
 
 		        /* next node */
 		        node = axl_node_get_next_called (node, "certificate-select");
@@ -135,17 +198,43 @@ void mod_websocket_load_certificate_locations (noPollCtx * nopoll_ctx) {
 	return;
 }
 
-void __mod_websocket_check_and_enable_port_sharing (TurbulenceCtx * _ctx, axlDoc * mod_websocket_conf)
+void __mod_websocket_check_and_enable_port_sharing (TurbulenceCtx * _ctx, axlDoc * mod_websocket_conf, noPollCtx * nopoll_ctx)
 {
-	axlNode * node = axl_doc_get (mod_websocket_conf, "/mod-websocket/general-settings/port-sharing");
+	axlNode   * node   = axl_doc_get (mod_websocket_conf, "/mod-websocket/general-settings/port-sharing");
 	if (HAS_ATTR_VALUE (node, "enable", "yes")) {
 		/* call to enable port sharing */
 		if (! vortex_websocket_listener_port_sharing (TBC_VORTEX_CTX (_ctx), nopoll_ctx, NULL, NULL))
-			error ("Unable to activate PORT-SHARE configuration, failed to share BEEP and BEEP over WebSocket");
+			error ("User requested to enable it, but there was a failure while activating PORT-SHARE configuration, failed to share BEEP and BEEP over WebSocket");
 		else
 			msg ("WEB-SOCKET: enable transport detection -> port sharing, ok");
+	} else {
+		msg ("WEB-SOCKET: port sharing not enabled");
 	} /* end if */
 
+	return;
+}
+
+void __mod_websocket_nopoll_log (noPollCtx * nopoll_ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data)
+{
+	TurbulenceCtx * ctx = user_data;
+	char          * message;
+
+	/* check if nopoll log is enabled to avoid dropping a log about warning and debug */
+	if (! __mod_websocket_nopoll_log_enabled && (level == NOPOLL_LEVEL_WARNING || level == NOPOLL_LEVEL_DEBUG))
+		return;
+
+	/* prepare string to differenciate it */
+	message = axl_strdup_printf (" (nopoll) %s", log_msg);
+
+	if (level == NOPOLL_LEVEL_CRITICAL)
+		error (message);
+	else if (level == NOPOLL_LEVEL_WARNING)
+		wrn (message);
+	else
+		msg (message);
+
+	/* release */
+	axl_free (message);
 	return;
 }
 
@@ -177,9 +266,6 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	if (turbulence_ctx_is_child (ctx)) 
 		return axl_true;
 
-	/* check and install port share config (even in child) */
-	__mod_websocket_check_and_enable_port_sharing (_ctx, mod_websocket_conf);
-
 	/* ok, get current configuration and start listener ports
 	 * according to its configuration */
 	if (! mod_websocket_load_config ()) 
@@ -187,13 +273,21 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 
 	/* init context */
 	nopoll_ctx = nopoll_ctx_new ();
+	msg ("WEB-SOCKET: Creating noPoll context %p", nopoll_ctx);
+
+	/* check and install port share config (even in child) */
+	__mod_websocket_check_and_enable_port_sharing (_ctx, mod_websocket_conf, nopoll_ctx); 
+
+	/* enable nopoll log by default */
+	nopoll_log_enable (nopoll_ctx, nopoll_true);
+	nopoll_log_color_enable (nopoll_ctx, nopoll_true);
+	nopoll_log_set_handler (nopoll_ctx, __mod_websocket_nopoll_log, _ctx);
 
 	/* check for debug enable=yes */
 	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/general-settings/debug");
-	if (HAS_ATTR_VALUE (node, "enable", "yes")) {
-		nopoll_log_enable (nopoll_ctx, nopoll_true);
-		nopoll_log_color_enable (nopoll_ctx, nopoll_true);
-	} /* end if */
+	if (HAS_ATTR_VALUE (node, "enable", "yes"))
+		__mod_websocket_nopoll_log_enabled = axl_true;
+
 
 	/* read all certificates */
 	mod_websocket_load_certificate_locations (nopoll_ctx);
@@ -254,6 +348,11 @@ static void mod_websocket_close (TurbulenceCtx * _ctx) {
 	/* release module allocated memory */
 	axl_doc_free (mod_websocket_conf);
 	mod_websocket_conf = NULL;
+
+	/* configure log handling */
+	nopoll_log_enable (nopoll_ctx, nopoll_false);
+	nopoll_log_color_enable (nopoll_ctx, nopoll_false);
+	nopoll_log_set_handler (nopoll_ctx, NULL, NULL);
 
 	nopoll_ctx_unref (nopoll_ctx);
 	nopoll_ctx = NULL;
