@@ -175,7 +175,9 @@ int py_turbulence_ctx_set_attr (PyObject *o, PyObject *attr_name, PyObject *v)
 static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args)
 {
 	char          * message = NULL;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = self->ctx;
+#endif
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "z", &message))
@@ -196,7 +198,9 @@ static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args
 static PyObject * py_turbulence_ctx_msg2 (PyTurbulenceCtx * self, PyObject * args)
 {
 	char          * message = NULL;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = self->ctx;
+#endif
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "z", &message))
@@ -217,7 +221,9 @@ static PyObject * py_turbulence_ctx_msg2 (PyTurbulenceCtx * self, PyObject * arg
 static PyObject * py_turbulence_ctx_wrn (PyTurbulenceCtx * self, PyObject * args)
 {
 	char          * message = NULL;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = self->ctx;
+#endif
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "z", &message))
@@ -238,7 +244,9 @@ static PyObject * py_turbulence_ctx_wrn (PyTurbulenceCtx * self, PyObject * args
 static PyObject * py_turbulence_ctx_error (PyTurbulenceCtx * self, PyObject * args)
 {
 	char          * message = NULL;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = self->ctx;
+#endif
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "z", &message))

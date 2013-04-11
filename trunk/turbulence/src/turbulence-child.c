@@ -354,7 +354,7 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	child = ctx->child;
 
 	/* define profile path */
-	msg ("Setting profile path id for child %d", child->init_string_items[10]);
+	msg ("Setting profile path id for child %s", child->init_string_items[10] ? child->init_string_items[10] : "<not defined>");
 	def = turbulence_ppath_find_by_id (ctx, atoi (child->init_string_items[10]));
 	if (def == NULL) {
 		error ("Unable to find profile path associated to id %d, unable to complete post init", atoi (child->init_string_items[10]));

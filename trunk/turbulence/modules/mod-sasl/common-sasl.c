@@ -531,8 +531,9 @@ axl_bool common_sasl_load_single_auth_db (TurbulenceCtx * ctx,
 		
 		/* format not found or unable to handle */
 		error ("Found request to load database with unrecognized format %s (location: %s, serverName: %s)",
-		       ATTR_VALUE (node, "type") ? ATTR_VALUE (node, "type") : "", 
-		       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "");
+		       ATTR_VALUE (node, "type") ? ATTR_VALUE (node, "type") : "<not defined>", 
+		       ATTR_VALUE (node, "location") ? ATTR_VALUE (node, "location") : "<not defined>", 
+		       ATTR_VALUE (node, "serverName") ? ATTR_VALUE (node, "serverName") : "<not defined>");
 		/* failed to load database */
 		return axl_false;
 	} /* end if */
