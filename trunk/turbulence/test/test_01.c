@@ -3919,6 +3919,8 @@ axl_bool test_15 (void) {
 	int               ppath_id;
 	int               has_tls;
 	int               fix_server_name;
+	const char      * remote_host = "localhost";
+	const char      * remote_port = "1233";
 
 	/* build connection status */
 	conn_status = turbulence_process_connection_status_string (axl_true,
@@ -3927,7 +3929,7 @@ axl_bool test_15 (void) {
 								   NULL,
 								   EncodingNone,
 								   "test-15.server",
-								   17, 42301, 1234, 37, 1, 0, 0);
+								   17, 42301, 1234, 37, 1, 0, remote_host, remote_port, 0);
 	turbulence_process_connection_recover_status (conn_status + 1, /* skip initial n used to signal the command */
 						      &handle_start_reply,
 						      &channel_num,
@@ -3940,6 +3942,7 @@ axl_bool test_15 (void) {
 						      &seq_no_expected, 
 						      &ppath_id,
 						      &fix_server_name,
+						      &remote_host, &remote_port,
 						      &has_tls);
 	/* check data */
 	if (! handle_start_reply) {
@@ -4581,7 +4584,7 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 
 			if (iterator > 0) {
 				/* enable log at nopoll */
-				vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_ENABLE_DEBUG, INT_TO_PTR (axl_true));
+				vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_DEBUG, INT_TO_PTR (axl_true));
 
 				/* enable log */
 				vortex_log_enable (vCtx, axl_true);
@@ -5157,6 +5160,100 @@ axl_bool test_27 (void) {
 	return axl_true;
 }
 
+axl_bool test_28 (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexAsyncQueue * queue;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	VortexFrame      * frame;
+	char             * local_check;
+
+	/* websocket setup */
+	VortexWebsocketSetup * wss_setup;
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
+
+	printf ("Test 28: checking proxy on parent retain original host and port descriptions..\n");
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_27.conf")) 
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx)) 
+		return axl_false;
+	
+	/* create queue, common to all tests */
+	queue = vortex_async_queue_new ();
+
+	/* connect and enable TLS through websocket protocol */
+	wss_setup = vortex_websocket_setup_new (vCtx);
+	/* setup we want TLS enabled */
+	vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_TLS, INT_TO_PTR (axl_true));
+	/* vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_DEBUG, INT_TO_PTR (axl_true)); */
+
+	/* create connection */
+	conn = vortex_websocket_connection_new ("localhost", "1602", wss_setup, NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR: failed to create connection...\n");
+		return axl_false;
+	} /* end if */
+
+	printf ("Test 28: ok, session created (with local port %s:%s), now create the channel..\n",
+		vortex_connection_get_local_addr (conn), vortex_connection_get_local_port (conn));
+
+	/* now create channel to ask the server what port and source
+	 * address is perceived */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-22:1");
+	if (channel == NULL) {
+		printf ("ERROR (2.2): expected to find proper channel creation but a proper reference was found..\n");
+		return axl_false;
+	} /* end if */
+
+	/* send request to get connection id */
+	vortex_channel_set_received_handler (channel, vortex_channel_queue_reply, queue);
+	vortex_channel_send_msg (channel, "getRemoteAddress", 16, NULL);
+
+	/* get reply */
+	frame = vortex_channel_get_reply (channel, queue);
+	if (frame == NULL) {
+		printf ("ERROR (2.3): failed to get remote address reply..\n");
+		return axl_false;
+	}
+
+	printf ("Test 28: perceived remote address is: %s\n", (const char *) vortex_frame_get_payload (frame));
+
+	local_check = axl_strdup_printf ("%s:%s", vortex_connection_get_local_addr (conn), vortex_connection_get_local_port (conn));
+
+	printf ("Test 28: checking '%s' == '%s'\n", local_check, (const char *) vortex_frame_get_payload (frame));
+	
+	if (! axl_cmp (local_check, (const char *) vortex_frame_get_payload (frame))) {
+		printf ("ERROR: (2.4): expected a different recognized remote address but found something different: %s\n", local_check);
+		return axl_false;
+	} /* end if */
+
+	vortex_frame_unref (frame);
+	axl_free (local_check);
+
+	/* close connection */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	/* finish queue */
+	vortex_async_queue_unref (queue);
+
+	/* test local connect to fail */
+	if (! test_websocket_listener_disabled ("localhost", "1602"))
+		return axl_false;
+	
+	return axl_true;
+}
+
 #endif
 
 typedef axl_bool (* TurbulenceTestHandler) (void);
@@ -5253,7 +5350,7 @@ int main (int argc, char ** argv)
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_04, test_05, test_05a, test_06, test_06a\n");
 	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_10e, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
-	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26\n");
+	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26, test_27, test_28\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <vortex@lists.aspl.es> Vortex/Turbulence Mailing list\n**\n");
 
@@ -5439,6 +5536,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_27")
 	run_test (test_27, "Test 27: Checking port sharing on child process..");   
+
+	CHECK_TEST("test_28")
+	run_test (test_28, "Test 28: Check proxy on parent retains host and port (of the connecting address)..");   
 #endif
 
 	printf ("All tests passed OK!\n");
