@@ -127,6 +127,7 @@ void test_22_frame_received (VortexChannel    * channel,
 			     axlPointer         user_data)
 {
 	const char * payload = (const char *) vortex_frame_get_payload (frame);
+	char * value;
 
 	if (axl_cmp (payload, "getServerName")) {
 		/* get servername or empty string */
@@ -134,6 +135,15 @@ void test_22_frame_received (VortexChannel    * channel,
 		if (payload == NULL)
 			payload = "";
 		vortex_channel_send_rpy (channel, payload, strlen (payload), vortex_frame_get_msgno (frame));
+		return;
+	} /* end if */
+
+	/* support for getRemoveAddress */
+	if (axl_cmp (payload, "getRemoteAddress")) {
+		value = axl_strdup_printf ("%s:%s", vortex_connection_get_host (conn), vortex_connection_get_port (conn));
+		printf ("Test 28: (SERVER), sending %s (%d)\n", value, (int) strlen (value));
+		vortex_channel_send_rpy (channel, value, strlen (value), vortex_frame_get_msgno (frame));
+		axl_free (value);
 		return;
 	} /* end if */
 
