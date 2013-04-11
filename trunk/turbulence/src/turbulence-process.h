@@ -105,6 +105,7 @@ char *           turbulence_process_connection_status_string (axl_bool          
 							      int               fix_server_name,
 							      const char      * remote_host,
 							      const char      * remote_port,
+							      const char      * remote_host_ip,
 							      /* this must be the last attribute */
 							      int               skip_conn_recover);
 
@@ -122,6 +123,7 @@ void             turbulence_process_connection_recover_status (char            *
 							       int             * fix_server_name,
 							       const char     ** remote_host,
 							       const char     ** remote_port,
+							       const char     ** remote_host_ip,
 							       int             * has_tls);
 
 axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket, 
