@@ -4932,14 +4932,56 @@ axl_bool test_24 (void) {
 }
 
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
+#define h_addr h_addr_list[0]
+VORTEX_SOCKET _test_create_socket (const char * host, const char * port)
+{
+	struct hostent     * hostent;
+	struct sockaddr_in   saddr;
+	VORTEX_SOCKET        session;
+
+	/* resolve hosting name */
+	hostent = gethostbyname (host);
+	if (hostent == NULL) {
+		printf ("unable to resolve host name %s", host);
+		exit (-1);
+	} /* end if */
+
+	/* create the socket and check if it */
+	session      = socket (AF_INET, SOCK_STREAM, 0);
+	if (session == VORTEX_INVALID_SOCKET) {
+		printf ("unable to create socket");
+		exit (-1);
+	} /* end if */
+
+	/* prepare socket configuration to operate using TCP/IP
+	 * socket */
+        memset(&saddr, 0, sizeof(saddr));
+	saddr.sin_addr.s_addr = ((struct in_addr *)(hostent->h_addr))->s_addr;
+        saddr.sin_family    = AF_INET;
+        saddr.sin_port      = htons((uint16_t) strtod (port, NULL));
+
+	/* do a tcp connect */
+        if (connect (session, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
+		if(errno != VORTEX_EINPROGRESS && errno != VORTEX_EWOULDBLOCK) { 
+			shutdown (session, SHUT_RDWR);
+			nopoll_close_socket (session);
+			/* printf ("unable to connect to remote host %s:%s errno=%d\n", host, port, errno); */
+			return -1;
+		} /* end if */
+	} /* end if */
+
+	/* return socket created */
+	return session;
+}
+
 axl_bool test_websocket_listener_disabled (const char * server, const char * port)
 {
-	VortexCtx      * ctx = vortex_ctx_new ();
-	VORTEX_SOCKET    _socket;
-	int              tries = 0;
+	VORTEX_SOCKET     _socket;
+	int               tries   = 0;
 
 	while (axl_true) {
-		_socket = vortex_connection_sock_connect (ctx, server, port, NULL, NULL);
+		/* create socket connection */
+		_socket = _test_create_socket (server, port);
 		if (_socket <= 0)
 			break;
 
@@ -4954,9 +4996,6 @@ axl_bool test_websocket_listener_disabled (const char * server, const char * por
 		tries++;
 		turbulence_sleep (NULL, 100000);
 	}  /* end while */
-
-	/* release context */
-	vortex_ctx_unref (&ctx);
 
 	return axl_true;
 }
