@@ -503,7 +503,9 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
 {
 	VortexChannel          * channel   = data;
 	TurbulenceBroadCastMsg * broadcast = user_data;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx          * ctx       = broadcast->ctx; 
+#endif
 
 	/* check the channel profile */
 	if (! axl_cmp (vortex_channel_get_profile (channel), broadcast->profile)) 
@@ -788,7 +790,9 @@ void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
 {
 	char               buffer[4096];
 	int                bytes_read;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx    * ctx = vortex_connection_get_data (conn, "tbc:ctx");  
+#endif
 	/* get socket associated */
 	int                _socket = PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:fd"));
 
@@ -1015,10 +1019,12 @@ axl_bool count_channels (axlPointer key, axlPointer _value, axlPointer user_data
 {
 	int           * count  = user_data;
 	int             value  = PTR_TO_INT(_value);
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx    = _ctx;
+#endif
 	
 	/* count */
-	msg2 ("Adding %d to current count %d (profile: %s)", *count, value, key);
+	msg2 ("Adding %d to current count %d (profile: %s)", *count, value, (const char *) key);
 	(*count) = (*count) + value;
 
 	return axl_false; /* iterate over all items found in the

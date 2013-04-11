@@ -250,7 +250,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	if (strlen (path) >= sizeof (socket_name.sun_path)) {
 	        vortex_close_socket (_socket);
 	        error ("%s: Failed to create local socket to hold connection, path is bigger that limit (%d >= %d), path: %s", 
-		       is_parent ? "PARENT" : "CHILD", strlen (path), sizeof (socket_name.sun_path), path);
+		       is_parent ? "PARENT" : "CHILD", (int) strlen (path), (int) sizeof (socket_name.sun_path), path);
 		return -1;
 	}
 	umask (0077);
@@ -334,7 +334,9 @@ axl_bool __turbulence_process_create_parent_connection (TurbulenceChild * child)
 	/* create the client connection making the child to do the
 	   bind (creating local file socket using child process
 	   permissions)  */
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = child->ctx;
+#endif
 
 	msg ("CHILD: process creating control connection: %s..", child->socket_control_path);
 	child->child_connection = __turbulence_process_local_unix_fd (child->socket_control_path, axl_false, child->ctx);
@@ -371,7 +373,9 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 	/* send at least one byte */
 	const char         * str = ancillary_data ? ancillary_data : "#"; 
 	int                  rv;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx      * ctx = child->ctx;
+#endif
 
 	/* clear structures */
 	memset (&msg, 0, sizeof (struct msghdr));
@@ -584,7 +588,7 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	
-	msg ("Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, strlen (conn_status));
+	msg ("Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, (int) strlen (conn_status));
 
 	/* socket that is know handled by the child process */
 	client_socket = vortex_connection_get_socket (conn);
@@ -651,7 +655,7 @@ axl_bool turbulence_process_send_proxy_connection_to_child (TurbulenceCtx    * c
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	
-	msg ("PARENT: (PROXY) Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, strlen (conn_status));
+	msg ("PARENT: (PROXY) Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, (int) strlen (conn_status));
 
 	/* send the socket descriptor to the child to avoid holding a
 	   bucket in the parent */
@@ -1066,7 +1070,9 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 
 void __turbulence_process_release_parent_connections_foreach  (VortexConnection * conn, axlPointer user_data, axlPointer user_data2, axlPointer user_data3) 
 {
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx          * ctx           = user_data;
+#endif
 	VortexConnection       * child_conn    = user_data2;
 	int                      client_socket = vortex_connection_get_socket (conn);
 
@@ -1204,9 +1210,11 @@ axl_bool turbulence_process_check_child_limit (TurbulenceCtx      * ctx,
 
 axl_bool __turbulence_process_show_conn_keys (axlPointer key, axlPointer data, axlPointer user_data)
 {
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = user_data;
+#endif
 
-	msg ("PARENT: found key %s", key);
+	msg ("PARENT: found key %s", (const char *) key);
 
 	return axl_false; /* don't stop the process */
 }
@@ -1539,7 +1547,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 
 		/* create child connection socket */
 		if (! __turbulence_process_create_child_connection (child)) {
-			error ("Unable to create child process connection to pass sockets for pid=%", pid);
+			error ("Unable to create child process connection to pass sockets for pid=%d", pid);
 		
 			TBC_PROCESS_UNLOCK_CHILD ();
 
@@ -1740,7 +1748,9 @@ int kill (int pid, int signal);
 
 axl_bool __terminate_child (axlPointer key, axlPointer data, axlPointer user_data)
 {
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx   * ctx   = user_data;
+#endif
 	TurbulenceChild * child = data;
 
 	/* send term signal */

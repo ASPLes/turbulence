@@ -195,7 +195,7 @@ axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function, axl
 	PyTuple_SetItem (args, 0, py_tbc_ctx);
 
 	/* now call to the function */
-	msg ("calling python app init function: %p (tbc ref: %p:%d)", init_function, py_tbc_ctx, py_tbc_ctx->ob_refcnt);
+	msg ("calling python app init function: %p (tbc ref: %p:%d)", init_function, py_tbc_ctx, (int) py_tbc_ctx->ob_refcnt);
 	result = PyObject_Call (init_function, args, NULL);
 
 	/* handle exceptions */
@@ -362,7 +362,7 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 		/* remove path only if kee-path is not set to yes */
 		if (! HAS_ATTR_VALUE (node, "keep-path", "yes")) {
 			if (! mod_python_remove_first_path ()) {
-				APPLICATION_LOAD_FAILED ("Failed to remove path from sys.path after python app initialization",
+				APPLICATION_LOAD_FAILED ("Failed to remove path from sys.path after python app initialization for start file: %s, app-init: %s",
 							 start_file, ATTR_VALUE (location, "app-init"));
 			} /* end if */
 		} /* end if */

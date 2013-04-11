@@ -255,7 +255,9 @@ axlPointer __turbulence_loop_run (TurbulenceLoop * loop)
 {
 	int                       max_fds;
 	int                       result;
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx           * ctx = loop->ctx;
+#endif
 
 	/* init here list, its cursor, the fileset to watch fd for
 	 * changes and a queue to receive new registrations */

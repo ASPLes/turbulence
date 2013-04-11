@@ -20,7 +20,9 @@ void test_10_received (VortexChannel    * channel,
 		       VortexFrame      * frame, 
 		       axlPointer         user_data)
 {
+#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx      * ctx = user_data;
+#endif
 	TurbulencePPathDef * ppath_selected;
 
 	msg ("Received frame request at child (pid: %d): %s",

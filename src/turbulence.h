@@ -187,6 +187,28 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
 #define tbc_access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
 void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
 
+/** 
+ * @internal The following definition allows to find printf like wrong
+ * argument passing to nopoll_log function. To activate the depuration
+ * just add the following header after this comment.
+ *
+ * #define SHOW_FORMAT_BUGS (1)
+ */
+#if defined(SHOW_FORMAT_BUGS)
+# undef error
+# undef msg
+# undef msg2
+# undef wrn
+# undef wrn_sl
+# undef tbc_access
+#define error(m,...) do{printf (m, ##__VA_ARGS__);}while(0)
+#define msg(m,...)   do{printf (m, ##__VA_ARGS__);}while(0)
+#define msg2(m,...)   do{printf (m, ##__VA_ARGS__);}while(0)
+#define wrn(m,...)   do{printf (m, ##__VA_ARGS__);}while(0)
+#define wrn_sl(m,...)   do{printf (m, ##__VA_ARGS__);}while(0)
+#define tbc_access(m,...)   do{printf (m, ##__VA_ARGS__);}while(0)
+#endif
+
 axl_bool turbulence_init (TurbulenceCtx * ctx, 
 			  VortexCtx     * vortex_ctx,
 			  const char    * config);

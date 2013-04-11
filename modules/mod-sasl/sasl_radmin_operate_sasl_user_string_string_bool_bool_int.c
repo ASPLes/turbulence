@@ -28,10 +28,12 @@ extern VortexMutex       sasl_db_mutex;
 int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const char * additional_value, int remote_admin, int disabled, int operation, char ** fault_error, int * fault_code, VortexChannel * channel)
 {
 	
-		/* get the serverName from the current channel */
+	/* get the serverName from the current channel */
 		const       char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 		/* get the context */
+#if ! defined(SHOW_FORMAT_BUGS)
 		TurbulenceCtx    * ctx        = common_sasl_get_context (sasl_backend);
+#endif
 
 		switch (operation) {
 		case 1:
