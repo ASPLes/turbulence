@@ -192,10 +192,11 @@ axl_bool mod_python_init_app (TurbulenceCtx * ctx, PyObject * init_function, axl
 
 	/* build parameters */
 	args = PyTuple_New (1);
+	Py_INCREF (py_tbc_ctx);
 	PyTuple_SetItem (args, 0, py_tbc_ctx);
 
 	/* now call to the function */
-	msg ("calling python app init function: %p (tbc ref: %p:%d)", init_function, py_tbc_ctx, (int) py_tbc_ctx->ob_refcnt);
+	msg ("calling python app init function: %p (tbc ref: %p, ref count: %d)", init_function, py_tbc_ctx, Py_REFCNT(py_tbc_ctx));
 	result = PyObject_Call (init_function, args, NULL);
 
 	/* handle exceptions */
@@ -514,6 +515,7 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 		if (py_tbc_ctx) {
 			msg ("calling to release internal vortex.Ctx reference..");
 			py_turbulence_ctx_nullify_vortex_ctx (py_tbc_ctx);
+			Py_DECREF (py_tbc_ctx);
 		}
 
 		/* get next node */
@@ -678,7 +680,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 		mod_python_initialize ();
 
 		/* acquire the GIL */
-		PyEval_ReleaseLock ();
+		/* PyEval_ReleaseLock (); */
 	} /* end if */
 
 	/* acquire the GIL */

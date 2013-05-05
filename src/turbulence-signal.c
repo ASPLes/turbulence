@@ -285,7 +285,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 		/* check current termination option */
 		doc  = turbulence_config_get (ctx);
 		node = axl_doc_get (doc, "/turbulence/global-settings/on-bad-signal");
-		error ("applyinng configured action %s", (node && HAS_ATTR (node, "action")) ? ATTR_VALUE (node, "action") : "not defined");
+		error ("applying configured action %s", (node && HAS_ATTR (node, "action")) ? ATTR_VALUE (node, "action") : "not defined");
 		if (HAS_ATTR_VALUE (node, "action", "ignore")) {
 			/* do notify if enabled */
 			CHECK_AND_REPORT_MAIL_TO ("Bad signal received at turbulence process, default action: ignore",
