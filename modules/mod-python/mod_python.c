@@ -566,6 +566,7 @@ void mod_python_initialize (void)
 		/* call to initialize threading API and to acquire the lock */
 		msg ("    init pythreads..");
 		PyEval_InitThreads();
+		PyEval_ReleaseLock ();
 
 		/* call to init py-turbulence */
 		msg ("    init py-turbulence..");
@@ -656,7 +657,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* get work directory and serverName */
 	const char       * workDir;
-	PyGILState_STATE   state; 
+	/* PyGILState_STATE   state; */
 
 	serverName = turbulence_ppath_get_server_name (conn);
 	workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
@@ -680,23 +681,23 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 		mod_python_initialize ();
 
 		/* acquire the GIL */
-		/* PyEval_ReleaseLock (); */
+		/* PyEval_ReleaseLock ();  */
 	} /* end if */
 
 	/* acquire the GIL */
-	state  = PyGILState_Ensure();
+	/* state  = PyGILState_Ensure(); */
 
 	/* for each application found, register it and call to
 	 * initialize its function */
 	if (! mod_python_init_applications (ctx, mod_python_conf, workDir, serverName, conn)) {
-		PyGILState_Release (state); 
+		/* PyGILState_Release (state);  */
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
 	}
 
 	/* now load python applications at the working dir if it is found */
 	if (! mod_python_init_applications (ctx, mod_python_site_conf, workDir, serverName, conn)) {
-		PyGILState_Release (state); 
+		/* PyGILState_Release (state);  */
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
 	}
@@ -706,7 +707,7 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 	/* let other threads to enter inside python engine: this must
 	   be the last call: release the GIL */
 	/* PyGILState_Release(state); */
-	PyGILState_Release(state); 
+	/* PyGILState_Release(state);  */
 	vortex_mutex_unlock (&mod_python_top_init);
 
 	msg ("mod-python started..");
