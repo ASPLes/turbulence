@@ -8,7 +8,7 @@
        The close-on-failure="yes" attribute allows to control if the
        module should close the connection after a TLS handshake
        failure or leave the connection as is. Leave this setting as is
-       for a have recommended secure configuration.
+       to have a recommended secure configuration.
    --></span>
    &lt;<span class="node">certificate-select</span> close-on-failure=<span class="attrvalue">"yes"</span> 
                        key=<span class="attrvalue">"private.key"</span> 
