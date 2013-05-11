@@ -57,7 +57,7 @@ PyMODINIT_FUNC  initlibpy_turbulence (void)
 	PyObject * module;
 
 	/* call to initilize threading API and to acquire the lock */
-	PyEval_InitThreads();
+	/* PyEval_InitThreads(); */
 
 	/* register vortex module */
 	module = Py_InitModule3 ("turbulence", NULL, 
