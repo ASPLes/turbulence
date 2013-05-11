@@ -851,7 +851,7 @@ axl_bool        common_sasl_load_serverName (TurbulenceCtx   * ctx,
 
 	/* check if we did find the node */
 	if (node == NULL) {
-		error ("Unable to find <auth-db> node declaration for the serverName=%s", serverName);
+		wrn ("Unable to find <auth-db> node declaration for the serverName=%s", serverName);
 		return axl_false;
 	} /* end if */
 
