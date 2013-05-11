@@ -646,6 +646,14 @@ void mod_python_load_config (TurbulenceCtx    * ctx,
 	return;
 }
 
+/* release python state according to the way the GIL was acquired */
+#define __mod_python_release_gil()                  \
+	if (initialization_done)                    \
+		threadState = PyEval_SaveThread();  \
+	else                                        \
+		PyGILState_Release (state);         
+
+
 /** 
  * @brief Starts python function once a profile path is selected 
  */
@@ -657,7 +665,9 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* get work directory and serverName */
 	const char       * workDir;
-	/* PyGILState_STATE   state; */
+	PyThreadState    * threadState;
+	PyGILState_STATE   state = 0;
+	axl_bool           initialization_done = axl_false;
 
 	serverName = turbulence_ppath_get_server_name (conn);
 	workDir    = turbulence_ppath_get_work_dir (ctx, ppath_selected);
@@ -675,31 +685,33 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 		return axl_true; 
 	} /* end if */
 
-	if (! mod_python_py_init) {
+	if (mod_python_py_init) { 
+		/* python engine was initialized previously so this is
+		 * a different thread, acquire the GIL state */
+		state  = PyGILState_Ensure(); 
+	} else {
 		/* initialize python engine and configure it to use with
 		   mod-python */
 		mod_python_initialize ();
 
 		/* acquire the GIL */
 		/* PyEval_ReleaseLock ();  */
+		initialization_done = axl_true;
 	} /* end if */
-
-	/* acquire the GIL */
-	/* state  = PyGILState_Ensure(); */
 
 	/* for each application found, register it and call to
 	 * initialize its function */
 	if (! mod_python_init_applications (ctx, mod_python_conf, workDir, serverName, conn)) {
-		/* PyGILState_Release (state);  */
-		PyEval_ReleaseLock ();  
+		/* release python gil */
+		__mod_python_release_gil ();
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
 	}
 
 	/* now load python applications at the working dir if it is found */
 	if (! mod_python_init_applications (ctx, mod_python_site_conf, workDir, serverName, conn)) {
-		/* PyGILState_Release (state);  */
-		PyEval_ReleaseLock ();  
+		/* release python gil */
+		__mod_python_release_gil ();
 		vortex_mutex_unlock (&mod_python_top_init);
 		return axl_false;
 	}
@@ -708,9 +720,8 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* let other threads to enter inside python engine: this must
 	   be the last call: release the GIL */
-	/* PyGILState_Release(state); */
-	/* PyGILState_Release(state);  */
-	PyEval_ReleaseLock ();  
+	/* release python gil */
+	__mod_python_release_gil ();
 	vortex_mutex_unlock (&mod_python_top_init);
 
 	msg ("mod-python started..");
