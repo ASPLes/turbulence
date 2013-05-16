@@ -42,8 +42,6 @@
 /* include base library */
 #include <py_turbulence.h>
 
-typedef struct _PyTurbulenceCtx PyTurbulenceCtx;
-
 axl_bool   py_turbulence_ctx_check    (PyObject * obj);
 
 void       py_turbulence_ctx_set      (PyObject      * py_tbc_ctx, 

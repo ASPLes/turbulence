@@ -39,18 +39,6 @@
 /* include header */
 #include <py_turbulence.h>
 
-struct _PyTurbulenceCtx {
-	/* header required to initialize python required bits for
-	   every python object */
-	PyObject_HEAD
-
-	/* pointer to the turbulence context */
-	TurbulenceCtx * ctx;
-
-	/* pointer to the PyVortexCtx */
-	PyObject      * py_vortex_ctx;
-};
-
 static int py_turbulence_ctx_init_type (PyTurbulenceCtx *self, PyObject *args, PyObject *kwds)
 {
     return 0;

@@ -52,6 +52,18 @@ typedef struct _PyTurbulenceInvokeData {
 	axlPointer    user_data;
 } PyTurbulenceInvokeData;
 
+typedef struct _PyTurbulenceCtx {
+	/* header required to initialize python required bits for
+	   every python object */
+	PyObject_HEAD
+
+	/* pointer to the turbulence context */
+	TurbulenceCtx * ctx;
+
+	/* pointer to the PyVortexCtx */
+	PyObject      * py_vortex_ctx;
+} PyTurbulenceCtx;
+
 void            py_turbulence_init (void);
 
 PyMODINIT_FUNC  initlibpy_turbulence (void);
