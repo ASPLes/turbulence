@@ -4989,7 +4989,7 @@ axl_bool test_websocket_listener_disabled (const char * server, const char * por
 		if (_socket <= 0)
 			break;
 
-		if (_socket > 0 && tries > 10) {
+		if (_socket > 0 && tries > 100) {
 			printf ("ERROR: expected to not to find port %s:%s to be running, but it was found a complete connect socket=%d\n",
 				server, port, _socket);
 			return axl_false;
