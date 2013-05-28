@@ -377,7 +377,8 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	msg ("CHILD: started socket watch on (child_connection socket: %d)", child->child_connection);
 
 	/* open connection management (child->conn_mgr) */
-	msg ("CHILD: starting child<->master BEEP link on %s:%s", child->init_string_items[12], child->init_string_items[13]);
+	msg ("CHILD: starting child<->master BEEP link on %s:%s (timeout 10 seconds)", child->init_string_items[12], child->init_string_items[13]);
+	vortex_connection_connect_timeout (ctx->vortex_ctx, 10000000);
 	child->conn_mgr = vortex_connection_new (ctx->vortex_ctx, 
 						 /* host */
 						 child->init_string_items[12], 
@@ -387,6 +388,7 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 
 	if (! vortex_connection_is_ok (child->conn_mgr, axl_false)) {
 		error ("CHILD: failed to create master<->child BEEP link..");
+		return axl_false;
 	} else {
 		/* connection ok, now unregister */
 		turbulence_conn_mgr_unregister (ctx, child->conn_mgr);
