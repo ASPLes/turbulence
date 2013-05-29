@@ -4982,6 +4982,7 @@ axl_bool test_websocket_listener_disabled (const char * server, const char * por
 {
 	VORTEX_SOCKET     _socket;
 	int               tries   = 0;
+	char            * cmd;
 
 	while (axl_true) {
 		/* create socket connection */
@@ -4990,8 +4991,15 @@ axl_bool test_websocket_listener_disabled (const char * server, const char * por
 			break;
 
 		if (_socket > 0 && tries > 100) {
+
 			printf ("ERROR: expected to not to find port %s:%s to be running, but it was found a complete connect socket=%d\n",
 				server, port, _socket);
+#if defined(AXL_OS_UNIX)
+			printf ("ERROR: current listener connections: \n");
+			cmd = axl_strdup_printf ("netstat --inet -a -n -p | grep :%s", port);
+			system (cmd);
+			axl_free (cmd);
+#endif
 			return axl_false;
 		} /* end if */
 
