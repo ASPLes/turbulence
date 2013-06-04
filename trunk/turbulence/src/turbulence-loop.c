@@ -106,6 +106,37 @@ axl_bool __turbulence_loop_read_first (TurbulenceLoop * loop)
 	return axl_true;
 }
 
+void __turbulence_loop_discard_broken (TurbulenceCtx * ctx, TurbulenceLoop * loop)
+{
+	int  loop_descriptor;
+	int  result;
+	char bytes[3];
+
+	/* reset cursor */
+	axl_list_cursor_first (loop->cursor);
+	while (axl_list_cursor_has_item (loop->cursor)) {
+		/* get loop descriptor */
+		loop_descriptor = PTR_TO_INT (axl_list_cursor_get (loop->cursor));
+
+		/* now add to the waiting socket */
+		result = recv (loop_descriptor, bytes, 1, MSG_PEEK);
+		if (errno == EBADF) {
+			
+			/* failed to add descriptor, close it and remove from wait list */
+			error ("Discarding descriptor %d because it is broken/invalid (EBADF/%d)", loop_descriptor, errno);
+
+			/* remove cursor */
+			axl_list_cursor_remove (loop->cursor);
+			continue;
+		} /* end if */
+
+		/* get the next item */
+		axl_list_cursor_next (loop->cursor);
+	} /* end if */
+
+	return;
+}
+
 axl_bool __turbulence_loop_read_pending (TurbulenceLoop * loop)
 {
 	TurbulenceLoopDescriptor * loop_descriptor, * aux;
@@ -263,6 +294,7 @@ axlPointer __turbulence_loop_run (TurbulenceLoop * loop)
 	 * changes and a queue to receive new registrations */
 	loop->list    = axl_list_new (axl_list_always_return_1, __turbulence_loop_descriptor_free);
 	loop->cursor  = axl_list_cursor_new (loop->list);
+
 	/* force to use always default select(2) based implementation */
 	loop->fileset  = __vortex_io_waiting_default_create (turbulence_ctx_get_vortex_ctx (loop->ctx), READ_OPERATIONS);
 	
@@ -285,8 +317,14 @@ wait_for_first_item:
 		result = __vortex_io_waiting_default_wait_on (loop->fileset, max_fds, READ_OPERATIONS);
 		
 		/* check for timeout and errors */
-		if (result == -1 || result == -2)
+		if (result == -1 || result == -2) {
+			if (errno == EBADF) {
+				error ("error received from wait on operation, result=%d, errno=%d (discarding broken descriptors)", result, errno);
+				__turbulence_loop_discard_broken (ctx, loop);
+			} /* end if */
+
 			goto process_pending;
+		}
 		if (result == -3) {
 			error ("fatal error received from io-wait function, finishing turbulence loop manager..");
 			return NULL;
