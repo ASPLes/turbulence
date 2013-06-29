@@ -56,6 +56,14 @@ AM_PROG_LIBTOOL
 AC_CHECK_HEADER(termios.h, [termios_found=yes], [termios_found=no])
 AM_CONDITIONAL(ENABLE_TERMIOS, test ".$termios_found" = ".yes")
 
+compiler_options=""
+STRICT_PROTOTYPES=""
+if test "$compiler" = "gcc" ; then
+   compiler_options="-Wstrict-prototypes -Wall -Werror -g -ansi -fstack-protector-all -Wstack-protector"
+   echo "Detected gcc compiler: $compiler, adding options: $compiler_options"
+fi
+AC_SUBST(compiler_options)
+
 dnl external dependencies
 PKG_CHECK_MODULES(AXL, axl >= 0.6.3) 
 

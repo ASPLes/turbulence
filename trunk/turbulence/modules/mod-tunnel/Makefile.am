@@ -1,6 +1,6 @@
 EXTRA_DIST = mod-tunnel.xml tunnel.conf resolver.xml mod-tunnel.win32.xml
 
-INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
+INCLUDES = $(compiler_options) -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_TUNNEL_CFLAGS)
 

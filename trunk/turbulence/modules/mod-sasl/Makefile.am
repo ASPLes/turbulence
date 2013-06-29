@@ -11,7 +11,7 @@ EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h mysql.sasl.dtd mysql
 	     auth-db.example.xml remote-admins.example.xml gen-mod-sasl-pass.py create-mysql-sasl-database.sql \
 	     extension.example.modules auth-db.mysql.example.xml sasl-radmin.idl
 
-INCLUDES = -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
+INCLUDES = $(compiler_options) -Wall -g -ansi -I ../../src -DCOMPILATION_DATE=`date +%s` \
 	   -DVERSION=\"$(TURBULENCE_VERSION)\" \
 	   $(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_XML_RPC_CFLAGS) $(VORTEX_SASL_CFLAGS) $(MYSQL_CFLAGS)
 
