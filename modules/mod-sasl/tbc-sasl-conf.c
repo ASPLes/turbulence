@@ -54,7 +54,7 @@ SaslAuthBackend * sasl_backend = NULL;
 TurbulenceCtx   * ctx          = NULL;
 VortexCtx       * vortex_ctx   = NULL;
 
-void tbc_sasl_add_user ()
+void tbc_sasl_add_user (void)
 {
 	const char  * serverName      = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	const char  * new_user_id     = exarg_get_string ("add-user");
@@ -124,7 +124,7 @@ change_password:
 /** 
  * @internal Lookup for the user and disables it.
  */
-void tbc_sasl_disable_user ()
+void tbc_sasl_disable_user (void)
 {
 	const char * user_id_to_disable = exarg_get_string ("disable-user");
 	const char * serverName         = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
@@ -142,7 +142,7 @@ void tbc_sasl_disable_user ()
 /** 
  * @internal List all users created.
  */
-void tbc_sasl_list_users ()
+void tbc_sasl_list_users (void)
 {
 	const char * serverName = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	axlList    * list;
@@ -174,7 +174,7 @@ void tbc_sasl_list_users ()
 /** 
  * @internal Lookup for the user and removes it from the database.
  */
-void tbc_sasl_remove_user ()
+void tbc_sasl_remove_user (void)
 {
 	const char * serverName        = exarg_is_defined ("serverName") ? exarg_get_string ("serverName") : NULL;
 	const char * user_id_to_remove = exarg_get_string ("remove-user");

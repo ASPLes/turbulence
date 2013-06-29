@@ -1,7 +1,7 @@
 # Module definition
 EXTRA_DIST = mod_tls.xml mod_tls.win32.xml tls.example.conf
 
-INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
+INCLUDES = $(compiler_options) -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
 	$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(VORTEX_TLS_CFLAGS)
 

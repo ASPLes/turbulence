@@ -2,7 +2,7 @@
 EXTRA_DIST = mod-python-def.xml python.example.conf
 SUBDIRS = doc
 
-INCLUDES = -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
+INCLUDES = $(compiler_options) -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
 	$(AXL_CFLAGS) $(VORTEX_CFLAGS) $(EXARG_CFLAGS) $(PYTHON_CFLAGS) $(PY_VORTEX_CFLAGS)
 
