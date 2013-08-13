@@ -208,6 +208,58 @@ axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
 	return axl_false; /* do filter */
 }
 
+axl_bool mod_sasl_mysql_check_unallowed_sequence (TurbulenceCtx * ctx, VortexConnection * conn, const char * content)
+{
+	char      * new_content;
+	axl_bool    found;
+
+	if (content == NULL || strlen (content) == 0)
+		return axl_true;
+
+	/* get a lower copy so we can do a case insensitive check */
+	new_content = axl_stream_to_lower_copy (content);
+	if (new_content == NULL) {
+		error ("Unable to copy content to do unallowed sequence, error was..");
+		return axl_false;
+	} /* end if */
+	
+	/* replace all \t with " " to unifify checks. Do the same with \n and \r */
+	axl_replace (new_content, "\t", " ");
+	axl_replace (new_content, "\r", " ");
+	axl_replace (new_content, "\n", " ");
+
+	/* set initial status */
+	found = axl_false;
+
+	if (strstr (new_content, "select "))
+		found = axl_true;
+	if (strstr (new_content, "insert "))
+		found = axl_true;
+	if (strstr (new_content, "delete "))
+		found = axl_true;
+	if (strstr (new_content, ";"))
+		found = axl_true;
+	if (strstr (new_content, "--"))
+		found = axl_true;
+	if (strstr (new_content, "'"))
+		found = axl_true;
+
+
+	/* drop an error log if found */
+	if (found) {
+		error ("IP %s should be blocked now because: Found unallowed input sequence at login attempt. Unallowed sequence is: %s", 
+		       vortex_connection_get_host_ip (conn), content);
+		vortex_connection_shutdown (conn);
+	} /* end if */
+
+	/* release memory copy */
+	axl_free (new_content);
+	
+	/* report failure */
+	return ! found;
+}
+       
+
 axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx, 
 				 VortexConnection * conn,
 				 axlNode          * auth_db_node_conf,
@@ -224,6 +276,22 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	MYSQL_RES   * result;
 	MYSQL_ROW     row;
 	axl_bool      _result;
+
+	/* check import parameters without doing anything */
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, auth_id))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, password))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, serverName))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, authorization_id))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, sasl_method))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, auth_id))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, vortex_connection_get_host (conn)))
+		return axl_false;
 
 	/* get the auth query */
 	doc  = axl_node_annotate_get (auth_db_node_conf, "mysql-conf", axl_false);
@@ -243,10 +311,12 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		axl_replace (query, "%n", serverName);
 		axl_replace (query, "%i", authorization_id);
 		axl_replace (query, "%m", sasl_method);
+
+		msg ("Checking IP filter for auth id [%s], query [%s]", auth_id, query);
 		
 		if (! mod_sasl_mysql_check_ip_filter_query (ctx, query, conn, auth_db_node_conf)) {
-			error ("IP filtered by defined expression associated to user: %s denied connection from %s", 
-			       auth_id, vortex_connection_get_host_ip (conn));
+			error ("login failure: %s, ip filtered by defined expression associated to user: %s denied connection from %s", 
+			       auth_id, auth_id, vortex_connection_get_host_ip (conn));
 			axl_free (query);
 			return 0;
 		}
@@ -268,7 +338,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	axl_replace (query, "%m", sasl_method);
 	axl_replace (query, "%p", vortex_connection_get_host (conn));
 
-	msg ("Trying to auth %s with query string %s", auth_id, query);
+	msg ("Trying to auth [%s] with query string [%s]", auth_id, query);
 
 	/* run query */
 	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_false, err);
@@ -283,6 +353,9 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	/* return content from the first [0][0] array position */
 	row     = mysql_fetch_row (result);
 	if (row == NULL) {
+		/* log login failure */
+		error ("login failure: %s, failed from: %s", auth_id, vortex_connection_get_host_ip (conn));
+
 		mysql_free_result (result);
 		return 0;
 	} /* end if */
@@ -314,6 +387,9 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		axl_free (query);
 		
 	} /* end if */
+
+	if (!_result)
+		error ("login failure: %s, failed from: %s", auth_id, vortex_connection_get_host_ip (conn));
 	
 	return _result ? 1 : 0;
 }
