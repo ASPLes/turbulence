@@ -918,6 +918,13 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 	(*remote_port)     = conn_status + iterator;
 	if (strlen (*remote_port) == 0)
 		*remote_port = 0;
+
+	/* get next position: remote_port */
+	iterator           = next;
+	next               = __get_next_field (conn_status, iterator);
+	(*remote_host_ip)  = conn_status + iterator;
+	if (strlen (*remote_host_ip) == 0)
+		*remote_host_ip = 0;
  
 	return;
 }
@@ -973,7 +980,7 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 						      &remote_host_ip,
 						      &fix_server_name);
 
-	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d, remote_host=%s, remote_port=%s",
+	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d, remote_host=%s, remote_port=%s, remote_host_ip=%s",
 	     handle_start_reply, channel_num, 
 	     profile ? profile : "", 
 	     profile_content ? profile_content : "", encoding, 
@@ -982,7 +989,8 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 	     seq_no,
 	     ppath_id, has_tls, fix_server_name,
 	     remote_host ? remote_host : "", 
-	     remote_port ? remote_port : "");
+	     remote_port ? remote_port : "",
+	     remote_host_ip ? remote_host_ip : "");
 
 	/* create a connection and register it on local vortex
 	   reader */
