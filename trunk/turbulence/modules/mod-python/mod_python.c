@@ -649,7 +649,7 @@ void mod_python_load_config (TurbulenceCtx    * ctx,
 /* release python state according to the way the GIL was acquired */
 #define __mod_python_release_gil()                  \
 	if (initialization_done)                    \
-		threadState = PyEval_SaveThread();  \
+		PyEval_SaveThread();                \
 	else                                        \
 		PyGILState_Release (state);         
 
@@ -665,7 +665,6 @@ static axl_bool mod_python_ppath_selected (TurbulenceCtx      * ctx,
 
 	/* get work directory and serverName */
 	const char       * workDir;
-	PyThreadState    * threadState;
 	PyGILState_STATE   state = 0;
 	axl_bool           initialization_done = axl_false;
 
