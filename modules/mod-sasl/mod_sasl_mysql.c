@@ -338,7 +338,8 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	axl_replace (query, "%m", sasl_method);
 	axl_replace (query, "%p", vortex_connection_get_host (conn));
 
-	msg ("Trying to auth [%s] with query string [%s]", auth_id, query);
+	msg ("Trying to auth [%s] with query string [%s], conn-id=%d from %s:%s ", auth_id, query, 
+	     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn));
 
 	/* run query */
 	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_false, err);

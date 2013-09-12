@@ -570,7 +570,6 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	/* get turbulence context */
 	axlHashCursor          * cursor;
 	VortexConnection       * conn;
-	int                      conn_id;
 	TurbulenceBroadCastMsg * broadcast;
 	TurbulenceConnMgrState * state;
 	axl_bool                 should_filter;
@@ -595,7 +594,6 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	while (axl_hash_cursor_has_item (cursor)) {
 		
 		/* get data */
-		conn_id = PTR_TO_INT (axl_hash_cursor_get_key (cursor));
 		state   = axl_hash_cursor_get_value (cursor);
 		conn    = state->conn;
 

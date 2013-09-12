@@ -973,14 +973,16 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 						      &remote_host_ip,
 						      &fix_server_name);
 
-	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d",
+	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d, remote_host=%s, remote_port=%s",
 	     handle_start_reply, channel_num, 
 	     profile ? profile : "", 
 	     profile_content ? profile_content : "", encoding, 
 	     serverName ? serverName : "",
 	     msg_no,
 	     seq_no,
-	     ppath_id, has_tls, fix_server_name);
+	     ppath_id, has_tls, fix_server_name,
+	     remote_host ? remote_host : "", 
+	     remote_port ? remote_port : "");
 
 	/* create a connection and register it on local vortex
 	   reader */

@@ -109,7 +109,7 @@ axl_bool __turbulence_loop_read_first (TurbulenceLoop * loop)
 void __turbulence_loop_discard_broken (TurbulenceCtx * ctx, TurbulenceLoop * loop)
 {
 	int  loop_descriptor;
-	int  result;
+	int  result = -1;
 	char bytes[3];
 
 	/* reset cursor */
@@ -120,7 +120,7 @@ void __turbulence_loop_discard_broken (TurbulenceCtx * ctx, TurbulenceLoop * loo
 
 		/* now add to the waiting socket */
 		result = recv (loop_descriptor, bytes, 1, MSG_PEEK);
-		if (errno == EBADF) {
+		if (result == -1 && errno == EBADF) {
 			
 			/* failed to add descriptor, close it and remove from wait list */
 			error ("Discarding descriptor %d because it is broken/invalid (EBADF/%d)", loop_descriptor, errno);
