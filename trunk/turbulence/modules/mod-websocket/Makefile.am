@@ -11,7 +11,7 @@ mod_websocket_la_SOURCES  = mod_websocket.c
 mod_websocket_la_LDFLAGS  = -module -ldl $(VORTEX_WEBSOCKET_LIBS)
 
 # reconfigure module installation directory
-libdir = `turbulence-config --mod-dir`
+libdir = `../../turbulence-config --mod-dir`
 
 # configure site module configuration installation
 etcdir   = $(sysconfdir)/turbulence/websocket
