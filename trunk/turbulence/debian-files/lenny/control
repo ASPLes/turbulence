@@ -101,7 +101,7 @@ Description: SASL profile implementation for Turbulence
 Package: turbulence-utils
 Section: libs
 Architecture: any
-Depends: libturbulence (>= ${Source-Version})
+Depends: libturbulence (>= ${Source-Version}), libreadline5
 Description: Tubulence utils
   Utils to manage turbulence features.
 
