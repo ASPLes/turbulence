@@ -1,5 +1,5 @@
 # Module definition
-EXTRA_DIST = template.xml
+EXTRA_DIST = # template.xml
 
 INCLUDES = $(compiler_options) -Wall -g -ansi $(TURBULENCE_CFLAGS) -I../../src -DCOMPILATION_DATE=`date +%s` \
 	-DVERSION=\"$(VERSION)\" \
