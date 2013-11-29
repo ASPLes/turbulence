@@ -1,0 +1,277 @@
+                     -= Turbulence 0.6.1 =-
+                       "Counting Stars"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce Turbulence
+  0.6.1 "Counting stars" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules which allows
+  to implement server side profiles that are used and combined then
+  with other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.core-admin.com
+      [Core-Admin homepage]
+ 
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  WEBSOCKET: integrated noPoll (http://www.aspl.es/nopoll), through
+  the new Vortex Library's WebSocket support to allow easy integration
+  of BEEP and BEEP over WebSocket without having to pay attention to
+  these details at profile level.
+
+  INTERNAL PROXY: added support to the engine to allow the master
+  process to proxy a connection to a child process. This way it is
+  possible to handle at a child process (which is running with
+  different uid/gid) a connection that must be handled at master
+  process (for example, because a TLS handshake is in place).
+
+  SECURITY: making mod-tls to close connection after TLS handshake
+  failure by default.
+
+  GENERAL: added support to use syslog (making it default
+  option). Lots of bugs were fixed and new minor features were added.
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.6.1
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Several modifications to make turbulence to be able to use
+  syslog.
+
+* [fix] Making use-syslog="yes/no" to be optional.
+
+* [fix] More fixings to better handle logging into syslog.
+
+* [fix] Added new regression test to try to trick turbulence server
+  when requesting TLS (but it wasn't properly initiated).
+
+* [fix] Updated mod-tls to close the connection when TLS handshake
+  fails to avoid security implementations (even though they are
+  covered). Now if the user configures a close-on-failure="yes" or
+  doesn't say anything about that attribute, the connection will be
+  closed.
+
+* [fix] Fixed documentation failure which was causing to get the exarg
+  mainpage instead of turbulence's. Added security clarification note
+  to explain why it is not required to add any connmark declaration
+  when it comes to secure profiles inside.
+
+* [fix] Added initial code to support mod-websocket (a module to
+  provide websocket services through libvortex-websocket-1.1).
+
+* [new] Added initial working mod-webosocket version with support to
+  handle applications at the parent process. Still more work is
+  required to allow applications on children too. Now it is possible
+  to reach applications served by Turbulence via BEEP over WebSocket
+  (ws:// and wss://). Nice!!  Updated regression test to include an
+  initial test suite (test_25).
+
+* [fix] Making turbulence process to not activate SIGCHLD handler on
+  master process until a child is created.
+
+* [new] Updated Turbulence engine to allow configuring search domains
+  (for data applications) inside <system-paths> nodes as done until
+  now inside profile path declaration.
+  
+* [new] Global engine update to allow supporting in a general way
+  proxing BEEP connection on the master process so they are handled
+  transparently at the child process as if it were received directly
+  by them.
+
+  This new support has been added to bypass OpenSSL's limitations in
+  terms to saving SSL context and recovering it at a child process.
+
+  With this new support mod-websocket is able to work on master and
+  child processes (using reuse=yes configuration).  NICE!!! Still more
+  work is required to update regression tests and cleanup the code.
+
+  API added:
+  - turbulence_conn_mgr_proxy_on_parent
+
+* [new] Updated turbulence code to install a vortex log handler when
+  debug isn't enabled on that library to track all critical errors
+  found and display them as turbulence error() messages.
+
+* [fix] Added new regression test to properly check WebSocket with TLS
+  connections on child process. Used this to cleanup the
+  module. Several updates into the turbulence-process to allow fixing
+  the serverName on child (which is imposed by the WebSocket Host
+  header).
+
+* [fix] Making regression tests to be not installed.
+
+* [fix] Updated turbulence-ppath module to notify about what profile
+  path name is being selected.
+
+* [new] Updated turbulence loop API to allow unwatching a socket,
+  getting associated context or getting currently watched
+  descriptors. API added:
+
+  - turbulence_loop_ctx
+  - turbulence_loop_unwatch_descriptor
+  - turbulence_loop_watching
+
+* [fix] Several modifications to make proxy on parent engine to
+  properly release references when connection close found without
+  having wrong reference accesses.
+
+* [fix] Making turbulence_process_create_child to skip operations when
+  detected turbulence is finishing.
+
+* [fix] Updated mod-websocket code to use new unified certificate
+  storage provided by noPoll API. Also updated module to allow
+  configuring port-share feature provided by Vortex Library to run on
+  current BEEP ports support for WebSockets too. Nice!! Updated
+  default configuration file.
+
+* [fix] Updated turbulence child creation process to check if
+  turbulence itself is finishing before proceed after acquiring the
+  child lock.
+
+* [fix] Updated child creation process to avoid releasing an internal
+  BEEP connection twice when the child fails at very early
+  stages. Added regression test (test_10e) to reproduce the conditions
+  to force the wrong reference access to check patch introduced.
+
+* [fix] Added additional code to wait a bit for child to start before
+  failing..
+
+* [fix] Updated test_17.conf to increase the limit to ensure the test
+  works.
+
+* [fix] Fixed child control socket path check at parent. Moved module
+  unloading code at the verify end..
+
+* [fix] Updated mod-websocket to allow importing certificates as
+  defined inside mod-tls.conf so they can be easily unified into a
+  single place.
+
+* [fix] Updated child local socket path code run by parent process to
+  avoid calling to connect when the path doesn't exists...implemented
+  internal micro-waits to let the child to process until the parent is
+  able to connect.
+
+* [fix] Making child process wait at the parent process to be skipped
+  when detected parent process is finishing..
+
+* [fix] Added additional regression test to check connections that
+  must be sent to child process but at <on connect> time:
+  test_27. Still more work required.
+
+* [fix] Updated turbulence engine to avoid failing when it is not
+  possible to setup set hard and soft socket limit.
+
+* [fix] Updated turbulence profile path engine to defer profile path
+  decision when separate="yes", it is on-connect selection, serverName
+  on profile path is ".*" and the user didn't still provided a
+  serverName (because no BEEP session has been established yet). This
+  fixes those situations where a profile path with a serverName=".*"
+  catches all connections even though having other profile paths with
+  the right serverName (matching one). Added test_27 reg test to
+  reproduce the bug and check the fix introduced.
+
+* [fix] Updated test_01.c to create a socket by other means to avoid
+  using socket creation API at Vortex which is creating some
+  interactions with the reg test.
+
+* [fix] Applied several printf-format fixings.
+
+* [fix] Several updates on mod-websocket to allow getting
+  notifications from the noPoll level that are handled through the
+  standard turbulence message handler. By default only critical
+  messages are showed. Updated certificate handling code to detect
+  files that aren't found because they are relative to implement a
+  search operation over certain standard locations to ensure
+  certificates have full path.
+
+* [fix] Making turbulence proxy on parent engine to restore original
+  connecting host and port on the proxied connection running at the
+  child.  Added regression test (test_28) to reproduce the bug and
+  check the fix introduced.
+
+* [fix] Updated connection state restore at child to also restore
+  host_ip value returned by vortex_connection_get_host_ip.
+
+* [fix] Updated typo error at turbulence-signal.c
+
+* [fix] Updated mod-python to avoid calling to PyEval_ReleaseLock
+  which seems to (well, it is) break GIL handling under some
+  circumstances.  Updated reference handling around PyTurbulenceCtx
+  used by initialisation (to ensure at least one ref will remain at
+  the end of the module).
+
+* [fix] Updated mod-python to avoid calling to acquire GIL but instead
+  use thread init and release lock calls. Fixes some issues while
+  calling to python APIs that acquires and releases the GIL
+  explicitly.
+
+* [fix] More fixings into mod-python to properly initialise and
+  release the lock just after the enter python init was completed.
+
+* [fix] Updated mod-python to acquire and release the python GIL in a
+  different manner so first initialisation lock is released using
+  PyEval_SaveThread but the rest of the cases PyGILState_Ensure is
+  used.
+
+* [fix] Several fixings to make mod-python to compile with Python2.5.
+
+* [fix] Updated regression test to wait a bit more for the socket to
+  be disabled after running websocket test..
+
+* [fix] Updated regression test to show current listener connections
+  after failure found at test_websocket_listener_disabled.
+
+* [fix] Making turbulence loop module to detect and discard
+  broken/invalid watched descriptors to avoid iterating over and over
+  again.
+
+* [fix] Minor changes into tbc-sasl-conf.c to get it compiled.
+
+* [fix] Enabled by default SSP support for gcc.
+
+* [fix] Updated mod_sasl_mysql.c to enforce security checks to
+  avoid SQL-injections.
+
+* [fix] Fixed connection source address restoration at child process.
+
+About Us
+~~~~~~~~
+
+  Advanced Software Production Line provides GNU/Linux support and
+  consulting services to help organisations to introduce GNU/Linux
+  inside its process.
+
+  Contact us, using English or Spanish, to get commercial support
+  and/or BEEP based development services.
+
+  You can reach us:
+
+       http://www.aspl.es - info@aspl.es
+
+  Enjoy Turbulence!  
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+29th Nov 2013, Madrid (Spain)
+  
+
