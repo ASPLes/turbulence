@@ -347,6 +347,7 @@ echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "   Status directory:               [$statusdir]"
 echo "   Runtime data directory:         [$runtimedatadir]"
+echo ""
 echo "   Reg. expression support (pcre): [$pcre_found]"
 if test "$pcre_found" = "no" ; then
 	echo "NOTE: building turbulence without pcre support will"
@@ -357,20 +358,30 @@ echo "   Build tbc-sasl-conf:            [$termios_found]"
 echo "   Build tbc-mod-gen:              [$enable_tbc_mod_gen]"
 echo "   Build tbc-dblist-mgr:           [$enable_tbc_dblist_mgr]"
 echo "   Build tbc-ctl:                  [$enable_tbc_ctl]"
+echo ""
 echo "   Build mod-python:               [$python_devel_found]"
 if test "x$python_devel_found" = "xyes"; then
 echo "     flags: $PYTHON_CFLAGS"
 echo "     libs: $PYTHON_LIBS"
 fi
-echo "   Build with MySQL support:       [$mysql_devel_found]"
+echo ""
+
+mysql_msg=""
+if test "x$mysql_devel_found" = "xno"; then
+     mysql_msg=" (Applications using MySQL, like mod-sasl-mysql, won't work)"
+fi
+
+echo "   Build with MySQL support:       [$mysql_devel_found]$mysql_msg"
 if test "x$mysql_devel_found" = "xyes"; then
 echo "     flags: $MYSQL_CFLAGS"
 echo "     libs: $MYSQL_LIBS"
 fi
+echo ""
 echo "   Build  WebSocket support:   [$enable_websocket] (mod-websocket: WebSocket over BEEP!)"
 if test "x$enable_websocket" = "xyes"; then
 echo "     libs: $VORTEX_WEBSOCKET_LIBS"
 fi
+echo ""
 echo "   Build turbulence documentation  [$DOXYGEN]"
 echo "------------------------------------------"
 echo "--            Let it BEEP!              --"
