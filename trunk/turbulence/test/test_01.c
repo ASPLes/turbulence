@@ -4997,7 +4997,9 @@ axl_bool test_websocket_listener_disabled (const char * server, const char * por
 #if defined(AXL_OS_UNIX)
 			printf ("ERROR: current listener connections: \n");
 			cmd = axl_strdup_printf ("netstat --inet -a -n -p | grep :%s", port);
-			system (cmd);
+			if (! system (cmd)) {
+			  printf ("ERROR: netstat command failed..\n");
+			}
 			axl_free (cmd);
 #endif
 			return axl_false;

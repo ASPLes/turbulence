@@ -307,25 +307,18 @@ void REPORT (axl_bool use_syslog, LogReportType type, int log, const char * mess
 		string = axl_strdup_printfv (message, args);
 		if (string == NULL)
 			return;
-		string2 = string;
 		if (type == LOG_REPORT_ERROR) {
-			string  = axl_strdup_printf ("**ERROR**: %s", string);
-			syslog (LOG_ERR, string);
+			syslog (LOG_ERR, "**ERROR**: %s", string);
 		} else if (type == LOG_REPORT_WARNING) {
-			string  = axl_strdup_printf ("warning: %s", string);
-			syslog (LOG_INFO, string);
+			syslog (LOG_INFO, "warning: %s", string);
 		} else if (type == LOG_REPORT_ACCESS) {
-			string  = axl_strdup_printf ("access: %s", string);
-			syslog (LOG_INFO, string);
+			syslog (LOG_INFO, "access: %s", string);
 		} else if (type == LOG_REPORT_VORTEX) {
-			string  = axl_strdup_printf ("vortex: %s", string);
-			syslog (LOG_INFO, string);
+			syslog (LOG_INFO, "vortex: %s", string);
 		} else {
-			string2 = NULL;
-			syslog (LOG_INFO, string);
+ 		        syslog (LOG_INFO, "info: %s", string);
 		}
 		axl_free (string);
-		axl_free (string2);
 		return;
 	} /* end if */
 
