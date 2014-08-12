@@ -101,6 +101,7 @@ build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_
 # 	cp body_back.gif html/
 	cp aspl-alt-compat-logo.png html/
 	cp aspl-logo-header.png html/
+	cp hacha-100x171.png html/
 
 turbulence-config-location.txt:
 	echo ">> turbulence --conf-location" > $@
