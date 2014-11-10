@@ -327,7 +327,10 @@ int main (int argc, char ** argv)
 	if (exarg_is_defined ("child")) {
 		msg ("CHILD: starting child with control path: %s", exarg_get_string ("child"));
 
-		/* recover child information */
+		/* recover child information: to see about the format
+		   about this child init string, look at the function
+		   turbulence_process_connection_status_string, inside
+		   turbulence-process.c */
 		if (! turbulence_child_build_from_init_string (ctx, exarg_get_string ("child"))) {
 			error ("Failed to recover child information from init child string received");
 			return -1;

@@ -1,6 +1,5 @@
 <pre class='fragment'>
-&lt;<span class="node">mod-tls</span>>
-   <span class="comment">&lt;!--  -*- nxml -*-  --></span>
+&lt;<span class="node">mod-tls</span>>   <span class="comment">&lt;!--  -*- nxml -*-  --></span>
    <span class="comment">&lt;!--  place one certificate select for each serverName to match.  Use
        serverName="*" to provide the same certificate for all serverNames
        requested. 
@@ -10,9 +9,6 @@
        failure or leave the connection as is. Leave this setting as is
        to have a recommended secure configuration.
    --></span>
-   &lt;<span class="node">certificate-select</span> close-on-failure=<span class="attrvalue">"yes"</span> 
-                       key=<span class="attrvalue">"private.key"</span> 
-                       cert=<span class="attrvalue">"certificate.crt"</span> 
-                       serverName=<span class="attrvalue">"tls.example.com"</span> />
+   <span class="comment">&lt;!--  <certificate-select serverName="tls.example.com" cert="certificate.crt" key="private.key" close-on-failure="yes" />  --></span>
 &lt;/<span class="node">mod-tls</span>>
 </pre>

@@ -1369,11 +1369,6 @@ int turbulence_get_system_id  (TurbulenceCtx * ctx, const char * value, axl_bool
 	return -1;
 }
 
-/* horrible hack to get fchown definition */
-#if !defined(fchown)
-int fchown (int fd, uid_t owner, gid_t group);
-#endif
-
 /** 
  * @brief Allows to change the owner (user and group) of the socket's
  * file associated.

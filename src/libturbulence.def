@@ -48,6 +48,7 @@ turbulence_change_fd_owner
 turbulence_change_fd_perms
 turbulence_child_build_from_init_string
 turbulence_child_cmd_prefix
+turbulence_child_get_serverName
 turbulence_child_new
 turbulence_child_post_init
 turbulence_child_ref

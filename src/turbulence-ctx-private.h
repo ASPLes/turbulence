@@ -151,6 +151,12 @@ struct _TurbulenceChild {
 	TurbulenceCtx      * ctx;
 	TurbulencePPathDef * ppath;
 
+	/** 
+	 * @brief This is a reference to the serverName configuration
+	 * that is found in the profile path that started this child.
+	 */
+	char               * serverName;
+
 	int                  child_connection;
 	TurbulenceLoop     * child_conn_loop;
 #if defined(AXL_OS_UNIX)

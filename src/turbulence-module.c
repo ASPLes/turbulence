@@ -420,7 +420,10 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
 	if (! init (ctx)) {
 		wrn ("init module: %s have failed, skiping", location);
 		
-		/* close the module */
+		/* close the module but do not unmap it. This way
+		   modules partially loaded won't break turbulence in
+		   the case they fail to load for some reason. */
+		module->skip_unmap = axl_true;
 		turbulence_module_free (module);
 		
 		return NULL;

@@ -753,9 +753,9 @@ int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx)
  * This is done to support some especiall cases (especially those
  * where TLS is around) where it is not possible to store the state of a connection and resume it on a child process.
  *
- * NOTE: This function only flags! not actually send the connection a
- * particular child (that only will happens when the site
- * administrator configures the profile path to make it).
+ * NOTE: This function only flags! it does not actually send the
+ * connection to a particular child (that only will happens when the
+ * site administrator configures the profile path to make it).
  *
  * @param conn The connection that is flagged to be proxied on parent. 
  *
