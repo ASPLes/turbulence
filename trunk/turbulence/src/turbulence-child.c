@@ -195,12 +195,41 @@ void              turbulence_child_unref (TurbulenceChild * child)
 	/* nullify */
 	child->conn_mgr = NULL;
 
+	/* release server name */
+	axl_free (child->serverName);
+
 	/* destroy mutex */
 	vortex_mutex_destroy (&child->mutex);
 
 	axl_free (child);
 
 	return;
+}
+
+/** 
+ * @brief Allows to get the serverName string included in the profile
+ * path configuration that triggered this child.
+ *
+ * Every child process created by turbulence is because there is a
+ * profile path configuration that instructs it. In this context, this
+ * function allows to get the serverName value of the provided profile
+ * path configuration that triggered the creation of this child. This
+ * function is useful to get a reference to the serverName
+ * configuration that triggered this child to allow additional
+ * configurations that may be necessary during child initialization or
+ * for its later processing.
+ *
+ * @param ctx A reference to the turbulence context that is running a
+ * child.
+ *
+ * @return A reference to the serverName expression configured in the
+ * profile path or NULL if it fails. 
+ */
+const char      * turbulence_child_get_serverName (TurbulenceCtx * ctx)
+{
+	if (ctx == NULL || ctx->child == NULL)
+		return NULL;
+	return ctx->child->serverName;
 }
 
 #define TURBULENCE_CHILD_CONF_LOG(logw,logr,level) do {			\
@@ -249,6 +278,7 @@ axl_bool          turbulence_child_build_from_init_string (TurbulenceCtx * ctx,
 	int                 iterator;
 	int                 size;
 	axl_bool            found;
+	char             ** items;
 
 	/* create empty child object */
 	child = axl_new (TurbulenceChild, 1);
@@ -307,6 +337,14 @@ axl_bool          turbulence_child_build_from_init_string (TurbulenceCtx * ctx,
 	/* set child on context */
 	ctx->child = child;
 	child->ctx = ctx;
+
+	/* get a reference to the serverName this child represents */
+	items = axl_split (child->init_string_items[11], 1, ";-;");
+	if (items == NULL)
+		return axl_false;
+	child->serverName = axl_strdup (items[5]);
+	axl_freev (items);
+	msg ("CHILD: profile path serverName for this child: %s", child->serverName);
 
 	/* set default reference counting */
 	child->ref_count = 1;

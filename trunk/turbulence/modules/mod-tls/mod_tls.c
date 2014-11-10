@@ -163,6 +163,12 @@ char * mod_tls_certificate_handler (VortexConnection * conn,
 	msg ("Selecting certificate file: %s (conn-id=%d, serverName: %s)",
 	     ATTR_VALUE (node, "cert"), vortex_connection_get_id (conn), serverName ? serverName : "none");
 
+	/* check if we have the key preloaded */
+	if (axl_node_annotate_get (node, "content-certificate", axl_false)) {
+		/* found content, return certificate content instead of the path */
+		return axl_strdup (axl_node_annotate_get (node, "content-certificate", axl_false));
+	} /* end if */
+
 	/* ensure file exists */
 	file = mod_tls_check_file_exists (conn, node, "cert", "certificate");
 	
@@ -183,6 +189,12 @@ char * mod_tls_private_key_handler (VortexConnection * conn,
 	/* return a copy to the certificate */
 	msg ("Selecting private key file: %s (conn-id=%d, serverName: %s)",
 	     ATTR_VALUE (node, "key"), vortex_connection_get_id (conn), serverName ? serverName : "none");
+
+	/* check if we have the key preloaded */
+	if (axl_node_annotate_get (node, "content-key", axl_false)) {
+		/* found content, return private key content instead of the path */
+		return axl_strdup (axl_node_annotate_get (node, "content-key", axl_false));
+	} /* end if */
 
 	/* ensure file exists */
 	file = mod_tls_check_file_exists (conn, node, "key", "private key");
@@ -229,6 +241,104 @@ void mod_tls_failure_handler (VortexConnection * conn, const char * error_messag
 	return;
 }
 
+char   * mod_tls_load_file_content (TurbulenceCtx * ctx, const char * file_path)
+{
+	char         * buffer;
+	FILE         * file;
+	int            bytes_read;
+	struct stat    buf;
+
+	/* skip silently when nothing is found */
+	if (! file_path)
+		return NULL;
+
+	/* get file size */
+	if (stat (file_path, &buf) != 0) {
+		error ("Unable to access %s (errno=%d : %s)", file_path, errno, vortex_errno_get_error (errno));
+		return NULL;
+	} /* end if */
+
+	/* allocate memory to hold the certificate */
+	buffer = axl_new (char, buf.st_size + 1);
+	if (buffer == NULL) {
+		error ("Unable to allocate memory to hold the buffer for the file content");
+		return NULL;
+	} /* end if */
+
+	/* open file and close it */
+	file = fopen (file_path, "r");
+	bytes_read = fread (buffer, 1, buf.st_size, file);
+	if (bytes_read != buf.st_size) {
+		error ("Expected to read %d bytes from %s but found %d",
+		       buf.st_size, file_path, bytes_read);
+		fclose (file);
+		axl_free (buffer);
+		return NULL;
+	} /* end if */
+	fclose (file);
+
+	return buffer;
+}
+
+axl_bool mod_tls_preload_certificates (TurbulenceCtx * ctx)
+{
+	axlNode * node;
+	char    * file_content;
+	char    * file;
+
+	if (! turbulence_ctx_is_child (ctx)) {
+		/* no preload is needed here, just return */
+		return axl_true;
+	} /* end if */
+
+	/* try to load configuration file */
+	if (! mod_tls_load_config ()) {
+		return axl_false;
+	} /* end if */
+
+	msg ("TLS: Preload certificate for %s", turbulence_child_get_serverName (ctx));
+	node = axl_doc_get (mod_tls_conf, "/mod-tls/certificate-select");
+	while (node) {
+		/* check if there is a certificate declaration with
+		   the provided serverName */
+		if (HAS_ATTR_VALUE (node, "serverName", turbulence_child_get_serverName (ctx))) {
+			/* get file pointed by the node: CERTIFICATE */
+			file         = vortex_support_domain_find_data_file (TBC_VORTEX_CTX (ctx), "tls", ATTR_VALUE (node, "cert"));
+			file_content = mod_tls_load_file_content (ctx, file);
+			if (file_content) {
+				/* annotate and report */
+				msg ("TLS: preloaded certificate from %s (%s)", file, turbulence_child_get_serverName (ctx));
+				axl_node_annotate_data_full (node, "content-certificate", NULL, file_content, axl_free);
+			} /* end if */
+			axl_free (file);
+
+			/* get file pointed by the node: PRIVATE KEY */
+			file         = vortex_support_domain_find_data_file (TBC_VORTEX_CTX (ctx), "tls", ATTR_VALUE (node, "key"));
+			file_content = mod_tls_load_file_content (ctx, file);
+			if (file_content) {
+				/* annotate and report */
+				msg ("TLS: preloaded private key from %s (%s)", file, turbulence_child_get_serverName (ctx));
+				axl_node_annotate_data_full (node, "content-key", NULL, file_content, axl_free);
+			} /* end if */
+			axl_free (file);
+
+			/** SECURITY: only load the certificate for
+			    the profile path activated to ensure the
+			    user running code on this child turbulence
+			    is not able to access to other sites
+			    certificates.
+			**/
+			break;
+		} /* end if */
+
+
+		/* get next node called "certificate-select" */
+		node = axl_node_get_next_called (node, "certificate-select");
+	} /* end while */
+
+	return axl_true;
+}
+
 /* mod_tls init handler */
 static axl_bool  mod_tls_init (TurbulenceCtx * _ctx) {
 
@@ -241,6 +351,11 @@ static axl_bool  mod_tls_init (TurbulenceCtx * _ctx) {
 		error ("Failed to initialize vortex TLS support, unable to start mod-tls");
 		return axl_false;
 	} /* end if */
+
+	/* pre-reload certificates to have access to them after
+	   uid/gid change */
+	if (! mod_tls_preload_certificates (_ctx))
+		return axl_false;
 
 	/* enable accepting TLS activation */
 	if (! vortex_tls_accept_negotiation (TBC_VORTEX_CTX (_ctx), 

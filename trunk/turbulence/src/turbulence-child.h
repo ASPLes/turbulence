@@ -46,6 +46,8 @@ axl_bool          turbulence_child_ref (TurbulenceChild * child);
 
 void              turbulence_child_unref (TurbulenceChild * child);
 
+const char      * turbulence_child_get_serverName (TurbulenceCtx * ctx);
+
 /* recover child information */
 axl_bool          turbulence_child_build_from_init_string (TurbulenceCtx * ctx, 
 							   const char    * socket_control_path);
