@@ -47,14 +47,15 @@ xml_examples = \
 	include-from-dir.xml \
 	search-path-example.xml
 
-drafts_and_docs = \
-	draft-brosnan-beep-limit-close.txt \
-	draft-brosnan-beep-servername-feature.txt
+# drafts_and_docs = \
+# 	draft-brosnan-beep-limit-close.txt \
+# 	draft-brosnan-beep-servername-feature.txt
 
 
 EXTRA_DIST = turbulence-doc.doxygen \
 	main-page-logo.png \
 	body_back.gif \
+	../web/images/hacha-100x171.png \
 	../web/images/aspl-alt-compat-logo.png \
 	turbulence-doc-footer.html \
 	turbulence-doc-header.html \
@@ -75,8 +76,8 @@ help:
 	@echo
 
 # build drafts and xml rfcs
-.xml.txt: 
-	xml2rfc $<
+# .xml.txt: 
+# 	xml2rfc $<
 
 
 initial_build_doc: 
@@ -101,7 +102,7 @@ build_doc: turbulence-config-location.txt clean_template template.xml $(tmp_xml_
 # 	cp body_back.gif html/
 	cp aspl-alt-compat-logo.png html/
 	cp aspl-logo-header.png html/
-	cp hacha-100x171.png html/
+	cp ../web/images/hacha-100x171.png html/
 
 turbulence-config-location.txt:
 	echo ">> turbulence --conf-location" > $@

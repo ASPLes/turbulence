@@ -110,7 +110,7 @@ void __turbulence_loop_discard_broken (TurbulenceCtx * ctx, TurbulenceLoop * loo
 {
 	int  loop_descriptor;
 	int  result = -1;
-	char bytes[3];
+	char bytes[4];
 
 	/* reset cursor */
 	axl_list_cursor_first (loop->cursor);
