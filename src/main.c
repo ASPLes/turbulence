@@ -239,6 +239,7 @@ void turbulence_place_pidfile (void)
 	int    pid      = getpid ();
 	char   buffer[20];
 	int    size;
+	int    value;
 
 	/* open pid file or create it to place the pid file */
 	pid_file = fopen (PIDFILE, "w");
@@ -250,7 +251,11 @@ void turbulence_place_pidfile (void)
 	/* stringfy pid */
 	size = axl_stream_printf_buffer (buffer, 20, NULL, "%d", pid);
 	msg ("signaling PID %d at %s", pid, PIDFILE);
-	fwrite (buffer, size, 1, pid_file);
+	value = fwrite (buffer, size, 1, pid_file);
+	if (value != size) {
+	        abort_error ("Unable to update pid file at: %s  (fwrite call failed)", PIDFILE);
+		return;
+	}
 
 	fclose (pid_file);
 	return;

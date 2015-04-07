@@ -61,6 +61,8 @@ version=`cat VERSION`
 pkg="turbulence"
 sed -i "s/AC_INIT(.*,.*)/AC_INIT($pkg,$version)/" configure.ac
 
+export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib/pkgconfig
+
 touch NEWS README AUTHORS ChangeLog 
 libtoolize --force;
 aclocal $ACLOCAL_FLAGS; 
