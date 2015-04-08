@@ -251,7 +251,7 @@ void turbulence_place_pidfile (void)
 	/* stringfy pid */
 	size = axl_stream_printf_buffer (buffer, 20, NULL, "%d", pid);
 	msg ("signaling PID %d at %s", pid, PIDFILE);
-	value = fwrite (buffer, size, 1, pid_file);
+	value = fwrite (buffer, 1, size, pid_file);
 	if (value != size) {
 	        abort_error ("Unable to update pid file at: %s  (fwrite call failed)", PIDFILE);
 		return;

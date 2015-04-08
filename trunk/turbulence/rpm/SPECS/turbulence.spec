@@ -128,7 +128,7 @@ SASL users, system logging and more.
 %post -n turbulence-server
 chkconfig turbulence on
 if [ ! -f /etc/turbulence/turbulence.conf ]; then
-        cp /etc/turbulence/valvula.example.conf /etc/turbulence/turbulence.conf
+        cp /etc/turbulence/turbulence.example.conf /etc/turbulence/turbulence.conf
 fi
 service turbulence restart
 
