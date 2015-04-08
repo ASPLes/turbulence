@@ -82,12 +82,13 @@ libturbulence_la_LDFLAGS = -Wl,-export-dynamic -ldl -no-undefined -export-symbol
 
 libturbulenceincludedir = $(includedir)/turbulence
 
-all-local: update-def
+# all-local: update-def
 
 libturbulence.def: update-def
 
 update-def:
-	echo "EXPORTS" > libturbulence.def
+	@echo "EXPORTS" > libturbulence.def
+	@echo -n "INFO: Current pwd is: "; pwd
 	cat .libs/libturbulence.exp | grep -v __turbulence >> libturbulence.def
 
 update-dtds: mod-turbulence.dtd.h turbulence-config.dtd.h turbulence-db-list.dtd.h
