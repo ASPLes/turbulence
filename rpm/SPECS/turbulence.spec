@@ -42,6 +42,8 @@ find %{buildroot} -name 'mod_test_15.*' -exec rm -f {} ';'
 find %{buildroot} -name '*.conf.tmp' -exec rm -f {} ';'
 find %{buildroot} -name '*.xml-tmp' -exec rm -f {} ';'
 find %{buildroot} -name '*.win32.xml' -exec rm -f {} ';'
+mkdir -p %{buildroot}/etc/init.d
+install -p %{_builddir}/%{name}-%{version}/doc/turbulence-rpm-init.d %{buildroot}/etc/init.d/turbulence
 
 %post -p /sbin/ldconfig
 
@@ -122,6 +124,13 @@ SASL users, system logging and more.
    /usr/bin/turbulence-config
    /usr/bin/turbulence-ctl
    /etc/turbulence/turbulence.example.conf
+   /etc/init.d/turbulence
+%post -n turbulence-server
+chkconfig turbulence on
+if [ ! -f /etc/turbulence/turbulence.conf ]; then
+        cp /etc/turbulence/valvula.example.conf /etc/turbulence/turbulence.conf
+fi
+service turbulence restart
 
 # libturbulence-mod-tunnel package
 %package -n libturbulence-mod-tunnel
