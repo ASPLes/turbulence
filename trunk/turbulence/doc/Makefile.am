@@ -63,7 +63,7 @@ EXTRA_DIST = turbulence-doc.doxygen \
 	draft-brosnan-beep-servername-feature.xml draft-brosnan-beep-servername-feature.txt \
 	draft-brosnan-beep-limit-close.txt draft-brosnan-beep-limit-close.xml \
 	python.module.example python.module.example.2 bg.gif aspl-alt-compat-logo.png \
-	turbulence2.css $(xml_examples) $(tmp_xml_examples) $(drafts_and_docs)
+	turbulence2.css $(xml_examples) $(tmp_xml_examples) $(drafts_and_docs) turbulence-init.d turbulence-rpm-init.d
 
 bin_SCRIPTS = initial_build_doc
 
