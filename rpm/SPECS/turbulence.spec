@@ -76,6 +76,7 @@ SASL users, system logging and more.
 Summary: BEEP application server built on top of Vortex Library
 Group: System Environment/Libraries
 Requires: libaxl-dev
+Requires: libvortex-1.1
 Requires: libvortex-1.1-dev
 %description  -n libturbulence-dev
 Development headers required to create turbulence modules or
@@ -263,6 +264,7 @@ Server side SASL module for Turbulence. BEEP authentication.
 Summary: Turbulence utils
 Group: System Environment/Libraries
 Requires: turbulence-server
+Requires: libvortex-1.1
 Requires: python-vortex
 Requires: python-vortex-sasl
 Requires: python-vortex-tls
