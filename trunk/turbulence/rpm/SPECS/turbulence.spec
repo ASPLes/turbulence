@@ -1,3 +1,4 @@
+%define release_date %(date +"%a %b %d %Y")
 %define turbulence_version %(cat VERSION)
 
 Name:           turbulence
@@ -58,7 +59,7 @@ Summary: BEEP application server built on top of Vortex Library
 Group: System Environment/Libraries
 Requires: libaxl1
 Requires: libvortex-1.1
-Requires: pcre-devel
+Requires: pcre
 %description  -n libturbulence
 Turbulence is an extensible and configurable general purpose 
 BEEP application server built on top of Vortex Library. 
@@ -171,7 +172,7 @@ interface to turbulence main server.
 Summary: SASL profile implementation for Turbulence
 Group: System Environment/Libraries
 Requires: turbulence-server
-Requires: libvortex-sasl-1.1
+Requires: libvortex-sasl-1.1, libvortex-xml-rpc-1.1
 %description  -n libturbulence-mod-sasl
 Server side SASL module for Turbulence. BEEP authentication.
 %files -n libturbulence-mod-sasl
@@ -265,15 +266,13 @@ Requires: turbulence-server
 Requires: python-vortex
 Requires: python-vortex-sasl
 Requires: python-vortex-tls
+Requires: readline
 %description  -n turbulence-utils
 Utils to manage turbulence features.
 %files -n turbulence-utils
    /usr/bin/tbc-dblist-mgr
    /usr/bin/tbc-mod-gen
 
-
-
 %changelog
-* Sun Apr 07 2015 Francis Brosnan Blázquez <francis@aspl.es> - %{turbulence_version}
-- New upstream release
+%include rpm/SPECS/changelog.inc
 
