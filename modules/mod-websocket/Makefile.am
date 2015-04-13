@@ -22,5 +22,5 @@ modconfdir   = $(sysconfdir)/turbulence/mods-available
 modconf_DATA = mod_websocket.xml mod_websocket.win32.xml
 
 mod_websocket.xml mod_websocket.win32.xml:
-	echo "<mod-turbulence location=\"`turbulence-config --mod-dir`/mod_websocket.so\"/>" > mod_websocket.xml
+	echo "<mod-turbulence location=\"$(prefix)/lib/turbulence/modules/mod_websocket.so\"/>" > mod_websocket.xml
 	echo "<mod-turbulence location=\"../modules/mod_websocket.dll\"/>" > mod_websocket.win32.xml
