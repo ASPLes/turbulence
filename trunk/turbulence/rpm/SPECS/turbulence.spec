@@ -44,6 +44,7 @@ find %{buildroot} -name '*.conf.tmp' -exec rm -f {} ';'
 find %{buildroot} -name '*.xml-tmp' -exec rm -f {} ';'
 find %{buildroot} -name '*.win32.xml' -exec rm -f {} ';'
 mkdir -p %{buildroot}/etc/init.d
+mkdir -p %{buildroot}/etc/turbulence/mods-enabled
 install -p %{_builddir}/%{name}-%{version}/doc/turbulence-rpm-init.d %{buildroot}/etc/init.d/turbulence
 
 %post -p /sbin/ldconfig
