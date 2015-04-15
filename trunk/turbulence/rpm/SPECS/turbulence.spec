@@ -130,6 +130,9 @@ SASL users, system logging and more.
    /etc/init.d/turbulence
 %post -n turbulence-server
 chkconfig turbulence on
+if [ ! -d /etc/turbulence/mods-enabled ]; then
+   mkdir /etc/turbulence/mods-enabled
+fi
 if [ ! -f /etc/turbulence/turbulence.conf ]; then
         cp /etc/turbulence/turbulence.example.conf /etc/turbulence/turbulence.conf
 fi
