@@ -19,10 +19,10 @@ mod_DATA = mod_tls.xml
 
 # configure site module configuration installation
 modconfdir   = $(sysconfdir)/turbulence/tls
-modconf_DATA = tls.example.conf tls.example.conf.tmp
+modconf_DATA = tls.example.conf
 
 mod_tls.xml mod_tls.win32.xml:
-	echo "<mod-turbulence location=\"`turbulence-config --mod-dir`/mod_tls.so\"/>" > mod_tls.xml
+	echo "<mod-turbulence location=\"$(prefix)/lib/turbulence/modules/mod_tls.so\"/>" > mod_tls.xml
 	echo "<mod-turbulence location=\"../modules/mod_tls.dll\"/>" > mod_tls.win32.xml
 
 # render html version from default configuration files

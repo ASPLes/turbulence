@@ -6,6 +6,8 @@ rm -rf rpm/BUILD/*
 rm -rf rpm/BUILDROOT/*
 find rpm/RPMS/ -type f -exec rm {} \;
 
+# refresh package
+./autogen.sh --prefix=/usr --sysconfdir=/etc
 make dist
 cp turbulence-`cat VERSION`.tar.gz rpm/SOURCES
 
