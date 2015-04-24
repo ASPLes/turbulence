@@ -138,6 +138,7 @@ void mod_websocket_import_certificate (noPollCtx * nopoll_ctx, axlNode * node, a
 		key = ATTR_VALUE (node, "key");
 	} /* end if */
 
+	msg ("Loading certificate serverName=%s, cert=%s, key=%s", serverName, cert, key);
         if (! nopoll_ctx_set_certificate (nopoll_ctx, serverName, cert, key, NULL)) {
 	        error ("Failed to load certificate associated to serverName=%s, cert=%s, key=%s",
 		       serverName ? serverName : "",

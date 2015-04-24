@@ -4583,6 +4583,9 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 			/* setup Host: header to indicate the profile path or application we want */
 			vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_HOST, (axlPointer) serverName);
 
+			/* disable SSL verification */ 
+			vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_CERT_VERIFY, INT_TO_PTR (axl_false));
+
 			if (iterator > 0) {
 				/* enable log at nopoll */
 				vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_DEBUG, INT_TO_PTR (axl_true));
