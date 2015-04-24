@@ -65,7 +65,7 @@ axl_bool mod_tls_load_config (void) {
 							   vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "tls", NULL));
 
 		/* load configuration file */
-		config           = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tls", "tls.conf");
+		config = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "tls", "tls.conf");
 		if (config == NULL) {
 			error ("Unable to find tls.conf file under expected locations, failed to activate TLS profile (try checking %s/turbulence/tls/tls.conf)",
 			       turbulence_sysconfdir (ctx));

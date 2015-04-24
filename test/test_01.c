@@ -4783,33 +4783,43 @@ axl_bool test_22 (void) {
 	/* run configuration */
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
-	
+
 	/* create queue, common to all tests */
 	queue = vortex_async_queue_new ();
 
 	/* call to test against test-22.server */
 	printf ("Test 22: checking TLS with: test-22.server..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false, axl_false)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server", queue, axl_false, axl_false)) {
+		printf ("ERROR: failed first part\n");
 		return axl_false;   
+	}
 
 	/* call to test against test-22.server.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.nochild..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.nochild", queue, axl_false, axl_false))  
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.nochild", queue, axl_false, axl_false)) {
+		printf ("ERROR: failed second part\n");
 		return axl_false;   
+	}
 
 	/* call to test against test-22.server.sasl ( */
 	printf ("Test 22: checking TLS with: test-22.server.sasl..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl", queue, axl_true, axl_false)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl", queue, axl_true, axl_false)) {
+		printf ("ERROR: failed third part\n");
 		return axl_false;   
+	}
 
 	/* call to test against test-22.server.sasl.nochild */
 	printf ("Test 22: checking TLS with: test-22.server.sasl.nochild..\n");
-	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true, axl_false)) 
+	if (! test_22_operations (tCtx, vCtx, "test-22.server.sasl.nochild", queue, axl_true, axl_false)) {
+		printf ("ERROR: failed fourth part\n");
 		return axl_false;   
+	}
 
 	/* check unfinished tls */
-	if (! test_22_unfinished (vCtx, "test-22.server", queue))
+	if (! test_22_unfinished (vCtx, "test-22.server", queue)) {
+		printf ("ERROR: failed unfinished part\n");
 		return axl_false;   
+	}
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
