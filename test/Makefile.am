@@ -46,11 +46,11 @@ EXTRA_DIST = $(configuration_files) test_05_a_passwd test_12b.sql
 noinst_PROGRAMS = test_01  test-websocket-client
 
 test_01_SOURCES = test_01.c
-test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
+test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o -lcrypt $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
 	$(VORTEX_XML_RPC_LIBS) $(EXARG_LIBS) $(VORTEX_TLS_LIBS) $(VORTEX_WEBSOCKET_LIBS)
 
 test_websocket_client_SOURCES = test-websocket-client.c
-test_websocket_client_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
+test_websocket_client_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o -lcrypt $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
 	$(VORTEX_XML_RPC_LIBS) $(EXARG_LIBS) $(VORTEX_TLS_LIBS) $(VORTEX_WEBSOCKET_LIBS)
 
 leak-check:

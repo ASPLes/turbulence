@@ -148,6 +148,10 @@ axl_bool        common_sasl_user_remove    (SaslAuthBackend  * sasl_backend,
 
 TurbulenceCtx * common_sasl_get_context    (SaslAuthBackend * backend);
 
+
+axl_bool        common_sasl_check_crypt_password (const char * password, 
+						  const char * crypt_password);
+
 /** 
  * @internal Set of operations that can implement a SASL backend format
  * handler.
@@ -175,6 +179,7 @@ typedef axlPointer (*ModSaslFormatHandler) (TurbulenceCtx    * ctx,
 					    ModSaslOpType      op_type,
 					    const char       * auth_id,
 					    const char       * authorization_id,
+					    const char       * formated_password,
 					    const char       * password,
 					    const char       * serverName,
 					    const char       * sasl_method,

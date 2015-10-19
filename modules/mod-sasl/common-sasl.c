@@ -34,6 +34,8 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
+#define _GNU_SOURCE
+#include <crypt.h>
 #include <common-sasl.h>
 
 /* include dtd definition */
@@ -245,6 +247,42 @@ TurbulenceCtx * common_sasl_get_context (SaslAuthBackend * backend)
 }
 
 /** 
+ * @brief Allows to check password using libc crypt(3) function, with
+ * the provided password (clear text) and crypted password.
+ *
+ * @param password The clear text password
+ *
+ * @param crypt_password Password stored with $n$salt{password} as
+ * described by crypt(3) manual. The function also support format
+ * provided by dovecto and similar systems where {CRYPT.ENCODING} is
+ * provided:  http://wiki.dovecot.org/Authentication/PasswordSchemes
+ *
+ * @return axl_true in the case password matches otherwise, axl_false
+ * is returned.
+ */
+axl_bool        common_sasl_check_crypt_password (const char * password, 
+						  const char * crypt_password)
+{
+	struct crypt_data data;
+	char * result;
+	
+	/* clear data */
+	memset (&data, 0, sizeof (struct crypt_data));
+	
+	/* crypt */
+	result = crypt_r (password, crypt_password, &data);
+	if (result && axl_cmp (result, crypt_password)) {
+		/* password matches */
+		axl_free (result);
+		return axl_true;
+	} /* end if */
+
+	/* release result and report */
+	axl_free (result);
+	return axl_false;
+}
+
+/** 
  * @brief Allows to register a new database format that will be
  * supported by common sasl (tools and module) that is associated to
  * the provided turbulence context. The handler provided will
@@ -361,8 +399,8 @@ axl_bool        common_sasl_format_load_db    (TurbulenceCtx    * ctx,
 
 	/* call to load auth db */
 	result = op_handler (ctx, NULL, backend, node, MOD_SASL_OP_TYPE_LOAD_AUTH_DB,
-			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
-			     NULL, NULL, NULL, NULL, NULL, &err, mutex);
+			     /* auth_id, authorization_id, formated_password, password, serverName, sasl_method, err, mutex */
+			     NULL, NULL, NULL, NULL, NULL, NULL, &err, mutex);
 
 	/* check error returned */
 	if (PTR_TO_INT(result) == 0) {
@@ -999,7 +1037,9 @@ axl_bool  common_sasl_load_auth_db_xml (SaslAuthBackend * sasl_backend,
  * @param db The reference to the xml database.
  * @param auth_id The user to authenticate.
  * @param authorization_id The authorization to use.
- * @param password The password to be used.
+ *
+ * @param formated_password Password already formated 
+ * @param password The password as it was received.
  * 
  * @return 1 if the account was autenticated. 0 if login or password
  * were not found or they are incorrect. -1 in the case the account is
@@ -1009,6 +1049,7 @@ axl_bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 				  SaslAuthDb      * db, 
 				  const char      * auth_id, 
 				  const char      * authorization_id, 
+				  const char      * formated_password,
 				  const char      * password)
 {
 	axlNode     * node;
@@ -1040,12 +1081,15 @@ axl_bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 			
 			/* user id found, check password */
 			db_password = ATTR_VALUE (node, "password");
-			
+
 			/* return if both passwords
 			 * are equal */
-			if (axl_cmp (password, db_password)) {
+			if (axl_cmp (formated_password, db_password)) {
 				return 1;
 			} /* end if */
+
+			/* support here passwords schemes using  */
+			/* http://wiki.dovecot.org/Authentication/PasswordSchemes */
 			
 		} /* end if */
 			
@@ -1075,6 +1119,7 @@ axl_bool common_sasl_auth_format_handler (TurbulenceCtx    * ctx,
 					  SaslAuthDb       * db, 
 					  const char       * auth_id, 
 					  const char       * authorization_id, 
+					  const char       * formated_password,
 					  const char       * password, 
 					  const char       * serverName,
 					  VortexMutex      * mutex)
@@ -1098,7 +1143,7 @@ axl_bool common_sasl_auth_format_handler (TurbulenceCtx    * ctx,
 	/* call to do auth */
 	result = op_handler (ctx, conn, sasl_backend, db->node, MOD_SASL_OP_TYPE_AUTH,
 			     /* auth_id, authorization_id, password, serverName, sasl_method, err, mutex */
-			     auth_id, authorization_id, password, serverName, NULL, &err, mutex);
+			     auth_id, authorization_id, formated_password, password, serverName, NULL, &err, mutex);
 
 	/* account authenticated in the case of 1 */
 	if (PTR_TO_INT (result) == 1)
@@ -1222,10 +1267,10 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 					VortexMutex      * mutex)
 {
 	/* get a reference to the turbulence context */
-	TurbulenceCtx * ctx     = NULL;
-	SaslAuthDb    * db      = NULL;
-	int             release = axl_false;
-	int             result  = 0;
+	TurbulenceCtx * ctx               = NULL;
+	SaslAuthDb    * db                = NULL;
+	int             result            = 0;
+	char          * formated_password = NULL;
 
 	/* no backend, no authentication */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL) {
@@ -1274,17 +1319,14 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	switch (db->format) {
 	case SASL_STORAGE_FORMAT_MD5:
 		/* redifine values */
-		password = vortex_tls_get_digest (VORTEX_MD5, password);
-		release  = axl_true;
+		formated_password = vortex_tls_get_digest (VORTEX_MD5, password);
 		break;
 	case SASL_STORAGE_FORMAT_SHA1:
 		/* redifine values */
-		password = vortex_tls_get_digest (VORTEX_SHA1, password);
-		release  = axl_true;
+		formated_password = vortex_tls_get_digest (VORTEX_SHA1, password);
 		break;
 	case SASL_STORAGE_FORMAT_PLAIN:
 		/* plain do not require additional format */
-		release  = axl_false;
 		break;
 	default:
 
@@ -1302,11 +1344,12 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	switch (db->type) {
 	case SASL_BACKEND_XML:
 		/* get result */
-		result = common_sasl_auth_db_xml (ctx, db, auth_id, authorization_id, password);
+		result = common_sasl_auth_db_xml (ctx, db, auth_id, authorization_id, formated_password, password);
 		break;
 	case SASL_BACKEND_FORMAT_HANDLER:
 		/* get result from format handler */
-		result = common_sasl_auth_format_handler (ctx, conn, sasl_backend, db, auth_id, authorization_id, password, serverName, NULL);
+		result = common_sasl_auth_format_handler (ctx, conn, sasl_backend, db, auth_id, authorization_id, 
+							  formated_password, password, serverName, NULL);
 		break;
 	default:
 		/* no support db format found */
@@ -1326,8 +1369,8 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		common_sasl_apply_max_allowed_tries (ctx, sasl_backend, conn);
 
 	/* check to release memory allocated */
-	if (release)
-		axl_free ((char*) password);
+	if (formated_password)
+		axl_free (formated_password);
 
 	/* return auth operation */
 	return result == 1;
