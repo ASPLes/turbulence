@@ -265,7 +265,7 @@ int  test_01_remove_all (const char * item_stored, axlPointer user_data)
  * @return axl_true if the dblist implementation is ok, otherwise false is
  * returned.
  */
-axl_bool  test_01 ()
+axl_bool  test_01 (void)
 {
 	TurbulenceDbList * dblist;
 	axlError         * err;
@@ -683,7 +683,7 @@ axl_bool  test_01b () {
  * 
  * @return axl_true if they succeed, othewise axl_false is returned.
  */
-axl_bool  test_02 ()
+axl_bool  test_02 (void)
 {
 	char * value;
 
@@ -868,7 +868,7 @@ axl_bool  test_02 ()
  * 
  * @return axl_true if it is workin, axl_false if some error is found.
  */
-axl_bool  test_03 ()
+axl_bool  test_03 (void)
 {
 	/* local reference */
 	SaslAuthBackend * sasl_backend;
@@ -1129,6 +1129,22 @@ axl_bool  test_03 ()
 	return axl_true;
 }
 
+axl_bool  test_03a (void){
+
+	/* check password working */
+	if (! common_sasl_check_crypt_password ("fIL09-h9Sa1", "$6$.gtOE.iGrioQzpR9$i4586ZHLXs65JWbh64n7GLjX3NlP5IHar8h6SNr9yiFVUHLD1KHspjQTMunlUgUTMeZj0raqgKclTKTkzi2WR0")) {
+		printf ("ERROR: expected match found a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	if (! common_sasl_check_crypt_password ("fIL09-h9Sa1", "$6$ZDOQg8aRwDASQhwQ$k9yTiz7/Dh.ImmGzkxVdVmargohi/azNYMEihRIwsVJWsQlqV7XysS0JYycgMXVqVkOuC6M.bdcvn3sy..Lz01")) {
+		printf ("ERROR: expected match found a failure was found..\n");
+		return axl_false;
+	} /* end if */
+
+	return axl_true;
+}
+
 /** 
  * @brief Allows to check the module support provided by
  * turbulence. It tries to load the mod-test module installed in the
@@ -1138,7 +1154,7 @@ axl_bool  test_03 ()
  * @return axl_true if module support is working, otherwise, axl_false is
  * returned.
  */
-axl_bool  test_04 ()
+axl_bool  test_04 (void)
 {
 	TurbulenceModule * module = NULL;
 	const char       * path;
@@ -5371,7 +5387,7 @@ int main (int argc, char ** argv)
 	printf ("**     CHILDREN: \n");
 	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
-	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_04, test_05, test_05a, test_06, test_06a\n");
+	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_03a, test_04, test_05, test_05a, test_06, test_06a\n");
 	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_10e, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
 	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26, test_27, test_28\n");
@@ -5432,6 +5448,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_03")
 	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl, tbc-sasl-conf)");
+
+	CHECK_TEST("test_03a")
+	run_test (test_03a, "Test 03a: Check crypt backend (common_sasl_check_crypt_password)");
 
 	CHECK_TEST("test_04")
 	run_test (test_04, "Test 04: Check module loading support");

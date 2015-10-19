@@ -369,6 +369,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		/* if it fails, check password format */
 		/* support here passwords schemes using  */
 		/* http://wiki.dovecot.org/Authentication/PasswordSchemes */
+		_result = common_sasl_check_crypt_password (password, row[0]);
 	} /* end if */
 	mysql_free_result (result);
 

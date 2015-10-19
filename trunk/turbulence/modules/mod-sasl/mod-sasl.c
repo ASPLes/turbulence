@@ -606,6 +606,23 @@ TurbulenceModDef module_def = {
  * SHA-1:          A9:4A:8F:E5:CC:B1:9B:A6:1C:4C:08:73:D3:91:E9:87:98:2F:BB:D3
  * \endcode
  *
+ * At the same time, it is also supported all password formats
+ * provided by crypt(3) API, which looks like:
+ *
+ * \code
+ * >> python
+ * Python 2.6.6 (r266:84292, Dec 26 2010, 22:31:48) 
+ * [GCC 4.4.5] on linux2
+ * Type "help", "copyright", "credits" or "license" for more information.
+ * >>> import crypt
+ * >>> crypt.crypt ("my-password", "$1$salt")
+ * '$1$salt$2UXoCqj/ltHf23Mz35S8u.'
+ * >>> crypt.crypt ("my-password", "$5$salt")
+ * '$5$salt$EBjPwW99d3EHw71rYuAncvySWwz9r/4NKupG0DQ8vyC'
+ * >>> crypt.crypt ("my-password", "$6$salt")
+ * '$6$salt$8y2PAuMRzsJn8tKxsjgEfs6mGY7zT9Fv6wEd3WBAP69p6glnYZeIJn179monOoNtrhRmaJE1glw8zZXYLcznD.'
+ * \endcode
+ *
  * Along with mod-sasl code is included a python script that can help
  * you generating these passwords and as example of code so your
  * application can generate those passwords too. The application is
