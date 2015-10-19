@@ -265,6 +265,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 				 axlNode          * auth_db_node_conf,
 				 const char       * auth_id,
 				 const char       * authorization_id,
+				 const char       * formated_password,
 				 const char       * password,
 				 const char       * serverName,
 				 const char       * sasl_method,
@@ -281,6 +282,8 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, auth_id))
 		return axl_false;
 	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, password))
+		return axl_false;
+	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, formated_password))
 		return axl_false;
 	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, serverName))
 		return axl_false;
@@ -361,7 +364,12 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		return 0;
 	} /* end if */
 	/* check result */
-	_result = axl_cmp (row[0], password);
+	_result = axl_cmp (row[0], formated_password);
+	if (! _result) {
+		/* if it fails, check password format */
+		/* support here passwords schemes using  */
+		/* http://wiki.dovecot.org/Authentication/PasswordSchemes */
+	} /* end if */
 	mysql_free_result (result);
 
 	/* now check for auth-log declaration to report it */
@@ -478,6 +486,7 @@ axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
 					  ModSaslOpType      op_type,
 					  const char       * auth_id,
 					  const char       * authorization_id,
+					  const char       * formated_password,
 					  const char       * password,
 					  const char       * serverName,
 					  const char       * sasl_method,
@@ -488,7 +497,7 @@ axlPointer mod_sasl_mysql_format_handler (TurbulenceCtx    * ctx,
 	case MOD_SASL_OP_TYPE_AUTH:
 		/* request to auth user */
 		return INT_TO_PTR (mod_sasl_mysql_do_auth (ctx, conn, auth_db_node_conf, 
-							   auth_id, authorization_id, password, serverName, sasl_method, err));
+							   auth_id, authorization_id, formated_password, password, serverName, sasl_method, err));
 	case MOD_SASL_OP_TYPE_LOAD_AUTH_DB:
 		/* request to load database (check we can connect with current settings) */
 		return INT_TO_PTR (mod_sasl_mysql_load_auth_db (ctx, sasl_backend, auth_db_node_conf, err));

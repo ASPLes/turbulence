@@ -22,7 +22,7 @@ lib_LTLIBRARIES   = mod-sasl.la $(BUILD_MOD_SASL_MYSQL)
 
 # mod-sasl.so
 mod_sasl_la_SOURCES  = mod-sasl.c mod-sasl.h common-sasl.c common-sasl.h common.sasl.dtd.h $(sasl_radmin_files)
-mod_sasl_la_LDFLAGS  = -module -ldl $(VORTEX_XML_RPC_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_TLS_LIBS)
+mod_sasl_la_LDFLAGS  = -module -ldl -lcrypt $(VORTEX_XML_RPC_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_TLS_LIBS)
 
 # mod-sasl-mysql.so
 if ENABLE_MYSQL_SUPPORT
@@ -51,7 +51,7 @@ if ENABLE_TERMIOS
 bin_PROGRAMS = tbc-sasl-conf
 
 tbc_sasl_conf_SOURCES = tbc-sasl-conf.c
-tbc_sasl_conf_LDFLAGS = $(EXARG_LIBS) $(AXL_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_TLS_LIBS) ../../src/libturbulence.la 
+tbc_sasl_conf_LDFLAGS = -lcrypt $(EXARG_LIBS) $(AXL_LIBS) $(VORTEX_SASL_LIBS) $(VORTEX_TLS_LIBS) ../../src/libturbulence.la 
 tbc_sasl_conf_LDADD   = common-sasl.o
 endif
 
