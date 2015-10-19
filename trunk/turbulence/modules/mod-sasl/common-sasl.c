@@ -34,7 +34,9 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/turbulence
  */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <crypt.h>
 #include <common-sasl.h>
 
