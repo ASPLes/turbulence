@@ -267,18 +267,19 @@ axl_bool        common_sasl_check_crypt_password (const char * password,
 	char * result;
 	
 	/* clear data */
+	data.initialized = 0;
 	memset (&data, 0, sizeof (struct crypt_data));
 	
 	/* crypt */
 	result = crypt_r (password, crypt_password, &data);
 	if (result && axl_cmp (result, crypt_password)) {
 		/* password matches */
-		axl_free (result);
+		/* axl_free (result); */
 		return axl_true;
 	} /* end if */
 
 	/* release result and report */
-	axl_free (result);
+	/* axl_free (result); */
 	return axl_false;
 }
 
@@ -1088,8 +1089,11 @@ axl_bool common_sasl_auth_db_xml (TurbulenceCtx   * ctx,
 				return 1;
 			} /* end if */
 
-			/* support here passwords schemes using  */
+ 			/* support here passwords schemes using  */
 			/* http://wiki.dovecot.org/Authentication/PasswordSchemes */
+			if (common_sasl_check_crypt_password (password, db_password)) {
+				return 1;
+			} /* end if */
 			
 		} /* end if */
 			
