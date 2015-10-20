@@ -4602,14 +4602,14 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 			/* disable SSL verification */ 
 			vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_CERT_VERIFY, INT_TO_PTR (axl_false));
 
-			if (iterator > 0) {
+/*			if (iterator > 0) { */
 				/* enable log at nopoll */
-				vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_DEBUG, INT_TO_PTR (axl_true));
-
+				/* vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_DEBUG, INT_TO_PTR (axl_true)); */
+				
 				/* enable log */
 				/* vortex_log_enable (vCtx, axl_true);
 				   vortex_color_log_enable (vCtx, axl_true);  */
-			} /* end if */
+			/* } */ /* end if */
 
 			/* create new connection */
 			conn = vortex_websocket_connection_new ("127.0.0.1", "1602", wss_setup, NULL, NULL);
@@ -4619,7 +4619,7 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 			vortex_connection_close (conn);
 
 			iterator++;
-			turbulence_sleep (ctx, 10000);
+			turbulence_sleep (ctx, 10000); 
 			printf ("Test --: ...failed to create Web-Socket connection, trying again..\n");
 		} /* end while */
 		
