@@ -4607,8 +4607,8 @@ axl_bool test_22_operations (TurbulenceCtx * ctx, VortexCtx * vCtx, const char *
 				vortex_websocket_setup_conf (wss_setup, VORTEX_WEBSOCKET_CONF_ITEM_ENABLE_DEBUG, INT_TO_PTR (axl_true));
 
 				/* enable log */
-				vortex_log_enable (vCtx, axl_true);
-				vortex_color_log_enable (vCtx, axl_true); 
+				/* vortex_log_enable (vCtx, axl_true);
+				   vortex_color_log_enable (vCtx, axl_true);  */
 			} /* end if */
 
 			/* create new connection */
