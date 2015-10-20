@@ -1,5 +1,5 @@
 <!-- <sasl-auth-db> -->
-<!ELEMENT sasl-auth-db (connection-settings, get-password, auth-log?, ip-filter?)>
+<!ELEMENT sasl-auth-db (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?)>
 
 <!-- <connection-settings> -->
 <!ELEMENT connection-settings EMPTY>
@@ -13,6 +13,16 @@
 <!-- <get-password> -->
 <!ELEMENT get-password EMPTY>
 <!ATTLIST get-password 
+	  query           CDATA   #REQUIRED>
+
+<!-- <get-password-alt> -->
+<!ELEMENT get-password-alt EMPTY>
+<!ATTLIST get-password-alt 
+	  query           CDATA   #REQUIRED>
+
+<!-- <get-password-alt-cleanup> -->
+<!ELEMENT get-password-alt-cleanup EMPTY>
+<!ATTLIST get-password-alt-cleanup 
 	  query           CDATA   #REQUIRED>
 
 <!-- <auth-log> -->

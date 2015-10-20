@@ -258,6 +258,81 @@ axl_bool mod_sasl_mysql_check_unallowed_sequence (TurbulenceCtx * ctx, VortexCon
 	/* report failure */
 	return ! found;
 }
+
+axl_bool __mod_sasl_mysql_prepare_query_and_auth (TurbulenceCtx    * ctx, 
+						  const char       * _query,
+						  VortexConnection * conn,
+						  axlNode          * auth_db_node_conf,
+						  const char       * auth_id,
+						  const char       * authorization_id,
+						  const char       * formated_password,
+						  const char       * password,
+						  const char       * serverName,
+						  const char       * sasl_method,
+						  axl_bool           just_run_query,
+						  axlError        ** err)
+{
+
+	MYSQL_RES   * result;
+	MYSQL_ROW     row;
+	axl_bool      _result;
+	char        * query;
+
+	/* duplicate query */
+	query = axl_strdup (_query);
+	if (query == NULL) 
+		return axl_false; /* allocation failure */
+
+	/* replace query with recognized tokens */
+	axl_replace (query, "%u", auth_id);
+	axl_replace (query, "%n", serverName);
+	axl_replace (query, "%i", authorization_id);
+	axl_replace (query, "%m", sasl_method);
+	axl_replace (query, "%p", vortex_connection_get_host (conn));
+
+	if (! just_run_query) {
+		msg ("Trying to auth [%s] with query string [%s], conn-id=%d from %s:%s ", auth_id, query, 
+		     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn));
+	} /* end if */
+
+	/* run query */
+	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_false, err);
+	axl_free (query);
+
+	/* check if we have to only run this query */
+	if (just_run_query) {
+		mysql_free_result (result);
+		return axl_true;
+	} /* end if */
+
+	/* check result */
+	if (result == NULL) {
+		error ("Unable to authenticate user, query string failed with %s", axl_error_get (*err));
+		axl_error_free (*err);
+		return axl_false;
+	} /* end if */
+
+	/* return content from the first [0][0] array position */
+	row     = mysql_fetch_row (result);
+	if (row == NULL) {
+		/* log login failure */
+		error ("login failure: %s, failed from: %s", auth_id, vortex_connection_get_host_ip (conn));
+
+		mysql_free_result (result);
+		return  axl_false;
+	} /* end if */
+	/* check result */
+	_result = axl_cmp (row[0], formated_password);
+	if (! _result) {
+		/* if it fails, check password format */
+		/* support here passwords schemes using  */
+		/* http://wiki.dovecot.org/Authentication/PasswordSchemes */
+		_result = common_sasl_check_crypt_password (password, row[0]);
+	} /* end if */
+	mysql_free_result (result);
+
+	return _result;
+}
        
 
 axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx, 
@@ -274,9 +349,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	char        * query; 
 	axlDoc      * doc;
 	axlNode     * node;
-	MYSQL_RES   * result;
-	MYSQL_ROW     row;
-	axl_bool      _result;
+	axl_bool      _result = axl_false;
 
 	/* check import parameters without doing anything */
 	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, auth_id))
@@ -330,49 +403,46 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		axl_free (query);
 	} /* end if */
 
-	/* get the node that contains the configuration */
-	node  = axl_doc_get (doc, "/sasl-auth-db/get-password");
-	query = axl_strdup (ATTR_VALUE (node, "query"));
-	
-	/* replace query with recognized tokens */
-	axl_replace (query, "%u", auth_id);
-	axl_replace (query, "%n", serverName);
-	axl_replace (query, "%i", authorization_id);
-	axl_replace (query, "%m", sasl_method);
-	axl_replace (query, "%p", vortex_connection_get_host (conn));
+	/***** ALT AUTHENTICATION *****/
+	/* get alt password if defined <get-password-alt> */
+	node =  axl_doc_get (doc, "/sasl-auth-db/get-password-alt");
+	if (node) {
+		/* get query */
+		query = (char *) ATTR_VALUE (node, "query");
 
-	msg ("Trying to auth [%s] with query string [%s], conn-id=%d from %s:%s ", auth_id, query, 
-	     vortex_connection_get_id (conn), vortex_connection_get_host (conn), vortex_connection_get_port (conn));
+		/* call to do auth operation */
+		_result = __mod_sasl_mysql_prepare_query_and_auth (ctx, query, conn, auth_db_node_conf, auth_id, authorization_id,
+								   formated_password, password,
+								   serverName, sasl_method, axl_false, err);		
 
-	/* run query */
-	result = mod_sasl_mysql_do_query (ctx, auth_db_node_conf, query, axl_false, err);
-	axl_free (query);
-	/* check result */
-	if (result == NULL) {
-		error ("Unable to authenticate user, query string failed with %s", axl_error_get (*err));
-		axl_error_free (*err);
-		return 0; 
+		/* clean for cleanup node <get-password-alt-cleanup> */
+		node =  axl_doc_get (doc, "/sasl-auth-db/get-password-alt-cleanup");
+		if (node) {
+			/* get query */
+			query = (char *) ATTR_VALUE (node, "query");
+
+			/* call and skip getting value reported */
+			if (! __mod_sasl_mysql_prepare_query_and_auth (ctx, query, conn, auth_db_node_conf, auth_id, authorization_id,
+								       formated_password, password,
+								       serverName, sasl_method, axl_true, err))
+				error ("Cleanup query failed, please, review <get-password-alt-cleanup>..");
+			
+		} /* end if */
 	} /* end if */
 
-	/* return content from the first [0][0] array position */
-	row     = mysql_fetch_row (result);
-	if (row == NULL) {
-		/* log login failure */
-		error ("login failure: %s, failed from: %s", auth_id, vortex_connection_get_host_ip (conn));
-
-		mysql_free_result (result);
-		return 0;
-	} /* end if */
-	/* check result */
-	_result = axl_cmp (row[0], formated_password);
+	/**** MAIN AUTHENTICATION ****/
+	/* if authentication failed, try with main table */
 	if (! _result) {
-		/* if it fails, check password format */
-		/* support here passwords schemes using  */
-		/* http://wiki.dovecot.org/Authentication/PasswordSchemes */
-		_result = common_sasl_check_crypt_password (password, row[0]);
-	} /* end if */
-	mysql_free_result (result);
+		/* get the node that contains the configuration */
+		node  = axl_doc_get (doc, "/sasl-auth-db/get-password");
+		query = (char *) ATTR_VALUE (node, "query");
 
+		/* call to do auth operation */
+		_result = __mod_sasl_mysql_prepare_query_and_auth (ctx, query, conn, auth_db_node_conf, auth_id, authorization_id,
+								   formated_password, password,
+								   serverName, sasl_method, axl_false, err);
+	} /* end if */
+	
 	/* now check for auth-log declaration to report it */
 	node = axl_doc_get (doc, "/sasl-auth-db/auth-log");
 	if (node) {

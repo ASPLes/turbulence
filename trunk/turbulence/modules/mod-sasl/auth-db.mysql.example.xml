@@ -5,6 +5,7 @@
 		       database="mysql_database" 
 		       host="mysql_host" 
 		       port="" />
+
   <!-- the following defines the SQL query that will be used to get
        the password associated to a user (auth_id) and under a
        serverName. Here is the list of provided values:
@@ -22,6 +23,36 @@
   -->
   
   <get-password query="SELECT password FROM users WHERE auth_id = '%u'" />
+
+  <!-- the following defines an alternative SQL query that will be
+       used to get the password associated to a user (auth_id) and
+       under a serverName. Here is the list of provided values:
+
+       - %u : the auth_id requested.
+
+       - %n : the serverName associated to the request. If not defined
+              it will be empty string. Keep in mind for your SQL.
+
+       - %i : authorization_id
+
+       - %m : SASL method 
+
+       - %p : remote peer ip address.
+
+      If defined, it will be used before using <get-password> value
+      defined. This is useful to provide alternative password
+      authentication methods without updating passwords on the main
+      table (that is used by <get-password>).
+
+      After running that <get-password-alt> query, you might also want
+      to configure <get-password-alt-cleanup> to setup a query that
+      optionally cleans the record used for the authentication done
+      (if ok is reported).
+  -->
+  <!--  <get-password-alt query="SELECT password FROM users WHERE auth_id = '%u' and source_ip = '%p'" /> -->
+
+  <!--  <get-password-alt-cleanup query="DELETE FROM users WHERE auth_id = '%u' and source_ip = '%p'" /> -->
+  
 
    <!-- the following defines the optional SQL query that will be used to
         report login ok or login failure according to %t (status)
