@@ -270,6 +270,7 @@ axl_bool __mod_sasl_mysql_prepare_query_and_auth (TurbulenceCtx    * ctx,
 						  const char       * serverName,
 						  const char       * sasl_method,
 						  axl_bool           just_run_query,
+						  axl_bool           skip_login_error_reporting,
 						  axlError        ** err)
 {
 
@@ -315,8 +316,10 @@ axl_bool __mod_sasl_mysql_prepare_query_and_auth (TurbulenceCtx    * ctx,
 	/* return content from the first [0][0] array position */
 	row     = mysql_fetch_row (result);
 	if (row == NULL) {
-		/* log login failure */
-		error ("login failure: %s, failed from: %s", auth_id, vortex_connection_get_host_ip (conn));
+		if (! skip_login_error_reporting) { 
+			/* log login failure */
+			error ("login failure: %s, failed from: %s", auth_id, vortex_connection_get_host_ip (conn));
+		} /* end if */
 
 		mysql_free_result (result);
 		return  axl_false;
@@ -408,23 +411,25 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	node =  axl_doc_get (doc, "/sasl-auth-db/get-password-alt");
 	if (node) {
 		/* get query */
-		query = (char *) ATTR_VALUE (node, "query");
+		query = (char *) ATTR_VALUE_TRANS (node, "query");
 
 		/* call to do auth operation */
 		_result = __mod_sasl_mysql_prepare_query_and_auth (ctx, query, conn, auth_db_node_conf, auth_id, authorization_id,
 								   formated_password, password,
-								   serverName, sasl_method, axl_false, err);		
+								   serverName, sasl_method, axl_false, 
+								   /* skip login error reporting */ axl_true, err);		
 
 		/* clean for cleanup node <get-password-alt-cleanup> */
 		node =  axl_doc_get (doc, "/sasl-auth-db/get-password-alt-cleanup");
 		if (node) {
 			/* get query */
-			query = (char *) ATTR_VALUE (node, "query");
+			query = (char *) ATTR_VALUE_TRANS (node, "query");
 
 			/* call and skip getting value reported */
 			if (! __mod_sasl_mysql_prepare_query_and_auth (ctx, query, conn, auth_db_node_conf, auth_id, authorization_id,
 								       formated_password, password,
-								       serverName, sasl_method, axl_true, err))
+								       serverName, sasl_method, axl_true, 
+								       /* skip login error reporting */ axl_true, err))
 				error ("Cleanup query failed, please, review <get-password-alt-cleanup>..");
 			
 		} /* end if */
@@ -440,7 +445,8 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		/* call to do auth operation */
 		_result = __mod_sasl_mysql_prepare_query_and_auth (ctx, query, conn, auth_db_node_conf, auth_id, authorization_id,
 								   formated_password, password,
-								   serverName, sasl_method, axl_false, err);
+								   serverName, sasl_method, axl_false, 
+								   /* skip login error reporting */ axl_false, err);
 	} /* end if */
 	
 	/* now check for auth-log declaration to report it */
