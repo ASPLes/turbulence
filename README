@@ -9,15 +9,13 @@ features already implemented and required by server BEEP
 applications. It is built on top of Vortex Library, and new
 functionality is added through modules.
 
-  The idea behind Turbulence is to create a modules implementing your
+  The idea behind Turbulence is to create a module implementing your
 profile (or any other feature), that turbulence will load and expose
 according to is configuration.
 
-  All project documentation can be found at: http://www.turbulence.ws
+  All project documentation can be found at: http://www.aspl.es/turbulence
 
   Additional resources such mailing list, etc are also found at the
 previous site.
 
---
-Francis Brosnan Blázquez
-25/03/2007, Spain, beloved Spain!
+
