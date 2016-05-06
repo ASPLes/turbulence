@@ -67,7 +67,7 @@ touch NEWS README AUTHORS ChangeLog
 libtoolize --force;
 aclocal $ACLOCAL_FLAGS; 
 autoheader --warnings=error;
-automake --add-missing --Werror -Wno-portability;
+automake --add-missing -Wno-portability;
 autoconf --force --warnings=error;
 
 

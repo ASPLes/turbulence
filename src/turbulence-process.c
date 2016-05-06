@@ -493,7 +493,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 		return axl_false;
 	}
 
-	if (!cmsg->cmsg_type == SCM_RIGHTS) {
+	if (cmsg->cmsg_type != SCM_RIGHTS) {
 		error ("Unexpected control message of unknown type %d, failed to receive socket", 
 		       cmsg->cmsg_type);
 		(*_socket) = -1;
