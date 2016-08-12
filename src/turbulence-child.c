@@ -104,6 +104,10 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 		return NULL;
 	}
 
+	msg ("PARENT: created master<->child BEEP link running at %s:%s (socket-session=%d)",
+	     vortex_connection_get_host_ip (result->conn_mgr), vortex_connection_get_port (result->conn_mgr),
+	     vortex_connection_get_socket (result->conn_mgr));
+
 	/* flag this listener as master<->child link */
 	vortex_connection_set_data (result->conn_mgr, "tbc:mc-link", result);
 
@@ -425,7 +429,10 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 						 NULL, NULL);
 
 	if (! vortex_connection_is_ok (child->conn_mgr, axl_false)) {
-		error ("CHILD: failed to create master<->child BEEP link..");
+		error ("CHILD: failed to create master<->child BEEP link, attempted to connect to %s:%s, error reported %s (code: %d)..",
+		       child->init_string_items[12], child->init_string_items[13],
+		       vortex_connection_get_message (child->conn_mgr),
+		       vortex_connection_get_status (child->conn_mgr));
 		return axl_false;
 	} else {
 		/* connection ok, now unregister */
