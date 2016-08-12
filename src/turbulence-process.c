@@ -428,7 +428,8 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket, 
 					    TurbulenceChild  * child, 
 					    char            ** ancillary_data, 
-					    int              * size)
+					    int              * size,
+					    const char       * label)
 {
 	struct msghdr    msg;
 	struct iovec     iov;
@@ -441,8 +442,8 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 	/* variables for error reporting */
 	VORTEX_SOCKET    temp;
 	int              soft_limit, hard_limit;
-
 	int            * int_ptr;
+	int              error_reported;
 	
 	v_return_val_if_fail (_socket && child, axl_false);
 
@@ -462,14 +463,20 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 	
 	status = recvmsg (child->child_connection, &msg, 0);
 	if (status == -1) {
-		error ("Failed to receive socket, recvmsg failed, error was: (code %d) %s",
-		       errno, vortex_errno_get_last_error ());
+		error ("%s: Failed to receive socket, recvmsg failed, error was: (code %d) %s",
+		       label, errno, vortex_errno_get_last_error ());
 		(*_socket) = -1;
 		return axl_false;
 	} /* end if */
 
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if (cmsg == NULL) {
+		/* report errno just after calling CMSG_FIRSTHDR */
+		error ("%s: Received empty control message from parent (status: %d), unable to receive socket (code %d): %s",
+		       label, status, errno, vortex_errno_get_last_error () ? vortex_errno_get_last_error () : "no error reported");
+		/* keep error for later reporting */
+		error_reported = errno;
+		
 		/* check first if we have support to create more sockets */
 		temp = socket (AF_INET, SOCK_STREAM, 0);
 		if (temp == VORTEX_INVALID_SOCKET) {
@@ -477,12 +484,11 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 			vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_SOFT_SOCK_LIMIT, &soft_limit);
 			vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_HARD_SOCK_LIMIT, &hard_limit);
 		
-			error ("Unable to receive socket from parent, droping socket connection, reached process limit: soft-limit=%d, hard-limit=%d\n",
-			       soft_limit, hard_limit);
-		} else {
-			error ("Received empty control message from parent (status: %d), unable to receive socket (code %d): %s",
-			       status, errno, vortex_errno_get_last_error ());
-			error ("Reached socket process limit?");
+			error ("%s: Unable to receive socket from parent, droping socket connection, reached process limit: soft-limit=%d, hard-limit=%d\n",
+			       label, soft_limit, hard_limit);
+		} else if (error_reported == 0) {
+			error ("%s: CMSG_FIRSTHDR(&msg) call failed (reported cmsg=NULL), we have not reached connection limits and no error reported.", label);
+			error ("%s: This might be caused by a configuration problem with loopback interface (lo). Does it have 127.0.0.1 and is up and running?", label);
 		} /* end if */
 
 		(*_socket) = -1;
@@ -494,8 +500,8 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 	}
 
 	if (cmsg->cmsg_type != SCM_RIGHTS) {
-		error ("Unexpected control message of unknown type %d, failed to receive socket", 
-		       cmsg->cmsg_type);
+		error ("%s: Unexpected control message of unknown type %d, failed to receive socket", 
+		       label, cmsg->cmsg_type);
 		(*_socket) = -1;
 		return axl_false;
 	}
@@ -512,7 +518,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 	int_ptr    = (int *) CMSG_DATA(cmsg);
 	(*_socket) = (*int_ptr);
 
-	msg ("Process received socket %d, checking to send received signal...", (*_socket));
+	msg ("%s: Process received socket %d, checking to send received signal...", label, (*_socket));
 	return axl_true;
 }
 
@@ -1082,8 +1088,8 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 	msg ("%s: notification on control connection, read content", label);
 
 	/* receive socket */
-	if (! turbulence_process_receive_socket (&_socket, child, &ancillary_data, NULL)) {
-		error ("%s: Failed to received socket..", label);
+	if (! turbulence_process_receive_socket (&_socket, child, &ancillary_data, NULL, label)) {
+		error ("%s: Failed to receive socket.. (turbulence_process_receive_socket failed)", label);
 		return axl_false; /* close parent notification socket */
 	}
 
