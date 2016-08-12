@@ -295,6 +295,7 @@ int main (int argc, char ** argv)
 {
 	char          * config;
 	VortexCtx     * vortex_ctx;
+	int             temp_fds[2];
 
 	/*** init exarg library ***/
 	if (! main_init_exarg (argc, argv))
@@ -327,6 +328,15 @@ int main (int argc, char ** argv)
 
 	/* check and enable console debug options */
 	main_common_enable_debug_options (ctx, vortex_ctx);
+
+	/* check loopback interface and vortex_support_pipe () is working */
+	if (vortex_support_pipe (vortex_ctx, temp_fds)) {
+		error ("vortex_support_pipe () is failing. Without this API turbulence cannot work properly. Please, check your LOOPBACK interface is up and running, with a 127.0.0.1 address and no other firewall/SELinux block");
+		return -1;
+	} /* end if */
+	/* close temporal sockets */
+	vortex_close_socket (temp_fds[0]);
+	vortex_close_socket (temp_fds[1]);
 
 	/* show some debug info */
 	if (exarg_is_defined ("child")) {
