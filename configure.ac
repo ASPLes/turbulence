@@ -1,5 +1,5 @@
 dnl  Turbulence:  BEEP application server
-dnl  Copyright (C) 2007 Advanced Software Production Line, S.L.
+dnl  Copyright (C) 2016 Advanced Software Production Line, S.L.
 dnl
 dnl  This program is free software; you can redistribute it and/or
 dnl  modify it under the terms of the GNU Lesser General Public License
@@ -27,12 +27,12 @@ dnl  For comercial support on build BEEP enabled solutions contact us:
 dnl          
 dnl      Postal address:
 dnl         Advanced Software Production Line, S.L.
-dnl         C/ Dr. Michavila Nº 14
-dnl         Coslada 28820 Madrid
+dnl         C/ Antonio Suarez 10, A-102
+dnl         Alcalá de Henares 28802 Madrid
 dnl         Spain
 dnl
 dnl      Email address:
-dnl         info@aspl.es - http://fact.aspl.es
+dnl         info@aspl.es - http://www.aspl.es/turbulence
 dnl
 
 AC_INIT(turbulence,0.6.3.b2836)
@@ -371,7 +371,7 @@ if test "x$mysql_devel_found" = "xno"; then
      mysql_msg=" (Applications using MySQL, like mod-sasl-mysql, won't work)"
 fi
 
-echo "   Build with MySQL support:       [$mysql_devel_found]$mysql_msg"
+echo "   Build with MySQL/MariaDB support:       [$mysql_devel_found]$mysql_msg"
 if test "x$mysql_devel_found" = "xyes"; then
 echo "     flags: $MYSQL_CFLAGS"
 echo "     libs: $MYSQL_LIBS"
