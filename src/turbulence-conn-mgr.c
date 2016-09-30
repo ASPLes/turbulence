@@ -799,6 +799,7 @@ void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
 		return;
 
 	/* check status and close the other connection if found that */
+	memset (buffer, 0, 4096);
 	bytes_read = vortex_frame_receive_raw (conn, buffer, 4096);
 
 	/* msg ("PROXY-beep: Read %d bytes from conn-id=%d, sending them to child socket=%d (refs: %d, status: %d, errno=%d%s%s)",
