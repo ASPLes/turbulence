@@ -789,16 +789,18 @@ void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
 	char               buffer[4096];
 	int                bytes_read;
 #if ! defined(SHOW_FORMAT_BUGS)
-	TurbulenceCtx    * ctx = vortex_connection_get_data (conn, "tbc:ctx");  
+	TurbulenceCtx    * ctx              = vortex_connection_get_data (conn, "tbc:ctx");  
 #endif
 	/* get socket associated */
-	int                _socket = PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:fd"));
+	int                _socket          = PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:fd"));
+	int                try_read_pending = 0;
 
 	/* check connection status */
 	if (! vortex_connection_is_ok (conn, axl_false)) 
 		return;
 
 	/* check status and close the other connection if found that */
+ read_more:
 	memset (buffer, 0, 4096);
 	bytes_read = vortex_frame_receive_raw (conn, buffer, 4096);
 
@@ -822,6 +824,12 @@ void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
 		/* buffer[bytes_read] = 0;
 		   msg ("PROXY-beep: sent content (beep conn-id=%d -> socket=%d): %s", vortex_connection_get_id (conn), _socket, buffer); */
 	} /* end if */
+
+	/* check for try pending */
+	try_read_pending = PTR_TO_INT (vortex_connection_get_data (conn, "try_read_pending"));
+	vortex_connection_set_data (conn, "try_read_pending", NULL);
+	if (try_read_pending > 0) 
+	        goto read_more;
 
 	return;
 }
