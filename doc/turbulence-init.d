@@ -77,7 +77,7 @@ do_stop()
 	start-stop-daemon --stop --quiet --oknodo --retry=0/5/KILL/5 --exec $DAEMON
 	[ "$?" = 2 ] && return 2
 
-	killall -9 turbulence > /dev/null 2>&1 
+	killall -9 `which turbulence` > /dev/null 2>&1 
 	
 	# Many daemons don't delete their pidfiles when they exit.
 	rm -f $PIDFILE
