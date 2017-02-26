@@ -95,8 +95,8 @@ Architecture: any
 Depends: turbulence-server (>= ${Source-Version}), 
   python-vortex (>= 1.1.4), python
 Recommends: python-vortex-sasl, python-vortex-tls
-Description: SASL profile implementation for Turbulence
-  Server side SASL module for Turbulence. BEEP authentication.
+Description: Python profile implementation for Turbulence
+  Server side Python module for Turbulence. BEEP authentication.
 
 Package: turbulence-utils
 Section: libs
