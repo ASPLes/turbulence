@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Updating mod-test.c.html"
-(cd ../modules/mod-test; c2html mod-test.c; cp mod-test.c.html ../../web/)
+# (cd ../modules/mod-test; c2html mod-test.c; cp mod-test.c.html ../../web/)
 (cp ../modules/mod-test/mod-test.c .)
 (cp ../modules/mod-test/Makefile.am .)
 (cp ../modules/mod-test/mod-test.xml.in .)
