@@ -67,7 +67,7 @@ Description: SASL profile implementation for Turbulence
 Package: libturbulence-mod-sasl-mysql
 Section: libs
 Architecture: any
-Depends: libturbulence-mod-sasl, libmysqlclient20
+Depends: libturbulence-mod-sasl, libmariadbclient18
 Description: MySQL support for Turbulence SASL module
   This provides MySQL support so it is possible to store and auth
   users from a MySQL database.
