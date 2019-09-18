@@ -1,7 +1,16 @@
 #!/usr/bin/python
 
-from core_admin_common import command
+from core_admin_common import command, support
 import sys
+
+(osname, oslongname, osversion) = support.get_os ()
+release_name = osversion.split (" ")[1]
+no_github_com_access = ["lenny", "squeeze"]
+
+if release_name in no_github_com_access:
+    command.run ("cp -f LATEST-VERSION VERSION")
+    sys.exit (0)
+# end if
 
 (status, info) = command.run ("LANG=C svn update . | grep revision")
 if status:
