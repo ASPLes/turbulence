@@ -126,6 +126,7 @@ void __turbulence_acquire_limits (TurbulenceCtx * ctx)
 		ctx->global_child_limit = value;
 	else
 		ctx->global_child_limit = 100;
+	msg ("Configured global-child-limit=%d", ctx->max_complete_flag_limit);
 
 	/* get global child limit */
 	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/max-incoming-complete-frame-limit", "value");
@@ -133,6 +134,7 @@ void __turbulence_acquire_limits (TurbulenceCtx * ctx)
 		ctx->max_complete_flag_limit = value;
 	else
 		ctx->max_complete_flag_limit = 32768;
+	msg ("Configured max-incoming-complete-frame-limit=%d", ctx->max_complete_flag_limit);
 
 	return;
 }
