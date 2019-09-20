@@ -26,6 +26,8 @@ version = "%s.b%s" % (version, revision)
 print "INFO: Updated vesion to: %s" % version
 
 open ("VERSION", "w").write ("%s\n" % version)
+open ("LATEST-VERSION", "w").write ("%s\n" % version)
+
 
 
 
