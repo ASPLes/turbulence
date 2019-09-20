@@ -951,11 +951,15 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 		return axl_true;
 	} /* end if */
 
-	msg ("NEW CONN: received connection-id=%d from %s:%s on local port %s:%s",
+	/** configure here max frame limit **/
+	vortex_connection_set_complete_frame_limit (connection, ctx->max_complete_flag_limit);
+
+	msg ("NEW CONN: received connection-id=%d from %s:%s on local port %s:%s (max-complete-frame-limit=%d)",
 	     vortex_connection_get_id (connection), 
 	     vortex_connection_get_host (connection), vortex_connection_get_port (connection),
-	     vortex_connection_get_local_addr (connection), vortex_connection_get_local_port (connection));
-	
+	     vortex_connection_get_local_addr (connection), vortex_connection_get_local_port (connection),
+	     ctx->max_complete_flag_limit);
+
 	/*** SECOND PART ***/
 	if (ctx->child) {
 		msg ("CHILD: Detected onConnect() on child process having a predefined profile path..");
