@@ -116,7 +116,16 @@ void __turbulence_ppath_state_free (axlPointer _state) {
 
 	if (state == NULL)
 		return;
+
+	/* release allocation */
 	axl_free (state->requested_serverName);
+
+	/* clear references */
+	state->requested_serverName = NULL;
+	state->path_selected = NULL;
+	state->ctx = NULL;
+
+	/* release node */
 	axl_free (state);
 	return;
 }
@@ -411,6 +420,11 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
  * connection (profiles already accepted, etc).
  *
  * SEE NOTES AT THE TOP OF THE FILE.
+ *
+ * Internal method returns:
+ *
+ * - axl_false -- ALLOW (do not filter)
+ * - axl_true  -- DENY (do filter)
  */
 axl_bool  __turbulence_ppath_mask (VortexConnection  * connection, 
 				   int                 channel_num,
@@ -425,6 +439,27 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 	/* get a reference to the turbulence profile path state */
 	TurbulencePPathState  * state  = user_data;
 	TurbulenceCtx         * ctx    = state->ctx;
+
+	if (ctx->is_exiting) {
+		error ("__turbulence_ppath_mask :: turbulence is finishing, rejecting connection...");
+		/* filter, no profile path selected */
+		return axl_true;
+	}
+	if (state == NULL) {
+		error ("  Found no items inside profile path configuration (state is NULL), rejecting (0x90008437)");
+		/* filter, no profile path selected */
+		return axl_true;
+	} /* end if */
+	if (state->path_selected == NULL) {
+		error ("  Found no items inside profile path configuration (state->path_selected is NULL), rejecting (0x90008438)");
+		/* filter, no profile path selected */
+		return axl_true;
+	} /* end if */
+	if (state->path_selected->ppath_items == NULL) {
+		error ("  Found no items inside profile path configuration (state->path_selected->ppath_items is NULL), rejecting (0x90008439)");
+		/* filter, no profile path selected */
+		return axl_true;
+	} /* end if */
 
 	msg2 ("  Starting profile path [%s] iterator for channel_num=%d, profile=%s, serverName=%s", 
 	      turbulence_ppath_get_name (state->path_selected), channel_num, uri, serverName ? serverName : "");
