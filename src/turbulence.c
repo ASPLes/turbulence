@@ -292,7 +292,10 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* do not perform any change if a null context is received */
 	v_return_if_fail (ctx);
 
-	msg ("Finishing turbulence up (VortexCtx: %p)..", ctx);
+	/* flag turbulence context as exiting */
+	ctx->is_exiting = axl_true;
+
+	msg ("%s: turbulence_exit: called, finishing turbulence (TurbulenceCtx: %p)..", turbulence_ctx_is_child (ctx) ? "CHILD" : "MASTER", ctx);
 
 	/* check to kill childs */
 	turbulence_process_kill_childs (ctx);
