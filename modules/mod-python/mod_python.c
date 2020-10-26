@@ -482,6 +482,8 @@ static void mod_python_close (TurbulenceCtx * _ctx) {
 		return;
 	}
 
+	msg ("mod_python_close: starting module close..");
+
 	/* say we are closing */
 	mod_python_py_init = axl_false;
 
