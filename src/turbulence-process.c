@@ -106,7 +106,7 @@ void turbulence_process_init         (TurbulenceCtx * ctx, axl_bool reinit)
 axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 {
 	VortexCtx        * vortex_ctx = ctx->vortex_ctx;
-	int                delay      = 300000; /* 300ms */
+	int                delay      = 1000000; /* 1seg */
 	int                tries      = 30; 
 
 	while (tries > 0) {
@@ -181,7 +181,7 @@ void turbulence_process_check_for_finish (TurbulenceCtx * ctx)
 	   the wait code for new connections... */
 
 	/* create data to be notified */
-	msg ("CHILD: initiated child termination (checking for rogue connections..");
+	msg ("CHILD: initiated child termination (checking for rogue connections..): if a connection is received, child process termination will be canceled");
 	if (! vortex_thread_create (&thread,
 				    (VortexThreadFunc) __turbulence_process_finished,
 				    ctx, VORTEX_THREAD_CONF_DETACHED, VORTEX_THREAD_CONF_END)) {
@@ -758,8 +758,16 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 	   register the connection handling by this process */
 	turbulence_conn_mgr_register (ctx, conn);
 
+	/* avoid handling any connection if turbulence is finishing */
+	if (ctx->is_exiting) {
+		error ("CHILD: Dropping connection=%d, turbulence is exiting..", vortex_connection_get_id (conn));
+		vortex_connection_shutdown (conn);
+		vortex_connection_close (conn);
+		return axl_false;
+	} /* end if */	 
+
 	/* check to handle start reply message */
-	msg ("CHILD: Checking to handle start channel=%s serverName=%s reply=%d at child=%d", profile, serverName ? serverName : "", handle_start_reply, getpid ());
+	msg ("CHILD: Checking to handle start channel=%s serverName=%s reply=%d at child-pid=%d (ctx->is_exiting=%d)", profile, serverName ? serverName : "", handle_start_reply, getpid (), ctx->is_exiting);
 	if (handle_start_reply) {
 		/* handle start channel reply */
 		if (! vortex_channel_0_handle_start_msg_reply (TBC_VORTEX_CTX (ctx), conn, channel_num,
@@ -1867,7 +1875,6 @@ void turbulence_process_kill_childs  (TurbulenceCtx * ctx)
 
 		/* notify all childs they will be closed */
 		axl_hash_foreach (ctx->child_process, __terminate_child, ctx);
-
 
 		/* unlock the list during the kill and wait */
 		TBC_PROCESS_UNLOCK_CHILD ();
