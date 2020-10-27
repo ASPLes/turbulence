@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://www.aspl.es/turbulence
 dnl
 
-AC_INIT(turbulence,0.6.3.b2836)
+AC_INIT(turbulence,0.6.4.b2836)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
@@ -258,8 +258,17 @@ case $host in
 esac
 AC_SUBST(EXARG_FLAGS)
 
+# find python-config
+if test -f "/bin/bash" ; then
+   PYTHON_CONFIG=`./get-python-config`
+else
+   bash_location=`which bash`
+   echo "Bash location found: $bash_location"
+   PYTHON_CONFIG=`${bash_location} ./get-python-config`
+fi 
+
 # get python includes 
-PYTHON_INCLUDES=`python-config --includes 2>/dev/null`
+PYTHON_INCLUDES=`$PYTHON_CONFIG --includes 2>/dev/null`
 old_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="-Wall -Werror $PYTHON_INCLUDES"
 echo "Python includes: $PYTHON_INCLUDES"
@@ -276,8 +285,8 @@ fi
 AM_CONDITIONAL(ENABLE_MOD_PYTHON, test "x$python_devel_found" = "xyes")
 
 dnl get python flags and libs
-PYTHON_CFLAGS=`python-config --cflags 2>/dev/null`
-PYTHON_LIBS=`python-config --ldflags 2>/dev/null`
+PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags 2>/dev/null`
+PYTHON_LIBS=`$PYTHON_CONFIG --ldflags 2>/dev/null`
 AC_SUBST(PYTHON_CFLAGS)
 AC_SUBST(PYTHON_LIBS)
 
