@@ -1,0 +1,8 @@
+etc/turbulence/mods-available/mod-python.xml
+etc/turbulence/python
+usr/lib/turbulence/modules/mod_python.a
+usr/lib/turbulence/modules/mod_python.la
+usr/lib/turbulence/modules/mod_python.so
+usr/lib/turbulence/modules/mod_python.so.0
+usr/lib/turbulence/modules/mod_python.so.0.0.0
+
