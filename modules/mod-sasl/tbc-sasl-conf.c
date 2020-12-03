@@ -1,5 +1,5 @@
 /*  Turbulence BEEP application server
- *  Copyright (C) 2010 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2020 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -36,7 +36,7 @@
  */
 
 #define HELP_HEADER "tbc-sasl-conf: a tool to administrate mod-sasl and users.\n\
-Copyright (C) 2007  Advanced Software Production Line, S.L.\n\n"
+Copyright (C) 2020  Advanced Software Production Line, S.L.\n\n"
 
 #define POST_HEADER "\n\
 If you have question, bugs to report, patches, you can reach us\n\

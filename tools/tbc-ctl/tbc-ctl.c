@@ -1,5 +1,5 @@
 /*  Turbulence BEEP application server
- *  Copyright (C) 2010 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2020 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -52,7 +52,7 @@
 #include <readline/history.h>
 
 #define HELP_HEADER "tbc-ctl: a CLI tool to manage turbulence remote management interface\n\
-Copyright (C) 2009  Advanced Software Production Line, S.L.\n\n"
+Copyright (C) 2020  Advanced Software Production Line, S.L.\n\n"
 
 #define POST_HEADER ""
 
