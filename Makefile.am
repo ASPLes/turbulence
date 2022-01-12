@@ -1,5 +1,5 @@
 # additional content
-EXTRA_DIST = VERSION turbulence.pc.in turbulence-config.in
+EXTRA_DIST = VERSION turbulence.pc.in turbulence-config.in get-python-config
 
 # build the BEEP application server
 if ENABLE_AF_ARCH_DOC
