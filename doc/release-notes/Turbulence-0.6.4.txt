@@ -1,0 +1,131 @@
+                     -= Turbulence 0.6.4 =-
+                         "Common People"       
+
+Release note
+~~~~~~~~~~~~
+
+  Advanced Software Production Line is proud to announce Turbulence
+  0.6.4 "Common People" release: an open source BEEP application
+  server, written on top of Vortex Library 1.1.
+
+  Turbulence is a BEEP server extensible through modules which allows
+  to implement server side profiles that are used and combined then
+  with other profiles through run time configuration.
+
+  Turbulence is written to make it easy to develop and deploy BEEP
+  profiles, allowing developers to provide a convenient configuration
+  interface to site administrators and end users.
+
+  Check out the following links to get ready with Turbulence:
+
+    - http://www.aspl.es/turbulence
+      [Turbulence homepage]
+
+    - http://www.core-admin.com
+      [Core-Admin homepage]
+ 
+    - http://www.beepcore.org
+      [BEEP Core community web site]
+    
+The release in short
+~~~~~~~~~~~~~~~~~~~~
+
+  - Added several updates and bug fixings.
+  - Added support for Debian BullsEye, Debian Buster and Ubuntu Focal
+
+Change notifications
+~~~~~~~~~~~~~~~~~~~~
+  None.
+
+Changes since the 0.6.4
+~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Finished support for crypt(3) API for mod-sasl and
+  mod-sasl-mysql extension plugin. Now the module is able to auth old
+  passwords and passwords crypted by crypt(3) API. Added regression
+  test (test_03a) to check support introduced and added documentation
+  to mod-sasl to explain how to use it.
+
+* [fix] Updated common-sasl.c code to define _GNU_SOURCE just if it is
+  not defined..
+
+* [fix] Updated mod-sasl-mysql extension library to allow implementing
+  alternative auth locations with <get-password-alt> and
+  <get-password-alt-cleanup>. This new feature is been used by
+  Core-Admin to provide auto login features
+
+* [fix] Updated mod_sasl_mysql to use ATTR_VALUE_TRANS when getting
+  values from xml configuration so administrators can use xml escaped
+  characters like (' apos).
+
+* [fix] Adding directory test/test_15_datadir (with empty file so
+  github.com allows to import it).
+
+* [fix] Fixed compilation errors spotted by gcc (5.3.1)
+
+* [fix] Several improvements inside turbulence_process_receive_socket
+  function to better report errors during the process. Added especial
+  case to detect loopback interface failures..
+
+* [fix] Making master<->child link creation to report addresses, errno
+  codes and indications when vortex_connection_new for master link
+  fails..
+
+* [fix] Making turbulence server to check vortex_support_pipe () to
+  avoid starting in the case a failure is found. Without that API
+  turbulence cannot work properly.
+  
+* [fix] Clear memory before calling read bytes from the wire inside
+  turbulence conn mgr module (proxy mode).
+
+* [fix] Updated turbulence-conn-mgr module (proxy read code) to use
+  try_read_pending API provided by vortex to do more read calls when
+  detected pending code to read. Fixes interation with
+  SSL+WebSocket+BEEP
+
+* [fix] Corrected libturbulence-mod-python descriptions for debian
+  packages..
+
+* [fix] Improved turbulence init.d script to avoid killing it self
+  when calling to restart..
+
+* [fix] Updated Turbulence Profile Path selection to setup max frame
+  limit at connection level as connection is notified accepted.
+
+* [fix] Updated code for turbulence-ppath module to clean state freed,
+  and additional code checking path mask selection.
+
+* [fix] Increased timeout to finish child process when found no
+  connection to watch.
+
+* [fix] Added code to detect if turbulence context is exiting before
+  calling for profile path selection after connection registration.
+
+* [fix] Updated turbulence_ctx_exit to flag at the very beginning that
+  the context is in the process of closing. Added some reporting to
+  show what is closing (child or master process).
+
+* [fix] Updated configure.ac to use get-python-config to adapt
+  compilation to support python2.7 where python3.X is default
+
+About Us
+~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides Linux Cloud Services
+  through https://asplhosting.com, to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can reach us:
+
+       https://www.asplhosting.com - info@aspl.es
+
+  Enjoy Turbulence!  
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - https://www.asplhosting.com
+                                   - https://www.aspl.es
+1th Sep 2022, Madrid (Spain)
+  
+
