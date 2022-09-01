@@ -1,5 +1,5 @@
 /*  Turbulence BEEP application server
- *  Copyright (C) 2020 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2022 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -5372,7 +5372,7 @@ int main (int argc, char ** argv)
 	axl_bool only_python = axl_false;
 
 	printf ("** test_01: Turbulence BEEP application server regression test\n");
-	printf ("** Copyright (C) 2008 Advanced Software Production Line, S.L.\n**\n");
+	printf ("** Copyright (C) 2022 Advanced Software Production Line, S.L.\n**\n");
 	printf ("** Regression tests: turbulence: %s \n",
 		VERSION);
 	printf ("**                   vortex:     %s \n",

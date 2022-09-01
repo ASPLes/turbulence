@@ -2,7 +2,7 @@
 
 if [ "$#" = "0" ]; then
     echo "turbulence-config @TURBULENCE_VERSION@: default turbulence installation settings"
-    echo "Copyright (C) 2010 Advanced Software Production Line, S.L."
+    echo "Copyright (C) 2022 Advanced Software Production Line, S.L."
     echo
     echo "The tool allows to get several configurations:";
     echo " --mod-dir: returns module directory installation";
