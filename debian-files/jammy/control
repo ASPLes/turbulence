@@ -101,6 +101,6 @@ Description: Python profile implementation for Turbulence
 Package: turbulence-utils
 Section: libs
 Architecture: any
-Depends: libturbulence (>= ${binary:Version}), libreadline5
+Depends: libturbulence (>= ${binary:Version}), libreadline8
 Description: Tubulence utils
   Utils to manage turbulence features.
