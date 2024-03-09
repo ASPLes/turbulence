@@ -1404,6 +1404,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 	aux     = axl_strdup_printf ("%d\n", length);
 	length  = strlen (aux);
 
+	written = 0;
 	while (tries < 100) {
 		written = write (child->child_connection, aux, length);
 		if (written == length)
