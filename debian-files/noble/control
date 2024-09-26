@@ -2,7 +2,7 @@ Source: turbulence
 Priority: extra
 Maintainer: Francis Brosnan <francis@aspl.es>
 Build-Depends: debhelper (>= 5), autotools-dev, pkg-config, 
-  libaxl-dev (>= 0.6.2), axl-knife (>= 0.6.2), libreadline-gplv2-dev, 
+  libaxl-dev (>= 0.6.2), axl-knife (>= 0.6.2), libreadline-dev, 
   libssl-dev, libgsasl7-dev, libvortex-1.1-dev (>= 1.1.4),
   python-vortex-dev, python-vortex-sasl-dev, libvortex-tls-1.1-dev,
   libvortex-tunnel-1.1-dev, libvortex-xml-rpc-1.1-dev,
