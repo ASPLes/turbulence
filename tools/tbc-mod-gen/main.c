@@ -1,5 +1,5 @@
 /*  Turbulence BEEP application server
- *  Copyright (C) 2022 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2025 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -51,7 +51,7 @@
 #include <tbc-mod-gen.dtd.h>
 
 #define HELP_HEADER "tbc-mod-gen: module generator for Turbulence BEEP server \n\
-Copyright (C) 2022 Advanced Software Production Line, S.L.\n\n"
+Copyright (C) 2025 Advanced Software Production Line, S.L.\n\n"
 
 #define POST_HEADER "\n\
 If you have question, bugs to report, patches, you can reach us\n\

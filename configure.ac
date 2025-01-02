@@ -1,5 +1,5 @@
 dnl  Turbulence:  BEEP application server
-dnl  Copyright (C) 2022 Advanced Software Production Line, S.L.
+dnl  Copyright (C) 2025 Advanced Software Production Line, S.L.
 dnl
 dnl  This program is free software; you can redistribute it and/or
 dnl  modify it under the terms of the GNU Lesser General Public License
@@ -35,7 +35,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://www.aspl.es/turbulence
 dnl
 
-AC_INIT(turbulence,0.6.4.b2893)
+AC_INIT(turbulence,0.6.4.b2899)
 
 TURBULENCE_VERSION=`cat VERSION`
 AC_SUBST(TURBULENCE_VERSION)
