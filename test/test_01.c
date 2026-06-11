@@ -923,6 +923,73 @@ axl_bool  test_03 (void)
 		return axl_false;
 	}
 
+	/* CHECK TRIMMING OF CREDENTIALS: leading/trailing non-visible
+	 * characters (" ", "\t", "\r", "\n") must be removed from both
+	 * the auth_id and the password before authenticating, so a user
+	 * that types a surrounding space/tab/newline is still accepted.
+	 * The fixture user is acceptedUser with password "test" (valid
+	 * both in the default db and in the serverName db). */
+	{
+		/* each (prefix, suffix) pair wraps the value with a
+		 * different combination of blank characters */
+		const char * trim_prefix[] = {" ", "",  "  ", "\t", "\n", "\r", " \t\r\n", NULL};
+		const char * trim_suffix[] = {"",  " ", "  ", "\t", "\n", "\r", " \t\r\n", NULL};
+		char       * trim_value;
+		int          i;
+
+		/* auth_id surrounded by blanks must still validate */
+		for (i = 0; trim_prefix[i] != NULL; i++) {
+			trim_value = axl_strdup_printf ("%s%s%s", trim_prefix[i], acceptedUser, trim_suffix[i]);
+			if (! common_sasl_auth_user (sasl_backend, NULL, trim_value, NULL, "test", serverName, &mutex)) {
+				printf ("Expected to validate user %s with surrounding blanks in the auth_id (variant %d)\n", acceptedUser, i);
+				axl_free (trim_value);
+				return axl_false;
+			}
+			axl_free (trim_value);
+		} /* end for */
+
+		/* password surrounded by blanks must still validate */
+		for (i = 0; trim_prefix[i] != NULL; i++) {
+			trim_value = axl_strdup_printf ("%s%s%s", trim_prefix[i], "test", trim_suffix[i]);
+			if (! common_sasl_auth_user (sasl_backend, NULL, acceptedUser, NULL, trim_value, serverName, &mutex)) {
+				printf ("Expected to validate user %s with surrounding blanks in the password (variant %d)\n", acceptedUser, i);
+				axl_free (trim_value);
+				return axl_false;
+			}
+			axl_free (trim_value);
+		} /* end for */
+
+		/* both auth_id and password surrounded by blanks at the same time */
+		trim_value = axl_strdup_printf ("  %s  ", acceptedUser);
+		if (! common_sasl_auth_user (sasl_backend, NULL, trim_value, NULL, "  test  ", serverName, &mutex)) {
+			printf ("Expected to validate user %s with surrounding blanks in both auth_id and password\n", acceptedUser);
+			axl_free (trim_value);
+			return axl_false;
+		}
+		axl_free (trim_value);
+
+		/* a wrong user surrounded by blanks must still fail (trimming
+		 * does not turn a wrong login into a valid one) */
+		if (common_sasl_auth_user (sasl_backend, NULL, "  non-existing-user  ", NULL, "test", serverName, &mutex)) {
+			printf ("Expected a failure validating a non-existing user even surrounded by blanks\n");
+			return axl_false;
+		}
+
+		/* an auth_id made only of blank characters must fail: it
+		 * becomes empty after trimming (length > 0 guard) */
+		if (common_sasl_auth_user (sasl_backend, NULL, " \t\r\n", NULL, "test", serverName, &mutex)) {
+			printf ("Expected a failure validating an auth_id made only of blank characters\n");
+			return axl_false;
+		}
+
+		/* a password made only of blank characters must fail: it
+		 * becomes empty after trimming (length > 0 guard) */
+		if (common_sasl_auth_user (sasl_backend, NULL, acceptedUser, NULL, " \t\r\n", serverName, &mutex)) {
+			printf ("Expected a failure validating user %s with a password made only of blank characters\n", acceptedUser);
+			return axl_false;
+		}
+	}
+
 	/* check default methods allowed */
 	if (! common_sasl_method_allowed (sasl_backend, "plain", &mutex)) {
 		printf ("Expected to find \"plain\" as a proper method accepted..\n");

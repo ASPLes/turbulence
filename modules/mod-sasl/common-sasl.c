@@ -1273,10 +1273,13 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 					VortexMutex      * mutex)
 {
 	/* get a reference to the turbulence context */
-	TurbulenceCtx * ctx               = NULL;
-	SaslAuthDb    * db                = NULL;
-	int             result            = 0;
-	char          * formated_password = NULL;
+	TurbulenceCtx * ctx                    = NULL;
+	SaslAuthDb    * db                     = NULL;
+	int             result                 = 0;
+	char          * formated_password      = NULL;
+	char          * auth_id_clean          = NULL;
+	char          * authorization_id_clean = NULL;
+	char          * password_clean         = NULL;
 
 	/* no backend, no authentication */
 	if (sasl_backend == NULL || sasl_backend->ctx == NULL) {
@@ -1288,6 +1291,49 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		error ("auth_id is NULL, unable to perform authentication");
 		return axl_false;
 	} /* end if */
+
+	/* Clean up the credentials received removing leading/trailing
+	 * non-visible characters (" ", "\t", "\r", "\n"). Some users
+	 * introduce a trailing space or a similar invisible symbol in
+	 * the login or password which would otherwise make the
+	 * authentication fail even though the credentials are
+	 * correct. We work on local copies because the values
+	 * received are owned by the caller (const). */
+	auth_id_clean = axl_strdup (auth_id);
+	axl_stream_trim (auth_id_clean);
+
+	/* ensure the auth_id still holds information after trimming
+	 * to avoid running queries with an empty user */
+	if (auth_id_clean == NULL || strlen (auth_id_clean) == 0) {
+		axl_free (auth_id_clean);
+		error ("auth_id is empty after removing surrounding blank characters, unable to perform authentication");
+		return axl_false;
+	} /* end if */
+
+	if (authorization_id != NULL) {
+		authorization_id_clean = axl_strdup (authorization_id);
+		axl_stream_trim (authorization_id_clean);
+	} /* end if */
+
+	if (password != NULL) {
+		password_clean = axl_strdup (password);
+		axl_stream_trim (password_clean);
+
+		/* ensure the password still holds information after
+		 * trimming to avoid checking an empty password */
+		if (password_clean == NULL || strlen (password_clean) == 0) {
+			error ("password is empty after removing surrounding blank characters, unable to perform authentication for auth_id=%s", auth_id_clean);
+			axl_free (auth_id_clean);
+			axl_free (authorization_id_clean);
+			axl_free (password_clean);
+			return axl_false;
+		} /* end if */
+	} /* end if */
+
+	/* from this point on, use the cleaned credentials */
+	auth_id          = auth_id_clean;
+	authorization_id = authorization_id_clean;
+	password         = password_clean;
 
 	/* get a reference to the context */
 	ctx = sasl_backend->ctx;
@@ -1317,6 +1363,9 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 
 		error ("no sasl <auth-db> was found for the provided serverName=%s or no default <auth-db> was found, unable to perform SASL authentication.",
 		       serverName ? serverName : "<not defined>");
+		axl_free (auth_id_clean);
+		axl_free (authorization_id_clean);
+		axl_free (password_clean);
 		return axl_false;
 	} /* end if */
 
@@ -1342,6 +1391,9 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		/* error, unable to find the proper keying material
 		 * encoding configuration */
 		error ("unable to find the proper format for keying material (inside sasl.conf)");
+		axl_free (auth_id_clean);
+		axl_free (authorization_id_clean);
+		axl_free (password_clean);
 		return axl_false;
 	} /* end switch */
 
@@ -1377,6 +1429,11 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 	/* check to release memory allocated */
 	if (formated_password)
 		axl_free (formated_password);
+
+	/* release the cleaned credential copies */
+	axl_free (auth_id_clean);
+	axl_free (authorization_id_clean);
+	axl_free (password_clean);
 
 	/* return auth operation */
 	return result == 1;

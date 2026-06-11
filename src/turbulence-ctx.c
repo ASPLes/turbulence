@@ -272,7 +272,7 @@ axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
 	/* acquire the mutex */
 	vortex_mutex_lock (&ctx->data_mutex);
 
-	/* perform a simple insert */
+	/* perform a simple lookup */
 	data = axl_hash_get (ctx->data, (axlPointer) key);
 
 	/* release the mutex */
@@ -295,9 +295,9 @@ axlPointer      turbulence_ctx_get_data       (TurbulenceCtx * ctx,
 void            turbulence_ctx_wait           (TurbulenceCtx * ctx,
 					       long microseconds)
 {
-	if (ctx == NULL || microseconds <= 0) 
+	if (ctx == NULL || microseconds <= 0)
 		return;
-	/* acquire a reference */
+	/* implement the blocking wait using the wait queue */
 	msg2 ("Process waiting during %d microseconds..", (int) microseconds);
 	vortex_async_queue_timedpop (ctx->wait_queue, microseconds);
 	return;
