@@ -71,7 +71,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 		return NULL;
 	} /* end if */
 
-	/* now check check base dir for socket control path exists */
+	/* now check the base dir holding the child socket control path exists */
 	temp_dir = turbulence_base_dir (result->socket_control_path);
 	if (temp_dir && ! vortex_support_file_test (temp_dir, FILE_EXISTS)) {
 		/* base directory having child socket control do not exists */
@@ -97,7 +97,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 	if (! vortex_connection_is_ok (result->conn_mgr, axl_false)) {
 		error ("Failed to connection child connection management, unable to create child process");
 
-		/* shutdown connection to be child by the child */
+		/* close the management listener that failed to start */
 		vortex_connection_close (result->conn_mgr);
 		axl_free (result);
 
@@ -122,7 +122,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 }
 
 /** 
- * @brief Allows to a acquire a reference to the provided object.
+ * @brief Allows to acquire a reference to the provided object.
  *
  * @param child The child object to get a reference.
  *
@@ -389,7 +389,8 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	int                   len;
 
 	/*** NOTE: indexes used for child->init_string_items[X] are defined inside
-	 * turbulence_process_create_child.c, around line 1392 ***/
+	 * turbulence-process.c, at __turbulence_process_send_child_init_string
+	 * (the child_init_string format string, around line 1376) ***/
 	msg ("CHILD: doing post init (recovering first connection)");
 
 	/* get child reference */
