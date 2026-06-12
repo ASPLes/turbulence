@@ -68,7 +68,7 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 	if (ctx->conn_mgr_hash == NULL)
 		return;
 
-	/* new connection created: configure it */
+	/* lock to remove the closing connection from the hash */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* remove from the hash */
@@ -270,7 +270,7 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	if (vortex_connection_get_data (conn, "tbc:conn:mgr:!")) 
 		return 1;
 
-	/* NOTE REFERECE 002: check if we are a child process and the
+	/* NOTE REFERENCE 002: check if we are a child process and the
 	 * connection isn't the result of the temporal listener to
 	 * create child control connection */
 	if (ctx->child && (vortex_connection_get_role (child->conn_mgr) == VortexRoleMasterListener)) {
@@ -480,7 +480,7 @@ void turbulence_conn_mgr_register (TurbulenceCtx * ctx, VortexConnection * conn)
 void turbulence_conn_mgr_unregister    (TurbulenceCtx    * ctx, 
 					VortexConnection * conn)
 {
-	/* new connection created: configure it */
+	/* lock to remove the connection from the hash */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* remove from the hash */
@@ -517,7 +517,7 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
 	      broadcast->profile); 
 	vortex_channel_send_msg (channel, broadcast->message, broadcast->message_size, NULL);
 
-	/* always return axl_true to make the process to continue */
+	/* always return axl_false to make the process continue */
 	return axl_false;
 }
 
@@ -550,7 +550,7 @@ int  _turbulence_conn_mgr_broadcast_msg_foreach (axlPointer key, axlPointer data
  * message is sent. This attribute is not optional.
  *
  * @param filter_conn Connection filtering function. If it returns
- * axl_true, the connection is filter. Optional parameter.
+ * axl_true, the connection is filtered. Optional parameter.
  *
  * @param filter_data User defined data provided to the filter
  * function. Optional parameter.
@@ -627,7 +627,7 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 
 		/* search for channels running the profile provided */
 		if (! vortex_connection_foreach_channel (conn, _turbulence_conn_mgr_broadcast_msg_foreach, broadcast))
-			error ("failed to broacast message over connection id=%d", vortex_connection_get_id (conn));
+			error ("failed to broadcast message over connection id=%d", vortex_connection_get_id (conn));
 
 		/* next cursor */
 		axl_hash_cursor_next (cursor);
@@ -750,7 +750,7 @@ int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx)
  * the child (as opposed to fully send the entire connection to be
  * handled by the child).
  *
- * This is done to support some especiall cases (especially those
+ * This is done to support some special cases (especially those
  * where TLS is around) where it is not possible to store the state of a connection and resume it on a child process.
  *
  * NOTE: This function only flags! it does not actually send the
@@ -760,7 +760,7 @@ int        turbulence_conn_mgr_count       (TurbulenceCtx            * ctx)
  * @param conn The connection that is flagged to be proxied on parent. 
  *
  * @return axl_true in the case the connection was flagged to be
- * proxied on on parent otherwise, axl_false is returned.
+ * proxied on parent otherwise, axl_false is returned.
  *
  * NOTE TO DEVELOPERS: in the case you are creating a module that
  * needs to activate this feature, just set the value as follows:
@@ -903,7 +903,7 @@ void __turbulence_conn_mgr_proxy_on_close (VortexConnection * conn, axlPointer _
 	/* release and shutdown */
 	vortex_connection_set_preread_handler (conn, NULL);
 
-	/* reduce reference counting but do it out side the close handler */
+	/* reduce reference counting but do it outside the close handler */
 	vortex_thread_pool_new_task (CONN_CTX (conn), __turbulence_conn_mgr_release_proxy_conn, conn);
 
 	return;
@@ -1059,7 +1059,7 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 
 	v_return_val_if_fail (ctx && conn, NULL);
 	
-	/* new connection created: configure it */
+	/* lock to read the profile stats for this connection */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
 	/* get state */
@@ -1102,7 +1102,7 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 }
 
 /** 
- * @internal Ensure we close all active connections before existing...
+ * @internal Ensure we close all active connections before exiting...
  */
 axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer data, axlPointer user_data) 
 {

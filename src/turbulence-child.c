@@ -74,7 +74,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 	/* now check the base dir holding the child socket control path exists */
 	temp_dir = turbulence_base_dir (result->socket_control_path);
 	if (temp_dir && ! vortex_support_file_test (temp_dir, FILE_EXISTS)) {
-		/* base directory having child socket control do not exists */
+		/* base directory having child socket control does not exist */
 		wrn ("run time directory %s do not exists, creating..", temp_dir);
 		if (! turbulence_create_dir (temp_dir)) {
 			/* call to finish references */
@@ -95,7 +95,7 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 	/* create listener connection used for child management */
 	result->conn_mgr = vortex_listener_new_full (ctx->vortex_ctx, "0.0.0.0", "0", NULL, NULL);
 	if (! vortex_connection_is_ok (result->conn_mgr, axl_false)) {
-		error ("Failed to connection child connection management, unable to create child process");
+		error ("Failed to create child connection management listener, unable to create child process");
 
 		/* close the management listener that failed to start */
 		vortex_connection_close (result->conn_mgr);
@@ -407,7 +407,7 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	ctx->child->ppath = def;
 
 	/* check here to change root path, in the case it is defined
-	 * now we still have priviledges */
+	 * now we still have privileges */
 	turbulence_ppath_change_root (ctx, def);
 
 	/* check here for setuid support */
@@ -447,7 +447,7 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	msg ("CHILD: checking to skip connection store, conn_status=%s, last='%c'", 
 	     child->init_string_items[11], child->init_string_items[11][len - 1]);
 	if (child->init_string_items[11][len - 1] == '1') {
-		msg ("CHILD: skiping connection restoring as indicated in conn_status (last position == '1'): %s", child->init_string_items[11]);
+		msg ("CHILD: skipping connection restoring as indicated in conn_status (last position == '1'): %s", child->init_string_items[11]);
 	} else {
 		/* register connection handled now by child  */
 		msg ("CHILD: restoring connection conn_socket=%s, conn_status=%s", child->init_string_items[0], child->init_string_items[11]);
