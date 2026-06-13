@@ -126,7 +126,7 @@ axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 		
 		/* finish current thread if turbulence is existing */
 		if (ctx->is_exiting) {
-			msg ("CHILD: Found turbulence existing, finishing child process termination thread signaled due to vortex reader stop");
+			msg ("CHILD: Found turbulence exiting, finishing child process termination thread signaled due to vortex reader stop");
 			return NULL;
 		}
 
@@ -144,7 +144,7 @@ axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 	}
 
 	/* unlock waiting child */
-	msg ("CHILD: calling to unlock due to vortex reader stoped (no more connections to be watched): %p (vortex refs: %d)..",
+	msg ("CHILD: calling to unlock due to vortex reader stopped (no more connections to be watched): %p (vortex refs: %d)..",
 	     ctx, vortex_ctx_ref_count (ctx->vortex_ctx));
 	/* unlock the current listener */
 	vortex_listener_unlock (TBC_VORTEX_CTX (ctx));
@@ -164,7 +164,7 @@ void turbulence_process_check_for_finish (TurbulenceCtx * ctx)
 	}
 
 	/* check if the child process was configured with a reuse
-	   flag, if not, notify exist right now */
+	   flag, if not, notify exit right now */
 	if (! ctx->child->ppath->reuse) {
 	        msg ("CHILD: unlocking listener to finish: %p..", ctx->vortex_ctx);
 		/* so it is a child process without reuse flag
@@ -249,13 +249,13 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	/* check path */
 	if (strlen (path) >= sizeof (socket_name.sun_path)) {
 	        vortex_close_socket (_socket);
-	        error ("%s: Failed to create local socket to hold connection, path is bigger that limit (%d >= %d), path: %s", 
+	        error ("%s: Failed to create local socket to hold connection, path is bigger than limit (%d >= %d), path: %s",
 		       is_parent ? "PARENT" : "CHILD", (int) strlen (path), (int) sizeof (socket_name.sun_path), path);
 		return -1;
 	}
 	umask (0077);
 	if (bind (_socket, (struct sockaddr *) &socket_name, sizeof(socket_name))) {
-	        error ("%s: Failed to create local socket to hold conection, bind function failed with error: %d, %s", 
+	        error ("%s: Failed to create local socket to hold connection, bind function failed with error: %d, %s", 
 		       is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error ());
 		vortex_close_socket (_socket);
 		return -1;
@@ -272,7 +272,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	/* now call to accept connection from parent */
 	_aux_socket = vortex_listener_accept (_socket);
 	if (_aux_socket < 0) 
-	         error ("%s: Failed to create local socket to hold conection, listener function failed with error: %d, %s (socket value is %d)", 
+	         error ("%s: Failed to create local socket to hold connection, listener function failed with error: %d, %s (socket value is %d)", 
 			is_parent ? "PARENT" : "CHILD", errno, vortex_errno_get_last_error (), _aux_socket);
 	vortex_close_socket (_socket);
 
@@ -484,7 +484,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 			vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_SOFT_SOCK_LIMIT, &soft_limit);
 			vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_HARD_SOCK_LIMIT, &hard_limit);
 		
-			error ("%s: Unable to receive socket from parent, droping socket connection, reached process limit: soft-limit=%d, hard-limit=%d\n",
+			error ("%s: Unable to receive socket from parent, dropping socket connection, reached process limit: soft-limit=%d, hard-limit=%d\n",
 			       label, soft_limit, hard_limit);
 		} else if (error_reported == 0) {
 			error ("%s: CMSG_FIRSTHDR(&msg) call failed (reported cmsg=NULL), we have not reached connection limits and no error reported.", label);
@@ -608,7 +608,7 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 	
 	msg ("Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, (int) strlen (conn_status));
 
-	/* socket that is know handled by the child process */
+	/* socket that is now handled by the child process */
 	client_socket = vortex_connection_get_socket (conn);
 	vortex_connection_set_close_socket (conn, axl_false);
 
@@ -727,7 +727,7 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 	}
 
 	/* now notify profile path selected after dropping
-	   priviledges */
+	   privileges */
 	if (! turbulence_module_notify (ctx, TBC_PPATH_SELECTED_HANDLER, def, conn, NULL)) {
 		/* close the connection */
 		TBC_FAST_CLOSE (conn);
@@ -1163,7 +1163,7 @@ void __turbulence_process_release_parent_connections_foreach  (VortexConnection 
 
 /** 
  * @internal This function ensures that all connections that the
- * parent handles but the child must't are closed properly so the
+ * parent handles but the child mustn't are closed properly so the
  * child process only have access to connections associated to its
  * profile path.
  *
@@ -1351,10 +1351,10 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
 	if (conn_status == NULL) {
-		error ("PARENT: failled to create child, unable to allocate conn status string");
+		error ("PARENT: failed to create child, unable to allocate conn status string");
 		return axl_false;
 	}
-	msg ("PARENT: conn_status value: %s (profile path id: %d, 4th postiion from the end)", conn_status, turbulence_ppath_get_id (def));
+	msg ("PARENT: conn_status value: %s (profile path id: %d, 4th position from the end)", conn_status, turbulence_ppath_get_id (def));
 
 	/* prepare child init string: 
 	 *
@@ -1370,8 +1370,8 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 	 * 9) child->socket_control_path : path to the socket_control_path
 	 * 10) ppath_id : profile path identification to be used on child (the profile path activated for this child)
 	 * 11) conn_status : connection status description to recover it at the child
-	 * 12) conn_mgr_host : host where the connection mgr is locatd (BEEP master<->child link)
-	 * 13) conn_mgr_port : port where the connection mgr is locatd (BEEP master<->child link)
+	 * 12) conn_mgr_host : host where the connection mgr is located (BEEP master<->child link)
+	 * 13) conn_mgr_port : port where the connection mgr is located (BEEP master<->child link)
 	 * POSITION INDEX:                       0    1    2    3    4    5    6    7    8    9   10   11   12   13*/
  	child_init_string = axl_strdup_printf ("%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%d;_;%s;_;%d;_;%s;_;%s;_;%s",
 					       /* 0  */ client_socket,
@@ -1390,7 +1390,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 					       /* 13 */ vortex_connection_get_local_port (child->conn_mgr));
 	axl_free (conn_status);
 	if (child_init_string == NULL) {
-		error ("PARENT: failled to create child, unable to allocate memory for child init string");
+		error ("PARENT: failed to create child, unable to allocate memory for child init string");
 		return axl_false;
 	} /* end if */
 
@@ -1603,7 +1603,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			 * new client socket */
 			client_socket = turbulence_conn_mgr_setup_proxy_on_parent (ctx, conn);
 		} else {
-			/* socket that is know handled by the child
+			/* socket that is now handled by the child
 			 * process */
 			client_socket = vortex_connection_get_socket (conn);
 
@@ -2015,7 +2015,7 @@ TurbulenceChild * turbulence_process_child_by_id (TurbulenceCtx * ctx, int pid)
 	/* unlock */
 	TBC_PROCESS_UNLOCK_CHILD ();
 
-	return child; /* no child found */
+	return child; /* may be NULL if no child found */
 }
 
 /** 
@@ -2072,7 +2072,7 @@ axl_bool __find_ppath (axlPointer key, axlPointer data, axlPointer user_data, ax
 	
 	if (turbulence_ppath_get_id (child->ppath) == turbulence_ppath_get_id (ppath)) {
 		/* found child associated, updating reference and
-		   signaling to stop earch */
+		   signaling to stop search */
 		(*result) = child;
 		return axl_true; /* found key, stop foreach */
 	} /* end if */
