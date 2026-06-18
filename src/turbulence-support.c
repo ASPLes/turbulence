@@ -123,7 +123,7 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 			backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.gdb", turbulence_runtime_tmpdir (ctx), time (NULL));
 		} else {
 			fclose (file_handle);
-			msg ("Checked that %s is writable/readable for the current usid=%d", backtrace_file, getuid ());
+			msg ("Checked that %s is writable/readable for the current uid=%d", backtrace_file, getuid ());
 			break;
 		} /* end if */
 
@@ -211,7 +211,7 @@ axl_bool turbulence_support_smtp_send_receive_reply_and_check (TurbulenceCtx * c
 		return axl_false;
 	}
 
-	msg ("Received afirmative SMTP content: %s", buffer);
+	msg ("Received affirmative SMTP content: %s", buffer);
 	return axl_true;
 }
 
@@ -233,7 +233,7 @@ axl_bool turbulence_support_smtp_send_receive_reply_and_check (TurbulenceCtx * c
  * optional, if not configured no subject will be placed.
  *
  * @param body The message body to be configured. This value is
- * optional, if not configured no subject will be placed.
+ * optional, if not configured no body will be placed.
  *
  * @param body_file Optional reference to a file that contains the
  * body of the message.
@@ -513,7 +513,7 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
  * @param body_file Optional reference to a file that contains the
  * body of the message.
  *
- * @return axl_true if the mail message was submited or axl_false if
+ * @return axl_true if the mail message was submitted or axl_false if
  * something failed.
  */
 axl_bool        turbulence_support_simple_smtp_send (TurbulenceCtx * ctx,
