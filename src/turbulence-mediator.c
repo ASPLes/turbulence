@@ -77,7 +77,7 @@ typedef struct _TurbulenceMediatorSubscriber {
 
 /** 
  * @internal API used to initialize mediator module.
- * @param The turbulence context where the mediator will be initialized.
+ * @param ctx The turbulence context where the mediator will be initialized.
  */
 void turbulence_mediator_init        (TurbulenceCtx * ctx)
 {
@@ -89,7 +89,7 @@ void turbulence_mediator_init        (TurbulenceCtx * ctx)
 		/* init hash */
 		ctx->mediator_hash = axl_hash_new (axl_hash_string, axl_hash_equal_string);
 
-		/* because the handler was not ready, take oportunity
+		/* because the handler was not ready, take opportunity
 		   to register built-in events */
 		turbulence_mediator_create_plug (ctx, "turbulence", "module-registered",
 						 /* do not subscribe */
@@ -109,8 +109,8 @@ void turbulence_mediator_init        (TurbulenceCtx * ctx)
  * TurbulenceMediatorAttr to know about attributes available.
  *
  * @return The function returns the value associated to the
- * attribute. Keep in mind some attributes may return a boolea value,
- * others may return an string or a pointer reference. The value
+ * attribute. Keep in mind some attributes may return a boolean value,
+ * others may return a string or a pointer reference. The value
  * returned is entirely event specific. Check its documentation. The
  * function may return NULL either because NULL value is defined on
  * the attribute or because a NULL object was received.
@@ -183,8 +183,8 @@ void turbulence_mediator_plug_free (axlPointer _plug)
  *
  * @param entry_name This is the event entry name.
  *
- * @param entry_domain This is the event entry domain, an string that
- * can be used to group together events with similiar or connected
+ * @param entry_domain This is the event entry domain, a string that
+ * can be used to group together events with similar or connected
  * logic.
  *
  * @param subscribe Set to axl_true to subscribe to the event (as \ref
@@ -340,7 +340,7 @@ axl_bool turbulence_mediator_plug_exits   (TurbulenceCtx             * ctx,
  * @param user_data A pointer to user defined data, passed to the
  * handler configured.
  *
- * NOTE: if the event does not exists, the handler will won't receive
+ * NOTE: if the event does not exist, the handler won't receive
  * any notification.
  *
  * @return axl_true if the caller was subscribed, otherwise axl_false
@@ -511,7 +511,7 @@ void turbulence_mediator_remove_plug (TurbulenceCtx             * ctx,
 		return;
 	} /* end if */
 	
-	/* subscribe: create the holder */
+	/* search the matching subscriber and remove it */
 	iterator = 0;
 	while (iterator < axl_list_length (plug->subscribers)) {
 		/* get subscriber value */
@@ -607,12 +607,12 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 		result = object->result;
 		
 	} else {
-		/* subscribe: create the holder */
+		/* notify each registered subscriber */
 		iterator = 0;
 		while (iterator < axl_list_length (plug->subscribers)) {
 			/* get subscriber value */
 			subscriber = axl_list_get_nth (plug->subscribers, iterator);
-			
+
 			/* check null reference */
 			if (subscriber == NULL)
 				break;

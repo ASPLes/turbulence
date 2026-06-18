@@ -361,8 +361,8 @@ TurbulenceLoop * turbulence_loop_create (TurbulenceCtx * ctx)
 	loop->ctx         = ctx;
 	loop->queue       = vortex_async_queue_new ();
 
-	/* crear manager */
-	if (! vortex_thread_create (&loop->thread, 
+	/* create loop thread */
+	if (! vortex_thread_create (&loop->thread,
 				    (VortexThreadFunc) __turbulence_loop_run,
 				    loop,
 				    VORTEX_THREAD_CONF_END)) {
@@ -537,7 +537,7 @@ void             turbulence_loop_close (TurbulenceLoop * loop, axl_bool notify)
 	if (loop == NULL)
 		return;
 
-	/* now finish log manager */
+	/* now finish the loop thread */
 	if (notify && loop->queue != NULL) {
 		vortex_async_queue_push (loop->queue, INT_TO_PTR (-4));
 		vortex_thread_destroy (&loop->thread, axl_false);

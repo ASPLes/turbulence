@@ -166,7 +166,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 
 /** 
  * @brief Allows to close the provided module, unloading from memory
- * and removing all registration references. The function do not
+ * and removing all registration references. The function does not
  * perform any module space notification. The function makes use of
  * the unload function implemented by modules (if defined).
  *
@@ -242,7 +242,7 @@ ModInitFunc        turbulence_module_get_init  (TurbulenceModule * module)
  * @param module The module that is being requested to return the
  * close function.
  * 
- * @return A refernce to the close function or NULL if the function
+ * @return A reference to the close function or NULL if the function
  * doesn't have a close function defined (which is possible and
  * allowed).
  */
@@ -347,7 +347,7 @@ axl_bool             turbulence_module_register  (TurbulenceModule * module)
 
 /** 
  * @brief Unregister the module provided from the list of modules
- * loaded. The function do not close the module (\ref
+ * loaded. The function does not close the module (\ref
  * turbulence_module_free). This is required to be done by the
  * caller.
  * 
@@ -418,7 +418,7 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
 		
 	/* check init */
 	if (! init (ctx)) {
-		wrn ("init module: %s have failed, skiping", location);
+		wrn ("init module: %s has failed, skipping", location);
 		
 		/* close the module but do not unmap it. This way
 		   modules partially loaded won't break turbulence in
@@ -520,13 +520,13 @@ void               turbulence_module_free (TurbulenceModule * module)
  * @param handler The handler to be called.
  *
  * @param data Optional data to be passed to the handler. This pointer
- * is handler especific.
+ * is handler specific.
  *
  * @param data2 Second optional data to be passed to the handler. This
- * pointer is handler especific.
+ * pointer is handler specific.
  *
  * @param data3 Third optional data to be passed to the handler. This
- * pointer is handler especific.
+ * pointer is handler specific.
  *
  * @return Returns axl_true if all handlers executed also returned
  * axl_true. Those handler that have no return value will cause the
@@ -560,7 +560,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 			
 		switch (handler) {
 		case TBC_CLOSE_HANDLER:
-			/* notify if defined reconf function */
+			/* notify if defined close function */
 			if (module->def->close != NULL) {
 				msg ("closing module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);
@@ -578,7 +578,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 			}
 			break;
 		case TBC_INIT_HANDLER:
-			/* notify if defined reconf function */
+			/* notify if defined init function */
 			if (module->def->init != NULL) {
 				msg ("initializing module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);
@@ -592,7 +592,7 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 			}
 			break;
 		case TBC_PPATH_SELECTED_HANDLER:
-			/* notify if defined reconf function */
+			/* notify if defined ppath_selected function */
 			if (module->def->ppath_selected != NULL) {
 				msg ("notifying profile path selected on module: %s (%s)", module->def->mod_name, module->path);
 				vortex_mutex_unlock (&ctx->registered_modules_mutex);

@@ -54,7 +54,7 @@ struct _TurbulenceExpr {
 };
 
 /** 
- * @internal Function used to check if the string provided have
+ * @internal Function used to check if the string provided has
  * content that must be revised to help its clarity.
  */
 int       turbulence_expr_has_escapable_chars        (const char * expression,
@@ -124,10 +124,10 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 
 	/* return results */
 	return result;
-} /* end __turbulence_ppath_has_escapable_chars */
+} /* end turbulence_expr_has_escapable_chars */
 
 /** 
- * @internal Support function which used information provided by
+ * @internal Support function which uses information provided by
  * previous function to expand the string providing a perl regular
  * expression compatible if used / and *.
  */
@@ -205,14 +205,14 @@ char * turbulence_expr_copy_and_escape (const char * expression,
 		iterator2++;
 	} /* end while */
 	
-	/* check to add ^ */
+	/* check to add $ */
 	if (expression[iterator2] != '$') {
 		result[iterator] = '$';
 	} /* end if */
 
 	/* return results */
 	return result;
-} /* end __turbulence_ppath_copy_and_escape */
+} /* end turbulence_expr_copy_and_escape */
 
 /* check if the expression is negative */
 const char * turbulence_expr_check_negative_expr (const char * expression, int  * negative)
@@ -317,7 +317,7 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 		expression = axl_stream_join (strv, "|");
 		axl_stream_freev (strv);
 		dealloc = axl_true;
-		msg ("NOTE: expression expanded to:: %s", expression);
+		msg ("NOTE: expression expanded to: %s", expression);
 	} /* end if */
 
 	/* do some regular expression support to avoid making it
@@ -409,7 +409,7 @@ axl_bool  turbulence_expr_match (TurbulenceExpr * expr, const char * subject)
  */
 const char     * turbulence_expr_get_expression (TurbulenceExpr * expr)
 {
-	/* check the NULL value to avoid accesing cuenca */
+	/* check the NULL value to avoid accessing a NULL reference */
 	if (expr == NULL)
 		return NULL;
 	/* return string expression used to build this turbulence

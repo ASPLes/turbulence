@@ -239,9 +239,9 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 	 * available directly to peers once the profile path is
 	 * selected.
 	 *
-	 * In the case no <allow> or <if-sucess> directive allows the
+	 * In the case no <allow> or <if-success> directive allows the
 	 * profile requested (uri parameter), then the second part is
-	 * called, which tries to find <if-sucesss> declaration that
+	 * called, which tries to find <if-success> declaration that
 	 * may contain another <allow> or <if-success> directives that
 	 * might allow the requested profile. To perform that task,
 	 * the function calls recursively to itself.
@@ -595,7 +595,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 		} /* end if */
 
 		/* check if the connection will be handled by a child
-		 * proces */
+		 * process */
 		if (state->path_selected->separate) {
 			/* flag the connection to skip futher handling
 			 * letting the child process to finish start
@@ -609,7 +609,7 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 
 	} /* end if */
 
-	/* reached this point we have the path seletected so call to
+	/* reached this point we have the path selected so call to
 	   base function */
 	return __turbulence_ppath_mask (connection, channel_num, uri, profile_content, encoding, serverName, frame, error_msg, user_data);
 }
@@ -738,9 +738,10 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	iterator = 0;
 	src      = vortex_connection_get_host (connection);
 	dst      = vortex_connection_get_local_addr (connection);
-	msg ("Checking: %-30s %-30s Profile path match for conn-id=%d", "Ppath. serveName", "requested serverName", 
+	msg ("Checking: %-30s %-30s Profile path match for conn-id=%d", "Ppath. serverName", "requested serverName",
 	     vortex_connection_get_id (connection));
 	while (ctx->paths->items[iterator] != NULL) {
+
 		/* get the profile path def */
 		def = ctx->paths->items[iterator];
 
@@ -767,7 +768,7 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 			break;
 		} else {
 			/* show profile path not mached */
-			msg2 ("profile path do not match: %s, for connection id=%d, src=%s local_addr=%s serverName='%s' (src_status:%d, dst_status:%d, serverName_status:%d) ", 
+			msg2 ("profile path does not match: %s, for connection id=%d, src=%s local_addr=%s serverName='%s' (src_status:%d, dst_status:%d, serverName_status:%d) ",
 			      def->path_name ? def->path_name : "(no path name defined)",
 			      vortex_connection_get_id (connection), src, dst, serverName ? serverName : "",
 			      src_status, dst_status, serverName_status);
@@ -880,7 +881,7 @@ void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx,
 	/* get profile path */
 	def = turbulence_ppath_find_by_id (ctx, ppath_id);
 	if (def == NULL) {
-		error ("Unable to set profile path state, ppath id %d do not return a valid profile path reference",
+		error ("Unable to set profile path state, ppath id %d does not return a valid profile path reference",
 		       ppath_id);
 		return;
 	} /* end if */
@@ -904,7 +905,7 @@ void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx,
 
 /** 
  * @internal Server init handler that allows to check the connection's
- * source and select the appropiate profile path to be used for the
+ * source and select the appropriate profile path to be used for the
  * connection. It also sets the required handler to enforce profile
  * path policy.
  *
@@ -919,7 +920,7 @@ void   __turbulence_ppath_set_state (TurbulenceCtx    * ctx,
  * entry point for all connections accepted by a turbulence process
  * with the target of find and set the profile path to be used.
  *
- * The function has tree parts:
+ * The function has three parts:
  *
  * 1) The first where master<->child process connection is detect to
  * handle it properly.
@@ -946,8 +947,8 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 	/* check if we are in a child process to find a preselected
 	 * profile path (that caused the creation of this child)  */
 	if (vortex_connection_get_data (listener, "tbc:mc-link")) {
-		/* check especial case where master process is
-		 * connecting to this child: this is the especial BEEP
+		/* check special case where master process is
+		 * connecting to this child: this is the special BEEP
 		 * connection that exists to link master process with
 		 * each child. */
 		child = vortex_connection_get_data (listener, "tbc:mc-link");
@@ -1184,7 +1185,7 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		if (HAS_ATTR (pdef, "dst")) {
 			definition->dst = turbulence_expr_compile (ctx,
 								   ATTR_VALUE (pdef, "dst"),
-								   "Failed to parse \"src\" expression at profile def");
+								   "Failed to parse \"dst\" expression at profile def");
 		} /* end if (HAS_ATTR (pdef, "dst")) */
 
 		/* ensure all rules we have are address based making
@@ -1474,7 +1475,7 @@ TurbulencePPathDef * turbulence_ppath_find_by_id (TurbulenceCtx * ctx, int ppath
 /** 
  * @brief Allows to get the unique profile path identifier.
  * @param ppath_def The profile path where the unique identifier will be retrieved.
- * @return The unique identifier or -1 ir it fails.
+ * @return The unique identifier or -1 if it fails.
  */
 int                  turbulence_ppath_get_id   (TurbulencePPathDef * ppath_def)
 {
@@ -1519,7 +1520,7 @@ const char         * turbulence_ppath_get_work_dir    (TurbulenceCtx      * ctx,
 		/* check that the directory path is indeed a directory and we can open it */
 		directory = opendir (ppath_def->work_dir);
 		if (directory == NULL) {
-			wrn ("Defined a work directory for profile path not accesible: %s", ppath_def->work_dir);
+			wrn ("Defined a work directory for profile path not accessible: %s", ppath_def->work_dir);
 			return NULL;
 		}
 		closedir (directory);
@@ -1561,7 +1562,7 @@ const char         * turbulence_ppath_get_server_name (VortexConnection * conn)
 
 	/* get context */
 	ctx   = state->ctx;
-	msg ("returing serverName on state %p, %p", state, state->requested_serverName);
+	msg ("returning serverName on state %p, %p", state, state->requested_serverName);
 	return state->requested_serverName;
 }
 

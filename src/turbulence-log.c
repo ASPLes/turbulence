@@ -126,7 +126,7 @@ void turbulence_log_init (TurbulenceCtx * ctx)
 /** 
  * @brief Allows to configure the provided file descriptor to receive
  * logs produced in the context of type parameter. The configuration
- * is perfomed on the context provided.
+ * is performed on the context provided.
  *
  * @param ctx Turbulence context to be configured.
  * @param type The log context to be reconfigured.
@@ -226,7 +226,7 @@ void turbulence_log_manager_start (TurbulenceCtx * ctx)
 	if (ctx->use_syslog)
 		return;
 
-	/* crear manager */
+	/* create manager */
 	ctx->log_manager = turbulence_loop_create (ctx);
 
 	msg ("log manager started");
@@ -288,7 +288,7 @@ void      turbulence_log_manager_register (TurbulenceCtx * ctx,
 
 
 /** 
- * @internal macro that allows to report a message to the particular
+ * @internal function that allows to report a message to the particular
  * log, appending date information.
  */
 void REPORT (axl_bool use_syslog, LogReportType type, int log, const char * message, va_list args, const char * file, int line) 
@@ -381,7 +381,7 @@ void REPORT (axl_bool use_syslog, LogReportType type, int log, const char * mess
  * @brief Reports a single line to the particular log, configured by
  * "type".
  * 
- * @param type The log to select for reporting. The function do not
+ * @param type The log to select for reporting. The function does not
  * support reporting at the same call to several targets. You must
  * call one time for each target to report.
  *

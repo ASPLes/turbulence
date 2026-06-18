@@ -138,7 +138,7 @@ axl_bool  __turbulence_db_list_validate (TurbulenceCtx * ctx, axlDoc * doc, axlE
  * axlError         * err;
  *
  * // open the db list, providing a reference to an axlError to get
- * // textual dianogtic error reporting and a list of tokens configuring
+ * // textual diagnostic error reporting and a list of tokens configuring
  * // the full path to the file to be opened, ended by a NULL decl.
  * list = turbulence_db_list_open (ctx, &err, SYSCONFDIR, 
  *                                       "turbulence", 
@@ -164,7 +164,7 @@ axl_bool  __turbulence_db_list_validate (TurbulenceCtx * ctx, axlDoc * doc, axlE
  * @param token First token of a list of tokens configuring the full
  * path to the db list. This list must be terminated with a NULL decl.
  * 
- * @return A referece to the \ref TurbulenceDbList handler. It is not
+ * @return A reference to the \ref TurbulenceDbList handler. It is not
  * required to perform a close operation when no longer needed. This
  * is already done by Turbulence.
  */
@@ -595,12 +595,11 @@ axl_bool                turbulence_db_list_edit   (TurbulenceDbList * list,
 	/* unlock */
 	vortex_mutex_unlock (&(list->mutex));
 
-	/* item removed either because it wasn't found or because it
-	 * was really removed */
+	/* reached this point, oldValue was not found in the list */
 	return axl_true;
 }
 
-/** 
+/**
  * @brief Allows to get a copy translated into a axlList from the
  * current content held by the \ref TurbulenceDbList.
  *
@@ -655,7 +654,7 @@ axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
  * 
  * @param list The list to close.
  *
- * @return axl_true if the list was properly close, otherwise axl_false is
+ * @return axl_true if the list was properly closed, otherwise axl_false is
  * returned. 
  */
 axl_bool                turbulence_db_list_close  (TurbulenceDbList * list)
@@ -676,7 +675,7 @@ axl_bool                turbulence_db_list_close  (TurbulenceDbList * list)
 	/* remove the item from the list without deallocating */
 	axl_list_unlink_ptr (ctx->db_list_opened, list);
 
-	/* clear memmory associated */
+	/* clear memory associated */
 	turbulence_db_list_close_internal (list, axl_true);
 
 	/* unlock and return */
@@ -691,7 +690,7 @@ axl_bool                turbulence_db_list_close  (TurbulenceDbList * list)
  * 
  * @param list The list to unload.
  *
- * @return axl_true if the list was properly close, otherwise
+ * @return axl_true if the list was properly closed, otherwise
  * axl_false is returned.
  */
 axl_bool                turbulence_db_list_unload  (TurbulenceDbList * list)
@@ -712,7 +711,7 @@ axl_bool                turbulence_db_list_unload  (TurbulenceDbList * list)
 	/* remove the item from the list without deallocating */
 	axl_list_unlink_ptr (ctx->db_list_opened, list);
 
-	/* clear memmory associated */
+	/* clear memory associated */
 	turbulence_db_list_close_internal (list, axl_false);
 
 	/* unlock and return */
@@ -729,7 +728,7 @@ axl_bool                turbulence_db_list_unload  (TurbulenceDbList * list)
  * @param dump_on_close Allows to signal if the list content must be
  * dumped before returning resources.
  * 
- * @return axl_true if the list was properly close, otherwise axl_false is
+ * @return axl_true if the list was properly closed, otherwise axl_false is
  * returned. 
  */
 axl_bool                turbulence_db_list_close_internal  (TurbulenceDbList * list, axl_bool dump_on_close)
@@ -890,7 +889,7 @@ axl_bool                turbulence_db_list_flush  (TurbulenceDbList * list)
  * @param list Turbulence db-list that is being requested to return
  * the number of items stored.
  * 
- * @return The number or items stored or -1 it if fails.
+ * @return The number of items stored or -1 if it fails.
  */
 axl_bool               turbulence_db_list_count          (TurbulenceDbList * list)
 {

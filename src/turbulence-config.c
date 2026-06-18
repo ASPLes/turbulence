@@ -195,7 +195,7 @@ void turbulence_config_load_expand_nodes (TurbulenceCtx * ctx)
  * turbulence context.
  * 
  * @return axl_true if the configuration file looks ok and it is
- * syncatically correct.
+ * syntactically correct.
  */
 axl_bool  turbulence_config_load (TurbulenceCtx * ctx, const char * config)
 {
@@ -293,7 +293,7 @@ axlDoc * turbulence_config_get (TurbulenceCtx * ctx)
  *
  * @return axl_true if the value was configured, otherwise axl_false
  * is returned (telling the value wasn't configured mostly because the
- * path is wrong or the node does not exists or any of the values
+ * path is wrong or the node does not exist or any of the values
  * passed to the function is NULL).
  */
 axl_bool            turbulence_config_set      (TurbulenceCtx * ctx,
@@ -324,7 +324,7 @@ axl_bool            turbulence_config_set      (TurbulenceCtx * ctx,
 
 /** 
  * @brief Allows to check if an xml attribute is positive, that is,
- * have 1, true or yes as value.
+ * has 1, true or yes as value.
  *
  * @param ctx The turbulence context.
  *
@@ -353,14 +353,14 @@ axl_bool        turbulence_config_is_attr_positive (TurbulenceCtx * ctx,
 }
 
 /**
- * @brief Allows to check if an xml attribute is positive, that is,
- * have 1, true or yes as value.
+ * @brief Allows to check if an xml attribute is negative, that is,
+ * has 0, no or false as value.
  *
  * @param ctx The turbulence context.
  *
- * @param node The node to check for positive attribute value.
+ * @param node The node to check for negative attribute value.
  *
- * @param attr_name The node attribute name to check for positive
+ * @param attr_name The node attribute name to check for negative
  * value.
  */
 axl_bool        turbulence_config_is_attr_negative (TurbulenceCtx * ctx,
@@ -370,7 +370,7 @@ axl_bool        turbulence_config_is_attr_negative (TurbulenceCtx * ctx,
 	if (ctx == NULL || node == NULL)
 		return axl_false;
 
-	/* check for yes, 1 or true */
+	/* check for no, 0 or false */
 	if (HAS_ATTR_VALUE (node, attr_name, "no"))
 		return axl_true;
 	if (HAS_ATTR_VALUE (node, attr_name, "0"))
