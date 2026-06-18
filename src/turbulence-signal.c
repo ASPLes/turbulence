@@ -56,7 +56,7 @@
  * @param ctx The turbulence context where the signal will be handled.
  * @param _signal The signal received.
  *
- * @return Returns 0 or the pid in the case the signal is SIGHLD.
+ * @return Returns 0 or the pid in the case the signal is SIGCHLD.
  */
 int turbulence_signal_received (TurbulenceCtx * ctx, int _signal)
 {
@@ -230,7 +230,7 @@ axl_bool turbulence_signal_unblock (TurbulenceCtx * ctx,
 }
 
 /** 
- * @internal Terminates the turbulence excution, returing the exit signal
+ * @internal Terminates the turbulence execution, returning the exit signal
  * provided as first parameter. This function is used to notify a
  * context that a signal was received.
  * 
@@ -248,7 +248,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 	/* lock the mutex and check */
 	vortex_mutex_lock (&ctx->exit_mutex);
 	if (ctx->is_exiting) {
-		msg ("process already existing, signal received=%d, doing nothing...", _signal);
+		msg ("process already exiting, signal received=%d, doing nothing...", _signal);
 
 		/* other thread is already cleaning */
 		vortex_mutex_unlock (&ctx->exit_mutex);
@@ -298,7 +298,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 			/* lock the process */
 			error ("Bad signal found, locking process, now you can attach or terminate pid: %d", 
 			       getpid ());
-			CHECK_AND_REPORT_MAIL_TO ("Bad signal received a turbulence process, default action: hold",
+			CHECK_AND_REPORT_MAIL_TO ("Bad signal received at a turbulence process, default action: hold",
 						  "Received termination signal and the process was hold for examination",
 						  NULL);
 			queue = vortex_async_queue_new ();
@@ -314,7 +314,7 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 				error ("..backtrace created at: %s", backtrace_file);
 
 			/* check if we have to do a mail notification */
-			CHECK_AND_REPORT_MAIL_TO ("Bad signal received a turbulence process, default action: backtrace",
+			CHECK_AND_REPORT_MAIL_TO ("Bad signal received at a turbulence process, default action: backtrace",
 						  NULL, backtrace_file);
 			/* release backtrace */
 			axl_free (backtrace_file);
