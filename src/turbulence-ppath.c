@@ -741,7 +741,6 @@ axl_bool __turbulence_ppath_select (TurbulenceCtx      * ctx,
 	msg ("Checking: %-30s %-30s Profile path match for conn-id=%d", "Ppath. serverName", "requested serverName",
 	     vortex_connection_get_id (connection));
 	while (ctx->paths->items[iterator] != NULL) {
-
 		/* get the profile path def */
 		def = ctx->paths->items[iterator];
 

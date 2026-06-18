@@ -131,7 +131,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 
 		/* check if the fullpath is ended with .xml */
 		if (strlen (fullpath) < 5 || ! axl_cmp (fullpath + (strlen (fullpath) - 4), ".xml")) {
-			msg2 ("skiping file %s which do not end with .xml", fullpath);
+			msg2 ("skipping file %s which does not end with .xml", fullpath);
 			goto next;
 		} /* end if */
 
@@ -147,7 +147,7 @@ void turbulence_run_load_modules_from_path (TurbulenceCtx * ctx, const char * pa
 		
 		/* now validate the file found */
 		if (! axl_dtd_validate (doc, ctx->module_dtd, &error)) {
-			wrn ("file %s does is not a valid turbulence module pointer: %s", fullpath,
+			wrn ("file %s is not a valid turbulence module pointer: %s", fullpath,
 			     axl_error_get (error));
 			goto next;
 		} /* end if */
@@ -211,11 +211,11 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
 		if (vortex_support_file_test (path, FILE_IS_DIR | FILE_EXISTS)) {
 			dirHandle = opendir (path);
 			if (dirHandle == NULL) {
-				wrn ("unable to open mod directory '%s' (%s), skiping to the next", strerror (errno), path);
+				wrn ("unable to open mod directory '%s' (%s), skipping to the next", strerror (errno), path);
 				goto next;
 			} /* end if */
 		} else {
-			wrn ("skiping mod directory: %s (not a directory or do not exists)", path);
+			wrn ("skipping mod directory: %s (not a directory or does not exist)", path);
 			goto next;
 		}
 
@@ -350,7 +350,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 		 * from here even knowing some logs (at the very
 		 * begin) will not be registered. This is because this
 		 * is the very earlier place where log can be
-		 * initializad: configuration file was red and clean
+		 * initialized: configuration file was read and clean
 		 * start configuration is also read. */
 	} /* end if */
 
@@ -358,7 +358,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	node       = axl_doc_get (doc, "/turbulence/global-settings/connections/max-connections");
 
 #if defined(AXL_OS_UNIX)
-	/* NOTE: currently, vortex_conf_set do not allows to configure
+	/* NOTE: currently, vortex_conf_set does not allow to configure
 	 * the hard/soft connection limit on windows platform. Once done,
 	 * this section must be public (remove
 	 * defined(AXL_OS_UNIX)). */
@@ -389,7 +389,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 
 	node = axl_doc_get (doc, "/turbulence/global-settings/tls-support");
 	if (HAS_ATTR_VALUE (node, "enabled", "yes")) {
-		/* enable sasl support */
+		/* enable tls support */
 		/* turbulence_tls_enable (); */
 	} /* end if */
 
@@ -405,7 +405,7 @@ int  turbulence_run_config    (TurbulenceCtx * ctx)
 	node = axl_doc_get (doc, "/turbulence/features");
 	if (node != NULL) {
 		
-		/* get first node posibily containing a feature */
+		/* get first node possibly containing a feature */
 		node = axl_node_get_first_child (node);
 		while (node != NULL) {
 			/* check for supported features */
