@@ -115,7 +115,7 @@ void __turbulence_server_backlog (TurbulenceCtx * ctx)
 	return;
 }
 
-/* configure serveral limits */
+/* configure several limits */
 void __turbulence_acquire_limits (TurbulenceCtx * ctx)
 {
 	int        value;
@@ -201,7 +201,7 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	} /* end if */
 
 	/* init turbulence-mediator.c: init this module before others
-	   to acchieve notifications and push events  */
+	   to achieve notifications and push events  */
 	turbulence_mediator_init (ctx);
 
 	/*** not required to initialize axl library, already done by vortex ***/
@@ -216,13 +216,13 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	/* init turbulence-module.c */
 	turbulence_module_init (ctx);
 
-	/* init turbulence-proces.c: reinit=axl_false */
+	/* init turbulence-process.c: reinit=axl_false */
 	turbulence_process_init (ctx, axl_false);
 
 	/* configure thread pool here */
 	__turbulence_thread_pool_conf (ctx);
 
-	/* configure serveral limits */
+	/* configure several limits */
 	__turbulence_acquire_limits (ctx);
 
 	/* init profile path module: this initialization must be done
@@ -924,7 +924,7 @@ long turbulence_last_modification (const char * file)
 
 /** 
  * @brief Allows to check if the provided file path is a full path
- * (not releative). The function is meant to be portable.
+ * (not relative). The function is meant to be portable.
  * 
  * @param file The file to check if it is a full path file name.
  * 
@@ -988,7 +988,7 @@ char   * turbulence_base_dir            (const char * path)
  * 
  * @param path The path that is required to return its base value.
  * 
- * @return Returns the base dir associated to the function. You msut
+ * @return Returns the file name associated to the function. You must
  * deallocate the returning value with axl_free.
  */
 char   * turbulence_file_name           (const char * path)
@@ -1346,7 +1346,7 @@ keep_on_reading:
  * provided string. 
  *
  * If the string already contains the user id or group id, the
- * function returns its corresponding integet value. The function also
+ * function returns its corresponding integer value. The function also
  * checks if the value (that should represent a user or group in some
  * way) is present on the current system. get_user parameter controls
  * if the operation should perform a user lookup or a group lookup.
@@ -1713,7 +1713,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * critical or interesting conditions. For example, this is used to
  * report backtraces on critical signal received. 
  *
- * This configuration is found and declarted at the <b><global-settings></b>
+ * This configuration is found and declared at the <b><global-settings></b>
  * section. Here is an example:
  *
  * \htmlinclude notify-failures.xml-tmp
@@ -1822,7 +1822,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * Then the <b>&lt;include /></b> node will be replaced with the content found inside <b>file-with-config.conf</b>. 
  *
- * <b>NOTE: </b> even having this feature, the resuling
+ * <b>NOTE: </b> even having this feature, the resulting
  * turbulence.conf file after replacing all <b>includes</b> must be a
  * properly formated turbulence.conf file.
  *
@@ -1899,7 +1899,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * <li><b>work-dir</b>: defines a working directory for the profile
  * path. This value is used by several modules to load user site
- * especific files (database configuration, etc). </li>
+ * specific files (database configuration, etc). </li>
  *
  * <li><b>chroot</b>: Defines a file system path used to make the
  * current process to chroot to that directory. Note in most cases
@@ -1964,9 +1964,9 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * <div class="center"><img src="images/profile-path-example.png" alt="[PROFILE PATH EXAMPLE]"></div>
  *
  * The example is mostly self-explanatory, but one detail remains. The
- * caonfiguration uses two attributes: <b>connmark</b> and
+ * configuration uses two attributes: <b>connmark</b> and
  * <b>preconnmark</b>. They are used as flags that must be detected in
- * the connection in other to allow the connection to accept a profile
+ * the connection in order to allow the connection to accept a profile
  * or the content of the following profiles.
  *
  * \section profile_path_flags_supported_by_allow_and_if_sucess 3.2 Profile path configuration: flags supported by <allow> and <if-success>
@@ -1987,7 +1987,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * SASL channel created isn't a warranty of a connection
  * authenticated. Thus, an additional mark is required to properly
  * ensure that the connection was authenticated. These "marks" are
- * profile/module especific.</p></li>
+ * profile/module specific.</p></li>
  *
  * <li><p><b>max-per-con</b>: allows to configure the maximum amount
  * of channels running the profile provided in the particular
@@ -2023,7 +2023,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *
  * \section turbulence_execution_model 3.4 Turbulence execution model (process security)
  *
- * It is posible to configure Turbulence, through profile path
+ * It is possible to configure Turbulence, through profile path
  * configuration, to handle connections in the same master process or
  * using child processes. Here is a detailed list:
  *
@@ -2071,7 +2071,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  * \htmlinclude search-path-example.xml-tmp
  *
  * The detail about what domain and what files are found with those
- * declarations is module especific. Check the particular module
+ * declarations is module specific. Check the particular module
  * documentation to find out how to use this.
  *
  * \section turbulence_modules_configuration 4.1 Turbulence modules configuration
@@ -2270,7 +2270,7 @@ void            turbulence_sleep           (TurbulenceCtx * ctx,
  *  >> make install
  * \endcode
  *
- * If you are new to autotools, you have to now that the first command
+ * If you are new to autotools, you have to know that the first command
  * (autogen.sh) is only execute once. Next times you can run
  * <b>./configure</b> which have the same effect and run faster. The
  * <b>autogen.sh</b> command is executed to bootstrap the project, adding all
