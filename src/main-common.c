@@ -50,7 +50,7 @@ void main_common_enable_debug_options (TurbulenceCtx * ctx,
 	turbulence_log3_enable (ctx, exarg_is_defined ("debug3"));
 
 	/* enable vortex debug: do this at this place because
-	 * turbulece_init makes a call to vortex_init */
+	 * turbulence_init makes a call to vortex_init */
 	vortex_log_enable  (vortex_ctx, exarg_is_defined ("vortex-debug"));
 	vortex_log2_enable (vortex_ctx, exarg_is_defined ("vortex-debug2"));
 	if (exarg_is_defined ("vortex-debug-color")) {
@@ -72,7 +72,7 @@ void main_common_enable_debug_options (TurbulenceCtx * ctx,
 		turbulence_module_set_no_unmap_modules (axl_true);
 	}
 
-	/* configure no unmap module if defined */
+	/* configure wait for pool threads */
 	msg ("Setting wait for pool threads = %s", exarg_is_defined ("wait-thread-pool") ? "True" : "False");
 	vortex_conf_set (vortex_ctx, VORTEX_SKIP_THREAD_POOL_WAIT, ! exarg_is_defined ("wait-thread-pool"), NULL);
 

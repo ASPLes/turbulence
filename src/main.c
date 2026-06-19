@@ -74,7 +74,7 @@ int  main_init_exarg (int argc, char ** argv)
 			   "Increase the level of log to console produced.");
 
 	exarg_install_arg ("debug3", NULL, EXARG_NONE,
-			   "Makes logs produced to console to inclue more information about the place it was launched.");
+			   "Makes logs produced to console to include more information about the place it was launched.");
 
 	exarg_install_arg ("color-debug", "c", EXARG_NONE,
 			   "Makes console log to be colorified. Calling to this option makes --debug to be activated.");
@@ -263,8 +263,8 @@ void turbulence_place_pidfile (void)
 
 
 /**
- * @internal Removes pid file to avoid poiting to another process with
- * the same pid after stoping turbulence.
+ * @internal Removes pid file to avoid pointing to another process with
+ * the same pid after stopping turbulence.
  */ 
 void turbulence_remove_pidfile (void)
 {
@@ -358,7 +358,7 @@ int main (int argc, char ** argv)
 	/* check detach operation */
 	if (exarg_is_defined ("detach")) {
 		turbulence_detach_process ();
-		/* caller do not follow */
+		/* caller does not follow */
 	}
 
 	if (! exarg_is_defined ("child")) {
@@ -437,7 +437,7 @@ int main (int argc, char ** argv)
 	vortex_ctx_free (vortex_ctx);
 
 	if (! exarg_is_defined ("child")) {
-		/* remote pid state file */
+		/* remove pid state file */
 		turbulence_remove_pidfile ();
 	} /* end if */
 
