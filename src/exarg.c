@@ -18,8 +18,8 @@
  *  02111-1307 USA
  *  
  *  You may find a copy of the license under this software is released
- *  at COPYING file. This is LGPL software: you are wellcome to
- *  develop propietary applications using this library withtout any
+ *  at COPYING file. This is LGPL software: you are welcome to
+ *  develop proprietary applications using this library without any
  *  royalty or fee but returning back any change, improvement or
  *  addition in the form of source code, project image, documentation
  *  patches, etc. 
@@ -89,7 +89,7 @@ typedef enum {
 
 /** 
  * @internal This allows to know the parse mode used by exarg. Parse
- * mode allows to differenciate arguments that are file path under
+ * mode allows to differentiate arguments that are file path under
  * unix by options under windows. This option is automatic, being the
  * first option parse to configure the parse mode. This means that the
  * user can't mix options provided using the windows and unix mode at
@@ -374,7 +374,7 @@ char     ** exarg_split           (const char * chunk, int separator_num, ...)
 				count++;
 
 				/* update index to skip the item found */
-				index += length - 1; /* make the last index to be captured the the -1 */
+				index += length - 1; /* make the last index to be captured the -1 */
 
 				/* break the loop */
 				break;
@@ -426,7 +426,7 @@ char     ** exarg_split           (const char * chunk, int separator_num, ...)
 				/* remember previous_index */
 				index += length; 
 				previous_index = index;
-				index--; /* make the last index to be captured the the -1 */
+				index--; /* make the last index to be captured the -1 */
 				break;
 			}
 			iterator++;
@@ -462,7 +462,7 @@ char     ** exarg_split           (const char * chunk, int separator_num, ...)
  * <i><b>NOTE:</b> not all printf specification is supported. Generally, the
  * following is supported: %s, %d, %f, %g, %ld, %lg and all
  * combinations that provides precision, number of items inside the
- * integer part, etc: %6.2f, %+2d, etc. An especial case not supported
+ * integer part, etc: %6.2f, %+2d, etc. A special case not supported
  * is %lld, %llu and %llg.</i>
  *
  * @return Return the number of bytes that must be allocated to hold
@@ -548,7 +548,7 @@ char  * exarg_strdup_printfv    (char * chunk, va_list args)
 }
 
 /** 
- * @internal Implementation that allows to produce dinamically
+ * @internal Implementation that allows to produce dynamically
  * allocated strings using printf-like format.
  * 
  * @param chunk The chunk representing the format.
@@ -675,7 +675,7 @@ void __exarg_add_argument (char * argument)
  * 
  * @param arg_name the key to use on lookup process
  *
- * @return the function retuns the argument option if found or NULL if
+ * @return the function returns the argument option if found or NULL if
  * not.
  */
 ExArgNodeOption * exarg_lookup_node (const char * arg_name)
@@ -737,7 +737,7 @@ int exarg_is_argument (char * argument)
 		return 1;
 	}
 
-	/* support sort argument format definition */
+	/* support short argument format definition */
 	if (CHECK_PARSE_MODE (PARSE_MODE_UNIX) && (strlen (argument) == 2) && (argument[0] == '-')) {
 
 		/* update parse mode */
@@ -1127,7 +1127,7 @@ void __exarg_parse_check_depends (void)
 		/* get next node */
 		node = node->next;
  
-	} /* end whle */
+	} /* end while */
 
 	/* nothing more to check */
 	return;
@@ -1140,7 +1140,7 @@ void __exarg_parse_check_depends (void)
  * Makes LibExArg to start command line parsing by using arguments
  * installed. 
  * 
- * Once this functions is called it is posible to call the set of
+ * Once this functions is called it is possible to call the set of
  * function which returns data obtained: \ref exarg_is_defined,
  * \ref exarg_get_int, \ref exarg_get_string and \ref exarg_get_params.
  *
@@ -1276,7 +1276,7 @@ void __exarg_end_free_dep (ExArgDependency * dep)
  * resources allocated so the library cannot be used any more for the
  * current execution.
  *
- * This function is reatrant. Several threads can actually call this
+ * This function is reentrant. Several threads can actually call this
  * function. It will take care about making only one thread to
  * actually free resources.
  **/
@@ -1349,7 +1349,7 @@ void       exarg_disable_help ()
  * example, to introduce your copyright.
  *
  * This function doesn't make a copy of the given string so you
- * must not free the header provided or use an static string.
+ * must not free the header provided or use a static string.
  **/
 void       exarg_add_usage_header (char * header)
 {
@@ -1366,7 +1366,7 @@ void       exarg_add_usage_header (char * header)
  * introduce your copyright.
  *
  * This function doesn't make a copy of the given string so you
- * must not free the header provided or use an static string.
+ * must not free the header provided or use a static string.
  **/
 void       exarg_add_help_header  (char * header)
 {
@@ -1422,7 +1422,7 @@ void __exarg_check_short_arg (epointer key, epointer value, epointer user_data)
  * 
  * This functions allows you to install new arguments to be
  * accepted. Every argument passed in to the program which is not
- * installed throught this function will no be accepted and will
+ * installed through this function will no be accepted and will
  * generate a non recognized command line error.
  *
  * Let's see an example on how to use exarg to install the --version
@@ -1441,7 +1441,7 @@ void __exarg_check_short_arg (epointer key, epointer value, epointer user_data)
  *
  * Because you could install arguments which may conflict, this
  * function will abort the program execution on that case. This will
- * ensure you, as programer, to have a binary compiled with no
+ * ensure you, as programmer, to have a binary compiled with no
  * problems due to exarg.
  *
  * Later on, you can use \ref exarg_is_defined to check the status of
@@ -1483,7 +1483,7 @@ void __exarg_check_short_arg (epointer key, epointer value, epointer user_data)
  *
  * This function will not do a copy from arg_name, arg_short_name or
  * description. This means you should not free that values while
- * using exarg. To end exarg using check \ref exarg_end. It is recomended to use
+ * using exarg. To end exarg using check \ref exarg_end. It is recommended to use
  * static values and shows on previous examples.
  **/
 void       exarg_install_arg  (const char     * arg_name, 
@@ -1503,7 +1503,7 @@ void       exarg_install_arg  (const char     * arg_name,
 				   arg_name);
 		}
 		
-		/* check if there are an shor argument with the same
+		/* check if there are a short argument with the same
 		 * name */
 		if (arg_short_name != NULL) {
 			node = argument_options;
@@ -1653,14 +1653,14 @@ void         exarg_add_dependency   (const char * arg_name,
 	/* locates the argument node */
 	node = exarg_lookup_node (arg_name);
 	if (node == NULL) {
-		exarg_msg ("error: you did especify an argument that doesn't exists (%s)", arg_name);
+		exarg_msg ("error: you did specify an argument that doesn't exist (%s)", arg_name);
 		return;
 	}
 
-	/* locates dependecy argument node */
+	/* locates dependency argument node */
 	node2 = exarg_lookup_node (arg_dependency);
 	if (node2 == NULL) {
-		exarg_msg ("error: you did especify an argument that doesn't exists (%s)", arg_dependency);
+		exarg_msg ("error: you did specify an argument that doesn't exist (%s)", arg_dependency);
 		return;
 	}
 
@@ -1677,8 +1677,8 @@ void         exarg_add_dependency   (const char * arg_name,
 
 /** 
  * @brief Allows to configure arguments that are mutually
- * excluyents. This function will take the first arguments to be
- * muatually excluyen with the second one without direction as it
+ * exclusive. This function will take the first arguments to be
+ * mutually exclusive with the second one without direction as it
  * happens with \ref exarg_add_dependency function.
  *
  * Once defined both arguments provided can't be defined at the same
@@ -1714,14 +1714,14 @@ void         exarg_add_exclusion     (const char * arg_name,
 	/* locates the argument node */
 	node = exarg_lookup_node (arg_name);
 	if (node == NULL) {
-		exarg_msg ("error: you did especify an argument that doesn't exists (%s)", arg_name);
+		exarg_msg ("error: you did specify an argument that doesn't exist (%s)", arg_name);
 		return;
 	}
 
-	/* locates dependecy argument node */
+	/* locates dependency argument node */
 	node2 = exarg_lookup_node (arg_excluded);
 	if (node2 == NULL) {
-		exarg_msg ("error: you did especify an argument that doesn't exists (%s)", arg_excluded);
+		exarg_msg ("error: you did specify an argument that doesn't exist (%s)", arg_excluded);
 		return;
 	}
 
@@ -1794,23 +1794,23 @@ void         exarg_accept_free_args (int accept)
 }
 
 /** 
- * @brief Allows to simulate user defined command line options alread
+ * @brief Allows to simulate user defined command line options already
  * installed by \ref exarg_install_arg, without requiring the user to
  * set those values.
  *
  * This function allows to install values received or to just define
  * the argument to be supported by the program, without requiring the
  * user to provide such option. This is a convenient to make some
- * options to be default, writting your application relying on
+ * options to be default, writing your application relying on
  * arguments defined by command line.
  *
  * The function won't define the argument if not installed
  * previously. If the argument isn't found, the function takes no
  * action.
  *
- * @param arg_name The argument o define as provided by the user.
+ * @param arg_name The argument to define as provided by the user.
  * @param value The value to be associated to the argument. Some
- * arguments doesn't require this paremeters (\ref EXARG_NONE), so,
+ * arguments doesn't require this parameters (\ref EXARG_NONE), so,
  * you can provide NULL to this parameter.
  */
 void       exarg_define           (char * arg_name,
