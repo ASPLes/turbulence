@@ -4072,6 +4072,20 @@ axl_bool test_15 (void) {
 		return axl_false;
 	}
 
+	/* has_tls was sent as 1: ensure it is recovered into has_tls and
+	 * not swapped with fix_server_name */
+	if (has_tls != 1) {
+		printf ("ERROR (11): unexpected has_tls value (%d != 1)\n", has_tls);
+		return axl_false;
+	}
+
+	/* fix_server_name was sent as 0: ensure it is recovered into
+	 * fix_server_name and not swapped with has_tls */
+	if (fix_server_name != 0) {
+		printf ("ERROR (12): unexpected fix_server_name value (%d != 0)\n", fix_server_name);
+		return axl_false;
+	}
+
 	axl_free (conn_status);
 	return axl_true;
 }

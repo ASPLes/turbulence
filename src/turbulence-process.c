@@ -988,11 +988,16 @@ VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCt
 						      &seq_no,
 						      &seq_no_expected,
 						      &ppath_id,
-						      &has_tls,
+						      /* NOTE: the order of these output pointers must
+						       * match the parameter declaration of
+						       * turbulence_process_connection_recover_status:
+						       * fix_server_name goes here and has_tls is the
+						       * last argument (see also test_15) */
+						      &fix_server_name,
 						      &remote_host,
 						      &remote_port,
 						      &remote_host_ip,
-						      &fix_server_name);
+						      &has_tls);
 
 	msg ("CHILD: Received conn_status: handle_start_reply=%d, channel_num=%d, profile=%s, profile_content=%s, encoding=%d, serverName=%s, msg_no=%d, seq_no=%d, ppath_id=%d, has_tls=%d, fix_server_name=%d, remote_host=%s, remote_port=%s, remote_host_ip=%s",
 	     handle_start_reply, channel_num, 
