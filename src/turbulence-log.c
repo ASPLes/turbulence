@@ -41,6 +41,13 @@
 /* local include */
 #include <turbulence-ctx-private.h>
 
+/* Provide va_copy when building under strict C89 (-ansi), where the
+ * C99 va_copy macro may not be exposed by <stdarg.h>. glibc always
+ * provides the __va_copy GNU extension. */
+#if ! defined(va_copy) && defined(__va_copy)
+#  define va_copy(dest, src) __va_copy ((dest), (src))
+#endif
+
 /** 
  * @brief Init the turbulence log module.
  */
@@ -394,21 +401,41 @@ void turbulence_log_report (TurbulenceCtx   * ctx,
 			    const char      * file,
 			    int               line)
 {
+	/* a private copy of the va_list is used for every REPORT call:
+	 * each REPORT consumes the va_list (through vsnprintf) so reusing
+	 * the same one across calls is undefined behaviour when type has
+	 * more than one bit set (e.g. wrn_sl uses ERROR|GENERAL). */
+	va_list args_copy;
+
 	/* according to the type received report */
-	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) 
-		REPORT (ctx->use_syslog, LOG_REPORT_GENERAL, ctx->general_log, message, args, file, line);
-	
+	if ((type & LOG_REPORT_GENERAL) == LOG_REPORT_GENERAL) {
+		va_copy (args_copy, args);
+		REPORT (ctx->use_syslog, LOG_REPORT_GENERAL, ctx->general_log, message, args_copy, file, line);
+		va_end (args_copy);
+	}
+
 	/* handle error and warning through the same log file */
-	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) 
-		REPORT (ctx->use_syslog, LOG_REPORT_ERROR, ctx->error_log, message, args, file, line);
-	if ((type & LOG_REPORT_WARNING) == LOG_REPORT_WARNING) 
-		REPORT (ctx->use_syslog, LOG_REPORT_WARNING, ctx->error_log, message, args, file, line);
-	
-	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) 
-		REPORT (ctx->use_syslog, LOG_REPORT_ACCESS, ctx->access_log, message, args, file, line);
+	if ((type & LOG_REPORT_ERROR) == LOG_REPORT_ERROR) {
+		va_copy (args_copy, args);
+		REPORT (ctx->use_syslog, LOG_REPORT_ERROR, ctx->error_log, message, args_copy, file, line);
+		va_end (args_copy);
+	}
+	if ((type & LOG_REPORT_WARNING) == LOG_REPORT_WARNING) {
+		va_copy (args_copy, args);
+		REPORT (ctx->use_syslog, LOG_REPORT_WARNING, ctx->error_log, message, args_copy, file, line);
+		va_end (args_copy);
+	}
+
+	if ((type & LOG_REPORT_ACCESS) == LOG_REPORT_ACCESS) {
+		va_copy (args_copy, args);
+		REPORT (ctx->use_syslog, LOG_REPORT_ACCESS, ctx->access_log, message, args_copy, file, line);
+		va_end (args_copy);
+	}
 
 	if ((type & LOG_REPORT_VORTEX) == LOG_REPORT_VORTEX) {
-		REPORT (ctx->use_syslog, LOG_REPORT_VORTEX, ctx->vortex_log, message, args, file, line);
+		va_copy (args_copy, args);
+		REPORT (ctx->use_syslog, LOG_REPORT_VORTEX, ctx->vortex_log, message, args_copy, file, line);
+		va_end (args_copy);
 	}
 	return;
 }
