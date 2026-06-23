@@ -710,6 +710,11 @@ axl_bool test_01c (void)
 	VortexThread       thread;
 	axlPointer         result;
 
+	/* regression (turbulence_db_list_cleanup NULL guard): calling
+	 * cleanup with a NULL ctx must return safely instead of
+	 * dereferencing NULL (the guard used && where it should use ||) */
+	turbulence_db_list_cleanup (NULL);
+
 	/* init db list module */
 	if (! turbulence_db_list_init (ctx)) {
 		printf ("Unable to initialize the turbulence db-list module..\n");

@@ -967,8 +967,9 @@ axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
  */
 void               turbulence_db_list_cleanup (TurbulenceCtx * ctx)
 {
-	/* do not perform any operation if null is received */
-	if (ctx == NULL && ctx->db_list_opened == NULL)
+	/* do not perform any operation if null is received or the
+	 * module was not initialized (nothing to clean) */
+	if (ctx == NULL || ctx->db_list_opened == NULL)
 		return;
 
 	/* clean mutex */
