@@ -870,6 +870,10 @@ axl_bool                turbulence_db_list_flush  (TurbulenceDbList * list)
 	/* dump the document content */
 	if (! axl_doc_dump_pretty_to_file (list->doc, list->full_path, 4)) {
 		error ("failed to dump: %s", list->full_path);
+		/* release the mutex before returning on error to avoid
+		 * leaving the list locked (which would deadlock the next
+		 * operation on it) */
+		vortex_mutex_unlock (&(list->mutex));
 		return axl_false;
 	}
 

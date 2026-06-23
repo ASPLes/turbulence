@@ -677,10 +677,120 @@ axl_bool  test_01b () {
 	return axl_true;
 }
 
-/** 
+/* data passed to the db-list flush lock watchdog thread (test_01c) */
+typedef struct _TestDbFlushLock {
+	TurbulenceDbList * dblist;
+	VortexAsyncQueue * queue;
+} TestDbFlushLock;
+
+axlPointer test_01c_flush_lock_watchdog (axlPointer _data)
+{
+	TestDbFlushLock * data = (TestDbFlushLock *) _data;
+
+	/* this call locks the list internal mutex; if a previous failing
+	 * flush leaked it, this blocks forever and the sentinel below is
+	 * never pushed (detected by the timed pop at the caller) */
+	turbulence_db_list_count (data->dblist);
+
+	/* signal the operation completed (mutex was free) */
+	vortex_async_queue_push (data->queue, INT_TO_PTR (1));
+	return NULL;
+}
+
+/**
+ * @brief Regression test: turbulence_db_list_flush must release the
+ * list mutex even when the dump operation fails, otherwise the next
+ * operation on the list deadlocks.
+ */
+axl_bool test_01c (void)
+{
+	TurbulenceDbList * dblist;
+	axlError         * err = NULL;
+	TestDbFlushLock    data;
+	VortexThread       thread;
+	axlPointer         result;
+
+	/* init db list module */
+	if (! turbulence_db_list_init (ctx)) {
+		printf ("Unable to initialize the turbulence db-list module..\n");
+		return axl_false;
+	}
+
+	/* clean any previous state (file or leftover directory) */
+	if (turbulence_file_test_v ("test_01c.xml", FILE_EXISTS)) {
+		unlink ("test_01c.xml");
+		rmdir  ("test_01c.xml");
+	}
+
+	dblist = turbulence_db_list_open (ctx, &err, "test_01c.xml", NULL);
+	if (dblist == NULL) {
+		printf ("Failed to open db list: %s\n", axl_error_get (err));
+		axl_error_free (err);
+		return axl_false;
+	}
+
+	/* add an item: this flush succeeds and creates the file */
+	if (! turbulence_db_list_add (dblist, "ITEM")) {
+		printf ("Expected to be able to add item to dblist\n");
+		return axl_false;
+	}
+
+	/* force the next flush to fail deterministically: replace the
+	 * backing file with a directory of the same name, so the dump
+	 * (fopen with "w") fails with EISDIR even when running as root */
+	unlink ("test_01c.xml");
+	if (! turbulence_create_dir ("test_01c.xml")) {
+		printf ("Failed to create directory to force flush failure\n");
+		return axl_false;
+	}
+
+	/* this flush must FAIL (target is a directory) returning axl_false,
+	 * but it must release the list mutex */
+	if (turbulence_db_list_flush (dblist)) {
+		printf ("ERROR (1): expected flush to fail when backing file is a directory\n");
+		rmdir ("test_01c.xml");
+		return axl_false;
+	}
+
+	/* watchdog: run a locking operation on the list in a separate
+	 * thread. If the failing flush leaked the mutex, the thread blocks
+	 * and the timed pop returns NULL (regression detected) instead of
+	 * hanging the whole test run */
+	data.dblist = dblist;
+	data.queue  = vortex_async_queue_new ();
+	if (! vortex_thread_create (&thread, (VortexThreadFunc) test_01c_flush_lock_watchdog,
+				    &data, VORTEX_THREAD_CONF_END)) {
+		printf ("ERROR (2): failed to create watchdog thread\n");
+		return axl_false;
+	}
+
+	/* wait up to 3 seconds for the locking operation to complete */
+	result = vortex_async_queue_timedpop (data.queue, 3000000);
+	if (result == NULL) {
+		printf ("ERROR (3): turbulence_db_list_flush leaked the list mutex on dump failure (deadlock detected by watchdog)\n");
+		return axl_false;
+	}
+
+	/* join watchdog and release queue */
+	vortex_thread_destroy (&thread, axl_false);
+	vortex_async_queue_unref (data.queue);
+
+	/* cleanup: remove the directory and close (close dumps again but
+	 * must not deadlock either) */
+	rmdir ("test_01c.xml");
+	turbulence_db_list_close (dblist);
+
+	/* remove any file recreated by close */
+	if (turbulence_file_test_v ("test_01c.xml", FILE_EXISTS))
+		unlink ("test_01c.xml");
+
+	return axl_true;
+}
+
+/**
  * @brie Check misc turbulence functions.
- * 
- * 
+ *
+ *
  * @return axl_true if they succeed, othewise axl_false is returned.
  */
 axl_bool  test_02 (void)
@@ -5523,6 +5633,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_0b")
 	run_test (test_01b, "Test 01-b: smtp notificaitons");
+
+	CHECK_TEST("test_01c")
+	run_test (test_01c, "Test 01-c: db-list flush releases mutex on dump failure");
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");
