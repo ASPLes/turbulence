@@ -100,8 +100,10 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
  			(*added_size) += 1;
  		}
 
-		/* check for .* */
-		if (expression [iterator] == '*' && expression [iterator - 1] != '.' ) {
+		/* check for .* (guard iterator > 0 to avoid reading
+		 * expression[-1] when the expression starts with '*';
+		 * the leading '*' case is already handled above) */
+		if (iterator > 0 && expression [iterator] == '*' && expression [iterator - 1] != '.' ) {
 			result = axl_true;
 			(*added_size) += 1;
 		}
@@ -112,8 +114,9 @@ int       turbulence_expr_has_escapable_chars        (const char * expression,
 			(*added_size) += 1;
 		}
 
-		/* check for \/ */
-		if (expression [iterator] == '/' && expression [iterator - 1] != '\\' ) {
+		/* check for \/ (guard iterator > 0 to avoid reading
+		 * expression[-1] when the expression starts with '/') */
+		if (iterator > 0 && expression [iterator] == '/' && expression [iterator - 1] != '\\' ) {
 			result = axl_true;
 			(*added_size) += 1;
 		}
@@ -352,7 +355,9 @@ TurbulenceExpr * turbulence_expr_compile (TurbulenceCtx * ctx,
 		error ("%s: %s, error: %s, at: %d",
 		       error_msg ? error_msg : "ERROR", expression, error, erroroffset);
 
-		/* free expr */
+		/* free expr (including the raw string expression copied
+		 * at creation time, otherwise it would be leaked) */
+		axl_free (expr->string_expression);
 		axl_free (expr);
 
 		/* check and dealloc */

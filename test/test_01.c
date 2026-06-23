@@ -584,6 +584,14 @@ axl_bool  test_01a () {
 	/* compile and match */
 	MATCH_AND_CHECK("*", "case", axl_true);
 
+	/* compile and match: expression starting with '/' exercises the
+	 * leading-'/' escaping path (previously triggered an out-of-bounds
+	 * read of expression[-1] in turbulence_expr_has_escapable_chars) */
+	MATCH_AND_CHECK("/path/to/*", "/path/to/file", axl_true);
+
+	/* compile and match */
+	MATCH_AND_CHECK("/path/to/*", "/other/file", axl_false);
+
 	/* compile and match */
 	MATCH_AND_CHECK("192.168.0.132,192.168.0.150", "192.168.0.132", axl_true);
 
@@ -616,6 +624,16 @@ axl_bool  test_01a () {
 
 	/* compile and match */
 	MATCH_AND_CHECK("not  192.168.0.132  ,  192.168.0.*  ", "192.168.1.145", axl_true);
+
+	/* an expression that fails to compile must return NULL and must
+	 * not leak the internal raw string copy (exercises the error path
+	 * of turbulence_expr_compile; detected as a leak under valgrind) */
+	expr = turbulence_expr_compile (ctx, "(unbalanced", NULL);
+	if (expr != NULL) {
+		printf ("Expected NULL when compiling an invalid expression but a compiled expr was returned\n");
+		turbulence_expr_free (expr);
+		return axl_false;
+	}
 
 	/* free context */
 	turbulence_ctx_free (ctx);
