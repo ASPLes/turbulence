@@ -282,7 +282,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 			/* check if the profile was used more than the
 			 * value configured */
 
-			if (vortex_connection_get_channel_count (connection, (const char *) item->profile) >= item->max_per_con) {
+			if (vortex_connection_get_channel_count (connection, uri) >= item->max_per_con) {
 				/* too much channels opened for the same uri */
 				iterator++;
 				continue;

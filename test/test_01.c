@@ -1954,6 +1954,71 @@ axl_bool test_08 (void) {
 	return axl_true;
 }
 
+/**
+ * @brief Regression test: the profile path "max-per-conn" limit must be
+ * enforced. test_08.conf allows profile-5 with max-per-conn="2", so the
+ * first two channels of that profile must be accepted and the third must
+ * be denied. (Before the fix, the limit was never enforced because the
+ * channel count was queried with a wrong argument -- the compiled
+ * TurbulenceExpr pointer cast to char* instead of the profile uri -- so
+ * the count was always 0.)
+ */
+axl_bool test_08a (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_08.conf"))
+		return axl_false;
+
+	/* register the profile limited by max-per-conn */
+	SIMPLE_URI_REGISTER ("urn:aspl.es:beep:profiles:reg-test:profile-5");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx))
+		return axl_false;
+
+	/* create connection to local server */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* max-per-conn=2: first channel must be accepted */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-5");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to create the 1st channel of profile-5 (max-per-conn=2)..\n");
+		return axl_false;
+	} /* end if */
+
+	/* second channel must be accepted */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-5");
+	if (channel == NULL) {
+		printf ("ERROR (3): expected to create the 2nd channel of profile-5 (max-per-conn=2)..\n");
+		return axl_false;
+	} /* end if */
+
+	/* third channel must be denied because the limit (2) is reached */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-5");
+	if (channel != NULL) {
+		printf ("ERROR (4): expected the 3rd channel of profile-5 to be DENIED by max-per-conn=2, but it was created (limit not enforced)\n");
+		return axl_false;
+	} /* end if */
+	printf ("Test 08-a: max-per-conn limit enforced (2 channels allowed, 3rd denied)\n");
+
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_09 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -5862,6 +5927,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_08")
 	run_test (test_08, "Test 08: Turbulence profile path filtering (basic)");
+
+	CHECK_TEST("test_08a")
+	run_test (test_08a, "Test 08-a: profile path max-per-conn limit enforced");
 
 	CHECK_TEST("test_09")
 	run_test (test_09, "Test 09: Turbulence profile path filtering (serverName)");
