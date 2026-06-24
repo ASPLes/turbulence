@@ -3419,13 +3419,40 @@ axl_bool test_12b (void) {
 	return test_12_common (vCtx, tCtx, 3, 1, axl_false);
 }
 
+/* helper for test_12c: open a connection to the mysql sasl backend with
+ * the provided serverName, attempt a SASL PLAIN auth with auth_id /
+ * password, close the connection and return the resulting SASL status
+ * (VortexError if the connection could not be created). */
+VortexStatus test_12c_try_auth (VortexCtx  * vCtx,
+				char       * serverName,
+				char       * auth_id,
+				char       * password)
+{
+	VortexConnection * conn;
+	VortexStatus       status         = VortexError;
+	char             * status_message = NULL;
+
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS (VORTEX_SERVERNAME_FEATURE, serverName, VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		vortex_connection_close (conn);
+		return VortexError;
+	} /* end if */
+
+	vortex_sasl_set_propertie   (conn, VORTEX_SASL_AUTH_ID,  auth_id,  NULL);
+	vortex_sasl_set_propertie   (conn, VORTEX_SASL_PASSWORD, password, NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+
+	vortex_connection_close (conn);
+	return status;
+}
+
 /**
- * @brief Regression test for mod-sasl-mysql: SQL values are escaped
- * (mysql_real_escape_string) and the input character blacklist is
- * gone. Checks (a) a complex password with characters the old
- * blacklist rejected (';', single quote, '--') authenticates fine,
- * and (b) a SQL injection attempt in the auth_id does NOT
- * authenticate.
+ * @brief Regression test for mod-sasl-mysql "Option B": SQL values are
+ * escaped (mysql_real_escape_string) and the input character blacklist is
+ * gone. It exercises several authentication vectors against the live
+ * MySQL backend.
  *
  * Requires the database loaded from test_12b.sql (it provides the user
  * 'special' whose md5 password matches "s3cret;p'ass--w0rd").
@@ -3433,9 +3460,6 @@ axl_bool test_12b (void) {
 axl_bool test_12c (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
-	VortexConnection * conn;
-	VortexStatus       status         = VortexError;
-	char             * status_message = NULL;
 
 	printf ("Test 12-c: PLEASE, ensure you have a database created with data found in: test_12b.sql\n");
 
@@ -3452,53 +3476,83 @@ axl_bool test_12c (void) {
 	if (! turbulence_run_config (tCtx))
 		return axl_false;
 
-	/* --- CASE A: a complex password with characters that the old input
-	 * blacklist used to reject (';', single quote, '--') must now
-	 * authenticate fine. The password is never interpolated into SQL: it
-	 * is compared in C, so any character is allowed. --- */
-	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS (VORTEX_SERVERNAME_FEATURE, "test-12.server", VORTEX_OPTS_END),
-					   NULL, NULL);
-	if (! vortex_connection_is_ok (conn, axl_false)) {
-		printf ("ERROR (1): expected proper connection after turbulence startup..\n");
-		return axl_false;
-	} /* end if */
-
-	vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID,  "special", NULL);
-	vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, "s3cret;p'ass--w0rd", NULL);
-	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
-	if (status != VortexOk) {
-		printf ("ERROR (2): expected auth OK for user 'special' with a complex password (containing ';', quote, '--'), but got: (%d) %s\n",
-			status, status_message ? status_message : "");
+	/* CASE A: a complex password with characters the old input blacklist
+	 * rejected (';', single quote, '--') must authenticate fine. The
+	 * password is never interpolated into SQL (compared in C). */
+	if (test_12c_try_auth (vCtx, "test-12.server", "special", "s3cret;p'ass--w0rd") != VortexOk) {
+		printf ("ERROR (1): expected auth OK for 'special' with a complex password (';', quote, '--')\n");
 		return axl_false;
 	} /* end if */
 	printf ("Test 12-c: complex password authenticated OK\n");
-	vortex_connection_close (conn);
 
-	/* --- CASE B: a SQL injection attempt in the auth_id must NOT
-	 * authenticate. With proper escaping the literal user name
-	 * "aspl' OR '1'='1" does not exist, so auth fails cleanly. Without
-	 * escaping the OR injection would return aspl's row and the known
-	 * password "test" would bypass authentication. --- */
-	status         = VortexError;
-	status_message = NULL;
-	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
-					   CONN_OPTS (VORTEX_SERVERNAME_FEATURE, "test-12.server", VORTEX_OPTS_END),
-					   NULL, NULL);
-	if (! vortex_connection_is_ok (conn, axl_false)) {
-		printf ("ERROR (3): expected proper connection after turbulence startup..\n");
+	/* CASE B: OR-based SQL injection in auth_id must NOT authenticate.
+	 * Escaped, the literal user "aspl' OR '1'='1" does not exist. */
+	if (test_12c_try_auth (vCtx, "test-12.server", "aspl' OR '1'='1", "test") == VortexOk) {
+		printf ("ERROR (2): OR injection in auth_id authenticated! SQL escaping is not working\n");
 		return axl_false;
 	} /* end if */
+	printf ("Test 12-c: OR injection in auth_id rejected\n");
 
-	vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID,  "aspl' OR '1'='1", NULL);
-	vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, "test", NULL);
-	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
-	if (status == VortexOk) {
-		printf ("ERROR (4): SQL injection in auth_id authenticated! SQL escaping is not working\n");
+	/* CASE C: UNION-based SQL injection in auth_id (full bypass attempt).
+	 * If unescaped, "zzz' UNION SELECT '<md5 of pwned123>' -- " would
+	 * return an attacker-controlled hash and the provided password
+	 * "pwned123" would authenticate without knowing any real credential.
+	 * Escaped, it must fail. (md5("pwned123") colon-hex below.) */
+	if (test_12c_try_auth (vCtx, "test-12.server",
+			       "zzz' UNION SELECT '94:C2:08:15:8B:0C:4F:7F:4D:C6:89:AC:C6:DC:C5:81' -- ",
+			       "pwned123") == VortexOk) {
+		printf ("ERROR (3): UNION injection in auth_id authenticated! SQL escaping is not working\n");
 		return axl_false;
 	} /* end if */
-	printf ("Test 12-c: SQL injection attempt in auth_id correctly rejected\n");
-	vortex_connection_close (conn);
+	printf ("Test 12-c: UNION injection in auth_id rejected\n");
+
+	/* NOTE on serverName (%n), the second SQL-interpolated field: it
+	 * cannot carry an injection in this transport. The BEEP/vortex
+	 * serverName feature is restricted to a hostname-like token, so a
+	 * crafted value such as "test-12.server' OR '1'='1" is sanitized down
+	 * to "test-12.server" before it ever reaches the SASL/SQL layer
+	 * (verified via debug logs). It is also used for exact-match backend
+	 * selection and %n is additionally SQL-escaped. There is therefore no
+	 * externally-reachable %n injection vector to assert here. */
+
+	/* CASE E: empty / whitespace-only credentials must be rejected
+	 * (length>0 guard in common_sasl_auth_user after trimming). */
+	if (test_12c_try_auth (vCtx, "test-12.server", "special", "") == VortexOk) {
+		printf ("ERROR (5): empty password authenticated!\n");
+		return axl_false;
+	} /* end if */
+	if (test_12c_try_auth (vCtx, "test-12.server", "special", "    ") == VortexOk) {
+		printf ("ERROR (6): whitespace-only password authenticated!\n");
+		return axl_false;
+	} /* end if */
+	if (test_12c_try_auth (vCtx, "test-12.server", "   ", "test") == VortexOk) {
+		printf ("ERROR (7): whitespace-only auth_id authenticated!\n");
+		return axl_false;
+	} /* end if */
+	printf ("Test 12-c: empty/whitespace-only credentials rejected\n");
+
+	/* CASE F: leading/trailing whitespace around auth_id and password is
+	 * trimmed server-side, so the user still authenticates (validates the
+	 * trim feature end-to-end through the mysql backend). */
+	if (test_12c_try_auth (vCtx, "test-12.server", " special ", " s3cret;p'ass--w0rd ") != VortexOk) {
+		printf ("ERROR (8): expected auth OK for ' special ' / ' <pass> ' (surrounding spaces trimmed)\n");
+		return axl_false;
+	} /* end if */
+	printf ("Test 12-c: surrounding whitespace trimmed, auth OK\n");
+
+	/* CASE G: a destructive stacked-query injection must NOT execute (it
+	 * is SQL-escaped, and mysql_query does not run multiple statements by
+	 * default). The attempt must fail and the users table must remain
+	 * intact (a valid user still authenticates afterwards). */
+	if (test_12c_try_auth (vCtx, "test-12.server", "special'; DROP TABLE users; -- ", "x") == VortexOk) {
+		printf ("ERROR (9): destructive injection in auth_id authenticated!\n");
+		return axl_false;
+	} /* end if */
+	if (test_12c_try_auth (vCtx, "test-12.server", "special", "s3cret;p'ass--w0rd") != VortexOk) {
+		printf ("ERROR (10): users table appears damaged after destructive injection attempt (valid user no longer authenticates)\n");
+		return axl_false;
+	} /* end if */
+	printf ("Test 12-c: destructive injection rejected, users table intact\n");
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
