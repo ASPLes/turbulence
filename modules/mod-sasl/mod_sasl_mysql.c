@@ -143,8 +143,54 @@ MYSQL_RES * mod_sasl_mysql_do_query (TurbulenceCtx  * ctx,
 	return mysql_store_result (conn);
 }
 
+/* Return a newly allocated, SQL-escaped copy of 'value' using the active
+ * MySQL connection (so the connection charset is honoured). Caller must
+ * axl_free() the result. Returns NULL if value is NULL or on connection
+ * error. */
+char * mod_sasl_mysql_escape (TurbulenceCtx * ctx,
+			      axlNode       * auth_db_node_conf,
+			      const char    * value)
+{
+	MYSQL    * conn;
+	char     * escaped;
+	int        len;
+	axlError * err = NULL;
 
-/** 
+	if (value == NULL)
+		return NULL;
+
+	conn = mod_sasl_mysql_get_connection (ctx, auth_db_node_conf, &err);
+	if (conn == NULL) {
+		error ("Unable to get MySQL connection to escape SQL value: %s",
+		       err ? axl_error_get (err) : "<no error>");
+		if (err)
+			axl_error_free (err);
+		return NULL;
+	} /* end if */
+
+	len     = strlen (value);
+	escaped = axl_new (char, (len * 2) + 1);   /* worst case per MySQL API */
+	if (escaped == NULL)
+		return NULL;
+
+	mysql_real_escape_string (conn, escaped, value, len);
+	return escaped;
+}
+
+/* Replace 'token' in 'query' with the SQL-escaped form of 'value'. The
+ * values interpolated into the SQL query (%u, %n, %i, %m, %p) MUST go
+ * through this macro to be safe against SQL injection. Requires 'ctx'
+ * and 'auth_db_node_conf' to be in scope. */
+#define REPLACE_ESCAPED(query, token, value) do {                              \
+		char * __esc = mod_sasl_mysql_escape (ctx, auth_db_node_conf,  \
+						      (value));                \
+		axl_replace ((query), (token), __esc ? __esc : "");            \
+		if (__esc)                                                     \
+			axl_free (__esc);                                      \
+	} while (0)
+
+
+/**
  *
  */
 axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
@@ -208,57 +254,6 @@ axl_bool mod_sasl_mysql_check_ip_filter_query (TurbulenceCtx     * ctx,
 	return axl_false; /* do filter */
 }
 
-axl_bool mod_sasl_mysql_check_unallowed_sequence (TurbulenceCtx * ctx, VortexConnection * conn, const char * content)
-{
-	char      * new_content;
-	axl_bool    found;
-
-	if (content == NULL || strlen (content) == 0)
-		return axl_true;
-
-	/* get a lower copy so we can do a case insensitive check */
-	new_content = axl_stream_to_lower_copy (content);
-	if (new_content == NULL) {
-		error ("Unable to copy content to do unallowed sequence, error was..");
-		return axl_false;
-	} /* end if */
-	
-	/* replace all \t with " " to unifify checks. Do the same with \n and \r */
-	axl_replace (new_content, "\t", " ");
-	axl_replace (new_content, "\r", " ");
-	axl_replace (new_content, "\n", " ");
-
-	/* set initial status */
-	found = axl_false;
-
-	if (strstr (new_content, "select "))
-		found = axl_true;
-	if (strstr (new_content, "insert "))
-		found = axl_true;
-	if (strstr (new_content, "delete "))
-		found = axl_true;
-	if (strstr (new_content, ";"))
-		found = axl_true;
-	if (strstr (new_content, "--"))
-		found = axl_true;
-	if (strstr (new_content, "'"))
-		found = axl_true;
-
-
-	/* drop an error log if found */
-	if (found) {
-		error ("IP %s should be blocked now because: Found unallowed input sequence at login attempt. Unallowed sequence is: %s", 
-		       vortex_connection_get_host_ip (conn), content);
-		vortex_connection_shutdown (conn);
-	} /* end if */
-
-	/* release memory copy */
-	axl_free (new_content);
-	
-	/* report failure */
-	return ! found;
-}
-
 axl_bool __mod_sasl_mysql_prepare_query_and_auth (TurbulenceCtx    * ctx, 
 						  const char       * _query,
 						  VortexConnection * conn,
@@ -284,12 +279,13 @@ axl_bool __mod_sasl_mysql_prepare_query_and_auth (TurbulenceCtx    * ctx,
 	if (query == NULL) 
 		return axl_false; /* allocation failure */
 
-	/* replace query with recognized tokens */
-	axl_replace (query, "%u", auth_id);
-	axl_replace (query, "%n", serverName);
-	axl_replace (query, "%i", authorization_id);
-	axl_replace (query, "%m", sasl_method);
-	axl_replace (query, "%p", vortex_connection_get_host (conn));
+	/* replace query with recognized tokens (SQL-escaped: these values
+	 * are interpolated into the query string) */
+	REPLACE_ESCAPED (query, "%u", auth_id);
+	REPLACE_ESCAPED (query, "%n", serverName);
+	REPLACE_ESCAPED (query, "%i", authorization_id);
+	REPLACE_ESCAPED (query, "%m", sasl_method);
+	REPLACE_ESCAPED (query, "%p", vortex_connection_get_host (conn));
 
 	if (! just_run_query) {
 		msg ("Trying to auth [%s] with query string [%s], conn-id=%d from %s:%s ", auth_id, query, 
@@ -354,23 +350,10 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	axlNode     * node;
 	axl_bool      _result = axl_false;
 
-	/* check import parameters without doing anything */
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, auth_id))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, password))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, formated_password))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, serverName))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, authorization_id))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, sasl_method))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, auth_id))
-		return axl_false;
-	if (! mod_sasl_mysql_check_unallowed_sequence (ctx, conn, vortex_connection_get_host (conn)))
-		return axl_false;
+	/* NOTE: values interpolated into SQL (%u, %n, %i, %m, %p) are
+	 * SQL-escaped at query build time via REPLACE_ESCAPED, so no input
+	 * blacklist is applied here. The password is never interpolated
+	 * into SQL (it is compared in C), so it accepts any character. */
 
 	/* get the auth query */
 	doc  = axl_node_annotate_get (auth_db_node_conf, "mysql-conf", axl_false);
@@ -385,11 +368,11 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		/* ip filter defined, get query */
 		query = axl_strdup (ATTR_VALUE (node, "query"));
 
-		/* replace query with recognized tokens */
-		axl_replace (query, "%u", auth_id);
-		axl_replace (query, "%n", serverName);
-		axl_replace (query, "%i", authorization_id);
-		axl_replace (query, "%m", sasl_method);
+		/* replace query with recognized tokens (SQL-escaped) */
+		REPLACE_ESCAPED (query, "%u", auth_id);
+		REPLACE_ESCAPED (query, "%n", serverName);
+		REPLACE_ESCAPED (query, "%i", authorization_id);
+		REPLACE_ESCAPED (query, "%m", sasl_method);
 
 		msg ("Checking IP filter for auth id [%s], query [%s]", auth_id, query);
 		
@@ -455,13 +438,14 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		/* log auth defined */
 		query = axl_strdup (ATTR_VALUE (node, "query"));
 	
-		/* replace query with recognized tokens */
+		/* replace query with recognized tokens. %t is a controlled
+		 * constant ("ok"/"failed"); the rest are SQL-escaped */
 		axl_replace (query, "%t", _result ? "ok" : "failed");
-		axl_replace (query, "%u", auth_id);
-		axl_replace (query, "%n", serverName);
-		axl_replace (query, "%i", authorization_id);
-		axl_replace (query, "%m", sasl_method);
-		axl_replace (query, "%p", vortex_connection_get_host (conn));
+		REPLACE_ESCAPED (query, "%u", auth_id);
+		REPLACE_ESCAPED (query, "%n", serverName);
+		REPLACE_ESCAPED (query, "%i", authorization_id);
+		REPLACE_ESCAPED (query, "%m", sasl_method);
+		REPLACE_ESCAPED (query, "%p", vortex_connection_get_host (conn));
 		
 		msg ("Trying to auth-log %s:%s with query string %s", auth_id, _result ? "ok" : "failed", query);
 		/* exec query */

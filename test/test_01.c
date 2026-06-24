@@ -3419,6 +3419,93 @@ axl_bool test_12b (void) {
 	return test_12_common (vCtx, tCtx, 3, 1, axl_false);
 }
 
+/**
+ * @brief Regression test for mod-sasl-mysql: SQL values are escaped
+ * (mysql_real_escape_string) and the input character blacklist is
+ * gone. Checks (a) a complex password with characters the old
+ * blacklist rejected (';', single quote, '--') authenticates fine,
+ * and (b) a SQL injection attempt in the auth_id does NOT
+ * authenticate.
+ *
+ * Requires the database loaded from test_12b.sql (it provides the user
+ * 'special' whose md5 password matches "s3cret;p'ass--w0rd").
+ */
+axl_bool test_12c (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexStatus       status         = VortexError;
+	char             * status_message = NULL;
+
+	printf ("Test 12-c: PLEASE, ensure you have a database created with data found in: test_12b.sql\n");
+
+	/* init vortex and turbulence with the mysql sasl backend (same
+	   setup as test_12b) */
+	if (! test_common_init (&vCtx, &tCtx, "test_12a.conf"))
+		return axl_false;
+
+	/* configure test path to locate appropriate sasl.conf files */
+	vortex_support_add_domain_search_path_ref (vCtx, axl_strdup ("sasl"),
+						   vortex_support_build_filename ("test_12b_module", NULL));
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx))
+		return axl_false;
+
+	/* --- CASE A: a complex password with characters that the old input
+	 * blacklist used to reject (';', single quote, '--') must now
+	 * authenticate fine. The password is never interpolated into SQL: it
+	 * is compared in C, so any character is allowed. --- */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS (VORTEX_SERVERNAME_FEATURE, "test-12.server", VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID,  "special", NULL);
+	vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, "s3cret;p'ass--w0rd", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	if (status != VortexOk) {
+		printf ("ERROR (2): expected auth OK for user 'special' with a complex password (containing ';', quote, '--'), but got: (%d) %s\n",
+			status, status_message ? status_message : "");
+		return axl_false;
+	} /* end if */
+	printf ("Test 12-c: complex password authenticated OK\n");
+	vortex_connection_close (conn);
+
+	/* --- CASE B: a SQL injection attempt in the auth_id must NOT
+	 * authenticate. With proper escaping the literal user name
+	 * "aspl' OR '1'='1" does not exist, so auth fails cleanly. Without
+	 * escaping the OR injection would return aspl's row and the known
+	 * password "test" would bypass authentication. --- */
+	status         = VortexError;
+	status_message = NULL;
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS (VORTEX_SERVERNAME_FEATURE, "test-12.server", VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (3): expected proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID,  "aspl' OR '1'='1", NULL);
+	vortex_sasl_set_propertie (conn, VORTEX_SASL_PASSWORD, "test", NULL);
+	vortex_sasl_start_auth_sync (conn, VORTEX_SASL_PLAIN, &status, &status_message);
+	if (status == VortexOk) {
+		printf ("ERROR (4): SQL injection in auth_id authenticated! SQL escaping is not working\n");
+		return axl_false;
+	} /* end if */
+	printf ("Test 12-c: SQL injection attempt in auth_id correctly rejected\n");
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_13_common (VortexCtx * vCtx, TurbulenceCtx * tCtx, axl_bool skip_third_test) {
 	VortexConnection * conn;
 	VortexChannel    * channel; 
@@ -5762,6 +5849,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_12b")
 	run_test (test_12b, "Test 12-b: check mod sasl mysql");
+
+	CHECK_TEST("test_12c")
+	run_test (test_12c, "Test 12-c: mod sasl mysql (complex password + SQL injection safe)");
 
 	if (enable_python_tests) {
 	python_test:
