@@ -810,6 +810,35 @@ axl_bool test_01c (void)
 	return axl_true;
 }
 
+/* prototype for the internal profile path mask handler (not published
+ * in a public header) used by the regression test below */
+extern axl_bool __turbulence_ppath_mask (VortexConnection * connection,
+					 int                channel_num,
+					 const char       * uri,
+					 const char       * profile_content,
+					 VortexEncoding     encoding,
+					 const char       * serverName,
+					 VortexFrame      * frame,
+					 char            ** error_msg,
+					 axlPointer         user_data);
+
+/**
+ * @brief Regression test: __turbulence_ppath_mask must reject (return
+ * axl_true) when the profile path state (user_data) is NULL, instead
+ * of dereferencing it to get the context and crashing.
+ */
+axl_bool test_09a (void)
+{
+	/* call the mask handler with a NULL profile path state: it must
+	 * not crash and must filter (return axl_true) */
+	if (! __turbulence_ppath_mask (NULL, -1, NULL, NULL, EncodingNone, NULL, NULL, NULL, NULL)) {
+		printf ("ERROR: __turbulence_ppath_mask did not reject a NULL profile path state\n");
+		return axl_false;
+	}
+
+	return axl_true;
+}
+
 /**
  * @brie Check misc turbulence functions.
  *
@@ -5695,7 +5724,10 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_09")
 	run_test (test_09, "Test 09: Turbulence profile path filtering (serverName)");
-	
+
+	CHECK_TEST("test_09a")
+	run_test (test_09a, "Test 09-a: profile path mask rejects NULL state without crashing");
+
 	CHECK_TEST("test_10prev")
 	run_test (test_10_prev, "Test 10-prev: Turbulence profile path filtering (simple child processes)");
 

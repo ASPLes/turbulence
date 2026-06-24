@@ -438,18 +438,24 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 {
 	/* get a reference to the turbulence profile path state */
 	TurbulencePPathState  * state  = user_data;
-	TurbulenceCtx         * ctx    = state->ctx;
+	TurbulenceCtx         * ctx    = NULL;
+
+	/* check the state before dereferencing it to get the context
+	 * (otherwise a NULL state would crash below) */
+	if (state == NULL) {
+		error ("  Found no items inside profile path configuration (state is NULL), rejecting (0x90008437)");
+		/* filter, no profile path selected */
+		return axl_true;
+	} /* end if */
+
+	/* now it is safe to get the context from the state */
+	ctx = state->ctx;
 
 	if (ctx->is_exiting) {
 		error ("__turbulence_ppath_mask :: turbulence is finishing, rejecting connection...");
 		/* filter, no profile path selected */
 		return axl_true;
 	}
-	if (state == NULL) {
-		error ("  Found no items inside profile path configuration (state is NULL), rejecting (0x90008437)");
-		/* filter, no profile path selected */
-		return axl_true;
-	} /* end if */
 	if (state->path_selected == NULL) {
 		error ("  Found no items inside profile path configuration (state->path_selected is NULL), rejecting (0x90008438)");
 		/* filter, no profile path selected */
