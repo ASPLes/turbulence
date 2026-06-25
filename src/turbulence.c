@@ -126,7 +126,7 @@ void __turbulence_acquire_limits (TurbulenceCtx * ctx)
 		ctx->global_child_limit = value;
 	else
 		ctx->global_child_limit = 100;
-	msg ("Configured global-child-limit=%d", ctx->max_complete_flag_limit);
+	msg ("Configured global-child-limit=%d", ctx->global_child_limit);
 
 	/* get global child limit */
 	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/max-incoming-complete-frame-limit", "value");
@@ -252,18 +252,11 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
  */
 void     turbulence_reload_config       (TurbulenceCtx * ctx, int value)
 {
-	/* get turbulence context */
-	int             already_notified = axl_false;
-	
 	msg ("caught HUP signal, reloading configuration");
 	/* reconfigure signal received, notify turbulence modules the
-	 * signal */
+	 * signal. The exit_mutex serializes concurrent reloads (and against
+	 * the exit path). */
 	vortex_mutex_lock (&ctx->exit_mutex);
-	if (already_notified) {
-		vortex_mutex_unlock (&ctx->exit_mutex);
-		return;
-	}
-	already_notified = axl_true;
 
 	/* call to reload logs */
 	__turbulence_log_reopen (ctx);
@@ -1250,7 +1243,7 @@ const char    * turbulence_runtime_tmpdir  (TurbulenceCtx * ctx)
 axl_bool  turbulence_is_num  (const char * value)
 {
 	int iterator = 0;
-	while (iterator < value[iterator]) {
+	while (value[iterator] != 0) {
 		/* check value on each position */
 		if (! isdigit (value[iterator]))
 			return axl_false;

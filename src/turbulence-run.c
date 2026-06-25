@@ -211,7 +211,7 @@ void turbulence_run_load_modules (TurbulenceCtx * ctx, axlDoc * doc)
 		if (vortex_support_file_test (path, FILE_IS_DIR | FILE_EXISTS)) {
 			dirHandle = opendir (path);
 			if (dirHandle == NULL) {
-				wrn ("unable to open mod directory '%s' (%s), skipping to the next", strerror (errno), path);
+				wrn ("unable to open mod directory '%s' (%s), skipping to the next", path, strerror (errno));
 				goto next;
 			} /* end if */
 		} else {

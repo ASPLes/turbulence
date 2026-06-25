@@ -849,6 +849,28 @@ axl_bool  test_02 (void)
 {
 	char * value;
 
+	/* check turbulence_is_num: it must scan the WHOLE string. The loop
+	 * used to stop early because it compared the index with the char
+	 * value (iterator < value[iterator]) instead of checking the null
+	 * terminator, so a non-digit beyond ~57 chars was never inspected. */
+	if (! turbulence_is_num ("12345")) {
+		printf ("Expected '12345' to be reported as a number..\n");
+		return axl_false;
+	}
+	if (turbulence_is_num ("12a45")) {
+		printf ("Expected '12a45' to be reported as NOT a number..\n");
+		return axl_false;
+	}
+	if (! turbulence_is_num ("9999999999999999999999999999999999999999999999999999999999999999999999")) {
+		printf ("Expected a long numeric string to be reported as a number..\n");
+		return axl_false;
+	}
+	/* long string with a trailing non-digit (beyond the old early stop) */
+	if (turbulence_is_num ("9999999999999999999999999999999999999999999999999999999999999999999999a")) {
+		printf ("Expected a long string with a trailing non-digit to be reported as NOT a number..\n");
+		return axl_false;
+	}
+
 	if (turbulence_file_is_fullpath ("test")) {
 		printf ("Expected to find a relative path..\n");
 		return axl_false;

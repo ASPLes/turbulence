@@ -91,7 +91,7 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 		return NULL;
 	} /* end if */
 
-	str_pid = axl_strdup_printf ("%d", getpid ());
+	str_pid = axl_strdup_printf ("%d", pid);
 	if (str_pid == NULL) {
 		error ("Bad signal found but unable to get str pid version, memory failure");
 		close (temp_file);
@@ -161,7 +161,7 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	axl_free (command);
 
 	/* get place some pid information */
-	command  = axl_strdup_printf ("echo -e 'Process that failed was %d. Here is the backtrace:\n--------------' >> %s", getpid (), backtrace_file);
+	command  = axl_strdup_printf ("echo -e 'Process that failed was %d. Here is the backtrace:\n--------------' >> %s", pid, backtrace_file);
 	status   = system (command);
 	msg ("Running: %s, exit status: %d", command, status);
 	axl_free (command);
@@ -278,6 +278,8 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 		       smtp_port ? smtp_port : "25",
 		       axl_error_get (err));
 		axl_error_free (err);
+		/* do not continue using an invalid socket */
+		return axl_false;
 	} /* end if */
 
 	/* read greetings */
