@@ -504,13 +504,15 @@ void turbulence_mediator_remove_plug (TurbulenceCtx             * ctx,
 
 	/* get plug */
 	plug      = axl_hash_get (ctx->mediator_hash, full_name);
+
+	/* free no longer used entry key (on all paths below) */
+	axl_free (full_name);
+
 	if (plug == NULL) {
-		/* free no longer used entry key */
-		axl_free (full_name);
 		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
 		return;
 	} /* end if */
-	
+
 	/* search the matching subscriber and remove it */
 	iterator = 0;
 	while (iterator < axl_list_length (plug->subscribers)) {

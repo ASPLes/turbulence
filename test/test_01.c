@@ -810,6 +810,10 @@ axl_bool test_01c (void)
 	if (turbulence_file_test_v ("test_01c.xml", FILE_EXISTS))
 		unlink ("test_01c.xml");
 
+	/* balance the db_list_init above: release the module registry
+	 * list and dtd (db_list_close already unlinked our dblist) */
+	turbulence_db_list_cleanup (ctx);
+
 	return axl_true;
 }
 
