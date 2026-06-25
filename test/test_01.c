@@ -1682,6 +1682,118 @@ axl_bool test_05 () {
 	return axl_true;
 }
 
+/* counters used by test_05_b to track which subscribers were notified */
+int      test_05_b_h1_calls   = 0;
+int      test_05_b_h2_calls   = 0;
+int      test_05_b_h3_calls   = 0;
+int      test_05_b_hnew_calls = 0;
+int      test_05_b_mut_calls  = 0;
+axl_bool test_05_b_mutated    = axl_false;
+
+void test_05_b_h1   (TurbulenceMediatorObject * object) { (void) object; test_05_b_h1_calls++;   return; }
+void test_05_b_h2   (TurbulenceMediatorObject * object) { (void) object; test_05_b_h2_calls++;   return; }
+void test_05_b_h3   (TurbulenceMediatorObject * object) { (void) object; test_05_b_h3_calls++;   return; }
+void test_05_b_hnew (TurbulenceMediatorObject * object) { (void) object; test_05_b_hnew_calls++; return; }
+
+void test_05_b_mut  (TurbulenceMediatorObject * object)
+{
+	TurbulenceCtx * ctx;
+
+	test_05_b_mut_calls++;
+
+	/* mutate the live subscriber list re-entrantly, but only once so
+	 * the second round is stable */
+	if (test_05_b_mutated)
+		return;
+	test_05_b_mutated = axl_true;
+
+	ctx = turbulence_mediator_object_get (object, TURBULENCE_MEDIATOR_ATTR_CTX);
+
+	/* remove a *later* subscriber (its holder gets freed here) and add
+	 * a brand new one, all while the notification is in progress */
+	turbulence_mediator_remove_plug (ctx, "test-05b", "entry", test_05_b_h3, NULL);
+	turbulence_mediator_subscribe   (ctx, "test-05b", "entry", test_05_b_hnew, NULL);
+	return;
+}
+
+axl_bool test_05_b (void) {
+	TurbulenceCtx * ctx;
+
+	/* reset counters */
+	test_05_b_h1_calls   = 0;
+	test_05_b_h2_calls   = 0;
+	test_05_b_h3_calls   = 0;
+	test_05_b_hnew_calls = 0;
+	test_05_b_mut_calls  = 0;
+	test_05_b_mutated    = axl_false;
+
+	/* create context and mediator */
+	ctx = turbulence_ctx_new ();
+	turbulence_mediator_init (ctx);
+
+	/* create the plug subscribing the first handler */
+	if (! turbulence_mediator_create_plug (ctx, "test-05b", "entry", axl_true, test_05_b_h1, NULL)) {
+		printf ("ERROR (05b.1): failed to create plug..\n");
+		return axl_false;
+	} /* end if */
+
+	/* subscribe the mutator and two more handlers, in order:
+	 *   [ h1, mut, h2, h3 ] */
+	turbulence_mediator_subscribe (ctx, "test-05b", "entry", test_05_b_mut, NULL);
+	turbulence_mediator_subscribe (ctx, "test-05b", "entry", test_05_b_h2, NULL);
+	turbulence_mediator_subscribe (ctx, "test-05b", "entry", test_05_b_h3, NULL);
+
+	/* ROUND 1: push the event. While running, the mutator removes h3
+	 * (a later subscriber, freeing its holder) and subscribes hnew.
+	 * Snapshot semantics require: every subscriber present at push
+	 * time is called exactly once -- including h3, even though its
+	 * holder was freed mid-round -- and hnew (added during the round)
+	 * is NOT called this round. */
+	turbulence_mediator_push_event (ctx, "test-05b", "entry", NULL, NULL, NULL, NULL);
+
+	if (test_05_b_h1_calls != 1 || test_05_b_mut_calls != 1 || test_05_b_h2_calls != 1) {
+		printf ("ERROR (05b.2): expected h1/mut/h2 called once, found h1=%d mut=%d h2=%d..\n",
+			test_05_b_h1_calls, test_05_b_mut_calls, test_05_b_h2_calls);
+		return axl_false;
+	} /* end if */
+	if (test_05_b_h3_calls != 1) {
+		printf ("ERROR (05b.3): a subscriber removed mid-notification must still be called from the snapshot, h3=%d (expected 1)..\n",
+			test_05_b_h3_calls);
+		return axl_false;
+	} /* end if */
+	if (test_05_b_hnew_calls != 0) {
+		printf ("ERROR (05b.4): a subscriber added mid-notification must NOT be called this round, hnew=%d (expected 0)..\n",
+			test_05_b_hnew_calls);
+		return axl_false;
+	} /* end if */
+
+	/* ROUND 2: the live list is now [ h1, mut, h2, hnew ] (h3 removed,
+	 * hnew added). The mutation is one-shot so this round is stable.
+	 * Verify the change took effect: hnew is now notified and h3 is
+	 * not. */
+	turbulence_mediator_push_event (ctx, "test-05b", "entry", NULL, NULL, NULL, NULL);
+
+	if (test_05_b_h1_calls != 2 || test_05_b_h2_calls != 2 || test_05_b_mut_calls != 2) {
+		printf ("ERROR (05b.5): expected h1/h2/mut at 2 calls, found h1=%d h2=%d mut=%d..\n",
+			test_05_b_h1_calls, test_05_b_h2_calls, test_05_b_mut_calls);
+		return axl_false;
+	} /* end if */
+	if (test_05_b_hnew_calls != 1) {
+		printf ("ERROR (05b.6): hnew must be notified in round 2, hnew=%d (expected 1)..\n", test_05_b_hnew_calls);
+		return axl_false;
+	} /* end if */
+	if (test_05_b_h3_calls != 1) {
+		printf ("ERROR (05b.7): removed h3 must not be notified again, h3=%d (expected 1)..\n", test_05_b_h3_calls);
+		return axl_false;
+	} /* end if */
+
+	/* cleanup */
+	turbulence_mediator_cleanup (ctx);
+	turbulence_ctx_free (ctx);
+
+	return axl_true;
+}
+
 
 axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * system_id, const char * path);
 
@@ -5981,6 +6093,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_05")
 	run_test (test_05, "Test 05: Check mediator API");
+
+	CHECK_TEST("test_05_b")
+	run_test (test_05_b, "Test 05-b: mediator snapshot stable under re-entrant subscribe/remove");
 
 	CHECK_TEST("test_05a")
 	run_test (test_05_a, "Test 05-a: Check system user/group id resolving..");

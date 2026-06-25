@@ -540,7 +540,10 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 {
 	/* get turbulence context */
 	TurbulenceModule   * module;
+	TurbulenceModule  ** snapshot;
+	int                  count;
 	int                  iterator = 0;
+	axl_bool             result   = axl_true;
 
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
 
@@ -548,60 +551,75 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 	if (handler == TBC_PPATH_SELECTED_HANDLER)
 		__turbulence_ppath_load_search_nodes (ctx, data);
 
-	while (iterator < axl_list_length (ctx->registered_modules)) {
+	/* Take a stable snapshot of the modules registered at this point.
+	 * Handlers are invoked with the lock released, so a handler that
+	 * (un)registers a module (for example on-demand activation) must
+	 * not be able to invalidate the iteration over the live list. The
+	 * modules referenced are not freed at runtime (only at cleanup,
+	 * after all notifications finished), so caching the pointers is
+	 * safe. Modules registered during the notification are
+	 * intentionally not notified in the current round. */
+	count = axl_list_length (ctx->registered_modules);
+	if (count == 0) {
+		vortex_mutex_unlock (&ctx->registered_modules_mutex);
+		return axl_true;
+	} /* end if */
+
+	snapshot = axl_new (TurbulenceModule *, count);
+	while (iterator < count) {
+		snapshot[iterator] = axl_list_get_nth (ctx->registered_modules, iterator);
+		iterator++;
+	} /* end while */
+
+	/* release the lock: handlers run against the stable snapshot */
+	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+
+	iterator = 0;
+	while (iterator < count && result) {
 		/* get the module */
-		module = axl_list_get_nth (ctx->registered_modules, iterator);
+		module = snapshot[iterator];
 
 		/* check reference */
 		if (module == NULL || module->def == NULL) {
 			iterator++;
 			continue;
 		} /* end if */
-			
+
 		switch (handler) {
 		case TBC_CLOSE_HANDLER:
 			/* notify if defined close function */
 			if (module->def->close != NULL) {
 				msg ("closing module: %s (%s)", module->def->mod_name, module->path);
-				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				module->def->close (ctx);
-				vortex_mutex_lock (&ctx->registered_modules_mutex);
 			}
 			break;
 		case TBC_RELOAD_HANDLER:
 			/* notify if defined reconf function */
 			if (module->def->reconf != NULL) {
 				msg ("reloading module: %s (%s)", module->def->mod_name, module->path);
-				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				module->def->reconf (ctx);
-				vortex_mutex_lock (&ctx->registered_modules_mutex);
 			}
 			break;
 		case TBC_INIT_HANDLER:
 			/* notify if defined init function */
 			if (module->def->init != NULL) {
 				msg ("initializing module: %s (%s)", module->def->mod_name, module->path);
-				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				if (! module->def->init (ctx)) {
-					/* init failed */
+					/* init failed: stop notifying remaining modules */
 					wrn ("failed to initialized module: %s, it returned initialization failure", module->def->mod_name);
-					return axl_false;
+					result = axl_false;
 				}
-				vortex_mutex_lock (&ctx->registered_modules_mutex);
-					
 			}
 			break;
 		case TBC_PPATH_SELECTED_HANDLER:
 			/* notify if defined ppath_selected function */
 			if (module->def->ppath_selected != NULL) {
 				msg ("notifying profile path selected on module: %s (%s)", module->def->mod_name, module->path);
-				vortex_mutex_unlock (&ctx->registered_modules_mutex);
 				if (! module->def->ppath_selected (ctx, data, data2))  {
-					/* init failed */
+					/* selection failed: stop notifying remaining modules */
 					wrn ("profile path selection for module: %s returned failure", module->def->mod_name);
-					return axl_false;
+					result = axl_false;
 				} /* end if */
-				vortex_mutex_lock (&ctx->registered_modules_mutex);
 			}
 			break;
 		}
@@ -609,11 +627,13 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 		/* next iterator */
 		iterator++;
 
-	} /* end if */
-	vortex_mutex_unlock (&ctx->registered_modules_mutex);
+	} /* end while */
 
-	/* reached this point always return TRUE dude!! */
-	return axl_true;
+	/* release the snapshot */
+	axl_free (snapshot);
+
+	/* result is axl_true unless a handler reported failure */
+	return result;
 }
 
 

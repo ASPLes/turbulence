@@ -607,32 +607,64 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 		result = object->result;
 		
 	} else {
-		/* notify each registered subscriber */
-		iterator = 0;
-		while (iterator < axl_list_length (plug->subscribers)) {
-			/* get subscriber value */
-			subscriber = axl_list_get_nth (plug->subscribers, iterator);
+		/* Take a stable snapshot of the current subscribers under
+		 * the lock before notifying any of them. Handlers are
+		 * invoked with the lock released, so a re-entrant
+		 * subscribe()/remove_plug() issued from within a handler
+		 * must not be able to invalidate the iteration over the live
+		 * list (which could otherwise skip subscribers or touch
+		 * freed holders). Subscribers added during the notification
+		 * are intentionally not notified in the current round. */
+		int                            count;
+		TurbulenceMediatorSubscriber * snapshot;
 
-			/* check null reference */
-			if (subscriber == NULL)
-				break;
-			
-			/* get references to handler and user data */
-			handler           = subscriber->handler;
-			object->user_data = subscriber->user_data;
-			
-			/* unlock during the operation */
+		count = axl_list_length (plug->subscribers);
+		if (count > 0) {
+			/* copy (handler, user_data) pairs into an
+			 * independent array owned by this call */
+			snapshot = axl_new (TurbulenceMediatorSubscriber, count);
+			iterator = 0;
+			while (iterator < count) {
+				/* get subscriber value */
+				subscriber = axl_list_get_nth (plug->subscribers, iterator);
+
+				/* check null reference */
+				if (subscriber == NULL) {
+					/* should not happen, stop copying here */
+					count = iterator;
+					break;
+				} /* end if */
+
+				snapshot[iterator].handler   = subscriber->handler;
+				snapshot[iterator].user_data = subscriber->user_data;
+
+				/* next iterator */
+				iterator++;
+			} /* end while */
+
+			/* unlock: notifications run against the snapshot */
 			vortex_mutex_unlock (&ctx->mediator_hash_mutex);
-			
-			/* do the call operation */
-			handler (object);
-			
-			/* lock during the operation */
+
+			/* notify each subscriber from the stable snapshot */
+			iterator = 0;
+			while (iterator < count) {
+				/* get references to handler and user data */
+				handler           = snapshot[iterator].handler;
+				object->user_data = snapshot[iterator].user_data;
+
+				/* do the call operation */
+				handler (object);
+
+				/* next iterator */
+				iterator++;
+			} /* end while */
+
+			/* re-lock to keep the function tail unlock balanced */
 			vortex_mutex_lock (&ctx->mediator_hash_mutex);
-			
-			/* next iterator */
-			iterator++;
-		} /* end while */
+
+			/* release the snapshot */
+			axl_free (snapshot);
+		} /* end if */
 	} /* end if */
 
 	/* unlock */
