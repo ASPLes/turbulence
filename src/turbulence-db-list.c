@@ -622,7 +622,7 @@ axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
 
 	/* check values received */
 	if (list == NULL)
-		return axl_false;
+		return NULL;
 
 	/* reload the document */
 	turbulence_db_list_reload (list);

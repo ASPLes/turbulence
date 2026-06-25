@@ -44,6 +44,9 @@
 /* local include to check mod-sasl */
 #include <common-sasl.h>
 
+/* used by test_signal_block to inspect the process signal mask */
+#include <signal.h>
+
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
 /* support for websocket */
 #include <vortex_websocket.h>
@@ -833,6 +836,47 @@ axl_bool test_09a (void)
 	 * not crash and must filter (return axl_true) */
 	if (! __turbulence_ppath_mask (NULL, -1, NULL, NULL, EncodingNone, NULL, NULL, NULL, NULL)) {
 		printf ("ERROR: __turbulence_ppath_mask did not reject a NULL profile path state\n");
+		return axl_false;
+	}
+
+	return axl_true;
+}
+
+/**
+ * @brief Regression test: turbulence_signal_block / _unblock must operate
+ * on the signal passed as argument. The implementation used to hardcode
+ * SIGCHLD in the mask, ignoring the parameter, so blocking any other
+ * signal had no effect (and silently masked SIGCHLD instead).
+ */
+axl_bool test_signal_mask (void)
+{
+	sigset_t current;
+
+	/* block SIGUSR1 and verify it is actually present in the mask */
+	turbulence_signal_block (ctx, SIGUSR1);
+
+	sigemptyset (&current);
+	if (sigprocmask (SIG_BLOCK, NULL, &current) != 0) {
+		printf ("ERROR (1): unable to query the current signal mask\n");
+		return axl_false;
+	}
+	if (! sigismember (&current, SIGUSR1)) {
+		printf ("ERROR (2): turbulence_signal_block(SIGUSR1) did not block SIGUSR1 (signal argument ignored?)\n");
+		/* best effort cleanup */
+		turbulence_signal_unblock (ctx, SIGUSR1);
+		return axl_false;
+	}
+
+	/* now unblock SIGUSR1 and verify it is gone from the mask */
+	turbulence_signal_unblock (ctx, SIGUSR1);
+
+	sigemptyset (&current);
+	if (sigprocmask (SIG_BLOCK, NULL, &current) != 0) {
+		printf ("ERROR (3): unable to query the current signal mask\n");
+		return axl_false;
+	}
+	if (sigismember (&current, SIGUSR1)) {
+		printf ("ERROR (4): turbulence_signal_unblock(SIGUSR1) did not unblock SIGUSR1\n");
 		return axl_false;
 	}
 
@@ -5919,6 +5963,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");
+
+	CHECK_TEST("test_signal_mask")
+	run_test (test_signal_mask, "Test 02-s: signal block/unblock honours the signal argument");
 
 	CHECK_TEST("test_03")
 	run_test (test_03, "Test 03: Sasl core backend (used by mod-sasl, tbc-sasl-conf)");

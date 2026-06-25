@@ -183,8 +183,7 @@ axl_bool __turbulence_signal_common_block (TurbulenceCtx * ctx,
 
 	/* msg ("Starting %s of signal %d", label, signal); */
 
-	sigemptyset (&intmask);
-	if ((sigemptyset(&intmask) == -1) || (sigaddset(&intmask, SIGCHLD) == -1)){  
+	if ((sigemptyset (&intmask) == -1) || (sigaddset (&intmask, signal) == -1)) {
 		error ("Failed to initialize the signal=%d mask", signal);
 		return axl_false;
 	}
