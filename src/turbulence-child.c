@@ -99,6 +99,12 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 
 		/* close the management listener that failed to start */
 		vortex_connection_close (result->conn_mgr);
+
+		/* free the socket control path allocated above: at this
+		 * point ref_count is still 0 and the mutex is not created,
+		 * so turbulence_child_unref() would be a no-op (and unsafe).
+		 * Release the only heap members set so far explicitly. */
+		axl_free (result->socket_control_path);
 		axl_free (result);
 
 		return NULL;
