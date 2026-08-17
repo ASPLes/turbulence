@@ -7,6 +7,7 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_types.h
 
 EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h mysql.sasl.dtd mysql.sasl.dtd.h \
+             test_mysql_sasl_conf.c \
              mod-sasl.win32.xml $(sasl_radmin_files) sasl.example.conf \
 	     auth-db.example.xml remote-admins.example.xml gen-mod-sasl-pass.py create-mysql-sasl-database.sql \
 	     extension.example.modules auth-db.mysql.example.xml sasl-radmin.idl
@@ -26,8 +27,25 @@ mod_sasl_la_LDFLAGS  = -module -ldl -lcrypt $(VORTEX_XML_RPC_LIBS) $(VORTEX_SASL
 
 # mod-sasl-mysql.so
 if ENABLE_MYSQL_SUPPORT
-mod_sasl_mysql_la_SOURCES   = mod_sasl_mysql.c common-sasl.c common-sasl.h common.sasl.dtd.h mysql.sasl.dtd.h
+mod_sasl_mysql_la_SOURCES   = mod_sasl_mysql.c mod_sasl_mysql_conf.c mod_sasl_mysql_conf.h common-sasl.c common-sasl.h common.sasl.dtd.h mysql.sasl.dtd.h
 mod_sasl_mysql_la_LDFLAGS   = -module -ldl $(MYSQL_LIBS)
+endif
+
+# regression tests for the mysql backend configuration layer.
+#
+# They only need libaxl (the configuration layer is deliberately free of
+# MySQL, vortex and turbulence), so they can run on any build host. That
+# is the point: every defect this backend had used to be reachable only
+# through a live authentication against a real database.
+if ENABLE_MYSQL_SUPPORT
+noinst_PROGRAMS = test-mysql-sasl-conf
+
+test_mysql_sasl_conf_SOURCES  = test_mysql_sasl_conf.c mod_sasl_mysql_conf.c mod_sasl_mysql_conf.h mysql.sasl.dtd.h
+test_mysql_sasl_conf_CPPFLAGS = -I. -I ../../src $(AXL_CFLAGS)
+test_mysql_sasl_conf_LDFLAGS  = $(AXL_LIBS)
+
+check-local: test-mysql-sasl-conf
+	./test-mysql-sasl-conf
 endif
 
 # reconfigure module installation directory

@@ -10,6 +10,9 @@
 /* include dtd definition */
 #include <mysql.sasl.dtd.h>
 
+/* configuration layer (pure, testable: see mod_sasl_mysql_conf.h) */
+#include <mod_sasl_mysql_conf.h>
+
 /* use this declarations to avoid c++ compilers to mangle exported
  * names. */
 BEGIN_C_DECLS
@@ -191,85 +194,22 @@ char * mod_sasl_mysql_escape (TurbulenceCtx * ctx,
 
 
 /**
- * @internal Set of values that may be interpolated into any SQL
- * template declared at auth-db.mysql.xml.
- *
- * Keeping them in a single struct is what allows every declaration --
- * the built-in ones and the generic extension points -- to share the
- * exact same substitution semantics, instead of repeating the same
- * block of replacements once per feature (which is how they drifted
- * apart in the first place).
+ * @internal Escape handler handed to the configuration layer so every
+ * statement is built with the escaping of the live MySQL connection.
  */
-typedef struct _ModSaslMysqlSubst {
-	const char * auth_id;          /* %u */
-	const char * serverName;       /* %n */
-	const char * authorization_id; /* %i */
-	const char * sasl_method;      /* %m */
-	const char * peer;             /* %p */
-	const char * status;           /* %t : "ok"/"failed", may be NULL */
-	const char * effective_id;     /* %e : resolved identity, may be NULL */
-} ModSaslMysqlSubst;
-
-/**
- * @internal Builds the final SQL statement for the provided template,
- * replacing every recognised token.
- *
- * Every value interpolated is SQL-escaped, with the single exception of
- * %t, which is a constant produced by this module ("ok"/"failed") and
- * never comes from the peer. A NULL value is replaced by the empty
- * string so a template is never left with a dangling token.
- *
- * @return newly allocated statement (caller must free it) or NULL.
- */
-char * mod_sasl_mysql_build_query (TurbulenceCtx     * ctx,
-				   axlNode           * auth_db_node_conf,
-				   const char        * query_template,
-				   ModSaslMysqlSubst * subst)
+char * mod_sasl_mysql_escape_handler (axlPointer data, const char * value)
 {
-	char * query;
-
-	if (query_template == NULL || subst == NULL)
-		return NULL;
-
-	query = axl_strdup (query_template);
-	if (query == NULL)
-		return NULL;
-
-	/* %t is a controlled constant, never peer provided */
-	axl_replace (query, "%t", subst->status ? subst->status : "");
-
-	REPLACE_ESCAPED (query, "%u", subst->auth_id);
-	REPLACE_ESCAPED (query, "%n", subst->serverName);
-	REPLACE_ESCAPED (query, "%i", subst->authorization_id);
-	REPLACE_ESCAPED (query, "%m", subst->sasl_method);
-	REPLACE_ESCAPED (query, "%p", subst->peer);
-	REPLACE_ESCAPED (query, "%e", subst->effective_id);
-
-	return query;
+	axlNode * auth_db_node_conf = (axlNode *) data;
+	return mod_sasl_mysql_escape (ctx, auth_db_node_conf, value);
 }
 
 /**
- * @internal Returns the SQL template declared at the provided node,
- * with XML entity references translated.
- *
- * IMPORTANT: this MUST use ATTR_VALUE_TRANS and never ATTR_VALUE. These
- * attributes carry SQL, SQL carries apostrophes, and any XML writer
- * legitimately serialises an apostrophe inside a single quoted
- * attribute as &apos;. Reading the attribute raw sends the literal text
- * "&apos;" to MySQL and every statement dies with error 1064.
- *
- * That is not hypothetical: on 2026-08-17 an automated tool rewrote
- * auth-db.mysql.xml through an XML serializer and, because
- * <get-password> and <ip-filter> were read with ATTR_VALUE, every user
- * of a production panel was locked out until the file was restored.
- *
- * The returned string is newly allocated: the caller must free it.
+ * @internal Convenience wrapper: builds a statement for this backend,
+ * escaping through the live MySQL connection of [auth_db_node_conf].
  */
-char * mod_sasl_mysql_get_query (axlNode * node)
+char * mod_sasl_mysql_build (axlNode * auth_db_node_conf, const char * query_template, ModSaslMysqlSubst * subst)
 {
-	if (node == NULL || ! HAS_ATTR (node, "query"))
-		return NULL;
-	return ATTR_VALUE_TRANS (node, "query");
+	return mod_sasl_mysql_build_query (query_template, subst, mod_sasl_mysql_escape_handler, auth_db_node_conf);
 }
 
 /**
@@ -367,7 +307,7 @@ axl_bool __mod_sasl_mysql_prepare_query_and_auth (TurbulenceCtx    * ctx,
 	subst.status           = NULL;
 	subst.effective_id     = NULL;
 
-	query = mod_sasl_mysql_build_query (ctx, auth_db_node_conf, _query, &subst);
+	query = mod_sasl_mysql_build (auth_db_node_conf, _query, &subst);
 	if (query == NULL)
 		return axl_false; /* allocation failure */
 
@@ -525,7 +465,6 @@ axl_bool mod_sasl_mysql_run_filters (TurbulenceCtx     * ctx,
 				     ModSaslMysqlSubst * subst)
 {
 	axlNode    * node;
-	const char * node_stage;
 	const char * match;
 	const char * name;
 	char       * template;
@@ -538,17 +477,22 @@ axl_bool mod_sasl_mysql_run_filters (TurbulenceCtx     * ctx,
 	while (node != NULL) {
 
 		/* only the declarations of the requested stage */
-		node_stage = HAS_ATTR (node, "stage") ? ATTR_VALUE (node, "stage") : "pre-auth";
-		if (! axl_cmp (node_stage, stage)) {
+		if (! mod_sasl_mysql_filter_applies (node, stage)) {
 			node = axl_node_get_next_called (node, "auth-filter");
 			continue;
 		} /* end if */
 
-		name     = HAS_ATTR (node, "name") ? ATTR_VALUE (node, "name") : "unnamed";
-		match    = HAS_ATTR (node, "match") ? ATTR_VALUE (node, "match") : "expression";
+		name  = mod_sasl_mysql_node_name (node);
+		match = mod_sasl_mysql_filter_match (node);
+
+		if (! mod_sasl_mysql_match_is_known (match)) {
+			error ("login failure: %s, <auth-filter> [%s] declares an unknown match=%s, denying",
+			       subst->auth_id, name, match);
+			return axl_false;
+		} /* end if */
 
 		template = mod_sasl_mysql_get_query (node);
-		query    = mod_sasl_mysql_build_query (ctx, auth_db_node_conf, template, subst);
+		query    = mod_sasl_mysql_build (auth_db_node_conf, template, subst);
 		axl_free (template);
 		if (query == NULL) {
 			error ("Unable to build <auth-filter> [%s], denying auth for %s", name, subst->auth_id);
@@ -587,12 +531,6 @@ axl_bool mod_sasl_mysql_run_filters (TurbulenceCtx     * ctx,
 
 		if (axl_cmp (match, "forbidden") && status == 1) {
 			error ("login failure: %s, <auth-filter> [%s] reported a forbidding value", subst->auth_id, name);
-			return axl_false;
-		} /* end if */
-
-		if (! axl_cmp (match, "required") && ! axl_cmp (match, "forbidden")) {
-			error ("login failure: %s, <auth-filter> [%s] declares an unknown match=%s, denying",
-			       subst->auth_id, name, match);
 			return axl_false;
 		} /* end if */
 
@@ -641,10 +579,10 @@ axl_bool mod_sasl_mysql_resolve_identity (TurbulenceCtx     * ctx,
 	node = axl_doc_get (doc, "/sasl-auth-db/auth-resolve");
 	while (node != NULL) {
 
-		name     = HAS_ATTR (node, "name") ? ATTR_VALUE (node, "name") : "unnamed";
+		name     = mod_sasl_mysql_node_name (node);
 
 		template = mod_sasl_mysql_get_query (node);
-		query    = mod_sasl_mysql_build_query (ctx, auth_db_node_conf, template, subst);
+		query    = mod_sasl_mysql_build (auth_db_node_conf, template, subst);
 		axl_free (template);
 		if (query == NULL) {
 			error ("Unable to build <auth-resolve> [%s], denying auth for %s", name, subst->auth_id);
@@ -696,7 +634,6 @@ void mod_sasl_mysql_run_notifies (TurbulenceCtx     * ctx,
 				  ModSaslMysqlSubst * subst)
 {
 	axlNode    * node;
-	const char * on;
 	const char * name;
 	char       * template;
 	char       * query;
@@ -705,16 +642,15 @@ void mod_sasl_mysql_run_notifies (TurbulenceCtx     * ctx,
 	node = axl_doc_get (doc, "/sasl-auth-db/auth-notify");
 	while (node != NULL) {
 
-		on   = HAS_ATTR (node, "on") ? ATTR_VALUE (node, "on") : "any";
-		name = HAS_ATTR (node, "name") ? ATTR_VALUE (node, "name") : "unnamed";
+		name = mod_sasl_mysql_node_name (node);
 
-		if (! axl_cmp (on, "any") && ! axl_cmp (on, subst->status ? subst->status : "")) {
+		if (! mod_sasl_mysql_notify_applies (node, subst->status)) {
 			node = axl_node_get_next_called (node, "auth-notify");
 			continue;
 		} /* end if */
 
 		template = mod_sasl_mysql_get_query (node);
-		query    = mod_sasl_mysql_build_query (ctx, auth_db_node_conf, template, subst);
+		query    = mod_sasl_mysql_build (auth_db_node_conf, template, subst);
 		axl_free (template);
 		if (query == NULL) {
 			error ("Unable to build <auth-notify> [%s], skipping it", name);
@@ -786,7 +722,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 		 * expected to report the filter, not to evaluate it */
 		template = mod_sasl_mysql_get_query (node);
 		subst.peer = NULL;
-		query      = mod_sasl_mysql_build_query (ctx, auth_db_node_conf, template, &subst);
+		query      = mod_sasl_mysql_build (auth_db_node_conf, template, &subst);
 		subst.peer = vortex_connection_get_host (conn);
 		axl_free (template);
 		if (query == NULL) {
@@ -898,7 +834,7 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 	if (node) {
 		/* log auth defined */
 		template = mod_sasl_mysql_get_query (node);
-		query    = mod_sasl_mysql_build_query (ctx, auth_db_node_conf, template, &subst);
+		query    = mod_sasl_mysql_build (auth_db_node_conf, template, &subst);
 		axl_free (template);
 		if (query) {
 			msg ("Trying to auth-log %s:%s with query string %s", auth_id, subst.status, query);
