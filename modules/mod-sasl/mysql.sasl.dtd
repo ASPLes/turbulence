@@ -1,5 +1,5 @@
 <!-- <sasl-auth-db> -->
-<!ELEMENT sasl-auth-db (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?)>
+<!ELEMENT sasl-auth-db (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?, auth-filter*, auth-resolve*, auth-notify*)>
 
 <!-- <connection-settings> -->
 <!ELEMENT connection-settings EMPTY>
@@ -37,3 +37,33 @@
 
 
 
+
+<!-- <auth-filter> : additional condition that may deny the auth.
+     Repeatable, evaluated in document order. Generalises <ip-filter>.
+
+     stage : "pre-auth" (default) or "post-auth"
+     match : "expression" (default), "required" or "forbidden" -->
+<!ELEMENT auth-filter EMPTY>
+<!ATTLIST auth-filter 
+	  name            CDATA   #IMPLIED
+	  query           CDATA   #REQUIRED
+	  stage           CDATA   #IMPLIED
+	  match           CDATA   #IMPLIED>
+
+<!-- <auth-resolve> : maps the credential that authenticated onto the
+     identity the session must run as. Repeatable, evaluated in document
+     order, each one receiving the identity resolved so far in %e -->
+<!ELEMENT auth-resolve EMPTY>
+<!ATTLIST auth-resolve 
+	  name            CDATA   #IMPLIED
+	  query           CDATA   #REQUIRED>
+
+<!-- <auth-notify> : fire and forget statement run once the auth result
+     is known. Repeatable. Generalises <auth-log>.
+
+     on : "any" (default), "ok" or "failed" -->
+<!ELEMENT auth-notify EMPTY>
+<!ATTLIST auth-notify 
+	  name            CDATA   #IMPLIED
+	  query           CDATA   #REQUIRED
+	  on              CDATA   #IMPLIED>
