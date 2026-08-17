@@ -568,21 +568,28 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 {
 
 	/* get turbulence context */
-	axlHashCursor          * cursor;
+	axlList                * conns;
 	VortexConnection       * conn;
 	TurbulenceBroadCastMsg * broadcast;
-	TurbulenceConnMgrState * state;
-	axl_bool                 should_filter;
+	int                      iterator;
+	int                      length;
 
 	v_return_val_if_fail (message, axl_false);
 	v_return_val_if_fail (message_size >= 0, axl_false);
 	v_return_val_if_fail (profile, axl_false);
 
-	/* lock and send */
-	vortex_mutex_lock (&ctx->conn_mgr_mutex);
-	
-	/* create the cursor */
-	cursor = axl_hash_cursor_new (ctx->conn_mgr_hash);
+	/* Take a stable, reference-counted snapshot of all registered
+	 * connections instead of iterating the live conn_mgr_hash with a
+	 * cursor while releasing the lock to call the filter handler. The
+	 * filter is documented to re-enter the conn manager (and another
+	 * thread may register/unregister/reset concurrently); doing so
+	 * with a live cursor would mutate or free the hash under the
+	 * cursor (use-after-free). Each connection in the list is
+	 * referenced so it stays alive while we send, and is unreferenced
+	 * by axl_list_free below. */
+	conns = turbulence_conn_mgr_conn_list (ctx, -1, NULL);
+	if (conns == NULL)
+		return axl_false;
 
 	/* create the broadcast data */
 	broadcast               = axl_new (TurbulenceBroadCastMsg, 1);
@@ -591,53 +598,31 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 	broadcast->profile      = profile;
 	broadcast->ctx          = ctx;
 
-	while (axl_hash_cursor_has_item (cursor)) {
-		
-		/* get data */
-		state   = axl_hash_cursor_get_value (cursor);
-		conn    = state->conn;
-
-		/* check if connection is nullified */
-		if (conn == NULL) {
-			/* connection filtered */
-			axl_hash_cursor_next (cursor);
-			continue;
-		} /* end if */
+	/* notify each connection from the snapshot with no lock held, so
+	 * the filter handler may freely re-enter the conn manager */
+	length   = axl_list_length (conns);
+	iterator = 0;
+	while (iterator < length) {
+		/* get connection */
+		conn = axl_list_get_nth (conns, iterator);
 
 		/* check filter function */
-
-		if (filter_conn) {
-			/* unlock during the filter call to allow
-			 * conn-mgr reentrancy from inside filter
-			 * handler */
-			vortex_mutex_unlock (&ctx->conn_mgr_mutex); 
-
-			/* get filtering result */
-			should_filter = filter_conn (conn, filter_data);
-
-			/* lock */
-			vortex_mutex_lock (&ctx->conn_mgr_mutex); 
-
-			if (should_filter) {
-				/* connection filtered */
-				axl_hash_cursor_next (cursor);
-				continue;
-			} /* end if */
+		if (filter_conn && filter_conn (conn, filter_data)) {
+			/* connection filtered */
+			iterator++;
+			continue;
 		} /* end if */
 
 		/* search for channels running the profile provided */
 		if (! vortex_connection_foreach_channel (conn, _turbulence_conn_mgr_broadcast_msg_foreach, broadcast))
 			error ("failed to broadcast message over connection id=%d", vortex_connection_get_id (conn));
 
-		/* next cursor */
-		axl_hash_cursor_next (cursor);
-	}
+		/* next connection */
+		iterator++;
+	} /* end while */
 
-	/* unlock */
-	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
-
-	/* free cursor hash and broadcast message */
-	axl_hash_cursor_free (cursor);
+	/* release the snapshot (unrefs every connection) and broadcast data */
+	axl_list_free (conns);
 	axl_free (broadcast);
 
 	return axl_true;
