@@ -125,24 +125,6 @@ PyObject * py_turbulence_ctx_get_attr (PyObject *o, PyObject *attr_name) {
 	return NULL;
 }
 
-void py_turbulence_ctx_sanitize (char * message)
-{
-	int        iterator = 0;
-
-	/* replace all % by # to avoid printf functions to interpret
-	   arguments that are not available */
-	while (message[iterator]) {
-		/* check for scapable characters */
-		if (message[iterator] == '%') 
-			message[iterator] = '#';
-
-		/* check next position */
-		iterator++;
-	} /* end while */
-
-	return;
-}
-
 /** 
  * @brief Implements attribute set operation.
  */
@@ -172,11 +154,17 @@ static PyObject * py_turbulence_ctx_msg (PyTurbulenceCtx * self, PyObject * args
 		return NULL;
 
 	if (message) {
-		/* prepare message */
-		py_turbulence_ctx_sanitize (message);
-
-		/* drop the log */
-		msg (message);
+		/* Drop the log passing the message as an ARGUMENT, never as
+		 * the format string: it comes from python code and a '%' in
+		 * it would otherwise be read as a specifier with no argument.
+		 *
+		 * This also removes the need to rewrite every '%' as '#'
+		 * beforehand, which mangled legitimate messages ("100% done")
+		 * and, worse, wrote into the buffer PyArg_ParseTuple returns:
+		 * that buffer belongs to an immutable python string, and
+		 * corrupting an interned literal there would affect the whole
+		 * process. */
+		msg ("%s", message);
 	} /* end if */
 	
 	Py_INCREF (Py_None);
@@ -195,11 +183,17 @@ static PyObject * py_turbulence_ctx_msg2 (PyTurbulenceCtx * self, PyObject * arg
 		return NULL;
 
 	if (message) {
-		/* prepare message */
-		py_turbulence_ctx_sanitize (message);
-
-		/* drop the log */
-		msg2 (message);
+		/* Drop the log passing the message as an ARGUMENT, never as
+		 * the format string: it comes from python code and a '%' in
+		 * it would otherwise be read as a specifier with no argument.
+		 *
+		 * This also removes the need to rewrite every '%' as '#'
+		 * beforehand, which mangled legitimate messages ("100% done")
+		 * and, worse, wrote into the buffer PyArg_ParseTuple returns:
+		 * that buffer belongs to an immutable python string, and
+		 * corrupting an interned literal there would affect the whole
+		 * process. */
+		msg2 ("%s", message);
 	} /* end if */
 	
 	Py_INCREF (Py_None);
@@ -218,11 +212,17 @@ static PyObject * py_turbulence_ctx_wrn (PyTurbulenceCtx * self, PyObject * args
 		return NULL;
 
 	if (message) {
-		/* prepare message */
-		py_turbulence_ctx_sanitize (message);
-
-		/* drop the log */
-		wrn (message);
+		/* Drop the log passing the message as an ARGUMENT, never as
+		 * the format string: it comes from python code and a '%' in
+		 * it would otherwise be read as a specifier with no argument.
+		 *
+		 * This also removes the need to rewrite every '%' as '#'
+		 * beforehand, which mangled legitimate messages ("100% done")
+		 * and, worse, wrote into the buffer PyArg_ParseTuple returns:
+		 * that buffer belongs to an immutable python string, and
+		 * corrupting an interned literal there would affect the whole
+		 * process. */
+		wrn ("%s", message);
 	} /* end if */
 	
 	Py_INCREF (Py_None);
@@ -241,11 +241,17 @@ static PyObject * py_turbulence_ctx_error (PyTurbulenceCtx * self, PyObject * ar
 		return NULL;
 
 	if (message) {
-		/* prepare message */
-		py_turbulence_ctx_sanitize (message);
-
-		/* drop the log */
-		error (message);
+		/* Drop the log passing the message as an ARGUMENT, never as
+		 * the format string: it comes from python code and a '%' in
+		 * it would otherwise be read as a specifier with no argument.
+		 *
+		 * This also removes the need to rewrite every '%' as '#'
+		 * beforehand, which mangled legitimate messages ("100% done")
+		 * and, worse, wrote into the buffer PyArg_ParseTuple returns:
+		 * that buffer belongs to an immutable python string, and
+		 * corrupting an interned literal there would affect the whole
+		 * process. */
+		error ("%s", message);
 	} /* end if */
 	
 	Py_INCREF (Py_None);

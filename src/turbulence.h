@@ -102,7 +102,25 @@ void      turbulence_color_log_enable (TurbulenceCtx * ctx,
  * @param m The error message to output.
  */
 #define error(m,...) do{turbulence_error (ctx, axl_false, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * file, int line, const char * format, ...);
+/** 
+ * @internal Marks a function as taking a printf style format string, so
+ * the compiler checks every call site against its arguments.
+ *
+ * Without this the logging functions are plain variadics and a mismatch
+ * (%d given a string, a missing argument, an extra one) compiles
+ * silently and only shows up as garbage in a log, or as a crash when a
+ * non pointer is read as one. With it, an entire family of defects
+ * becomes a compile error at the exact call site.
+ *
+ * Guarded because the attribute is a GCC/clang extension.
+ */
+#if defined(__GNUC__)
+#define TBC_PRINTF_FORMAT(fmt_idx, args_idx) __attribute__ ((format (printf, fmt_idx, args_idx)))
+#else
+#define TBC_PRINTF_FORMAT(fmt_idx, args_idx)
+#endif
+
+void  turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char * file, int line, const char * format, ...) TBC_PRINTF_FORMAT (5, 6);
 
 /** 
  * Drop an error msg to the console stderr without taking into
@@ -128,7 +146,7 @@ void  turbulence_error (TurbulenceCtx * ctx, axl_bool ignore_debug, const char *
  * @param m The console message to output.
  */
 #define msg(m,...)   do{turbulence_msg (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_msg   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
+void  turbulence_msg   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...) TBC_PRINTF_FORMAT (4, 5);
 
 /** 
  * Drop a second level msg to the console stdout.
@@ -141,7 +159,7 @@ void  turbulence_msg   (TurbulenceCtx * ctx, const char * file, int line, const 
  * @param m The console message to output.
  */
 #define msg2(m,...)   do{turbulence_msg2 (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_msg2   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
+void  turbulence_msg2   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...) TBC_PRINTF_FORMAT (4, 5);
 
 
 
@@ -156,7 +174,7 @@ void  turbulence_msg2   (TurbulenceCtx * ctx, const char * file, int line, const
  * @param m The warning message to output.
  */
 #define wrn(m,...)   do{turbulence_wrn (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_wrn   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
+void  turbulence_wrn   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...) TBC_PRINTF_FORMAT (4, 5);
 
 /** 
  * Drops to the console stdout a warning, placing the content prefixed
@@ -171,7 +189,7 @@ void  turbulence_wrn   (TurbulenceCtx * ctx, const char * file, int line, const 
  * @param m The warning message to output.
  */
 #define wrn_sl(m,...)   do{turbulence_wrn_sl (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
+void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...) TBC_PRINTF_FORMAT (4, 5);
 
 /** 
  * Reports an access message, a message that is sent to the access log
@@ -185,7 +203,7 @@ void  turbulence_wrn_sl   (TurbulenceCtx * ctx, const char * file, int line, con
  * @param m The console message to output.
  */
 #define tbc_access(m,...)   do{turbulence_access (ctx, __AXL_FILE__, __AXL_LINE__, m, ##__VA_ARGS__);}while(0)
-void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...);
+void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, const char * format, ...) TBC_PRINTF_FORMAT (4, 5);
 
 /** 
  * @internal The following definition allows to find printf like wrong

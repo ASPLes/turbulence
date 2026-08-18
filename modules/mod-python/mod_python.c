@@ -383,8 +383,11 @@ axl_bool mod_python_init_applications (TurbulenceCtx     * ctx,
 
 void mod_python_exception (const char * exception_msg)
 {
-	/* log into turbulence error found */
-	error (exception_msg);
+	/* log into turbulence error found. The message is passed as an
+	 * ARGUMENT and not as the format string: it is built from a python
+	 * exception, so a '%' in it would be read as a specifier with no
+	 * argument, printing garbage read off the stack or crashing. */
+	error ("%s", exception_msg);
 	
 	return;
 }

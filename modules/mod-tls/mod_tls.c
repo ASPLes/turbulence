@@ -269,8 +269,11 @@ char   * mod_tls_load_file_content (TurbulenceCtx * ctx, const char * file_path)
 	file = fopen (file_path, "r");
 	bytes_read = fread (buffer, 1, buf.st_size, file);
 	if (bytes_read != buf.st_size) {
-		error ("Expected to read %d bytes from %s but found %d",
-		       buf.st_size, file_path, bytes_read);
+		/* st_size is off_t (64 bits here), so it must not be printed
+		 * with %d: that reads half of it and reports a wrong size for
+		 * any file above 2GB. Both values are widened to long. */
+		error ("Expected to read %ld bytes from %s but found %ld",
+		       (long) buf.st_size, file_path, (long) bytes_read);
 		fclose (file);
 		axl_free (buffer);
 		return NULL;
