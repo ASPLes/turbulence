@@ -229,6 +229,41 @@ axl_bool turbulence_signal_unblock (TurbulenceCtx * ctx,
 }
 
 /** 
+ * @internal Terminates the process right now with the signal received.
+ *
+ * Needed because RETURNING from the handler of a fault signal does not
+ * "continue": SIGSEGV re-executes the faulting instruction, so the
+ * handler is entered again, and again, burning a core forever instead
+ * of dying. Any path that decides not to handle a fault signal must end
+ * up here rather than returning.
+ *
+ * The default disposition is restored and the signal re-raised so the
+ * process dies of the very signal it received: that is what makes the
+ * master's waitpid() report the real cause, and what lets the child be
+ * reaped and its slot released.
+ */
+void __turbulence_signal_die_now (int _signal)
+{
+	signal (_signal, SIG_DFL);
+	raise (_signal);
+
+	/* not reached unless the signal is blocked or ignored somewhere
+	 * else: leave anyway, never return to the faulting instruction */
+	_exit (-1);
+	return;
+}
+
+/** 
+ * @internal Reports whether the signal received is a fault signal,
+ * that is, one where returning from the handler resumes the very
+ * instruction that failed.
+ */
+axl_bool __turbulence_signal_is_fault (int _signal)
+{
+	return _signal == SIGSEGV || _signal == SIGABRT;
+}
+
+/** 
  * @internal Terminates the turbulence execution, returning the exit signal
  * provided as first parameter. This function is used to notify a
  * context that a signal was received.
@@ -251,6 +286,13 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 
 		/* other thread is already cleaning */
 		vortex_mutex_unlock (&ctx->exit_mutex);
+
+		/* ..but a fault signal cannot simply be left alone: returning
+		 * resumes the instruction that faulted and we would come back
+		 * here forever, spinning instead of finishing the exit the
+		 * other thread already started */
+		if (__turbulence_signal_is_fault (_signal))
+			__turbulence_signal_die_now (_signal);
 		return;
 	} /* end if */
 
@@ -291,6 +333,16 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 						  "Received termination signal but it was ignored.",
 						  NULL);
 
+			/* A fault signal cannot be ignored: returning from
+			 * the handler resumes the faulting instruction and
+			 * the process would spin here forever, holding its
+			 * child slot and never being reaped by the master.
+			 * Report it clearly and terminate instead: a process
+			 * that dies is recoverable, one that spins is not. */
+			error ("on-bad-signal action=ignore cannot be applied to %s: returning would re-execute the faulting instruction, terminating instead",
+			       _signal == SIGSEGV ? "SIGSEGV" : "SIGABRT");
+			__turbulence_signal_die_now (_signal);
+
 			/* ignore the signal emision */
 			return;
 		} else if (HAS_ATTR_VALUE (node, "action", "hold")) {
@@ -319,9 +371,17 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 			axl_free (backtrace_file);
 		}
 
-		/* signal vortex to not terminate threads (to avoid
-		 * deadlocks) */
-		exit (-1);
+		/* Signal vortex to not terminate threads (to avoid
+		 * deadlocks).
+		 *
+		 * _exit and not exit: this runs inside the handler of a
+		 * process whose state is already broken, and exit () would
+		 * run atexit handlers and flush stdio, taking locks that the
+		 * faulting thread may well be holding. Hanging here is worse
+		 * than an abrupt exit: the master would never receive
+		 * SIGCHLD, would never release the child slot, and would
+		 * stop accepting new connections for that profile path. */
+		_exit (-1);
 		break;
 	default:
 		msg ("terminating turbulence..");

@@ -55,6 +55,7 @@ int mkstemp(char *template);
 	if (write (temp_file, str, len) != len) {			\
 		error ("Unable to write expected string: %s", str);     \
 		close (temp_file);					\
+		unlink (temp_name);					\
 		axl_free (temp_name);					\
 		axl_free (str_pid);					\
 		return NULL;						\
@@ -95,6 +96,8 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	if (str_pid == NULL) {
 		error ("Bad signal found but unable to get str pid version, memory failure");
 		close (temp_file);
+		unlink (temp_name);
+		axl_free (temp_name);
 		return NULL;
 	}
 	
@@ -115,12 +118,12 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	
 	/* build the command to get gdb output */
 	while (1) {
-		backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.gdb", turbulence_runtime_datadir (ctx), time (NULL));
+		backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.%d.gdb", turbulence_runtime_datadir (ctx), pid, (int) time (NULL));
 		file_handle    = fopen (backtrace_file, "w");
 		if (file_handle == NULL) {
 			msg ("Changing path because path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
 			axl_free (backtrace_file);
-			backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.gdb", turbulence_runtime_tmpdir (ctx), time (NULL));
+			backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.%d.gdb", turbulence_runtime_tmpdir (ctx), pid, (int) time (NULL));
 		} else {
 			fclose (file_handle);
 			msg ("Checked that %s is writable/readable for the current uid=%d", backtrace_file, getuid ());
@@ -132,6 +135,8 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 		if (file_handle == NULL) {
 			error ("Failed to produce backtrace, alternative path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
 			axl_free (backtrace_file);
+			unlink (temp_name);
+			axl_free (temp_name);
 			return NULL;
 		}
 		fclose (file_handle);
@@ -140,6 +145,8 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 
 	if (backtrace_file == NULL) {
 		error ("Failed to produce backtrace, internal reference is NULL");
+		unlink (temp_name);
+		axl_free (temp_name);
 		return NULL;
 	}
 
@@ -167,7 +174,7 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	axl_free (command);
 	
 	/* get backtrace */
-	command  = axl_strdup_printf ("gdb -x %s >> %s", temp_name, backtrace_file);
+	command  = axl_strdup_printf ("gdb -batch -x %s >> %s 2>&1", temp_name, backtrace_file);
 	status   = system (command);
 	msg ("Running: %s, exit status: %d", command, status);
 
