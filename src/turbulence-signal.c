@@ -239,16 +239,32 @@ axl_bool turbulence_signal_unblock (TurbulenceCtx * ctx,
  *
  * The default disposition is restored and the signal re-raised so the
  * process dies of the very signal it received: that is what makes the
- * master's waitpid() report the real cause, and what lets the child be
- * reaped and its slot released.
+ * master's waitpid() report the real cause (WIFSIGNALED instead of a
+ * plain exit status), what allows a core dump for post-mortem, and what
+ * lets the child be reaped and its slot released.
+ *
+ * The signal MUST be unblocked before raising it. While a handler runs,
+ * the signal it is handling is blocked (POSIX adds it to the mask
+ * unless SA_NODEFER), so raise () would only mark it pending and
+ * execution would fall through to the _exit below, losing the signal
+ * exit status and the core dump. Verified: without the unblock the
+ * process leaves with the _exit code, with it the process is killed by
+ * the signal.
  */
-void __turbulence_signal_die_now (int _signal)
+static void __turbulence_signal_die_now (int _signal)
 {
+	sigset_t mask;
+
 	signal (_signal, SIG_DFL);
+
+	sigemptyset (&mask);
+	sigaddset (&mask, _signal);
+	sigprocmask (SIG_UNBLOCK, &mask, NULL);
+
 	raise (_signal);
 
-	/* not reached unless the signal is blocked or ignored somewhere
-	 * else: leave anyway, never return to the faulting instruction */
+	/* not reached unless the signal is ignored somewhere else: leave
+	 * anyway, never return to the faulting instruction */
 	_exit (-1);
 	return;
 }
@@ -258,7 +274,7 @@ void __turbulence_signal_die_now (int _signal)
  * that is, one where returning from the handler resumes the very
  * instruction that failed.
  */
-axl_bool __turbulence_signal_is_fault (int _signal)
+static axl_bool __turbulence_signal_is_fault (int _signal)
 {
 	return _signal == SIGSEGV || _signal == SIGABRT;
 }
