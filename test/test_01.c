@@ -44,6 +44,9 @@
 /* local include to check mod-sasl */
 #include <common-sasl.h>
 
+/* to count open descriptors at /proc/self/fd (test_10_e leak check) */
+#include <dirent.h>
+
 /* configuration layer of the mysql sasl backend and the DTD compiled into
  * it: exercised by test_12d/test_12e without needing a database */
 #include <mod_sasl_mysql_conf.h>
@@ -3108,14 +3111,47 @@ axl_bool test_10_d (void) {
 	return axl_true;
 }
 
+/* Counts the file descriptors this process has open. Used to detect
+ * descriptor leaks on paths that are executed many times over the life of
+ * a long running daemon. Returns -1 when /proc is not available. */
+int test_count_open_fds (void)
+{
+	DIR           * dir;
+	struct dirent * entry;
+	int             count = 0;
+
+	dir = opendir ("/proc/self/fd");
+	if (dir == NULL)
+		return -1;
+	while ((entry = readdir (dir)) != NULL) {
+		if (entry->d_name[0] == '.')
+			continue;
+		count++;
+	} /* end while */
+	closedir (dir);
+	/* discount the descriptor opendir itself is using */
+	return count - 1;
+}
+
+/* number of additional failed child creations used to detect the leak */
+#define TEST_10E_ROUNDS (5)
+
 axl_bool test_10_e (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
 	VortexChannel    * channel;
+	int                iterator;
+	int                fds_before = -1;
+	int                fds_after  = -1;
 	
 	/* FIRST PART: init vortex and turbulence */
-	if (! test_common_init (&vCtx, &tCtx, "test_10e.conf")) 
+	/* NOTE this test uses a config with log reporting ENABLED on purpose:
+	 * turbulence_process_create_child only opens the four log pipes when
+	 * logging is enabled, and that branch (where the descriptor leak
+	 * lived) is not covered by any other test config, all of which
+	 * declare log-reporting enabled="no". */
+	if (! test_common_init (&vCtx, &tCtx, "test_10e-log.conf")) 
 		return axl_false;
 
 	/* register here all profiles required by tests */
@@ -3125,25 +3161,66 @@ axl_bool test_10_e (void) {
 	if (! turbulence_run_config (tCtx)) 
 		return axl_false;
 
-	/* create connection to local server */
-	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
-					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "dk534jd.fail.aspl.es", VORTEX_OPTS_END),
-					   NULL, NULL);
-	if (! vortex_connection_is_ok (conn, axl_false)) {
-		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
-		return axl_false;
-	} /* end if */
+	/* Run the failing child creation several times and check the parent
+	 * does not leak descriptors doing so.
+	 *
+	 * turbulence_process_create_child opens four pipes to carry the child
+	 * logs BEFORE forking, and only __turbulence_process_prepare_logging
+	 * (reached on the success path) closes their write ends. Every error
+	 * path taken after the pipes are created used to return without
+	 * closing any of the eight descriptors, so a daemon whose children
+	 * fail to start burned 8 descriptors per attempt until it ran out and
+	 * stopped accepting connections. */
+	iterator = 0;
+	while (iterator < (TEST_10E_ROUNDS + 1)) {
 
-	/* check to create profile 2 channel */
-	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
-	if (channel != NULL) {
-		printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
-		return axl_false;
-	} /* end if */
+		/* create connection to local server */
+		conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010", 
+						   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "dk534jd.fail.aspl.es", VORTEX_OPTS_END),
+						   NULL, NULL);
+		if (! vortex_connection_is_ok (conn, axl_false)) {
+			printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+			return axl_false;
+		} /* end if */
 
-	/* close the connection and check child process */
+		/* check to create profile 2 channel */
+		channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1");
+		if (channel != NULL) {
+			printf ("ERROR (2): expected to find NULL channel reference (creation failure) but found proper result..\n");
+			return axl_false;
+		} /* end if */
+
+		vortex_connection_close (conn);
+
+		/* take the reference after the first round so one off
+		 * allocations done on the first child creation are not
+		 * counted as a leak */
+		if (iterator == 0) {
+			fds_before = test_count_open_fds ();
+			printf ("Test 10-e: descriptors open after first failed child creation: %d\n", fds_before);
+		} /* end if */
+
+		iterator++;
+	} /* end while */
+
+	fds_after = test_count_open_fds ();
+	printf ("Test 10-e: descriptors open after %d more failed creations: %d\n", TEST_10E_ROUNDS, fds_after);
+
+	if (fds_before > 0 && fds_after > 0) {
+		/* one leaked round is 8 descriptors (four pipes), so anything
+		 * at or above that after several rounds is the leak coming
+		 * back. A small margin is allowed for descriptors legitimately
+		 * opened by the runtime in between. */
+		if ((fds_after - fds_before) >= 8) {
+			printf ("ERROR (3): parent leaked descriptors on failed child creation: %d -> %d (+%d) after %d rounds\n",
+				fds_before, fds_after, fds_after - fds_before, TEST_10E_ROUNDS);
+			return axl_false;
+		} /* end if */
+		printf ("Test 10-e: no descriptor leak detected (%d -> %d)\n", fds_before, fds_after);
+	} else
+		printf ("Test 10-e: /proc not available, descriptor leak check skipped\n");
+
 	printf ("Test 10-e: closing connection and checking childs..\n");
-	vortex_connection_close (conn);
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);

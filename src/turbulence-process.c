@@ -220,7 +220,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	if (is_parent) {
 		while (tries > 0) {
 			if (connect (_socket, (struct sockaddr *)&socket_name, sizeof (socket_name))) {
-				if (errno == 107 || errno == 111 || errno == 2) {
+				if (errno == ENOTCONN || errno == ECONNREFUSED || errno == ENOENT) {
 					/* implement a wait operation */
 					turbulence_sleep (ctx, delay);
 				} else {
@@ -284,11 +284,17 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	 * after this is closed. */
 	unlink (path);
 
-	/* drop an ok log. NOTE it reports _aux_socket, the descriptor this
-	 * function returns: _socket is the listening socket, already closed
-	 * just above, so reporting it here described a closed descriptor as
-	 * "created OK" */
-	msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _aux_socket);	
+	/* Report the outcome. NOTE it reports _aux_socket, the descriptor
+	 * this function returns: _socket is the listening socket, already
+	 * closed just above, so reporting it here described a closed
+	 * descriptor as "created OK". And the success message is only
+	 * emitted on success: it used to be printed even when the accept
+	 * above had failed, so the logs claimed a socket was created while
+	 * the function was returning an error. */
+	if (_aux_socket < 0)
+		error ("%s: local socket (%s) NOT created, accept failed", is_parent ? "PARENT" : "CHILD", path);
+	else
+		msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _aux_socket);	
 	
 	return _aux_socket;
 }
@@ -491,11 +497,15 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if (cmsg == NULL) {
-		/* report errno just after calling CMSG_FIRSTHDR */
-		error ("%s: Received empty control message from parent (status: %d), unable to receive socket (code %d): %s",
-		       label, status, errno, vortex_errno_get_last_error () ? vortex_errno_get_last_error () : "no error reported");
-		/* keep error for later reporting */
+		/* Capture errno BEFORE reporting anything: error () writes to
+		 * stderr and to the log files and calls fflush, and any of
+		 * those may set errno, so reading it afterwards would not be
+		 * the value CMSG_FIRSTHDR left behind (which is what the
+		 * decision below depends on). */
 		error_reported = errno;
+
+		error ("%s: Received empty control message from parent (status: %d), unable to receive socket (code %d): %s",
+		       label, status, error_reported, vortex_errno_get_last_error () ? vortex_errno_get_last_error () : "no error reported");
 		
 		/* check first if we have support to create more sockets */
 		temp = socket (AF_INET, SOCK_STREAM, 0);
@@ -523,6 +533,15 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 		error ("%s: Unexpected control message of unknown type %d, failed to receive socket", 
 		       label, cmsg->cmsg_type);
 		(*_socket) = -1;
+		/* report the optional outputs too: the caller reads them on
+		 * failure (turbulence_process_parent_notify checks
+		 * ancillary_data) and the sibling error path above already
+		 * does this, so leaving them untouched here made the caller
+		 * see whatever the stack held */
+		if (ancillary_data)
+			(*ancillary_data) = NULL;
+		if (size)
+			(*size) = 0;
 		return axl_false;
 	}
 
@@ -531,6 +550,13 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 		(*size)   = status;
 	if (ancillary_data) {
 		(*ancillary_data) = axl_new (char, status + 1);
+		if ((*ancillary_data) == NULL) {
+			error ("%s: Unable to allocate %d bytes to hold the ancillary data received", label, status + 1);
+			(*_socket) = -1;
+			if (size)
+				(*size) = 0;
+			return axl_false;
+		} /* end if */
 		memcpy (*ancillary_data, iov.iov_base, status);
 	}
 
@@ -582,10 +608,17 @@ char * turbulence_process_connection_status_string (axl_bool          handle_sta
 				  fix_server_name,
 				  /* indication about the current
 				   * remote host and current remote
-				   * port to be restored on the parent. */
-				  remote_host, 
-				  remote_port,
-				  remote_host_ip,
+				   * port to be restored on the parent.
+				   * Guarded like the rest of the string
+				   * fields: these getters report NULL for a
+				   * connection without host/port set, and a
+				   * NULL reaching %s is undefined behaviour
+				   * (glibc prints "(null)", which would then
+				   * pass the child side emptiness check and
+				   * be installed as a real host name). */
+				  remote_host ? remote_host : "", 
+				  remote_port ? remote_port : "",
+				  remote_host_ip ? remote_host_ip : "",
 				  /* this must be the last always! */
 				  skip_conn_recover);
 }
@@ -1235,6 +1268,48 @@ int __turbulence_process_release_parent_connections (TurbulenceCtx    * ctx,
 	return 0;
 }
 
+/** 
+ * @internal Closes the log pipes created for a child that could not be
+ * started.
+ *
+ * turbulence_process_create_child opens these four pipes BEFORE forking,
+ * and only __turbulence_process_prepare_logging (reached on the success
+ * path) disposes of them. Every error path taken after they are created
+ * must call this, otherwise the parent burns eight descriptors per failed
+ * attempt: a long running daemon whose children fail to start ends up
+ * unable to accept connections.
+ *
+ * Safe to call with pipes that were never created (their descriptors are
+ * initialised to -1) and to call twice.
+ */
+void __turbulence_process_close_log_pipes (int * general_log, int * error_log, int * access_log, int * vortex_log)
+{
+	int    iterator;
+	int  * pipes[4];
+
+	pipes[0] = general_log;
+	pipes[1] = error_log;
+	pipes[2] = access_log;
+	pipes[3] = vortex_log;
+
+	iterator = 0;
+	while (iterator < 4) {
+		if (pipes[iterator]) {
+			if (pipes[iterator][0] >= 0) {
+				vortex_close_socket (pipes[iterator][0]);
+				pipes[iterator][0] = -1;
+			} /* end if */
+			if (pipes[iterator][1] >= 0) {
+				vortex_close_socket (pipes[iterator][1]);
+				pipes[iterator][1] = -1;
+			} /* end if */
+		} /* end if */
+		iterator++;
+	} /* end while */
+
+	return;
+}
+
 void __turbulence_process_prepare_logging (TurbulenceCtx * ctx, axl_bool is_parent, int * general_log, int * error_log, int * access_log, int * vortex_log)
 {
 	/* check if log is enabled or not */
@@ -1442,7 +1517,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 		if (written == length)
 			break;
 		tries++;
-		if (errno == 107) {
+		if (errno == ENOTCONN) {
 			wrn ("PARENT: child still not ready, waiting 10ms (socket: %d), reconnecting..", child->child_connection);
 			turbulence_sleep (ctx, 10000);
 			vortex_close_socket (child->child_connection);
@@ -1450,7 +1525,12 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 				error ("PARENT: error after reconnecting to child process, errno: %d:%s", errno, vortex_errno_get_last_error ());
 				break;
 			} /* end if */
-		}
+		} else {
+			/* wait before retrying: without this the loop spins
+			 * up to 100 times with no delay at all, burning cpu
+			 * on any write error other than ENOTCONN */
+			turbulence_sleep (ctx, 10000);
+		} /* end if */
 
 		/* if fails, check if the parent process is finishing to avoid waiting */
 		if (ctx->is_exiting) {
@@ -1612,6 +1692,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	/* create control socket path */
 	child        = turbulence_child_new (ctx, def);
 	if (child == NULL) {
+		/* release the log pipes opened above */
+		__turbulence_process_close_log_pipes (general_log, error_log, access_log, vortex_log);
+
 		/* unlock child process mutex */
 		TBC_PROCESS_UNLOCK_CHILD ();
 
@@ -1652,7 +1735,10 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		/* create child connection socket */
 		if (! __turbulence_process_create_child_connection (child)) {
 			error ("Unable to create child process connection to pass sockets for pid=%d", pid);
-		
+
+			/* release the log pipes opened above */
+			__turbulence_process_close_log_pipes (general_log, error_log, access_log, vortex_log);
+
 			TBC_PROCESS_UNLOCK_CHILD ();
 
 			vortex_connection_shutdown (conn);
@@ -1666,6 +1752,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 								   profile, profile_content, 
 								   encoding, serverName, frame,
 								   general_log, error_log, access_log, vortex_log)) {
+			/* release the log pipes opened above */
+			__turbulence_process_close_log_pipes (general_log, error_log, access_log, vortex_log);
+
 			TBC_PROCESS_UNLOCK_CHILD ();
 
 			vortex_connection_shutdown (conn);
@@ -1681,6 +1770,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 			    ctx, child, conn, client_socket,handle_start_reply, channel_num,
 			    profile, profile_content, encoding, serverName, frame)) {
 			error ("PARENT: Unable to send socket associated to the connection that originated the child process (proxied)");
+			/* release the log pipes opened above */
+			__turbulence_process_close_log_pipes (general_log, error_log, access_log, vortex_log);
+
 			TBC_PROCESS_UNLOCK_CHILD ();
 
 			vortex_connection_shutdown (conn);
@@ -1694,6 +1786,9 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		 */
 		if (! proxy_on_parent && ! turbulence_process_send_socket (client_socket, child, "s", 1)) {
 			error ("PARENT: Unable to send socket associated to the connection that originated the child process");
+			/* release the log pipes opened above */
+			__turbulence_process_close_log_pipes (general_log, error_log, access_log, vortex_log);
+
 			TBC_PROCESS_UNLOCK_CHILD ();
 
 			vortex_connection_shutdown (conn);

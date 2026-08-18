@@ -20,6 +20,7 @@ configuration_files = \
 	test_10c.conf \
 	test_10d.conf \
 	test_10e.conf \
+	test_10e-log.conf \
 	test_11.conf  \
 	test_12.conf  \
 	test_12a.conf \
@@ -41,6 +42,11 @@ configuration_files = \
 
 
 EXTRA_DIST = $(configuration_files) test_05_a_passwd test_12b.sql
+
+# log files produced by test_10e-log.conf: that test runs with log reporting
+# enabled on purpose (it is the only one that does) to exercise the log pipe
+# branch of turbulence_process_create_child
+CLEANFILES = test_10e-log-main.log test_10e-log-error.log test_10e-log-access.log test_10e-log-vortex.log
 
 # replace with bin_PROGRAMS to check performance
 noinst_PROGRAMS = test_01  test-websocket-client
