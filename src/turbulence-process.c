@@ -47,8 +47,8 @@
 
 
 /** 
- * @internal Path to the turbulence binary path that used to load current
- * instance.
+ * @internal Path to the turbulence binary that was used to load the
+ * current instance.
  */
 const char * turbulence_bin_path         = NULL;
 
@@ -70,8 +70,8 @@ extern axl_bool __turbulence_module_no_unmap;
 } while (0)
 
 /** 
- * @internal Macro used to block sigchild and lock the mutex
- * associated to child processes.
+ * @internal Macro used to unlock the mutex associated to child
+ * processes and unblock sigchild, undoing TBC_PROCESS_LOCK_CHILD.
  */
 #define TBC_PROCESS_UNLOCK_CHILD() do {                  \
 	vortex_mutex_unlock (&ctx->child_process_mutex); \
@@ -124,15 +124,17 @@ axlPointer __turbulence_process_finished (TurbulenceCtx * ctx)
 		} /* end if */
 		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 		
-		/* finish current thread if turbulence is existing */
+		/* finish current thread if turbulence is exiting */
 		if (ctx->is_exiting) {
 			msg ("CHILD: Found turbulence exiting, finishing child process termination thread signaled due to vortex reader stop");
 			return NULL;
 		}
 
 		if (tries < 10) {
-			/* reduce tries, wait */
-			msg ("CHILD: delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-existing=%d",
+			/* report the wait only when we are close to give up:
+			   the tries counter and the sleep happen below, out
+			   of this block, on every iteration */
+			msg ("CHILD: delay child process termination to ensure the parent has no pending connections, tries=%d, delay=%d, reader connections=%d, tbc conn mgr=%d, is-exiting=%d",
 			     tries, delay,
 			     vortex_reader_connections_watched (vortex_ctx), 
 			     axl_hash_items (ctx->conn_mgr_hash),
@@ -213,7 +215,8 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	        return -1;
 	}
 
-	/* if child, wait until it connects to the child */
+	/* parent side: connect to the socket the child has bound,
+	   retrying because the child may not have created it yet */
 	if (is_parent) {
 		while (tries > 0) {
 			if (connect (_socket, (struct sockaddr *)&socket_name, sizeof (socket_name))) {
@@ -234,7 +237,7 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 			tries--;
 			delay = delay * 2;
 
-		} /* end if */
+		} /* end while */
 
 		/* drop an ok log */
 		msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _socket);
@@ -281,8 +284,11 @@ int __turbulence_process_local_unix_fd (const char *path, axl_bool is_parent, Tu
 	 * after this is closed. */
 	unlink (path);
 
-	/* drop an ok log */
-	msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _socket);	
+	/* drop an ok log. NOTE it reports _aux_socket, the descriptor this
+	 * function returns: _socket is the listening socket, already closed
+	 * just above, so reporting it here described a closed descriptor as
+	 * "created OK" */
+	msg ("%s: local socket (%s) = %d created OK", is_parent ? "PARENT" : "CHILD", path, _aux_socket);	
 	
 	return _aux_socket;
 }
@@ -299,9 +305,9 @@ axl_bool __turbulence_process_create_child_connection (TurbulenceChild * child)
 	strcpy (socket_name.sun_path, child->socket_control_path);
 	socket_name.sun_family = AF_UNIX;
 
-	/* create the client connection making the child to do the
-	   bind (creating local file socket using child process
-	   permissions)  */
+	/* parent side: wait for the child to bind the local file socket
+	   (it is created with the child process permissions) and then
+	   connect to it */
 	turbulence_sleep (ctx, 1000);
 	while (iterator < 25) {
 		/* check if the file exists ... */
@@ -348,13 +354,16 @@ axl_bool __turbulence_process_create_parent_connection (TurbulenceChild * child)
  * @internal Function used to send the provided socket to the provided
  * child.
  *
- * @param socket The socket to be send.
+ * @param socket The socket to be sent.
  *
- * @param child The child child where to send the new socket.
+ * @param child The child where to send the new socket.
  *
  * @param ancillary_data Data to be sent along with the
  * socket. Standard data is "s" to close that socket in the child
  * process and "n" to notify a new connection.
+ *
+ * @param size Length of ancillary_data. Ignored when ancillary_data is
+ * NULL, in which case a single byte is sent.
  *
  * @return If the socket was sent.
  */
@@ -416,11 +425,22 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 
 /** 
  * @brief Allows to receive a socket from the parent on the child
- * provided. In the case the function works, the socket references is
+ * provided. In the case the function works, the socket reference is
  * updated with the socket descriptor.
  *
- * @param socket A reference where to set socket received. It cannot be NULL.
- * @param child Child receiving the socket. 
+ * @param _socket A reference where to set the socket received. It cannot be NULL.
+ *
+ * @param child Child receiving the socket. It cannot be NULL.
+ *
+ * @param ancillary_data Optional reference where the data sent along
+ * with the socket is reported, newly allocated and NUL terminated. The
+ * caller must release it.
+ *
+ * @param size Optional reference where the length of ancillary_data is
+ * reported.
+ *
+ * @param label Prefix used on the diagnostics produced ("PARENT" or
+ * "CHILD").
  *
  * @return The function returns axl_false in the case of failure,
  * otherwise axl_true is returned.
@@ -484,7 +504,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 			vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_SOFT_SOCK_LIMIT, &soft_limit);
 			vortex_conf_get (TBC_VORTEX_CTX(ctx), VORTEX_HARD_SOCK_LIMIT, &hard_limit);
 		
-			error ("%s: Unable to receive socket from parent, dropping socket connection, reached process limit: soft-limit=%d, hard-limit=%d\n",
+			error ("%s: Unable to receive socket from parent, dropping socket connection, reached process limit: soft-limit=%d, hard-limit=%d",
 			       label, soft_limit, hard_limit);
 		} else if (error_reported == 0) {
 			error ("%s: CMSG_FIRSTHDR(&msg) call failed (reported cmsg=NULL), we have not reached connection limits and no error reported.", label);
@@ -612,9 +632,8 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 	client_socket = vortex_connection_get_socket (conn);
 	vortex_connection_set_close_socket (conn, axl_false);
 
-	/* unwatch the connection from the parent to avoid receiving
-	   more content which now handled by the child and unregister
-	   from connection manager */
+	/* unwatch the connection from the parent to avoid receiving more
+	   content, which is now handled by the child */
 	vortex_reader_unwatch_connection (CONN_CTX (conn), conn);
 
 	/* send the socket descriptor to the child to avoid holding a
@@ -773,7 +792,7 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 		if (! vortex_channel_0_handle_start_msg_reply (TBC_VORTEX_CTX (ctx), conn, channel_num,
 							       profile, profile_content,
 							       encoding, serverName, frame)) {
-			error ("Channel start not (profile=%s) accepted on child=%d process, closing conn id=%d..sending error reply",
+			error ("Channel start (profile=%s) not accepted on child=%d process, closing conn id=%d..sending error reply",
 			       profile,
 			       vortex_getpid (), vortex_connection_get_id (conn));
 
@@ -797,7 +816,7 @@ axl_bool __turbulence_process_common_new_connection (TurbulenceCtx      * ctx,
 				result = axl_false; 
 			}
 		} else {
-			msg ("Channel start accepted on child profile=%s, serverName=%s accepted on child", profile, serverName ? serverName : "");
+			msg ("CHILD: Channel start accepted, profile=%s, serverName=%s", profile, serverName ? serverName : "");
 		}
 	} /* end if */
 
@@ -833,6 +852,15 @@ int __get_next_field (char * conn_status, int _iterator)
 /** 
  * @internal Function that recovers the data to reconstruct a
  * connection state from the provided string.
+ *
+ * IMPORTANT: conn_status must NOT include the leading command marker
+ * ('n') that travels with the ancillary data. Callers strip it (see the
+ * "ancillary_data + 1" at turbulence_process_parent_notify and test_15):
+ * the first field parsed here is handle_start_reply.
+ *
+ * NOTE the string is modified in place: this function writes NUL
+ * terminators over the field separators, and the pointers reported for
+ * the string fields point inside conn_status.
  */
 void     turbulence_process_connection_recover_status (char            * conn_status,
 						       axl_bool        * handle_start_reply,
@@ -933,7 +961,7 @@ void     turbulence_process_connection_recover_status (char            * conn_st
 	if (strlen (*remote_port) == 0)
 		*remote_port = 0;
 
-	/* get next position: remote_port */
+	/* get next position: remote_host_ip */
 	iterator           = next;
 	next               = __get_next_field (conn_status, iterator);
 	(*remote_host_ip)  = conn_status + iterator;
@@ -1122,7 +1150,7 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 		   descriptor used bucket. */
 		wrn ("%s: closing socket=%d because it is already owned by the child process (due to fork call)", label, _socket);
 	} else if (ancillary_data[0] == 'n') {
-		/* received notification if a new, unknown connection,
+		/* received notification of a new, unknown connection,
 		   register it */
 		msg ("%s: Received socket %d, and ancillary_data[0]='%c' (processing)", 
 		     label, _socket, ancillary_data[0]);
@@ -1178,13 +1206,12 @@ void __turbulence_process_release_parent_connections_foreach  (VortexConnection 
  * associated running at the parent, are available and the child so it
  * is required to release all this stuff.
  *
- * The function has two steps: first check all connections in the
- * connection manager hash closing all of them but skipping the
- * connection that must handle the child (that is, the connection that
- * triggered the fork) and the second step to initialize the
- * connection manager hash. Later the connection that must handle the
- * child is added to the newly initialized connection manager hash by
- * issuing a turbulence_conn_mgr_register.
+ * The function walks every connection known to the reader and sets the
+ * close on exec flag on its socket, skipping the connection the child
+ * must handle (the one that triggered the fork). The same is done with
+ * the temporal master<->child link. That way the descriptors are
+ * released automatically when the child execs, without closing them in
+ * the parent, which still needs them.
  */
 int __turbulence_process_release_parent_connections (TurbulenceCtx    * ctx, 
 						     VortexConnection * child_conn, 
@@ -1198,8 +1225,8 @@ int __turbulence_process_release_parent_connections (TurbulenceCtx    * ctx,
 	vortex_reader_foreach_offline (ctx->vortex_ctx, __turbulence_process_release_parent_connections_foreach, 
 				       ctx, child_conn, NULL);
 
-	/* release temporal listener created by the parent for
-	 * master<->child link  */
+	/* same treatment for the temporal listener created by the parent
+	 * for the master<->child link  */
 	conn          = child->conn_mgr;
 	client_socket = vortex_connection_get_socket (conn);
 	msg ("CHILD: Setting close on exec on socket: %d (conn id: %d, role: %d)", client_socket, 
@@ -1249,7 +1276,7 @@ void __turbulence_process_prepare_logging (TurbulenceCtx * ctx, axl_bool is_pare
  *
  * @param def The profile path def selected for this connection.
  *
- * @return axl_true in the case the limit was reched and the
+ * @return axl_true in the case the limit was reached and the
  * connection was closed, otherwise axl_false is returned.
  */
 axl_bool turbulence_process_check_child_limit (TurbulenceCtx      * ctx,
@@ -1359,7 +1386,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 		error ("PARENT: failed to create child, unable to allocate conn status string");
 		return axl_false;
 	}
-	msg ("PARENT: conn_status value: %s (profile path id: %d, 4th position from the end)", conn_status, turbulence_ppath_get_id (def));
+	msg ("PARENT: conn_status value: %s (profile path id: %d, 7th field of 16)", conn_status, turbulence_ppath_get_id (def));
 
 	/* prepare child init string: 
 	 *
@@ -1593,7 +1620,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		return;
 	} /* end if */
 
-	/* unregister from connection manager */
+	/* report the temporal listener prepared for the child link */
 	msg ("PARENT: created temporal listener to prepare child management connection id=%d (socket: %d): %p (refs: %d)", 
 	     vortex_connection_get_id (child->conn_mgr), vortex_connection_get_socket (child->conn_mgr),
 	     child->conn_mgr, vortex_connection_ref_count (child->conn_mgr));
@@ -1839,7 +1866,7 @@ axl_bool __terminate_child (axlPointer key, axlPointer data, axlPointer user_dat
 
 /** 
  * @internal Function that allows to check and kill childs started by
- * turbulence acording to user configuration.
+ * turbulence according to user configuration.
  *
  * @param ctx The context where the child stop operation will take
  * place.
@@ -1938,7 +1965,7 @@ axl_bool turbulence_process_child_list_build (axlPointer _pid, axlPointer _child
 
 /** 
  * @brief Allows to get the list of childs created at the time the
- * call happend.
+ * call happened.
  *
  * @param ctx The context where the childs were created. The context
  * must represents a master process (turbulence_ctx_is_child (ctx) ==
