@@ -4,8 +4,16 @@
 #ifndef __MYSQL_SASL_DTD_H__
 #define __MYSQL_SASL_DTD_H__
 #define MYSQL_SASL_DTD "\n\
-<!-- <sasl-auth-db> -->                                                                                                                                                       \
+<!-- <sasl-auth-db>                                                                                                                                                           \
+                                                                                                                                                                              \
+     set-auth-id : 'yes' (default) or 'no'. Controls whether an identity                                                                                                      \
+     produced by <auth-resolve> is published as the SASL auth id of the                                                                                                       \
+     connection, which is what makes the mapping transparent to the rest                                                                                                      \
+     of the stack. 'no' keeps the resolution available for %e, post-auth                                                                                                      \
+     filters and notifications only. -->                                                                                                                                      \
 <!ELEMENT sasl-auth-db (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?, auth-filter*, auth-resolve*, auth-notify*)>   \
+<!ATTLIST sasl-auth-db                                                                                                                                                        \
+   set-auth-id     CDATA   #IMPLIED>                                                                                                                                          \
                                                                                                                                                                               \
 <!-- <connection-settings> -->                                                                                                                                                \
 <!ELEMENT connection-settings EMPTY>                                                                                                                                          \

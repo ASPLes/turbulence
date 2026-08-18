@@ -8,6 +8,10 @@
 #define MOD_SASL_DEFAULT_MATCH  "expression"
 #define MOD_SASL_DEFAULT_ON     "any"
 
+/* a resolved identity is published as the SASL auth id unless the
+ * document explicitly opts out */
+#define MOD_SASL_DEFAULT_SET_AUTH_ID axl_true
+
 /**
  * @brief Returns the SQL template declared at the provided node, with
  * XML entity references translated.
@@ -170,4 +174,43 @@ axl_bool mod_sasl_mysql_notify_applies (axlNode * node, const char * status)
 		return axl_true;
 
 	return axl_cmp (on, status ? status : "");
+}
+
+
+/**
+ * @brief Reports whether an identity produced by <auth-resolve> must be
+ * published as the SASL auth id of the connection.
+ *
+ * Declared at the root element, and defaulting to yes:
+ *
+ *   <sasl-auth-db set-auth-id="no"> ... </sasl-auth-db>
+ *
+ * Publishing is what makes a mapping transparent: everything above
+ * mod-sasl (turbulence modules and the language bindings) asks the
+ * connection for its auth id and gets the identity the session must run
+ * as, without having to know that a mapping took place. That is the
+ * behaviour an api-token style deployment wants, so it is the default.
+ *
+ * Setting it to "no" keeps the resolution available for %e, post-auth
+ * filters and notifications while leaving the credential presented as
+ * the auth id. That suits a deployment that resolves only to audit or
+ * to drive additional checks, and does not want the session identity to
+ * change underneath the rest of the stack.
+ *
+ * Only the exact value "no" disables it: an unrecognised value keeps
+ * the default rather than silently changing which identity a session
+ * runs as.
+ */
+axl_bool mod_sasl_mysql_resolve_sets_auth_id (axlDoc * doc)
+{
+	axlNode * root;
+
+	if (doc == NULL)
+		return MOD_SASL_DEFAULT_SET_AUTH_ID;
+
+	root = axl_doc_get_root (doc);
+	if (root == NULL || ! HAS_ATTR (root, "set-auth-id"))
+		return MOD_SASL_DEFAULT_SET_AUTH_ID;
+
+	return ! axl_cmp (ATTR_VALUE (root, "set-auth-id"), "no");
 }

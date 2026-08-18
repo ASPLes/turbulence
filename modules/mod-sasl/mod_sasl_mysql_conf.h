@@ -71,4 +71,6 @@ axl_bool mod_sasl_mysql_notify_applies   (axlNode * node, const char * status);
 
 axl_bool mod_sasl_mysql_match_is_known   (const char * match);
 
+axl_bool mod_sasl_mysql_resolve_sets_auth_id (axlDoc * doc);
+
 #endif /* __MOD_SASL_MYSQL_CONF_H__ */

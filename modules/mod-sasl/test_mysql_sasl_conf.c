@@ -328,6 +328,41 @@ void check_dtd (axlDtd * dtd, const char * body, axl_bool should_validate, const
 	return;
 }
 
+void check_dtd_root (axlDtd * dtd, const char * root_attrs, axl_bool should_validate, const char * description)
+{
+	axlDoc   * doc;
+	axlError * err = NULL;
+	char     * content;
+	axl_bool   valid;
+
+	content = axl_strdup_printf (
+		"<sasl-auth-db %s>"
+		"<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+		"<get-password query=\"SELECT password FROM user WHERE name like binary '%%u'\" />"
+		"</sasl-auth-db>", root_attrs);
+	doc     = axl_doc_parse (content, -1, &err);
+	axl_free (content);
+
+	if (doc == NULL) {
+		printf ("  FAIL: %s (document did not even parse: %s)\n", description,
+			err ? axl_error_get (err) : "<no error>");
+		if (err)
+			axl_error_free (err);
+		test_failed++;
+		return;
+	}
+
+	valid = axl_dtd_validate (doc, dtd, &err);
+	if (err) {
+		axl_error_free (err);
+		err = NULL;
+	}
+	axl_doc_free (doc);
+
+	check (valid == should_validate, description);
+	return;
+}
+
 void test_dtd (void)
 {
 	axlDtd   * dtd;
@@ -376,6 +411,255 @@ void test_dtd (void)
 	check_dtd (dtd, "<auth-notify name='x' />", axl_false, "auth-notify without query is refused");
 	check_dtd (dtd, "<not-a-known-node query='q' />", axl_false, "unknown declaration is refused");
 
+	/* the root attribute controlling identity publication */
+	check_dtd_root (dtd, "set-auth-id='no'",  axl_true,  "root set-auth-id=no validates");
+	check_dtd_root (dtd, "set-auth-id='yes'", axl_true,  "root set-auth-id=yes validates");
+	check_dtd_root (dtd, "",                  axl_true,  "root without set-auth-id validates");
+	check_dtd_root (dtd, "not-a-known-attr='x'", axl_false, "unknown root attribute is refused");
+
+	axl_dtd_free (dtd);
+	return;
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. set-auth-id: whether a resolved identity is published            */
+/* ------------------------------------------------------------------ */
+
+/* Builds a minimum document whose root carries the provided attribute
+ * declaration (empty string for none). Returns NULL when it does not
+ * parse, which the caller reports as a failure. */
+axlDoc * parse_root (const char * root_attrs)
+{
+	axlDoc   * doc;
+	axlError * err = NULL;
+	char     * content;
+
+	content = axl_strdup_printf (
+		"<sasl-auth-db %s>"
+		"<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+		"<get-password query=\"SELECT password FROM user WHERE name like binary '%%u'\" />"
+		"</sasl-auth-db>", root_attrs);
+	doc     = axl_doc_parse (content, -1, &err);
+	axl_free (content);
+	if (err)
+		axl_error_free (err);
+	return doc;
+}
+
+void check_set_auth_id (const char * root_attrs, axl_bool expected, const char * description)
+{
+	axlDoc * doc;
+
+	doc = parse_root (root_attrs);
+	if (doc == NULL) {
+		printf ("  FAIL: %s (document did not parse)\n", description);
+		test_failed++;
+		return;
+	}
+
+	check (mod_sasl_mysql_resolve_sets_auth_id (doc) == expected, description);
+	axl_doc_free (doc);
+	return;
+}
+
+void test_set_auth_id (void)
+{
+	printf ("Test 05: publishing a resolved identity as the SASL auth id\n");
+
+	/* The default decides whether an <auth-resolve> mapping is visible
+	 * to everything above mod-sasl. It must be "publish": that is what
+	 * an api-token deployment needs, and a silent "no" would leave the
+	 * session running under the credential instead of the identity. */
+	check_set_auth_id ("", axl_true, "not declared defaults to publishing");
+	check_set_auth_id ("set-auth-id='yes'", axl_true, "set-auth-id=yes publishes");
+	check_set_auth_id ("set-auth-id='no'", axl_false, "set-auth-id=no does not publish");
+
+	/* Only the exact value disables it. Anything else keeps the
+	 * default rather than silently changing which identity a session
+	 * runs as because of a typo. */
+	check_set_auth_id ("set-auth-id='NO'", axl_true, "set-auth-id=NO is not the opt out (exact match only)");
+	check_set_auth_id ("set-auth-id='false'", axl_true, "set-auth-id=false keeps the default");
+	check_set_auth_id ("set-auth-id='0'", axl_true, "set-auth-id=0 keeps the default");
+	check_set_auth_id ("set-auth-id=''", axl_true, "empty set-auth-id keeps the default");
+
+	check (mod_sasl_mysql_resolve_sets_auth_id (NULL) == axl_true, "NULL document defaults to publishing");
+
+	return;
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. BACKWARD COMPATIBILITY: files already deployed must keep loading  */
+/* ------------------------------------------------------------------ */
+
+/* Updating turbulence on a core-admin server replaces the DTD compiled
+ * into the module, and mod-sasl refuses to load an auth-db.mysql.xml
+ * that does not validate. A DTD that stopped accepting a shape already
+ * deployed would therefore lock every user out of that panel the moment
+ * the package lands -- the same failure mode as 2026-08-17, reached
+ * from the other side.
+ *
+ * On paper this cannot happen: every content model this DTD ever had is
+ * a prefix of the current one,
+ *
+ *   (connection-settings, get-password)
+ *   (connection-settings, get-password, auth-log?, ip-filter?)
+ *   (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?)
+ *   (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?, auth-filter*, auth-resolve*, auth-notify*)
+ *
+ * so the accepted language only ever grew, and a file loading today
+ * validates against its own older DTD by definition. These cases pin
+ * that reasoning against the real shapes instead of trusting it. */
+
+void check_dtd_document (axlDtd * dtd, const char * content, axl_bool should_validate, const char * description)
+{
+	axlDoc   * doc;
+	axlError * err = NULL;
+	axl_bool   valid;
+
+	doc = axl_doc_parse (content, -1, &err);
+	if (doc == NULL) {
+		printf ("  FAIL: %s (document did not even parse: %s)\n", description,
+			err ? axl_error_get (err) : "<no error>");
+		if (err)
+			axl_error_free (err);
+		test_failed++;
+		return;
+	}
+
+	valid = axl_dtd_validate (doc, dtd, &err);
+	if (err) {
+		axl_error_free (err);
+		err = NULL;
+	}
+	axl_doc_free (doc);
+
+	check (valid == should_validate, description);
+	return;
+}
+
+/* The file as it lives on a production core-admin server: comments
+ * between declarations, the two -alt nodes added by core-admin's
+ * micro-update 001 carrying &apos; escaped apostrophes, and <auth-log>
+ * written with a double quoted attribute. Taken from node01-foxnice
+ * (password replaced). */
+#define DEPLOYED_FILE \
+	"<?xml version='1.0' ?>\n" \
+	"<sasl-auth-db>\n" \
+	"        <!--  connection settings  -->\n" \
+	"        <connection-settings port='' host='localhost' database='core_admin' password='xxxx' user='core_admin' />\n" \
+	"        <!--  the query used to get the password\n" \
+	"             - %u : the auth_id requested.\n" \
+	"        -->\n" \
+	"        <get-password query=\"SELECT password FROM user WHERE name like binary '%u' AND is_active = 1\" />\n" \
+	"        <get-password-alt query='SELECT proxy_token FROM proxy_user WHERE name = &apos;%u&apos; AND source_ip = &apos;%p&apos;' />\n" \
+	"        <get-password-alt-cleanup query='DELETE FROM proxy_user WHERE name = &apos;%u&apos; AND source_ip = &apos;%p&apos;' />\n" \
+	"        <!-- auth log -->\n" \
+	"        <auth-log query=\"INSERT INTO auth_log (user, status, ip, serverName) VALUES ('%u', '%t', '%p', '%n')\" />\n" \
+	"        <!-- ip filter -->\n" \
+	"        <ip-filter query=\"SELECT ip_filter FROM user WHERE name like binary '%u'\" />\n" \
+	"</sasl-auth-db>\n"
+
+void test_backward_compatibility (void)
+{
+	axlDtd   * dtd;
+	axlError * err = NULL;
+
+	printf ("Test 06: backward compatibility with deployed auth-db.mysql.xml\n");
+
+	dtd = axl_dtd_parse (MYSQL_SASL_DTD, -1, &err);
+	check (dtd != NULL, "the compiled DTD parses");
+	if (dtd == NULL) {
+		if (err)
+			axl_error_free (err);
+		return;
+	}
+
+	/* the real production file, comments and entities included */
+	check_dtd_document (dtd, DEPLOYED_FILE, axl_true,
+			    "the file deployed on a production server still validates");
+
+	/* the shape of the oldest installations: nothing but the two
+	 * elements the first version of this DTD required */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query=\"SELECT password FROM user WHERE name = '%u'\" />"
+			    "</sasl-auth-db>",
+			    axl_true, "oldest shape (connection-settings + get-password) validates");
+
+	/* the shape after <auth-log>/<ip-filter> were introduced, before
+	 * the -alt nodes existed: a server that never ran micro-update 001 */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query=\"SELECT password FROM user WHERE name = '%u'\" />"
+			    "<auth-log query=\"INSERT INTO auth_log (user) VALUES ('%u')\" />"
+			    "<ip-filter query=\"SELECT ip_filter FROM user WHERE name = '%u'\" />"
+			    "</sasl-auth-db>",
+			    axl_true, "shape without the -alt nodes validates");
+
+	/* only <auth-log>, no <ip-filter> */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query='q' />"
+			    "<auth-log query='q' />"
+			    "</sasl-auth-db>",
+			    axl_true, "auth-log without ip-filter validates");
+
+	/* only <ip-filter>, no <auth-log> */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query='q' />"
+			    "<ip-filter query='q' />"
+			    "</sasl-auth-db>",
+			    axl_true, "ip-filter without auth-log validates");
+
+	/* a server left in the state micro-update 036 produced, with XML
+	 * entities inside the queries: it must still LOAD. The statements
+	 * are wrong, but refusing the document would take the panel down
+	 * at package install time instead of letting the recovery run. */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query='SELECT password FROM user WHERE name like binary &apos;%u&apos;' />"
+			    "<ip-filter query='SELECT ip_filter FROM user WHERE name like binary &apos;%u&apos;' />"
+			    "</sasl-auth-db>",
+			    axl_true, "a file carrying XML entities still validates (recovery must be possible)");
+
+	/* the root attribute is optional: no deployed file declares it */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query='q' />"
+			    "</sasl-auth-db>",
+			    axl_true, "a file without set-auth-id validates");
+
+	/* NOT vacuous: the model is an ordered sequence and stays that way,
+	 * which is what has always been enforced. No writer of this file
+	 * (core-admin installer, micro-updates 001/036/037) produces these,
+	 * they are here so a future reordering of the model is noticed. */
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<get-password query='q' />"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "</sasl-auth-db>",
+			    axl_false, "get-password before connection-settings is refused");
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "<get-password query='q' />"
+			    "<ip-filter query='q' />"
+			    "<auth-log query='q' />"
+			    "</sasl-auth-db>",
+			    axl_false, "ip-filter before auth-log is refused");
+	check_dtd_document (dtd,
+			    "<sasl-auth-db>"
+			    "<connection-settings port='' host='localhost' database='d' password='p' user='u' />"
+			    "</sasl-auth-db>",
+			    axl_false, "a file without get-password is refused");
+
 	axl_dtd_free (dtd);
 	return;
 }
@@ -388,6 +672,8 @@ int main (int argc, char ** argv)
 	test_build_query ();
 	test_predicates ();
 	test_dtd ();
+	test_set_auth_id ();
+	test_backward_compatibility ();
 
 	printf ("\n%d checks passed, %d failed\n", test_passed, test_failed);
 
