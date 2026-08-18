@@ -5,7 +5,15 @@
      connection, which is what makes the mapping transparent to the rest
      of the stack. "no" keeps the resolution available for %e, post-auth
      filters and notifications only. -->
-<!ELEMENT sasl-auth-db (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?, auth-filter*, auth-resolve*, auth-notify*)>
+<!-- NOTE the three extension declarations are a single repeatable choice,
+     not three ordered groups. The backend reaches each family by name
+     (axl_doc_get + axl_node_get_next_called), so document order BETWEEN
+     different families is irrelevant to it, and forcing every auth-filter
+     ahead of every auth-resolve only prevented writing the file in the
+     order it is evaluated: a post-auth filter naturally reads after the
+     resolve whose identity it checks. Order WITHIN a family is still
+     meaningful and still preserved. -->
+<!ELEMENT sasl-auth-db (connection-settings, get-password, get-password-alt?, get-password-alt-cleanup?, auth-log?, ip-filter?, (auth-filter | auth-resolve | auth-notify)*)>
 <!ATTLIST sasl-auth-db
 	  set-auth-id     CDATA   #IMPLIED>
 

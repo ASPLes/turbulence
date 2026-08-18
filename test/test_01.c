@@ -4235,6 +4235,22 @@ axl_bool test_12e (void) {
 				   "<auth-notify query='q' />",
 				   axl_true, "built-in and extension declarations combine");
 
+	/* The three extension families may be INTERLEAVED. The backend reaches
+	 * each one by name, so document order between families means nothing to
+	 * it, and requiring every auth-filter ahead of every auth-resolve
+	 * prevented writing the file in the order it is evaluated: a post-auth
+	 * filter naturally reads after the resolve whose identity it checks.
+	 * This is the shape core-admin needs for api_token support. */
+	mysql_conf_check_dtd_body (dtd,
+				   "<auth-filter name='token-ips' query='q' />"
+				   "<auth-resolve name='token-user' query='q' />"
+				   "<auth-filter name='resolved-user-ips' stage='post-auth' query='q' />"
+				   "<auth-notify name='token-usage' on='ok' query='q' />",
+				   axl_true, "extension declarations may be interleaved (post-auth filter after auth-resolve)");
+	mysql_conf_check_dtd_body (dtd,
+				   "<auth-notify query='q' /><auth-resolve query='q' /><auth-filter query='q' />",
+				   axl_true, "extension declarations validate in any order");
+
 	mysql_conf_check_dtd_body (dtd, "<auth-filter name='x' />", axl_false, "auth-filter without query is refused");
 	mysql_conf_check_dtd_body (dtd, "<auth-resolve name='x' />", axl_false, "auth-resolve without query is refused");
 	mysql_conf_check_dtd_body (dtd, "<auth-notify name='x' />", axl_false, "auth-notify without query is refused");
