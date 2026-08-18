@@ -7,6 +7,10 @@
 /* include support for common-sasl */
 #include <common-sasl.h>
 
+/* SASL properties: used to publish the resolved identity so the whole
+ * stack (including language bindings) sees the session running as it */
+#include <vortex_sasl.h>
+
 /* include dtd definition */
 #include <mysql.sasl.dtd.h>
 
@@ -805,16 +809,32 @@ axl_bool mod_sasl_mysql_do_auth (TurbulenceCtx    * ctx,
 			 * identity we could not confirm */
 			_result = axl_false;
 		} else if (effective_id) {
-			/* publish it on the connection so the application
-			 * layer can operate as the resolved identity while
-			 * keeping the credential actually presented for
-			 * auditing */
-			vortex_connection_set_data_full (conn, axl_strdup (MOD_SASL_EFFECTIVE_ID_KEY), axl_strdup (effective_id),
-							 axl_free, axl_free);
+			/* keep the credential actually presented available
+			 * for auditing: <auth-log> already recorded it, but
+			 * other modules may want it after the fact */
 			vortex_connection_set_data_full (conn, axl_strdup (MOD_SASL_ORIGINAL_ID_KEY), axl_strdup (auth_id),
 							 axl_free, axl_free);
-			msg ("auth id [%s] resolved onto identity [%s] for conn-id=%d",
-			     auth_id, effective_id, vortex_connection_get_id (conn));
+
+			/* publish the resolved identity as the SASL auth id
+			 * of the connection.
+			 *
+			 * This is what makes the resolution transparent: the
+			 * whole stack above (turbulence modules, and the
+			 * language bindings through vortex_sasl_get_propertie)
+			 * asks for the auth id of the connection and gets the
+			 * identity the session must run as, without having to
+			 * know that a mapping took place. Publishing it as
+			 * connection data instead would not work across the
+			 * bindings, which store their own object types under
+			 * that same store. */
+			if (mod_sasl_mysql_resolve_sets_auth_id (doc)) {
+				vortex_sasl_set_propertie (conn, VORTEX_SASL_AUTH_ID, axl_strdup (effective_id), axl_free);
+				msg ("auth id [%s] resolved onto identity [%s] for conn-id=%d (published as SASL auth id)",
+				     auth_id, effective_id, vortex_connection_get_id (conn));
+			} else {
+				msg ("auth id [%s] resolved onto identity [%s] for conn-id=%d (not published, set-auth-id=no)",
+				     auth_id, effective_id, vortex_connection_get_id (conn));
+			} /* end if */
 		} /* end if */
 	} /* end if */
 
