@@ -7,7 +7,6 @@ sasl_radmin_files = service_dispatch.h service_dispatch.c \
 	sasl_radmin_types.h
 
 EXTRA_DIST = mod-sasl.xml common.sasl.dtd common.sasl.dtd.h mysql.sasl.dtd mysql.sasl.dtd.h \
-             test_mysql_sasl_conf.c \
              mod-sasl.win32.xml $(sasl_radmin_files) sasl.example.conf \
 	     auth-db.example.xml remote-admins.example.xml gen-mod-sasl-pass.py create-mysql-sasl-database.sql \
 	     extension.example.modules auth-db.mysql.example.xml sasl-radmin.idl
@@ -37,16 +36,10 @@ endif
 # MySQL, vortex and turbulence), so they can run on any build host. That
 # is the point: every defect this backend had used to be reachable only
 # through a live authentication against a real database.
-if ENABLE_MYSQL_SUPPORT
-noinst_PROGRAMS = test-mysql-sasl-conf
-
-test_mysql_sasl_conf_SOURCES  = test_mysql_sasl_conf.c mod_sasl_mysql_conf.c mod_sasl_mysql_conf.h mysql.sasl.dtd.h
-test_mysql_sasl_conf_CPPFLAGS = -I. -I ../../src $(AXL_CFLAGS)
-test_mysql_sasl_conf_LDFLAGS  = $(AXL_LIBS)
-
-check-local: test-mysql-sasl-conf
-	./test-mysql-sasl-conf
-endif
+# NOTE: the regression tests for this backend's configuration layer and its
+# DTD live in test/test_01.c (test_12d and test_12e), together with the rest
+# of the turbulence suite, so there is a single regression binary to run.
+# mod_sasl_mysql_conf.o is linked into it from here.
 
 # reconfigure module installation directory
 oldlibdir = $(libdir)
