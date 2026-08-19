@@ -1118,6 +1118,8 @@ axl_bool  test_03 (void)
 	VortexMutex       mutex;
 	char            * serverName   = NULL;
 	char            * acceptedUser = "aspl";
+	/* account flagged disabled="yes" on the same db as acceptedUser */
+	char            * disabledUser = "aspl-disabled";
 
 	/* init the mutex */
 	vortex_mutex_create (&mutex);
@@ -1162,6 +1164,28 @@ axl_bool  test_03 (void)
 		printf ("Expected to a failure while validating aspl2 user\n");
 		return axl_false;
 	}
+
+	/* DISABLED ACCOUNT: an account flagged with disabled="yes" must be
+	 * refused even when the password provided is the right one.
+	 *
+	 * The two checks together are what makes this meaningful: the user
+	 * must EXIST (otherwise the rejection would only prove that an
+	 * unknown user cannot log in, which the aspl2 case above already
+	 * covers) and authentication with its correct password must FAIL.
+	 *
+	 * No test config declared disabled="yes" until now, so this control
+	 * shipped without ever being exercised. */
+	if (! common_sasl_user_exists (sasl_backend, disabledUser, serverName, &err, &mutex)) {
+		printf ("Expected to find the user %s at the auth db (needed to tell 'disabled' from 'missing')\n", disabledUser);
+		axl_error_free (err);
+		return axl_false;
+	}
+
+	if (common_sasl_auth_user (sasl_backend, NULL, disabledUser, NULL, "test", serverName, &mutex)) {
+		printf ("ERROR: the DISABLED account %s authenticated with its correct password!\n", disabledUser);
+		return axl_false;
+	}
+	printf ("Test 03: disabled account (%s) refused even with the right password\n", disabledUser);
 
 	/* CHECK TRIMMING OF CREDENTIALS: leading/trailing non-visible
 	 * characters (" ", "\t", "\r", "\n") must be removed from both
@@ -1420,6 +1444,7 @@ axl_bool  test_03 (void)
 		printf ("Test 03: checking serverName associated database support..\n");
 		serverName = "www.turbulence.ws";
 		acceptedUser = "aspl3";		
+		disabledUser = "aspl3-disabled";
 		goto test_03_init;
 	}
 
@@ -2338,6 +2363,7 @@ axl_bool test_09 (void) {
 
 TurbulenceCtx    * tCtxTest10 = NULL;
 TurbulenceCtx    * tCtxTest10a = NULL;
+TurbulenceCtx    * tCtxTest10f = NULL;
 
 void test_10_signal_handler (int _signal)
 {
@@ -2349,6 +2375,12 @@ void test_10_a_signal_handler (int _signal)
 {
 	/* marshal signal */
 	turbulence_signal_received (tCtxTest10a, _signal);
+}
+
+void test_10_f_signal_handler (int _signal)
+{
+	/* marshal signal */
+	turbulence_signal_received (tCtxTest10f, _signal);
 }
 
 axl_bool test_10 (void) {
@@ -3224,6 +3256,114 @@ axl_bool test_10_e (void) {
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+/**
+ * @brief Test 10-f: a child that faults under on-bad-signal
+ * action="ignore" must still die and be reaped.
+ *
+ * WHY THIS EXISTS: no test config declared on-bad-signal
+ * action="ignore" (they all use "hold", which blocks on purpose, or
+ * "backtrace"), so that branch of the fault handler shipped without ever
+ * being executed.
+ *
+ * WHAT IT PROVES: that configuring "ignore" does not leave a child
+ * running. The child must die and the parent must both reap it and keep
+ * accepting connections.
+ *
+ * WHAT IT DOES NOT PROVE, measured and stated on purpose: it does not
+ * distinguish the current handler from the one before it. "ignore"
+ * cannot be honoured for a fault signal, because returning from the
+ * handler re-executes the faulting instruction; the handler now says so
+ * and terminates explicitly. But WITHOUT that change the child dies too:
+ * the kernel refuses to deliver the second, recursive fault and kills
+ * the process (verified: the handler is entered exactly once and the
+ * child is reaped with status 11, SIGSEGV, either way). So the explicit
+ * termination is hardening and diagnostics, not the repair of a live
+ * hang, and this test must not be read as guarding against one.
+ */
+axl_bool test_10_f (void) {
+
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	int                iterator;
+
+	/* FIRST PART: init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtxTest10f, "test_10f.conf"))
+		return axl_false;
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtxTest10f))
+		return axl_false;
+
+	/* install signal handling */
+	turbulence_signal_install (tCtxTest10f, axl_false, axl_false, test_10_f_signal_handler);
+
+	/* create connection to local server */
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* open the channel served by the child */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-1-failed");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to NOT find NULL channel reference (creation ok) but found failure..\n");
+		return axl_false;
+	}
+
+	if (turbulence_process_child_count (tCtxTest10f) != 1) {
+		printf ("ERROR (3): expected to find one child running before causing the failure, found %d..\n",
+			turbulence_process_child_count (tCtxTest10f));
+		return axl_false;
+	} /* end if */
+
+	/* make the child fault */
+	printf ("Test 10-f: sending message to break the child (on-bad-signal action=ignore)..\n");
+	if (! vortex_channel_send_msg (channel, "wrong access", 12, NULL)) {
+		printf ("ERROR (4): expected to send the message that breaks the child but found an error..\n");
+		return axl_false;
+	} /* end if */
+
+	/* wait, bounded, for the child to die and be reaped */
+	printf ("Test 10-f: waiting up to 10 seconds for the child to die and be reaped..\n");
+	iterator = 0;
+	while (iterator < 100) {
+		if (turbulence_process_child_count (tCtxTest10f) == 0)
+			break;
+		turbulence_sleep (tCtxTest10f, 100000);
+		iterator++;
+	} /* end while */
+
+	if (turbulence_process_child_count (tCtxTest10f) != 0) {
+		printf ("ERROR (5): the child did NOT die after faulting with on-bad-signal action=ignore.\n");
+		printf ("           A fault signal cannot be ignored: returning from the handler re-executes\n");
+		printf ("           the faulting instruction, so the child spins forever holding its slot.\n");
+		return axl_false;
+	} /* end if */
+	printf ("Test 10-f: child died and was reaped (%d childs running)\n", turbulence_process_child_count (tCtxTest10f));
+
+	/* the parent must keep working: create the connection again */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	conn = vortex_connection_new_full (vCtx, "127.0.0.1", "44010",
+					   CONN_OPTS(VORTEX_SERVERNAME_FEATURE, "test-10.server", VORTEX_OPTS_END),
+					   NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (6): expected the parent to keep accepting connections after the child died..\n");
+		return axl_false;
+	} /* end if */
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtxTest10f);
 
 	return axl_true;
 }
@@ -6629,7 +6769,7 @@ int main (int argc, char ** argv)
 	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_03a, test_04, test_05, test_05a, test_06, test_06a\n");
-	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10b, test_10c, test_10d, test_10e, test_11, test_12,\n");
+	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10f, test_10b, test_10c, test_10d, test_10e, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_12c, test_12d, test_12e, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
 	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26, test_27, test_28\n");
 	printf ("** Report bugs to:\n**\n");
@@ -6744,6 +6884,9 @@ int main (int argc, char ** argv)
 	if (enable_10a) {
 		CHECK_TEST("test_10a")
 		run_test (test_10_a, "Test 10-a: Recover from child with failures...");
+
+		CHECK_TEST("test_10f")
+		run_test (test_10_f, "Test 10-f: child faulting under on-bad-signal action=ignore must still die");
 	}
 
 	CHECK_TEST("test_10b")

@@ -21,6 +21,7 @@ configuration_files = \
 	test_10d.conf \
 	test_10e.conf \
 	test_10e-log.conf \
+	test_10f.conf \
 	test_11.conf  \
 	test_12.conf  \
 	test_12a.conf \
@@ -47,6 +48,11 @@ EXTRA_DIST = $(configuration_files) test_05_a_passwd test_12b.sql
 # enabled on purpose (it is the only one that does) to exercise the log pipe
 # branch of turbulence_process_create_child
 CLEANFILES = test_10e-log-main.log test_10e-log-error.log test_10e-log-access.log test_10e-log-vortex.log
+
+# backtraces produced by the tests that make a child fault on purpose
+# (test_10a with on-bad-signal action=backtrace); they accumulate one file
+# per run
+CLEANFILES += test_15_datadir/turbulence-backtrace.*.gdb
 
 # replace with bin_PROGRAMS to check performance
 noinst_PROGRAMS = test_01  test-websocket-client
