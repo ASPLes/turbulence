@@ -22,6 +22,7 @@ configuration_files = \
 	test_10e.conf \
 	test_10e-log.conf \
 	test_10f.conf \
+	test_10g-syslog.conf \
 	test_11.conf  \
 	test_12.conf  \
 	test_12a.conf \

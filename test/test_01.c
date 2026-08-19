@@ -1448,6 +1448,34 @@ axl_bool  test_03 (void)
 		goto test_03_init;
 	}
 
+	/* PASSWORD STORAGE FORMATS: every test config declared format="md5",
+	 * so the "plain" and "sha-1" branches of the storage format selection
+	 * (common-sasl.c) were never taken. Each of these databases declares
+	 * one of them and holds the same password ("test") encoded
+	 * accordingly, so a mistake in the encoding of one format cannot be
+	 * masked by the others. */
+	printf ("Test 03: checking password storage formats (plain, sha-1)..\n");
+
+	if (! common_sasl_auth_user (sasl_backend, NULL, "aspl-plain", NULL, "test", "plain.turbulence.ws", &mutex)) {
+		printf ("Expected to validate aspl-plain against the db declared with format=\"plain\"\n");
+		return axl_false;
+	}
+	if (common_sasl_auth_user (sasl_backend, NULL, "aspl-plain", NULL, "wrong-password", "plain.turbulence.ws", &mutex)) {
+		printf ("ERROR: a wrong password was accepted on the db declared with format=\"plain\"\n");
+		return axl_false;
+	}
+	printf ("Test 03: format=plain accepts the right password and refuses a wrong one\n");
+
+	if (! common_sasl_auth_user (sasl_backend, NULL, "aspl-sha1", NULL, "test", "sha1.turbulence.ws", &mutex)) {
+		printf ("Expected to validate aspl-sha1 against the db declared with format=\"sha-1\"\n");
+		return axl_false;
+	}
+	if (common_sasl_auth_user (sasl_backend, NULL, "aspl-sha1", NULL, "wrong-password", "sha1.turbulence.ws", &mutex)) {
+		printf ("ERROR: a wrong password was accepted on the db declared with format=\"sha-1\"\n");
+		return axl_false;
+	}
+	printf ("Test 03: format=sha-1 accepts the right password and refuses a wrong one\n");
+
 	/* terminate the sasl module */
 	common_sasl_free (sasl_backend);
 
@@ -3452,6 +3480,115 @@ axl_bool test_10_a (void) {
 
 	/* finish turbulence */
 	test_common_exit (vCtx, tCtxTest10a);
+
+	return axl_true;
+}
+
+/* rounds of log pipe preparation used to detect the leak */
+#define TEST_10G_ROUNDS (5)
+
+/**
+ * @brief Test 10-g: with log-reporting use-syslog="yes" the master must
+ * not keep the child log pipes open.
+ *
+ * WHY THIS EXISTS: no test config declared use-syslog="yes", so that
+ * whole logging mode shipped without ever being executed. It hides a
+ * descriptor leak on the SUCCESS path of child creation, which is worse
+ * than the failure path covered by test 10-e because it is the normal
+ * one.
+ *
+ * WHAT IT PROVES: turbulence_log_is_enabled only looks at enabled="yes",
+ * so with syslog configured create_child still opens the four log pipes,
+ * while turbulence_log_manager_start returned before creating the log
+ * manager. The read ends were then handed to turbulence_loop_watch_
+ * descriptor with a NULL loop, which discards them through its
+ * v_return_if_fail: four descriptors per child stayed open in the master
+ * forever. The test drives __turbulence_process_prepare_logging directly
+ * and requires every descriptor to be released.
+ *
+ * It also fixes the two properties the mode is built on: use_syslog is
+ * parsed from the config, and no log file is created in this mode.
+ */
+axl_bool test_10_g (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	int                general_log[2];
+	int                error_log[2];
+	int                access_log[2];
+	int                vortex_log[2];
+	int                iterator;
+	int                fds_before;
+	int                fds_after;
+
+	if (! test_common_init (&vCtx, &tCtx, "test_10g-syslog.conf"))
+		return axl_false;
+
+	/* same sequence turbulence_run_config follows, without starting a
+	 * server: init the log module and then the log manager, which under
+	 * syslog returns without creating the loop */
+	turbulence_log_init (tCtx);
+	turbulence_log_manager_start (tCtx);
+
+	if (tCtx->log_manager != NULL) {
+		printf ("ERROR (0): expected no log manager created under syslog..\n");
+		return axl_false;
+	} /* end if */
+
+	/* the config must have been parsed into syslog mode */
+	if (! tCtx->use_syslog) {
+		printf ("ERROR (1): expected use_syslog enabled after loading test_10g-syslog.conf..\n");
+		return axl_false;
+	} /* end if */
+
+	/* and no log file must have been opened: the general log descriptor
+	 * keeps the value set at context creation */
+	if (tCtx->general_log > 0) {
+		printf ("ERROR (2): expected no general log file opened under syslog, but found descriptor %d..\n",
+			tCtx->general_log);
+		return axl_false;
+	} /* end if */
+
+	/* logging IS reported as enabled, which is what makes create_child
+	 * open the pipes this test is about */
+	if (! turbulence_log_is_enabled (tCtx)) {
+		printf ("ERROR (3): expected log reporting to be enabled under syslog..\n");
+		return axl_false;
+	} /* end if */
+
+	fds_before = test_count_open_fds ();
+	printf ("Test 10-g: descriptors open before preparing log pipes: %d\n", fds_before);
+
+	iterator = 0;
+	while (iterator < TEST_10G_ROUNDS) {
+
+		if (pipe (general_log) != 0 || pipe (error_log) != 0 ||
+		    pipe (access_log) != 0 || pipe (vortex_log) != 0) {
+			printf ("ERROR (4): unable to create log pipes..\n");
+			return axl_false;
+		} /* end if */
+
+		/* this is what the master does after forking a child */
+		__turbulence_process_prepare_logging (tCtx, axl_true, general_log, error_log, access_log, vortex_log);
+
+		iterator++;
+	} /* end while */
+
+	fds_after = test_count_open_fds ();
+	printf ("Test 10-g: descriptors open after %d rounds: %d\n", TEST_10G_ROUNDS, fds_after);
+
+	if (fds_before > 0 && fds_after > 0) {
+		/* a leaked round is four descriptors (the read ends) */
+		if ((fds_after - fds_before) >= 4) {
+			printf ("ERROR (5): master leaked log descriptors under syslog: %d -> %d (+%d) after %d rounds\n",
+				fds_before, fds_after, fds_after - fds_before, TEST_10G_ROUNDS);
+			return axl_false;
+		} /* end if */
+		printf ("Test 10-g: no descriptor leak detected (%d -> %d)\n", fds_before, fds_after);
+	} else
+		printf ("Test 10-g: /proc not available, descriptor leak check skipped\n");
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
 
 	return axl_true;
 }
@@ -6769,7 +6906,7 @@ int main (int argc, char ** argv)
 	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_03a, test_04, test_05, test_05a, test_06, test_06a\n");
-	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10f, test_10b, test_10c, test_10d, test_10e, test_11, test_12,\n");
+	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10f, test_10b, test_10c, test_10d, test_10e, test_10g, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_12c, test_12d, test_12e, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
 	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26, test_27, test_28\n");
 	printf ("** Report bugs to:\n**\n");
@@ -6900,6 +7037,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_10e")
         run_test (test_10_e, "Test 10-e: test child failing at creation time");
+
+	CHECK_TEST("test_10g")
+	run_test (test_10_g, "Test 10-g: log pipes must not leak with log-reporting use-syslog=yes");
 
 	CHECK_TEST("test_11")
 	run_test (test_11, "Test 11: Check turbulence profile path selected");

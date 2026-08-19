@@ -1381,7 +1381,17 @@ axl_bool  common_sasl_auth_user        (SaslAuthBackend  * sasl_backend,
 		formated_password = vortex_tls_get_digest (VORTEX_SHA1, password);
 		break;
 	case SASL_STORAGE_FORMAT_PLAIN:
-		/* plain do not require additional format */
+		/* Plain needs no digest, but the value MUST still be
+		 * produced: the comparison done downstream is
+		 * axl_cmp (formated_password, db_password), so leaving it at
+		 * the NULL it was initialised to made EVERY authentication
+		 * against a database declared with format="plain" fail.
+		 *
+		 * A copy is taken, not the pointer itself, so the
+		 * "if (formated_password) axl_free (...)" at the end of this
+		 * function stays symmetric and does not release the caller's
+		 * cleaned password buffer, which is freed separately. */
+		formated_password = axl_strdup (password);
 		break;
 	default:
 

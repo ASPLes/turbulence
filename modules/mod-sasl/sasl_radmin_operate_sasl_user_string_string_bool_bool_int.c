@@ -31,9 +31,7 @@ int operate_sasl_user_5_string_string_bool_bool_int (const char * auth_id, const
 	/* get the serverName from the current channel */
 		const       char * serverName = SERVER_NAME_FROM_CHANNEL(channel);
 		/* get the context */
-#if ! defined(SHOW_FORMAT_BUGS)
 		TurbulenceCtx    * ctx        = common_sasl_get_context (sasl_backend);
-#endif
 
 		switch (operation) {
 		case 1:

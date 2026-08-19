@@ -208,9 +208,7 @@ void mod_tls_failure_handler (VortexConnection * conn, const char * error_messag
 	char            log_buffer [512];
 	unsigned long   err;
 	const char    * serverName = vortex_connection_get_server_name (conn);
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = _ctx;
-#endif
 	axlNode       * node = mod_tls_find_certificate_node (conn, serverName);
 	axl_bool        close_on_failure = HAS_ATTR_VALUE (node, "close-on-failure", "yes");
 
@@ -425,9 +423,7 @@ axl_bool mod_tls_post_check (VortexConnection * conn,
 static axl_bool mod_tls_ppath_selected (TurbulenceCtx      * _ctx, 
 					TurbulencePPathDef * ppath_selected, 
 					VortexConnection   * conn) {
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = _ctx;
-#endif
 
 	/* drop a log message */
 	msg ("Received request to activate TLS on connection id=%d", vortex_connection_get_id (conn));

@@ -233,9 +233,16 @@ axl_bool turbulence_signal_unblock (TurbulenceCtx * ctx,
  *
  * Needed because RETURNING from the handler of a fault signal does not
  * "continue": SIGSEGV re-executes the faulting instruction, so the
- * handler is entered again, and again, burning a core forever instead
- * of dying. Any path that decides not to handle a fault signal must end
- * up here rather than returning.
+ * decision not to handle it has to be turned into an explicit exit
+ * rather than a plain return.
+ *
+ * MEASURED, so it is not overstated: without this the process does NOT
+ * hang. The kernel refuses to deliver the second, recursive fault and
+ * kills it anyway (the handler is entered exactly once and the process
+ * is reaped with the fault signal). What this buys is therefore not the
+ * repair of a hang: it is that the exit is deliberate and, at the call
+ * sites below, that the log says why the configured action could not be
+ * applied instead of the process just vanishing.
  *
  * The default disposition is restored and the signal re-raised so the
  * process dies of the very signal it received: that is what makes the
@@ -303,10 +310,10 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 		/* other thread is already cleaning */
 		vortex_mutex_unlock (&ctx->exit_mutex);
 
-		/* ..but a fault signal cannot simply be left alone: returning
-		 * resumes the instruction that faulted and we would come back
-		 * here forever, spinning instead of finishing the exit the
-		 * other thread already started */
+		/* ..but a fault signal is not left to return: returning
+		 * resumes the instruction that faulted, so leave through an
+		 * explicit exit instead of relying on the kernel killing us
+		 * on the recursive fault */
 		if (__turbulence_signal_is_fault (_signal))
 			__turbulence_signal_die_now (_signal);
 		return;
@@ -350,11 +357,13 @@ void turbulence_signal_exit (TurbulenceCtx * ctx, int _signal)
 						  NULL);
 
 			/* A fault signal cannot be ignored: returning from
-			 * the handler resumes the faulting instruction and
-			 * the process would spin here forever, holding its
-			 * child slot and never being reaped by the master.
-			 * Report it clearly and terminate instead: a process
-			 * that dies is recoverable, one that spins is not. */
+			 * the handler resumes the faulting instruction, so
+			 * the process dies either way (the kernel kills it on
+			 * the recursive fault). What the configuration asked
+			 * for is simply not achievable, so say so in the log
+			 * and terminate deliberately: otherwise the operator
+			 * configures "ignore", sees the process die, and has
+			 * nothing telling them why it was not honoured. */
 			error ("on-bad-signal action=ignore cannot be applied to %s: returning would re-execute the faulting instruction, terminating instead",
 			       _signal == SIGSEGV ? "SIGSEGV" : "SIGABRT");
 			__turbulence_signal_die_now (_signal);

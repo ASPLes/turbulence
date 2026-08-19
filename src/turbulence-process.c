@@ -346,9 +346,7 @@ axl_bool __turbulence_process_create_parent_connection (TurbulenceChild * child)
 	/* create the client connection making the child to do the
 	   bind (creating local file socket using child process
 	   permissions)  */
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = child->ctx;
-#endif
 
 	msg ("CHILD: process creating control connection: %s..", child->socket_control_path);
 	child->child_connection = __turbulence_process_local_unix_fd (child->socket_control_path, axl_false, child->ctx);
@@ -378,7 +376,7 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 					 const char      * ancillary_data, 
 					 int               size)
 {
-	struct msghdr        msg;
+	struct msghdr        msg_hdr;
 	int                * int_ptr;
 	char                 ccmsg[CMSG_SPACE(sizeof(socket))];
 
@@ -388,35 +386,33 @@ axl_bool turbulence_process_send_socket (VORTEX_SOCKET     socket,
 	/* send at least one byte */
 	const char         * str = ancillary_data ? ancillary_data : "#"; 
 	int                  rv;
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx      * ctx = child->ctx;
-#endif
 
 	/* clear structures */
-	memset (&msg, 0, sizeof (struct msghdr));
+	memset (&msg_hdr, 0, sizeof (struct msghdr));
 
 	/* configure destination */
-	msg.msg_namelen        = 0;
+	msg_hdr.msg_namelen        = 0;
 
 	vec.iov_base   = (char *) str;
 	vec.iov_len    = ancillary_data == NULL ? 1 : size;
-	msg.msg_iov    = &vec;
-	msg.msg_iovlen = 1;
+	msg_hdr.msg_iov    = &vec;
+	msg_hdr.msg_iovlen = 1;
 
-	msg.msg_control        = ccmsg;
-	msg.msg_controllen     = sizeof(ccmsg);
+	msg_hdr.msg_control        = ccmsg;
+	msg_hdr.msg_controllen     = sizeof(ccmsg);
 
-	cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg = CMSG_FIRSTHDR(&msg_hdr);
 	cmsg->cmsg_level       = SOL_SOCKET;
 	cmsg->cmsg_type        = SCM_RIGHTS;
 	cmsg->cmsg_len         = CMSG_LEN(sizeof(socket));
 	int_ptr                = (int*)CMSG_DATA(cmsg);
 	(*int_ptr)             = socket;
 
-	msg.msg_controllen     = cmsg->cmsg_len;
-	msg.msg_flags = 0;
+	msg_hdr.msg_controllen     = cmsg->cmsg_len;
+	msg_hdr.msg_flags = 0;
 	
-	rv = (sendmsg (child->child_connection, &msg, 0) != -1);
+	rv = (sendmsg (child->child_connection, &msg_hdr, 0) != -1);
 	if (rv)  {
 		msg ("PARENT: Socket %d sent to child via %d (ancillary data: %s), closing (status: %d)..", 
 		     socket, child->child_connection, ancillary_data, rv);
@@ -457,7 +453,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 					    int              * size,
 					    const char       * label)
 {
-	struct msghdr    msg;
+	struct msghdr    msg_hdr;
 	struct iovec     iov;
 	char             buf[1024];
 	int              status;
@@ -479,15 +475,15 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 	iov.iov_base = buf;
 	iov.iov_len = 1023;
 
-	memset (&msg, 0, sizeof (struct msghdr));	
-	msg.msg_name       = 0;
-	msg.msg_namelen    = 0;
-	msg.msg_iov        = &iov;
-	msg.msg_iovlen     = 1;
-	msg.msg_control    = ccmsg;
-	msg.msg_controllen = sizeof(ccmsg); 
+	memset (&msg_hdr, 0, sizeof (struct msghdr));	
+	msg_hdr.msg_name       = 0;
+	msg_hdr.msg_namelen    = 0;
+	msg_hdr.msg_iov        = &iov;
+	msg_hdr.msg_iovlen     = 1;
+	msg_hdr.msg_control    = ccmsg;
+	msg_hdr.msg_controllen = sizeof(ccmsg); 
 	
-	status = recvmsg (child->child_connection, &msg, 0);
+	status = recvmsg (child->child_connection, &msg_hdr, 0);
 	if (status == -1) {
 		error ("%s: Failed to receive socket, recvmsg failed, error was: (code %d) %s",
 		       label, errno, vortex_errno_get_last_error ());
@@ -495,7 +491,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 		return axl_false;
 	} /* end if */
 
-	cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg = CMSG_FIRSTHDR(&msg_hdr);
 	if (cmsg == NULL) {
 		/* Capture errno BEFORE reporting anything: error () writes to
 		 * stderr and to the log files and calls fflush, and any of
@@ -517,7 +513,7 @@ axl_bool turbulence_process_receive_socket (VORTEX_SOCKET    * _socket,
 			error ("%s: Unable to receive socket from parent, dropping socket connection, reached process limit: soft-limit=%d, hard-limit=%d",
 			       label, soft_limit, hard_limit);
 		} else if (error_reported == 0) {
-			error ("%s: CMSG_FIRSTHDR(&msg) call failed (reported cmsg=NULL), we have not reached connection limits and no error reported.", label);
+			error ("%s: CMSG_FIRSTHDR(&msg_hdr) call failed (reported cmsg=NULL), we have not reached connection limits and no error reported.", label);
 			error ("%s: This might be caused by a configuration problem with loopback interface (lo). Does it have 127.0.0.1 and is up and running?", label);
 		} /* end if */
 
@@ -1168,7 +1164,9 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 	}
 
 	/* check content received */
-	if (ancillary_data == NULL || strlen (ancillary_data) == 0 || _socket <= 0) {
+	/* NOTE _socket < 0 and not <= 0: descriptor 0 is a perfectly valid
+	   socket for a daemon that closed its standard input */
+	if (ancillary_data == NULL || strlen (ancillary_data) == 0 || _socket < 0) {
 		error ("%s: Ancillary data is null (%p) or empty or socket returned is not valid (%d)",
 		       label, ancillary_data, _socket);
 		goto release_content;
@@ -1204,9 +1202,7 @@ axl_bool turbulence_process_parent_notify (TurbulenceLoop * loop,
 
 void __turbulence_process_release_parent_connections_foreach  (VortexConnection * conn, axlPointer user_data, axlPointer user_data2, axlPointer user_data3) 
 {
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx          * ctx           = user_data;
-#endif
 	VortexConnection       * child_conn    = user_data2;
 	int                      client_socket = vortex_connection_get_socket (conn);
 
@@ -1246,7 +1242,7 @@ void __turbulence_process_release_parent_connections_foreach  (VortexConnection 
  * released automatically when the child execs, without closing them in
  * the parent, which still needs them.
  */
-int __turbulence_process_release_parent_connections (TurbulenceCtx    * ctx, 
+void __turbulence_process_release_parent_connections (TurbulenceCtx    * ctx, 
 						     VortexConnection * child_conn, 
 						     TurbulenceChild  * child)
 {
@@ -1264,8 +1260,8 @@ int __turbulence_process_release_parent_connections (TurbulenceCtx    * ctx,
 	client_socket = vortex_connection_get_socket (conn);
 	msg ("CHILD: Setting close on exec on socket: %d (conn id: %d, role: %d)", client_socket, 
 	     vortex_connection_get_id (conn), vortex_connection_get_role (conn));
-	     fcntl (client_socket, F_SETFD, fcntl(client_socket, F_GETFD) | FD_CLOEXEC); 
-	return 0;
+	fcntl (client_socket, F_SETFD, fcntl(client_socket, F_GETFD) | FD_CLOEXEC);
+	return;
 }
 
 /** 
@@ -1315,6 +1311,25 @@ void __turbulence_process_prepare_logging (TurbulenceCtx * ctx, axl_bool is_pare
 	/* check if log is enabled or not */
 	if (! turbulence_log_is_enabled (ctx))
 		return;
+
+	/* When logs are sent to syslog there is no log manager to register
+	 * the read ends into: turbulence_log_manager_start returns before
+	 * creating it (turbulence-log.c), so ctx->log_manager is NULL and
+	 * turbulence_loop_watch_descriptor discards the descriptor through
+	 * its v_return_if_fail. Registering here would leave the four read
+	 * ends open in the master for the whole daemon lifetime, four
+	 * descriptors per child successfully created.
+	 *
+	 * The pipes are not needed at all in this mode: the child reports
+	 * through syslog (see REPORT in turbulence-log.c, which returns
+	 * without touching the descriptor when use_syslog is set), so the
+	 * parent closes both ends here. The child copies are released when
+	 * it finishes. */
+	if (ctx->use_syslog) {
+		if (is_parent)
+			__turbulence_process_close_log_pipes (general_log, error_log, access_log, vortex_log);
+		return;
+	} /* end if */
 
 	if (is_parent) {
 
@@ -1385,9 +1400,7 @@ axl_bool turbulence_process_check_child_limit (TurbulenceCtx      * ctx,
 
 axl_bool __turbulence_process_show_conn_keys (axlPointer key, axlPointer data, axlPointer user_data)
 {
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = user_data;
-#endif
 
 	msg ("PARENT: found key %s", (const char *) key);
 
@@ -1947,9 +1960,7 @@ int kill (int pid, int signal);
 
 axl_bool __terminate_child (axlPointer key, axlPointer data, axlPointer user_data)
 {
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx   * ctx   = user_data;
-#endif
 	TurbulenceChild * child = data;
 
 	/* send term signal */

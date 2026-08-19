@@ -86,6 +86,18 @@ void              turbulence_process_set_child_cmd_prefix (const char * cmd_pref
 
 axl_bool          __turbulence_process_create_parent_connection (TurbulenceChild * child);
 
+void              __turbulence_process_close_log_pipes (int * general_log,
+							int * error_log,
+							int * access_log,
+							int * vortex_log);
+
+void              __turbulence_process_prepare_logging (TurbulenceCtx * ctx,
+							axl_bool        is_parent,
+							int           * general_log,
+							int           * error_log,
+							int           * access_log,
+							int           * vortex_log);
+
 VortexConnection * __turbulence_process_handle_connection_received (TurbulenceCtx      * ctx, 
 								    TurbulencePPathDef * ppath,
 								    VORTEX_SOCKET        socket, 

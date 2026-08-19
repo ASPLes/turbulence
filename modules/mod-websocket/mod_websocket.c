@@ -62,9 +62,7 @@ int mod_websocket_post_configuration (VortexCtx               * _ctx,
 				      VortexConnectionStage     stage, 
 				      axlPointer                user_data)
 {
-#if ! defined(SHOW_FORMAT_BUGS)
 	TurbulenceCtx * ctx = user_data;
-#endif
 
 	/* do not configure anything that isn't an accepted listener connection */
 	if (vortex_connection_get_role (conn) != VortexRoleListener)
