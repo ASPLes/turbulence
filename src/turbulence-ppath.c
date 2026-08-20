@@ -99,17 +99,8 @@
  *
  */
 
-typedef struct _TurbulencePPathState {
-	/* a reference to the profile path selected for the
-	 * connection */
-	TurbulencePPathDef * path_selected;
-
-	/* requested serverName found at the profile path selection */
-	char               * requested_serverName;
-
-	/* turbulence context */
-	TurbulenceCtx      * ctx;
-} TurbulencePPathState;
+/* NOTE: TurbulencePPathState is declared at turbulence-ctx-private.h,
+ * next to the rest of the profile path types. */
 
 void __turbulence_ppath_state_free (axlPointer _state) {
 	TurbulencePPathState * state = _state;
@@ -136,23 +127,39 @@ struct _TurbulencePPath {
 	
 };
 
-TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode * node)
+TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode * node, int * warnings)
 {
 	axlNode             * child;
 	int                   iterator;
+	TurbulencePPathItem * item;
 	TurbulencePPathItem * result = axl_new (TurbulencePPathItem, 1);
 
 	/* get the profile expression */
 	result->profile = turbulence_expr_compile (
 		/* turbulence context */
-		ctx, 
+		ctx,
 		/* the expression */
-		ATTR_VALUE (node, "profile"), 
+		ATTR_VALUE (node, "profile"),
 		/* error message */
 		"Failed to get profile expression..");
 	if (result->profile == NULL) {
+		error ("PPATH: unable to compile profile expression '%s' declared at <%s>, discarding this node",
+		       ATTR_VALUE (node, "profile") ? ATTR_VALUE (node, "profile") : "",
+		       axl_node_get_name (node));
+		(*warnings)++;
 		axl_free (result);
 		return NULL;
+	} /* end if */
+
+	/* NOTE: turbulence-config.dtd declares a "serverName" attribute
+	 * for <allow> and <if-success>, but the profile path engine only
+	 * enforces the "server-name" declared at <path-def>. Report it
+	 * instead of silently ignoring administrator configuration. */
+	if (HAS_ATTR (node, "serverName")) {
+		wrn ("PPATH: ignoring serverName='%s' declared at <%s profile='%s'>: serverName is only enforced from the <path-def> \"server-name\" attribute",
+		     ATTR_VALUE (node, "serverName"), axl_node_get_name (node),
+		     ATTR_VALUE (node, "profile") ? ATTR_VALUE (node, "profile") : "");
+		(*warnings)++;
 	} /* end if */
 
 	/* get the connmark flag if defined */
@@ -180,6 +187,16 @@ TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode 
 		result->type = PROFILE_IF;
 	} /* end if */
 
+	/* NOTE: turbulence-config.dtd allows <allow> to hold <allow> and
+	 * <if-success> childs, but only <if-success> nodes sequence what
+	 * is available after a profile is accepted, so childs declared
+	 * inside an <allow> never take effect. Report them. */
+	if (result->type == PROFILE_ALLOW && axl_node_get_first_child (node) != NULL) {
+		wrn ("PPATH: ignoring childs declared inside <allow profile='%s'>: only <if-success> sequences additional profiles",
+		     ATTR_VALUE (node, "profile") ? ATTR_VALUE (node, "profile") : "");
+		(*warnings)++;
+	} /* end if */
+
 	/* parse here childs inside <if-success> node */
 	if (result->type == PROFILE_IF) {
 		/* parse child nodes */
@@ -187,16 +204,22 @@ TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode 
 		child               = axl_node_get_first_child (node);
 		iterator            = 0;
 		while (child != NULL) {
-			/* get the first definition */
-			result->ppath_items[iterator] = __turbulence_ppath_get_item (ctx, child);
-			
+			/* get the next definition: on failure keep going
+			 * instead of storing the NULL, which would
+			 * terminate this NULL terminated array early and
+			 * silently drop every remaining sibling */
+			item = __turbulence_ppath_get_item (ctx, child, warnings);
+			if (item != NULL) {
+				result->ppath_items[iterator] = item;
+				iterator++;
+			} /* end if */
+
 			/* next profile path item */
 			child = axl_node_get_next (child);
-			iterator++;
 
 		} /* end while */
 	} /* end if */
-	
+
 	/* return result parsed */
 	return result;
 }
@@ -291,12 +314,19 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 
 		/* profile path matched! */
 
-		/* check if the channel num is defined */
-		if (channel_num > 0  && state->path_selected->serverName != NULL && serverName != NULL && strlen (serverName) > 1) {
+		/* check if the channel num is defined.
+		 *
+		 * NOTE: the length check below used to be "> 1", which
+		 * skipped the whole serverName enforcement for a single
+		 * character serverName, accepting the channel without ever
+		 * comparing it against the profile path configuration. The
+		 * intention is "a serverName was provided and it is not
+		 * empty", that is, "> 0". */
+		if (channel_num > 0  && state->path_selected->serverName != NULL && serverName != NULL && strlen (serverName) > 0) {
 
 			/* check the serverName value provided against
 			 * the configuration */
-			if (! turbulence_expr_match (state->path_selected->serverName, serverName ? serverName : "")) {
+			if (! turbulence_expr_match (state->path_selected->serverName, serverName)) {
 				error ("  <allow level=%d>: serverName='%s' doesn't match current profile path conf (%s)", level, serverName ? serverName : "",
 				       turbulence_ppath_get_name (state->path_selected));
 				/* filter the channel creation because
@@ -617,7 +647,19 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 	} /* end if */
 
 	/* reached this point we have the path selected so call to
-	   base function */
+	   base function.
+
+	   OBSERVATION (pending, do not "fix" without a reproducer): this
+	   function reads its state from the connection
+	   (TURBULENCE_PPATH_STATE) but hands "user_data" down to
+	   __turbulence_ppath_mask. Both are the same object today
+	   (__turbulence_ppath_still_not_selected stores the state and
+	   installs this mask with it in one go, and
+	   __turbulence_ppath_select mutates that very object), so the
+	   divergence is not observable. If it ever were, the authoritative
+	   one is the connection state read above, since that is what
+	   __turbulence_ppath_select updates. Left as is until there is a
+	   case that can be anchored with a regression test. */
 	return __turbulence_ppath_mask (connection, channel_num, uri, profile_content, encoding, serverName, frame, error_msg, user_data);
 }
 
@@ -1072,12 +1114,15 @@ void __turbulence_ppath_check_user (TurbulenceCtx      * ctx,
 int  turbulence_ppath_init (TurbulenceCtx * ctx)
 {
 	/* get turbulence context */
-	axlNode            * node; 
-	axlNode            * pdef;
-	TurbulencePPathDef * definition;
-	int                  iterator;
-	int                  iterator2;
-	VortexCtx          * vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
+	axlNode             * node;
+	axlNode             * pdef;
+	TurbulencePPathDef  * definition;
+	TurbulencePPathItem * item;
+	int                   iterator;
+	int                   iterator2;
+	int                   warnings    = 0;
+	int                   total_items = 0;
+	VortexCtx           * vortex_ctx  = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* check turbulence context received */
 	v_return_val_if_fail (ctx, axl_false);
@@ -1228,16 +1273,38 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 					continue;
 				} /* end if */
 
-				/* get the first definition */
-				definition->ppath_items[iterator2] = __turbulence_ppath_get_item (ctx, node);
-				
+				/* get the next definition: on failure keep
+				 * going instead of storing the NULL, which
+				 * would terminate this NULL terminated array
+				 * early and silently drop the remaining
+				 * nodes declared by the administrator */
+				item = __turbulence_ppath_get_item (ctx, node, &warnings);
+				if (item != NULL) {
+					definition->ppath_items[iterator2] = item;
+					iterator2++;
+				} /* end if */
+
 				/* next profile path item */
 				node = axl_node_get_next (node);
-				iterator2++;
 
 			} /* end while */
 		} /* end if */
-		
+
+		/* report what was loaded for this profile path */
+		msg ("PPATH: loaded profile path '%s' (id=%d): %d item(s), separate=%d, reuse=%d, serverName=%s",
+		     definition->path_name ? definition->path_name : "(no path name defined)",
+		     definition->id, iterator2, definition->separate, definition->reuse,
+		     definition->serverName ? __TBC_EXP_STR__(definition->serverName) : "(not defined)");
+
+		if (iterator2 == 0) {
+			wrn ("PPATH: profile path '%s' (id=%d) declares no <allow>/<if-success> node, so it accepts no profile at all",
+			     definition->path_name ? definition->path_name : "(no path name defined)",
+			     definition->id);
+			warnings++;
+		} /* end if */
+
+		total_items += iterator2;
+
 		/* get next profile path def */
 		iterator++;
 		pdef = axl_node_get_next (pdef);
@@ -1252,7 +1319,16 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 						    __turbulence_ppath_handle_connection_on_greetings,
 						    ctx);
 	
-	msg ("profile path definition ok (all rules address based status: %d)..", ctx->all_rules_address_based);
+	/* report the final status of the operation so the administrator
+	 * can tell an accepted-and-fully-applied configuration from an
+	 * accepted-but-partially-ignored one */
+	if (warnings > 0) {
+		wrn ("PPATH: profile path definition loaded WITH %d warning(s): %d profile path(s), %d item(s), all rules address based status: %d (see the warnings above: that configuration is not being applied)",
+		     warnings, iterator, total_items, ctx->all_rules_address_based);
+	} else {
+		msg ("PPATH: profile path definition ok: %d profile path(s), %d item(s), all rules address based status: %d",
+		     iterator, total_items, ctx->all_rules_address_based);
+	} /* end if */
 
 	/* return ok code */
 	return axl_true;
@@ -1349,36 +1425,73 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 	return;
 }
 
-/** 
+#if defined(DEFINE_SETGROUPS_PROTO)
+int  setgroups (size_t size, const gid_t * list);
+#endif
+
+/**
  * @internal Change to the effective user id and group id configured
  * in the profile path configuration (if any).
+ *
+ * A failure changing any of them is fatal: it leaves the process
+ * running with the privileges the administrator configured it to drop,
+ * so the caller must abort instead of continuing.
+ *
+ * @return axl_true if the process ends up running with the configured
+ * credentials, otherwise axl_false.
  */
-void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx, 
-				      TurbulencePPathDef * ppath_def)
+axl_bool turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
+					  TurbulencePPathDef * ppath_def)
 {
+	gid_t   group_id;
+
+	/* NOTE: setuid() does not touch the supplementary group list, so
+	 * dropping to an unprivileged user while keeping the groups
+	 * inherited from the privileged process defeats the whole
+	 * privilege drop. Reset that list BEFORE changing the user id
+	 * (which is also the only moment we still have the privileges
+	 * setgroups requires).
+	 *
+	 * The list is reset to just the target group: when no
+	 * run-as-group is configured, the current group is used, so the
+	 * process is left with exactly one group and none of the
+	 * inherited ones. */
+	if (ppath_def->user_id > 0 || ppath_def->group_id > 0) {
+		group_id = (gid_t) (ppath_def->group_id > 0 ? ppath_def->group_id : (int) getgid ());
+
+		if (setgroups (1, &group_id) != 0) {
+			error ("Failed to reset supplementary group list to gid %d, error (%d:%s)",
+			       (int) group_id, errno, vortex_errno_get_last_error ());
+			return axl_false;
+		} /* end if */
+	} /* end if */
 
 	/* check to change current group */
 	if (ppath_def->group_id != -1 && ppath_def->group_id > 0) {
-		if (setgid (ppath_def->group_id) != 0) {
-			error ("Failed to set executing group id: %d, error (%d:%s)", 
+		if (setgid ((gid_t) ppath_def->group_id) != 0) {
+			error ("Failed to set executing group id: %d, error (%d:%s)",
 			       ppath_def->group_id, errno, vortex_errno_get_last_error ());
+			return axl_false;
 		} /* end if */
 	} /* end if */
 
 	/* check to change current user */
 	if (ppath_def->user_id != -1 && ppath_def->user_id > 0) {
-		if (setuid (ppath_def->user_id) != 0) {
-			error ("Failed to set executing user id: %d, error (%d:%s)", 
+		if (setuid ((uid_t) ppath_def->user_id) != 0) {
+			error ("Failed to set executing user id: %d, error (%d:%s)",
 			       ppath_def->user_id, errno, vortex_errno_get_last_error ());
+			return axl_false;
 		} /* end if */
 	} /* end if */
 
-	/* update process executing ids */
-	ppath_def->user_id = getuid ();
-	ppath_def->group_id = getgid ();
+	/* update process executing ids: reached this point every change
+	 * requested did succeed, so these values do report the configured
+	 * credentials and not a silently failed drop */
+	ppath_def->user_id = (int) getuid ();
+	ppath_def->group_id = (int) getgid ();
 	msg ("running process as: %d:%d", ppath_def->user_id, ppath_def->group_id);
 
-	return;
+	return axl_true;
 }
 
 /** 
@@ -1573,37 +1686,51 @@ void  __turbulence_ppath_load_search_nodes (TurbulenceCtx * ctx, TurbulencePPath
 int  chroot (const char * path);
 #endif
 
-/** 
+/**
  * @internal Allows to change current process root dir.
+ *
+ * Like turbulence_ppath_change_user_id, a failure here is fatal: the
+ * process would keep running outside the root the administrator
+ * configured it to be confined into, so the caller must abort instead
+ * of continuing unconfined.
+ *
+ * @return axl_true when the process ends up confined as configured, or
+ * when no chroot was requested at all. Otherwise axl_false.
  */
-void turbulence_ppath_change_root    (TurbulenceCtx      * ctx, 
-				      TurbulencePPathDef * ppath_def)
+axl_bool turbulence_ppath_change_root    (TurbulenceCtx      * ctx,
+					  TurbulencePPathDef * ppath_def)
 {
-	/* check for permission */
-	if (getuid () != 0) 
-		return;
-	/* check if chroot is defined */
+	/* check if chroot is defined: nothing requested, nothing to do */
 	if (ppath_def->chroot == NULL)
-		return;
+		return axl_true;
+
+	/* check for permission: a chroot was requested but it cannot be
+	 * honoured without privileges, so do not continue unconfined */
+	if (getuid () != 0) {
+		error ("Unable to change root dir to %s: chroot requires root privileges and the process is running as uid %d",
+		       ppath_def->chroot, (int) getuid ());
+		return axl_false;
+	} /* end if */
+
 	if (chroot (ppath_def->chroot) != 0) {
 		error ("Failed to change root dir to %s, error found: %d:%s",
 		       ppath_def->chroot,
 		       errno, vortex_errno_get_last_error ());
-		/* do not report success below: the process is still
-		 * running outside the configured root */
-		return;
+		return axl_false;
 	} /* end if */
 
 	/* chroot does not change the current working directory, so it is
 	 * still pointing outside the new root and the confinement can be
 	 * walked out of with a relative path. Move into the new root. */
-	if (chdir ("/") != 0)
+	if (chdir ("/") != 0) {
 		error ("Failed to change working dir to / after chroot to %s, error found: %d:%s",
 		       ppath_def->chroot,
 		       errno, vortex_errno_get_last_error ());
+		return axl_false;
+	} /* end if */
 
 	msg ("change root dir to: %s", ppath_def->chroot);
-	return;
+	return axl_true;
 }
 
 /** 

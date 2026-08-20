@@ -413,11 +413,23 @@ axl_bool          turbulence_child_post_init (TurbulenceCtx * ctx)
 	ctx->child->ppath = def;
 
 	/* check here to change root path, in the case it is defined
-	 * now we still have privileges */
-	turbulence_ppath_change_root (ctx, def);
+	 * now we still have privileges: a failure is fatal, the child
+	 * would keep running outside the root the profile path configured
+	 * it to be confined into */
+	if (! turbulence_ppath_change_root (ctx, def)) {
+		error ("Unable to change process root dir as requested by profile path '%s', aborting child",
+		       turbulence_ppath_get_name (def));
+		return axl_false;
+	} /* end if */
 
-	/* check here for setuid support */
-	turbulence_ppath_change_user_id (ctx, def);
+	/* check here for setuid support: a failure dropping privileges is
+	 * fatal, the child would keep running with the credentials the
+	 * profile path configured it to leave behind */
+	if (! turbulence_ppath_change_user_id (ctx, def)) {
+		error ("Unable to change process credentials as requested by profile path '%s', aborting child",
+		       turbulence_ppath_get_name (def));
+		return axl_false;
+	} /* end if */
 
 	/* create loop to watch child->child_connection */
 	child->child_conn_loop = turbulence_loop_create (ctx);

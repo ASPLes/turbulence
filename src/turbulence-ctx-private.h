@@ -203,10 +203,44 @@ struct _TurbulencePPathItem {
 	
 };
 
+/* profile path state associated to a connection, stored under the
+ * TURBULENCE_PPATH_STATE connection key (see turbulence-ppath.c) */
+typedef struct _TurbulencePPathState {
+	/* a reference to the profile path selected for the
+	 * connection */
+	TurbulencePPathDef * path_selected;
+
+	/* requested serverName found at the profile path selection */
+	char               * requested_serverName;
+
+	/* turbulence context */
+	TurbulenceCtx      * ctx;
+} TurbulencePPathState;
+
+/* MEMORY OWNERSHIP INSIDE _TurbulencePPathDef
+ *
+ * This structure mixes owned and borrowed references on purpose, so
+ * check which one you are touching before releasing anything:
+ *
+ * - OWNED (allocated by turbulence_ppath_init, released by
+ *   turbulence_ppath_cleanup): path_name, serverName, src, dst and
+ *   ppath_items.
+ *
+ * - BORROWED from the configuration document (ctx->config): chroot,
+ *   work_dir and node. They are plain ATTR_VALUE()/axlNode pointers
+ *   into the axlDoc, so they MUST NOT be released here: the document
+ *   owns them and outlives the profile paths. Freeing any of them
+ *   causes a double free when the configuration document is released.
+ *
+ * The asymmetry is deliberate: node is needed to walk <search> nodes
+ * lazily (__turbulence_ppath_load_search_nodes), which already forces
+ * the document to outlive this structure.
+ */
 struct _TurbulencePPathDef {
 	int    id;
 
-	/* the name of the profile path group (optional value) */
+	/* the name of the profile path group (optional value).
+	 * OWNED: released by turbulence_ppath_cleanup */
 	char                 * path_name;
 
 	/* the server name pattern to be used to match the profile
@@ -245,11 +279,14 @@ struct _TurbulencePPathDef {
 	   are reused. */
 	axl_bool reuse;
 
-	/* allows to change working directory to the provided value */
-	const char * chroot;	
+	/* allows to change the process root directory to the provided
+	 * value.
+	 * BORROWED from ctx->config: do not release */
+	const char * chroot;
 
 	/* allows to configure a working directory associated to the
-	 * profile path. */
+	 * profile path.
+	 * BORROWED from ctx->config: do not release */
 	const char * work_dir;
 	
 	/** 
@@ -266,8 +303,9 @@ struct _TurbulencePPathDef {
 	 */
 	int childs_running;
 
-	/** 
+	/**
 	 * reference to the <ppath-def> that where this profile path was loaded.
+	 * BORROWED from ctx->config: do not release
 	 */
 	axlNode * node;
 

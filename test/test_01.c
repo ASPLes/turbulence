@@ -889,8 +889,8 @@ axl_bool test_09b (void)
 	}
 	iterator--;
 
-	if (iterator != 3) {
-		printf ("ERROR (1): expected to find 3 profile path definitions but found %d\n", iterator);
+	if (iterator != 4) {
+		printf ("ERROR (1): expected to find 4 profile path definitions but found %d\n", iterator);
 		return axl_false;
 	}
 
@@ -903,6 +903,97 @@ axl_bool test_09b (void)
 		iterator, no_items);
 
 	/* the release below is what used to crash */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+/* prototype for the internal profile path item matcher (not published
+ * in a public header) used by the regression test below */
+extern int __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
+					  TurbulencePPathItem ** ppath_items,
+					  TurbulencePPathState * state,
+					  const char           * uri,
+					  const char           * serverName,
+					  int                    channel_num,
+					  VortexConnection     * connection,
+					  const char           * profile_content,
+					  int                    level);
+
+/**
+ * @brief Regression test: the serverName requested on a channel start
+ * must be checked against the "server-name" declared by the selected
+ * profile path. The length guard used to be "strlen (serverName) > 1",
+ * so a single character serverName skipped the check entirely and the
+ * channel was accepted whatever the profile path declared.
+ */
+axl_bool test_09c (void)
+{
+	TurbulenceCtx        * tCtx;
+	VortexCtx            * vCtx;
+	TurbulencePPathDef   * def;
+	TurbulencePPathState   state;
+	int                    iterator;
+	const char           * uri = "urn:aspl.es:beep:profiles:reg-test:base";
+
+	if (! test_common_init (&vCtx, &tCtx, "test_ppath.conf"))
+		return axl_false;
+
+	/* find the profile path that only accepts serverName "server-b" */
+	def      = NULL;
+	iterator = 1;
+	while (axl_true) {
+		def = turbulence_ppath_find_by_id (tCtx, iterator);
+		if (def == NULL)
+			break;
+		if (axl_cmp (turbulence_ppath_get_name (def), "ppath-reg-test-server-name"))
+			break;
+		iterator++;
+	}
+
+	if (def == NULL) {
+		printf ("ERROR (1): unable to find the 'ppath-reg-test-server-name' profile path\n");
+		return axl_false;
+	}
+
+	/* build the profile path state the mask handler works with. The
+	 * items checked below declare no connmark/preconnmark/max-per-conn,
+	 * so the connection reference is never dereferenced and can be
+	 * NULL here. */
+	state.path_selected        = def;
+	state.requested_serverName = NULL;
+	state.ctx                  = tCtx;
+
+	/* a single character serverName that does NOT match "server-b"
+	 * must be denied (this is the case that used to be accepted) */
+	if (! __turbulence_ppath_mask_items (tCtx, def->ppath_items, &state, uri, "a", 1, NULL, NULL, 1)) {
+		printf ("ERROR (2): serverName='a' does not match server-name='server-b' but the channel was accepted\n");
+		return axl_false;
+	}
+
+	/* a longer non matching serverName must be denied too (this one
+	 * was already denied before the fix) */
+	if (! __turbulence_ppath_mask_items (tCtx, def->ppath_items, &state, uri, "ab", 1, NULL, NULL, 1)) {
+		printf ("ERROR (3): serverName='ab' does not match server-name='server-b' but the channel was accepted\n");
+		return axl_false;
+	}
+
+	/* the matching serverName must still be accepted: the fix must not
+	 * turn the check into a blanket deny */
+	if (__turbulence_ppath_mask_items (tCtx, def->ppath_items, &state, uri, "server-b", 1, NULL, NULL, 1)) {
+		printf ("ERROR (4): serverName='server-b' matches server-name='server-b' but the channel was denied\n");
+		return axl_false;
+	}
+
+	/* no serverName provided must keep working (the check only applies
+	 * when the peer did request one) */
+	if (__turbulence_ppath_mask_items (tCtx, def->ppath_items, &state, uri, "", 1, NULL, NULL, 1)) {
+		printf ("ERROR (5): empty serverName must not be filtered by the server-name check\n");
+		return axl_false;
+	}
+
+	printf ("Test 09-c: serverName enforced for 1 char, longer and empty values\n");
+
 	test_common_exit (vCtx, tCtx);
 
 	return axl_true;
@@ -7097,6 +7188,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_09b")
 	run_test (test_09b, "Test 09-b: profile path release with a <path-def> without items");
+
+	CHECK_TEST("test_09c")
+	run_test (test_09c, "Test 09-c: profile path serverName enforcement on channel start");
 
 	CHECK_TEST("test_signal_mask")
 	run_test (test_signal_mask, "Test 02-s: signal block/unblock honours the signal argument");
