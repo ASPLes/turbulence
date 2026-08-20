@@ -855,6 +855,60 @@ axl_bool test_09a (void)
 }
 
 /**
+ * @brief Regression test: a <path-def> declaring no <allow>/<if-success>
+ * child is accepted by turbulence-config.dtd, but turbulence_ppath_init
+ * only allocates definition->ppath_items when at least one such child is
+ * found. turbulence_ppath_cleanup used to walk that array
+ * unconditionally, dereferencing NULL while releasing the profile path.
+ */
+axl_bool test_09b (void)
+{
+	TurbulenceCtx      * tCtx;
+	VortexCtx          * vCtx;
+	TurbulencePPathDef * def;
+	int                  iterator;
+	int                  no_items;
+
+	/* init vortex and turbulence with a configuration holding
+	 * <path-def> nodes without <allow>/<if-success> childs */
+	if (! test_common_init (&vCtx, &tCtx, "test_ppath.conf"))
+		return axl_false;
+
+	/* check the profile paths were loaded and that the ones without
+	 * items are indeed reported with a NULL items array (profile path
+	 * ids are assigned from 1, in document order) */
+	iterator = 1;
+	no_items = 0;
+	while (axl_true) {
+		def = turbulence_ppath_find_by_id (tCtx, iterator);
+		if (def == NULL)
+			break;
+		if (def->ppath_items == NULL)
+			no_items++;
+		iterator++;
+	}
+	iterator--;
+
+	if (iterator != 3) {
+		printf ("ERROR (1): expected to find 3 profile path definitions but found %d\n", iterator);
+		return axl_false;
+	}
+
+	if (no_items != 2) {
+		printf ("ERROR (2): expected to find 2 profile paths without items but found %d\n", no_items);
+		return axl_false;
+	}
+
+	printf ("Test 09-b: loaded %d profile paths (%d without <allow>/<if-success> items), releasing..\n",
+		iterator, no_items);
+
+	/* the release below is what used to crash */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
+/**
  * @brief Regression test: turbulence_signal_block / _unblock must operate
  * on the signal passed as argument. The implementation used to hardcode
  * SIGCHLD in the mask, ignoring the parameter, so blocking any other
@@ -7040,6 +7094,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");
+
+	CHECK_TEST("test_09b")
+	run_test (test_09b, "Test 09-b: profile path release with a <path-def> without items");
 
 	CHECK_TEST("test_signal_mask")
 	run_test (test_signal_mask, "Test 02-s: signal block/unblock honours the signal argument");

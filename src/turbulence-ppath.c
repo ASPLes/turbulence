@@ -193,8 +193,8 @@ TurbulencePPathItem * __turbulence_ppath_get_item (TurbulenceCtx * ctx, axlNode 
 			/* next profile path item */
 			child = axl_node_get_next (child);
 			iterator++;
-			
-		} /* end if */
+
+		} /* end while */
 	} /* end if */
 	
 	/* return result parsed */
@@ -252,7 +252,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		/* item from the profile path */
 		item = ppath_items[iterator];
 
-		/* profile properly matched, including the serverName */
+		/* check if this item declares the profile requested */
 		msg2 ("  <allow level=%d>: Checking profile path def (profile: %s == %s?)", level, turbulence_expr_get_expression (item->profile), uri);
 
 		/* check the profile uri */
@@ -310,9 +310,9 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		msg2 ("  <allow level=%d>: Profile path MATCHED, including serverName at <allow> level: channel_num=%d, profile=%s, serverName=%s", 
 		      level, channel_num, uri, serverName ? serverName : "");
 		return axl_false;
-	} /* end if */
+	} /* end while */
 
-	msg2 ("  <allow level=%d>: anything matched in <allow> nodes at this level, let's see <if-success> nodes", level);
+	msg2 ("  <allow level=%d>: nothing matched in <allow> nodes at this level, let's see <if-success> nodes", level);
 
 	/* SECOND PART: now check for second level profile path configurations,
 	 * based on <if-success> */
@@ -328,8 +328,9 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 		 * check all <allow> and <if-success> nodes inside. */
 		if (item->type == PROFILE_IF) {
 
-			/* profile properly matched, including the serverName */
-			msg2 ("  <if-success level=%d>: found if branch, now checking if we have some profile accepted matching: %s?)", 
+			/* found an <if-success> branch, report which
+			 * expression is going to be checked */
+			msg2 ("  <if-success level=%d>: found if branch, now checking if we have some profile accepted matching: %s?)",
 			      level, turbulence_expr_get_expression (item->profile));
 
 			/* check if we have a profile attr alias before continue */
@@ -367,8 +368,9 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 				/* get the uri value */
 				uri2 = axl_hash_cursor_get_key (profiles);
 
-				/* profile properly matched, including the serverName */
-				msg2 ("  <if-success level=%d>: Checking profile path def (profile: %s == %s?)", 
+				/* check the <if-success> expression against
+				 * this running profile */
+				msg2 ("  <if-success level=%d>: Checking profile path def (profile: %s == %s?)",
 				      level, turbulence_expr_get_expression (item->profile), uri2);
 
 				/* try to match the profile expression against
@@ -409,7 +411,7 @@ int  __turbulence_ppath_mask_items (TurbulenceCtx        * ctx,
 
 		/* next item to process */
 		iterator++;
-	} /* end if */
+	} /* end while */
 
 	return axl_true;
 }
@@ -469,15 +471,6 @@ axl_bool  __turbulence_ppath_mask (VortexConnection  * connection,
 
 	msg2 ("  Starting profile path [%s] iterator for channel_num=%d, profile=%s, serverName=%s", 
 	      turbulence_ppath_get_name (state->path_selected), channel_num, uri, serverName ? serverName : "");
-	if (state == NULL || state->path_selected == NULL) {
-		error ("No profile path selected, deny: %s (conn id: %d [%s:%s])", 
-		       uri, 
-		       vortex_connection_get_id (connection), 
-		       vortex_connection_get_host (connection),
-		       vortex_connection_get_port (connection));
-		/* filter, no profile path selected */
-		return axl_true;
-	} /* end if */
 
 	/* check if the profile provided is found in the <allow> or
 	 * <if-success> configuration */
@@ -558,10 +551,18 @@ axl_bool  __turbulence_ppath_mask_temporal   (VortexConnection  * connection,
 					      axlPointer          user_data)
 {
 	TurbulencePPathState * state;
-	TurbulenceCtx        * ctx;
+	TurbulenceCtx        * ctx = NULL;
 
-	/* get current state */
+	/* get current state: check it before dereferencing it to get the
+	 * context (otherwise a NULL state would crash below). Same guard
+	 * applied by __turbulence_ppath_mask. */
 	state = vortex_connection_get_data (connection, TURBULENCE_PPATH_STATE);
+	if (state == NULL) {
+		error ("  Found no profile path state on connection (state is NULL), rejecting (0x9000843a)");
+		/* filter, no profile path state available */
+		return axl_true;
+	} /* end if */
+
 	ctx   = state->ctx;
 
 	/* the following is to avoid noisy output on greetings phase
@@ -624,7 +625,7 @@ axl_bool __turbulence_ppath_handle_connection_match_src (VortexConnection * conn
 							 TurbulenceExpr   * expr, 
 							 const char       * src)
 {
-	/* by default, it no expression is found, it means this match
+	/* by default, if no expression is found, it means this match
 	 * pattern must not block the connection  */
 	if (expr == NULL)
 		return axl_true;
@@ -979,6 +980,11 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 		msg ("PARENT: sending socket %d to child because he already owns it and we don't want it at the parent process (master <-> child)", session);
 		if (! turbulence_process_send_socket (session, child, "s", 1))  {
 			error ("PARENT: Unable to send socket associated to the management connection associated to the child process");
+			/* the child did not get the socket, so the master
+			 * listener that made this connection possible is
+			 * still ours: close it here too, otherwise its
+			 * descriptor is leaked on every failure */
+			vortex_connection_shutdown (conn_mgr);
 			return axl_false;
 		} /* end if */
 
@@ -1017,63 +1023,7 @@ axl_bool  __turbulence_ppath_handle_connection_on_connect (VortexConnection * co
 }
 
 
-/** 
- * @internal Helper for __turbulence_ppath_get_server_name_feature.
- */
-char * __turbulence_ppath_get_server_name_feature_aux (const char * features)
-{
-	int    last     = 0;
-	int    iterator = 0;
-	char * result;
-
-	/* check last position */
-	while (iterator < features[last] && features[last] != 0 && features[last] != ' ')
-		last++;
-
-	/* check for empty results */
-	if (last == iterator)
-		return NULL;
-	
-	/* check we have found last position */
-	if (features[last] == 0 || features[last] == ' ') {
-		result = axl_new (char, last - iterator + 1);
-		memcpy (result, features, last - iterator);
-		return result;
-	}
-	return NULL;
-}
-
-/** 
- * @internal Function used to get the serverName reported by
- * x-serverName feature (if found). The function returns NULL if
- * nothing is found.
- */
-char * __turbulence_ppath_get_server_name_feature (const char * features)
-{
-	int iterator = 0;
-
-	/* check for empty features */
-	if (features == NULL)
-		return NULL;
-
-	while (iterator < strlen (features)) {
-
-		if (axl_memcmp (features + iterator, "x-serverName:", 13)) 
-			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 13);
-		if (axl_memcmp (features + iterator, "serverName:", 11)) 
-			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 11);
-		if (axl_memcmp (features + iterator, "x-serverName=", 13)) 
-			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 13);
-		if (axl_memcmp (features + iterator, "serverName=", 11)) 
-			return __turbulence_ppath_get_server_name_feature_aux (features + iterator + 11);
-
-		/* next position */
-		iterator++;
-	}
-	return NULL;
-}
-
-/** 
+/**
  * @internal Handler called to configure/reconfigure profile path to
  * be applied to this connection. This handler is called after the
  * connection was accepted and once the client greetings was received.
@@ -1198,13 +1148,11 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		   accept handler rather waiting client greetings
 		   reception */
 		if (ctx->all_rules_address_based) {
-			/* if has server-Name defined and its value is
-			   different .* (which means all serverName
-			   allowed including empty value). The following signals all rules are address based if: 
-			   - It has serverName defined and
-			   - It has a value different from .* and
-			   - the rule having serverName configuration have no address match 
-			*/
+			/* A rule stops being address based as soon as it
+			   declares a server-name that is not ".*" (".*"
+			   means every serverName is allowed, including the
+			   empty value, so it adds no restriction that
+			   needs the client greetings to be evaluated). */
 
 			if ((HAS_ATTR (pdef, "server-name")) && 
 			    (! HAS_ATTR_VALUE (pdef, "server-name", ".*"))) {
@@ -1246,7 +1194,7 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 		/* check for chroot value */
 		definition->chroot   = ATTR_VALUE (pdef, "chroot");
 
-		/* check for chroot value */
+		/* check for work-dir value */
 		definition->work_dir = ATTR_VALUE (pdef, "work-dir");
 
 		/* now, we have to parse all childs. Rules from the
@@ -1286,8 +1234,8 @@ int  turbulence_ppath_init (TurbulenceCtx * ctx)
 				/* next profile path item */
 				node = axl_node_get_next (node);
 				iterator2++;
-			
-			} /* end if */
+
+			} /* end while */
 		} /* end if */
 		
 		/* get next profile path def */
@@ -1328,7 +1276,7 @@ void __turbulence_ppath_free_item (TurbulencePPathItem * item)
 
 		/* next profile path item */
 		iterator++;
-	} /* end if */
+	} /* end while */
 
 	/* free the array */
 	axl_free (item->ppath_items);
@@ -1364,9 +1312,15 @@ void turbulence_ppath_cleanup (TurbulenceCtx * ctx)
 			turbulence_expr_free (def->src);
 			turbulence_expr_free (def->dst);
 
+			/* NOTE: def->ppath_items is only allocated by
+			 * turbulence_ppath_init when the <path-def> holds at
+			 * least one <allow>/<if-success> child. The DTD
+			 * accepts a <path-def> without any of them (and one
+			 * holding only <search> childs), so the array may
+			 * legitimately be NULL here. */
 			iterator2 = 0;
-			while (def->ppath_items[iterator2] != NULL) {
-				
+			while (def->ppath_items != NULL && def->ppath_items[iterator2] != NULL) {
+
 				/* free the item */
 				__turbulence_ppath_free_item (def->ppath_items[iterator2]);
 
@@ -1433,15 +1387,15 @@ void turbulence_ppath_change_user_id (TurbulenceCtx      * ctx,
  *
  * @param conn The connection where the Profile path configured is requested.
  *
- * @return The profile path name or NULL if it has no profile path
- * defined.
+ * @return The profile path definition selected or NULL if it has no
+ * profile path defined.
  */
 TurbulencePPathDef * turbulence_ppath_selected (VortexConnection * conn)
 {
 	TurbulencePPathState * state;
 
 	/* check connection reference */
-	v_return_val_if_fail (conn, axl_false);
+	v_return_val_if_fail (conn, NULL);
 
 	/* get state */
 	state = vortex_connection_get_data (conn, TURBULENCE_PPATH_STATE);
@@ -1631,10 +1585,23 @@ void turbulence_ppath_change_root    (TurbulenceCtx      * ctx,
 	/* check if chroot is defined */
 	if (ppath_def->chroot == NULL)
 		return;
-	if (chroot (ppath_def->chroot) != 0) 
-		error ("Failed to change root dir to %s, error found: %d:%s", 
+	if (chroot (ppath_def->chroot) != 0) {
+		error ("Failed to change root dir to %s, error found: %d:%s",
 		       ppath_def->chroot,
 		       errno, vortex_errno_get_last_error ());
+		/* do not report success below: the process is still
+		 * running outside the configured root */
+		return;
+	} /* end if */
+
+	/* chroot does not change the current working directory, so it is
+	 * still pointing outside the new root and the confinement can be
+	 * walked out of with a relative path. Move into the new root. */
+	if (chdir ("/") != 0)
+		error ("Failed to change working dir to / after chroot to %s, error found: %d:%s",
+		       ppath_def->chroot,
+		       errno, vortex_errno_get_last_error ());
+
 	msg ("change root dir to: %s", ppath_def->chroot);
 	return;
 }

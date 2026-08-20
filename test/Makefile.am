@@ -14,6 +14,7 @@ configuration_files = \
 	test_08.conf  \
 	test_08b.conf  \
 	test_09.conf  \
+	test_ppath.conf \
 	test_10.conf  \
 	test_10-a.conf \
 	test_10b.conf \
