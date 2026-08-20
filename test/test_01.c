@@ -926,6 +926,23 @@ axl_bool  test_02 (void)
 		printf ("Expected a long string with a trailing non-digit to be reported as NOT a number..\n");
 		return axl_false;
 	}
+	/* NULL used to be dereferenced right away */
+	if (turbulence_is_num (NULL)) {
+		printf ("Expected NULL to be reported as NOT a number..\n");
+		return axl_false;
+	}
+	/* the empty string used to be reported as a number because the
+	 * loop ended before inspecting any digit */
+	if (turbulence_is_num ("")) {
+		printf ("Expected the empty string to be reported as NOT a number..\n");
+		return axl_false;
+	}
+	/* bytes over 127 must not be handed to isdigit as negative values
+	 * (undefined behaviour with the usual signed char) */
+	if (turbulence_is_num ("12\xe9" "45")) {
+		printf ("Expected a string with a high-bit byte to be reported as NOT a number..\n");
+		return axl_false;
+	}
 
 	if (turbulence_file_is_fullpath ("test")) {
 		printf ("Expected to find a relative path..\n");
@@ -1864,6 +1881,8 @@ axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * valu
 
 axl_bool test_05_a (void) {
 	int value;
+	int iterator;
+	FILE * file;
 	TurbulenceCtx * ctx = turbulence_ctx_new ();
 	/* turbulence_log_enable       (ctx, axl_true);
 	   turbulence_color_log_enable (ctx, axl_true); */
@@ -1900,6 +1919,61 @@ axl_bool test_05_a (void) {
 			value, "mysql");
 		return axl_false;
 	}
+
+	/* A field longer than the internal 512 bytes buffer must be
+	 * rejected. The reading macro used to consume byte by byte with no
+	 * bound of its own while the caller kept incrementing the index, so
+	 * a long enough field wrote past the end of the stack array. */
+	file = fopen ("test_05_a_long_passwd", "w");
+	if (file == NULL) {
+		printf ("ERROR (4): unable to create the overlong passwd file..\n");
+		return axl_false;
+	} /* end if */
+	iterator = 0;
+	while (iterator < 2000) {
+		fprintf (file, "a");
+		iterator++;
+	} /* end while */
+	fprintf (file, ":x:100:100:long user:/home/long:/bin/false\n");
+	fclose (file);
+
+	if (__turbulence_get_system_id_info (ctx, "some-user", &value, "test_05_a_long_passwd")) {
+		printf ("ERROR (5): expected failure reading a passwd file with an overlong field..\n");
+		return axl_false;
+	} /* end if */
+	unlink ("test_05_a_long_passwd");
+
+	/* The numeric form documented by turbulence_get_system_id must be
+	 * honoured. It was not: the value was always looked up inside
+	 * /etc/passwd, so a profile path declaring run-as-user="1000"
+	 * silently resolved to -1 and turbulence_ppath_change_user_id skips
+	 * setuid/setgid on -1, leaving the child running as the original
+	 * user. */
+	if (turbulence_get_system_id (ctx, "1000", axl_true) != 1000) {
+		printf ("ERROR (6): expected numeric user id 1000 to be returned as is..\n");
+		return axl_false;
+	} /* end if */
+	if (turbulence_get_system_id (ctx, "0", axl_false) != 0) {
+		printf ("ERROR (7): expected numeric group id 0 to be returned as is..\n");
+		return axl_false;
+	} /* end if */
+	if (turbulence_get_system_id (ctx, NULL, axl_true) != -1) {
+		printf ("ERROR (8): expected -1 for a NULL user..\n");
+		return axl_false;
+	} /* end if */
+
+	/* enabling the third debug level must enable the previous ones:
+	 * it used to set only the second, leaving turbulence_log_enabled()
+	 * reporting false while the third level was active */
+	turbulence_log3_enable (ctx, axl_true);
+	if (! turbulence_log2_enabled (ctx) || ! turbulence_log_enabled (ctx)) {
+		printf ("ERROR (9): expected first and second debug level enabled after enabling the third..\n");
+		return axl_false;
+	} /* end if */
+	/* restore: the levels do not chain back on deactivation */
+	turbulence_log3_enable (ctx, axl_false);
+	turbulence_log2_enable (ctx, axl_false);
+	turbulence_log_enable  (ctx, axl_false);
 
 	turbulence_ctx_free (ctx);
 

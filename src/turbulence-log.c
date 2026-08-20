@@ -404,7 +404,7 @@ void turbulence_log_report (TurbulenceCtx   * ctx,
 	/* a private copy of the va_list is used for every REPORT call:
 	 * each REPORT consumes the va_list (through vsnprintf) so reusing
 	 * the same one across calls is undefined behaviour when type has
-	 * more than one bit set (e.g. wrn_sl uses ERROR|GENERAL). */
+	 * more than one bit set (e.g. wrn_sl uses WARNING|GENERAL). */
 	va_list args_copy;
 
 	/* according to the type received report */

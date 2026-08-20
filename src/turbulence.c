@@ -104,7 +104,7 @@ void __turbulence_server_backlog (TurbulenceCtx * ctx)
 	int        backlog     = 50;
 	int        value;
 
-	/* get max limit for the pool */
+	/* get the TCP backlog configured */
 	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/server-backlog", "value");
 	if (value > 0)
 		backlog = value;
@@ -128,7 +128,7 @@ void __turbulence_acquire_limits (TurbulenceCtx * ctx)
 		ctx->global_child_limit = 100;
 	msg ("Configured global-child-limit=%d", ctx->global_child_limit);
 
-	/* get global child limit */
+	/* get max size allowed for an incoming complete frame */
 	value = turbulence_config_get_number (ctx, "/turbulence/global-settings/max-incoming-complete-frame-limit", "value");
 	if (value > 0)
 		ctx->max_complete_flag_limit = value;
@@ -187,7 +187,12 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 
 	/* load current turbulence configuration */
 	if (! turbulence_config_load (ctx, config)) {
-		/* unable to load configuration */
+		/* unable to load configuration. Every failure from this
+		 * point must release exit_mutex: it was created above and
+		 * only turbulence_exit destroys it, which the caller will
+		 * not reach after a failed init (it calls
+		 * turbulence_ctx_free, and that only destroys data_mutex) */
+		vortex_mutex_destroy (&ctx->exit_mutex);
 		return axl_false;
 	}
 
@@ -197,6 +202,7 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	/*** init the vortex library ***/
 	if (! vortex_init_ctx (vortex_ctx)) {
 		abort_error ("unable to start vortex library, terminating turbulence execution..");
+		vortex_mutex_destroy (&ctx->exit_mutex);
 		return axl_false;
 	} /* end if */
 
@@ -210,6 +216,7 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	/* db list */
 	if (! turbulence_db_list_init (ctx)) {
 		abort_error ("failed to init the turbulence db-list module");
+		vortex_mutex_destroy (&ctx->exit_mutex);
 		return axl_false;
 	} /* end if */
 
@@ -229,6 +236,7 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	 * before calling to turbulence_run_config to avoid third
 	 * party modules to install handler with higher priority. */
 	if (! turbulence_ppath_init (ctx)) {
+		vortex_mutex_destroy (&ctx->exit_mutex);
 		return axl_false;
 	} /* end if */
 
@@ -237,7 +245,7 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 
 	/* init ok */
 	return axl_true;
-} /* end if */
+}
 
 /** 
  * @brief Function that performs a reload operation for the current
@@ -293,13 +301,14 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* check to kill childs */
 	turbulence_process_kill_childs (ctx);
 
-	/* terminate all modules */
+	/* release the configuration document (modules are closed below,
+	 * once connections have been unrefered) */
 	turbulence_config_cleanup (ctx);
 
 	/* unref all connections (before calling to terminate vortex) */
 	turbulence_conn_mgr_cleanup (ctx);
 
-	/* get the vortex context assocaited */
+	/* get the vortex context associated */
 	vortex_ctx = turbulence_ctx_get_vortex_ctx (ctx);
 
 	/* terminate profile path */
@@ -332,7 +341,7 @@ void turbulence_exit (TurbulenceCtx * ctx,
 	/* cleanup process module */
 	turbulence_process_cleanup (ctx);
 
-	/* termiante proxy loop (if started) */
+	/* terminate proxy loop (if started) */
 	turbulence_loop_close (ctx->proxy_loop, axl_true);
 
 	/* free mutex */
@@ -351,9 +360,9 @@ void turbulence_exit (TurbulenceCtx * ctx,
  */
 #define CONSOLE if (ctx->console_enabled || ignore_debug) fprintf
 
-/** 
- * @internal Simple macro to check if the console output is activated
- * or not.
+/**
+ * @internal Same check as \ref CONSOLE but for the vfprintf variant,
+ * used to report a message already collected into a va_list.
  */
 #define CONSOLEV if (ctx->console_enabled || ignore_debug) vfprintf
 
@@ -434,8 +443,9 @@ axl_bool  turbulence_log_enabled (TurbulenceCtx * ctx)
  * @brief Allows to activate the turbulence console log (by default
  * disabled).
  * 
- * @param ctx The turbulence context to configure.  @param value The
- * value to configure to enable/disable console log.
+ * @param ctx The turbulence context to configure.
+ *
+ * @param value The value to configure to enable/disable console log.
  */
 void turbulence_log_enable       (TurbulenceCtx * ctx, 
 				  int  value)
@@ -527,9 +537,13 @@ void turbulence_log3_enable      (TurbulenceCtx * ctx,
 	/* update the global console activation */
 	ctx->console_enabled     = ctx->console_debug || ctx->console_debug2 || ctx->console_debug3;
 
-	/* makes implicit activations */
+	/* makes implicit activations: done through the second level
+	 * function so the activation is transitive and the first level
+	 * is enabled too. Setting console_debug2 directly left
+	 * turbulence_log_enabled() reporting false with the third level
+	 * active */
 	if (ctx->console_debug3)
-		ctx->console_debug2 = axl_true;
+		turbulence_log2_enable (ctx, axl_true);
 
 	return;
 }
@@ -620,23 +634,23 @@ void  turbulence_access   (TurbulenceCtx * ctx, const char * file, int line, con
 
 	/* check extended console log */
 	if (ctx->console_debug3) {
-#if defined(AXL_OS_UNIX)	
+#if defined(AXL_OS_UNIX)
 		if (ctx->console_color_debug) {
-			CONSOLE (stdout, "(proc:%d) [\e[1;32mmsg\e[0m] (%s:%d) ", ctx->pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [\e[1;32macc\e[0m] (%s:%d) ", ctx->pid, file, line);
 		} else
 #endif
-			CONSOLE (stdout, "(proc:%d) [msg] (%s:%d) ", ctx->pid, file, line);
+			CONSOLE (stdout, "(proc:%d) [acc] (%s:%d) ", ctx->pid, file, line);
 	} else {
-#if defined(AXL_OS_UNIX)	
+#if defined(AXL_OS_UNIX)
 		if (ctx->console_color_debug) {
-			CONSOLE (stdout, "\e[1;32mI: \e[0m");
+			CONSOLE (stdout, "\e[1;32mA: \e[0m");
 		} else
 #endif
-			CONSOLE (stdout, "I: ");
+			CONSOLE (stdout, "A: ");
 	} /* end if */
-	
+
 	va_start (args, format);
-	
+
 	/* report to console */
 	CONSOLEV (stdout, format, args);
 
@@ -799,8 +813,11 @@ void turbulence_wrn_sl (TurbulenceCtx * ctx, const char * file, int line, const 
 	va_end (args);
 	va_start (args, format);
 
-	/* report to log */
-	turbulence_log_report (ctx, LOG_REPORT_ERROR | LOG_REPORT_GENERAL, format, args, file, line);
+	/* report to log: this is a warning, so it goes to the same
+	 * destinations turbulence_wrn uses. It reported as
+	 * LOG_REPORT_ERROR before, which escalated every warning printed
+	 * through this function to error severity in syslog */
+	turbulence_log_report (ctx, LOG_REPORT_WARNING | LOG_REPORT_GENERAL, format, args, file, line);
 
 	va_end (args);
 
@@ -850,10 +867,12 @@ axl_bool  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 /** 
  * @brief Creates the directory with the path provided.
  * 
- * @param path The directory to create.
- * 
- * @return axl_true if the directory was created, otherwise axl_false is
- * returned.
+ * @param path The directory to create. It is created with 0770
+ * permissions under unix.
+ *
+ * @return axl_true if the directory was created, otherwise axl_false
+ * is returned. Note that an already existing directory is reported as
+ * a failure (the underlying mkdir fails with EEXIST).
  */
 axl_bool   turbulence_create_dir  (const char * path)
 {
@@ -957,8 +976,8 @@ char   * turbulence_base_dir            (const char * path)
 	/* start with string length */
 	iterator = strlen (path) - 1;
 
-	/* lookup for the back-slash */
-	while ((iterator >= 0) && 
+	/* lookup backwards for the last separator (slash or back-slash) */
+	while ((iterator >= 0) &&
 	       ((path [iterator] != '/') && path [iterator] != '\\'))
 		iterator--;
 
@@ -992,25 +1011,34 @@ char   * turbulence_file_name           (const char * path)
 	/* start with string length */
 	iterator = strlen (path) - 1;
 
-	/* lookup for the back-slash */
+	/* lookup backwards for the last separator (slash or back-slash) */
 	while ((iterator >= 0) && ((path [iterator] != '/') && (path [iterator] != '\\')))
 		iterator--;
 
-	/* check if the file provided doesn't have any file part */
+	/* no separator found: the whole path is already the file name */
 	if (iterator == -1) {
-		/* return the an empty file part */
 		return axl_strdup (path);
 	}
 
-	/* copy the base dir found */
+	/* copy the file name found, that is, everything after the
+	 * separator */
 	return axl_strdup (path + iterator + 1);
 }
 
-/*
+/**
  * @brief Allows to get the next line read from the user. The function
  * return an string allocated.
- * 
- * @return An string allocated or NULL if nothing was received.
+ *
+ * @param prompt The prompt to write before reading, or NULL to write
+ * nothing.
+ *
+ * @param flags Controls the read operation. Use \ref
+ * DISABLE_STDIN_ECHO to avoid echoing what the user types.
+ *
+ * @return An string allocated (that must be released with axl_free) or
+ * NULL if nothing was received. Note NULL is also returned if the line
+ * received is longer than the internal buffer (1024 bytes) because no
+ * end of line was found inside it.
  */
 char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 {
@@ -1021,21 +1049,29 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 	int output;
 
 	/* buffer declaration */
-	char   buffer[1024];
-	char * result = NULL;
-	int    iterator;
-	
+	char     buffer[1024];
+	char   * result = NULL;
+	int      iterator;
+	axl_bool tty_opened   = axl_false;
+	axl_bool echo_changed = axl_false;
+
 	/* try to read directly from the tty */
 	if ((input = output = open (TBC_TERMINAL, O_RDWR)) < 0) {
 		/* if fails to open the terminal, use the standard
 		 * input and standard error */
 		input  = STDIN_FILENO;
 		output = STDERR_FILENO;
+	} else {
+		/* the terminal was opened here, so it must be closed
+		 * before leaving no matter which path is taken */
+		tty_opened = axl_true;
 	} /* end if */
 
 	/* print the prompt if defined */
 	if (prompt != NULL) {
-		/* write the prompt */
+		/* write the prompt: the result is flushed in both cases,
+		 * it is checked only because write is declared with
+		 * warn_unused_result */
 		if (write (output, prompt, strlen (prompt)) == -1)
 			fsync (output);
 		else
@@ -1047,12 +1083,16 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 		if (input != STDIN_FILENO && (tcgetattr (input, &current_set) == 0)) {
 			/* copy to the new set */
 			memcpy (&new_set, &current_set, sizeof (struct termios));
-			
+
 			/* configure new settings */
 			new_set.c_lflag &= ~(ECHO | ECHONL);
-			
+
 			/* set this values to the current input */
-			tcsetattr (input, TCSANOW, &new_set);
+			if (tcsetattr (input, TCSANOW, &new_set) == 0) {
+				/* only now current_set holds a valid
+				 * setting to restore later */
+				echo_changed = axl_true;
+			} /* end if */
 		} /* end if */
 	} /* end if */
 
@@ -1074,17 +1114,18 @@ char * turbulence_io_get (char * prompt, TurbulenceIoFlags flags)
 		iterator++;
 	} /* end while */
 
-	/* return terminal settings if modified */
-	if (flags & DISABLE_STDIN_ECHO) {
-		if (input != STDIN_FILENO) {
-			
-			/* set this values to the current input */
-			tcsetattr (input, TCSANOW, &current_set);
+	/* restore terminal settings, but only if they were really
+	 * changed: otherwise current_set was never filled by tcgetattr
+	 * and applying it would push uninitialised stack content into
+	 * the terminal */
+	if (echo_changed)
+		tcsetattr (input, TCSANOW, &current_set);
 
-			/* close opened file descriptor */
-			close (input);
-		} /* end if */
-	} /* end if */
+	/* close the terminal descriptor opened above. This used to happen
+	 * only when DISABLE_STDIN_ECHO was requested, so every call
+	 * without that flag leaked the descriptor */
+	if (tty_opened)
+		close (input);
 
 	/* do not return anything from this point */
 	return result;
@@ -1165,7 +1206,7 @@ const char    * turbulence_sysconfdir     (TurbulenceCtx * ctx)
  * configured to: <b>../data</b>.
  *
  * @param ctx The turbulence ctx with the associated configuration
- * where we are getting the sysconfdir. If NULL is provided, default
+ * where we are getting the datadir. If NULL is provided, default
  * value is returned.
  *
  * @return The path currently configured by default or the value
@@ -1197,8 +1238,8 @@ const char    * turbulence_datadir        (TurbulenceCtx  * ctx)
  * content is found.
  *
  * @param ctx The turbulence ctx with the associated configuration
- * where we are getting the sysconfdir. If NULL is provided, default
- * value is returned.
+ * where we are getting the runtime datadir. If NULL is provided,
+ * default value is returned.
  *
  * @return The path currently configured by default or the value
  * overrided on the configuration.
@@ -1238,14 +1279,24 @@ const char    * turbulence_runtime_tmpdir  (TurbulenceCtx * ctx)
  * @param value The decimal number to be checked.
  *
  * @return axl_true in the case a decimal value is found otherwise
- * axl_false is returned.
+ * axl_false is returned. NULL and the empty string are not numbers, so
+ * axl_false is returned for them.
  */
 axl_bool  turbulence_is_num  (const char * value)
 {
 	int iterator = 0;
+
+	/* NULL and empty string are not decimal numbers */
+	if (value == NULL || value[0] == 0)
+		return axl_false;
+
 	while (value[iterator] != 0) {
-		/* check value on each position */
-		if (! isdigit (value[iterator]))
+		/* check value on each position: the cast is required
+		 * because isdigit is undefined for negative values and
+		 * char is signed on most platforms, so any byte over
+		 * 127 (for example inside an utf-8 sequence) would be
+		 * passed as a negative value */
+		if (! isdigit ((unsigned char) value[iterator]))
 			return axl_false;
 
 		/* next position */
@@ -1258,7 +1309,15 @@ axl_bool  turbulence_is_num  (const char * value)
 
 #if defined(AXL_OS_UNIX)
 
+/* Reads one byte into line[iterator], stopping at the delimiter. The
+ * iterator bound is checked here because the caller increments it once
+ * per byte read with no limit of its own: a field longer than the
+ * buffer would write past the end of the stack array. */
 #define SYSTEM_ID_CONSUME_UNTIL_ZERO(line, fstab, delimiter)                       \
+        if (iterator >= (int) (sizeof (line) - 1)) {                               \
+	      fclose (fstab);                                                      \
+	      return axl_false;                                                    \
+	}                                                                          \
 	if (fread (line + iterator, 1, 1, fstab) != 1 || line[iterator] == 0) {    \
 	      fclose (fstab);                                                      \
 	      return axl_false;                                                    \
@@ -1266,7 +1325,7 @@ axl_bool  turbulence_is_num  (const char * value)
         if (line[iterator] == delimiter) {                                         \
 	      line[iterator] = 0;                                                  \
 	      break;                                                               \
-	}                                                                          
+	}
 
 axl_bool __turbulence_get_system_id_info (TurbulenceCtx * ctx, const char * value, int * system_id, const char * path)
 {
@@ -1355,9 +1414,24 @@ int turbulence_get_system_id  (TurbulenceCtx * ctx, const char * value, axl_bool
 #if defined (AXL_OS_UNIX)
 	int system_id = -1;
 
-	/* get user and group id associated to the value provided */
-	if (! __turbulence_get_system_id_info (ctx, value, &system_id, get_user ? "/etc/passwd" : "/etc/group"))
+	/* nothing to resolve */
+	if (value == NULL)
 		return -1;
+
+	/* if the value already holds the numeric id, use it directly:
+	 * looking it up inside /etc/passwd would fail because there is no
+	 * account *named* "1000", and the caller would silently get -1 */
+	if (turbulence_is_num (value))
+		return atoi (value);
+
+	/* get user and group id associated to the value provided */
+	if (! __turbulence_get_system_id_info (ctx, value, &system_id, get_user ? "/etc/passwd" : "/etc/group")) {
+		/* report it: a caller like the profile path run-as-user
+		 * support skips setuid/setgid when it receives -1, so a
+		 * value that cannot be resolved must not pass unnoticed */
+		error ("Failed to resolve %s '%s' into a system id", get_user ? "user" : "group", value);
+		return -1;
+	} /* end if */
 
 	/* return the user id or group id */
 	msg ("Resolved %s:%s to system id %d", get_user ? "user" : "group", value, system_id);
@@ -1425,15 +1499,16 @@ axl_bool        turbulence_change_fd_perms (TurbulenceCtx * ctx,
 	return axl_true;
 }
 
-/** 
- * @brief Implements a portable subsecond thread sleep operation. The
- * caller will be blocked during the provide period.
+/**
+ * @brief Implements a portable thread sleep operation. The caller will
+ * be blocked during the provided period.
  *
  * @param ctx The context used during the operation.
  *
- * @param microseconds Amount of time to wait.
- *
- * 
+ * @param microseconds Amount of time to wait. Values of one second or
+ * more are accepted (Linux normalises the resulting timeval), though
+ * POSIX only requires the sub-second range to be handled, so callers
+ * needing longer waits should not rely on it on other platforms.
  */
 void            turbulence_sleep           (TurbulenceCtx * ctx,
 					    long            microseconds)
