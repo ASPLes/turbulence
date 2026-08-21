@@ -57,6 +57,13 @@
  */
 #define TURBULENCE_CONN_MGR_STATS_MAX_RETRIES (100)
 
+/**
+ * @internal Max number of times __turbulence_conn_mgr_proxy_send_all
+ * waits (10ms each) for the child socket to become writable again
+ * before considering it broken.
+ */
+#define TURBULENCE_CONN_MGR_PROXY_SEND_MAX_TRIES (100)
+
 /** 
  * @internal Handler called once the connection is about to be closed,
  * used to drop its registration from the connection manager hash.
@@ -82,8 +89,10 @@ void turbulence_conn_mgr_on_close (VortexConnection * conn,
 	/* lock to remove the closing connection from the hash */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
-	/* remove from the hash */
-	axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
+	/* remove from the hash (recheck under lock: it may have been
+	 * nullified by turbulence_conn_mgr_cleanup in the middle) */
+	if (ctx->conn_mgr_hash)
+		axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
@@ -355,7 +364,23 @@ int turbulence_conn_mgr_notify (VortexCtx               * vortex_ctx,
 	/* new connection created: configure it */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
-	axl_hash_insert_full (ctx->conn_mgr_hash, 
+	/* check the hash is still in place: after
+	 * turbulence_conn_mgr_cleanup the hash is nullified and
+	 * axl_hash_insert_full would silently drop the state, leaking it
+	 * along with the connection reference acquired above */
+	if (ctx->conn_mgr_hash == NULL) {
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+		wrn ("Connection manager already finished, not registering connection id=%d",
+		     vortex_connection_get_id (conn));
+
+		axl_hash_free (state->profiles_running);
+		vortex_connection_unref (conn, "turbulence-conn-mgr");
+		axl_free (state);
+		return 1;
+	} /* end if */
+
+	axl_hash_insert_full (ctx->conn_mgr_hash,
 			      /* key to store */
 			      INT_TO_PTR (vortex_connection_get_id (conn)), NULL,
 			      /* data to store */
@@ -510,11 +535,17 @@ void turbulence_conn_mgr_register (TurbulenceCtx * ctx, VortexConnection * conn)
 void turbulence_conn_mgr_unregister    (TurbulenceCtx    * ctx, 
 					VortexConnection * conn)
 {
+	/* do not remove if hash is not defined */
+	if (ctx->conn_mgr_hash == NULL)
+		return;
+
 	/* lock to remove the connection from the hash */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 
-	/* remove from the hash */
-	axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
+	/* remove from the hash (recheck under lock: it may have been
+	 * nullified by turbulence_conn_mgr_cleanup in the middle) */
+	if (ctx->conn_mgr_hash)
+		axl_hash_remove (ctx->conn_mgr_hash, INT_TO_PTR (vortex_connection_get_id (conn)));
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
@@ -805,7 +836,69 @@ axl_bool   turbulence_conn_mgr_proxy_on_parent (VortexConnection * conn)
 	return PTR_TO_INT (vortex_connection_get_data (conn, "tbc:proxy:conn"));
 }
 
-/** 
+/**
+ * @internal Sends the entire buffer provided into the socket received,
+ * handling partial sends and retrying on EINTR/EAGAIN.
+ *
+ * A partial send is a normal condition (the socket send buffer is full),
+ * not a failure: sending the remaining bytes is what keeps the proxied
+ * connection consistent. Before the retry on EAGAIN/EWOULDBLOCK the
+ * function waits for the socket to become writable so it does not busy
+ * loop.
+ *
+ * @return axl_true if the whole buffer was sent, otherwise axl_false.
+ */
+axl_bool __turbulence_conn_mgr_proxy_send_all (TurbulenceCtx * ctx,
+					       VORTEX_SOCKET   _socket,
+					       const char    * buffer,
+					       int             buffer_size)
+{
+	int              sent;
+	int              offset = 0;
+	int              tries  = 0;
+	fd_set           writefds;
+	struct timeval   tv;
+
+	while (offset < buffer_size) {
+
+		sent = send (_socket, buffer + offset, buffer_size - offset, 0);
+		if (sent > 0) {
+			/* content accepted: continue with what is left */
+			offset += sent;
+			tries   = 0;
+			continue;
+		} /* end if */
+
+		/* interrupted before sending anything: just try again */
+		if (sent < 0 && errno == VORTEX_EINTR)
+			continue;
+
+		/* send buffer full: wait until the socket is writable */
+		if (sent < 0 && (errno == VORTEX_EAGAIN || errno == VORTEX_EWOULDBLOCK)) {
+			tries++;
+			if (tries > TURBULENCE_CONN_MGR_PROXY_SEND_MAX_TRIES) {
+				error ("PROXY-beep: socket=%d still not writable after %d tries, %d bytes pending",
+				       _socket, tries - 1, buffer_size - offset);
+				return axl_false;
+			} /* end if */
+
+			FD_ZERO (&writefds);
+			FD_SET (_socket, &writefds);
+			tv.tv_sec  = 0;
+			tv.tv_usec = 10000; /* 10ms */
+			select (_socket + 1, NULL, &writefds, NULL, &tv);
+			continue;
+		} /* end if */
+
+		/* any other error (or a 0 return) means the socket is
+		 * no longer usable */
+		return axl_false;
+	} /* end while */
+
+	return axl_true;
+}
+
+/**
  * Function used to read content from the connection and write that
  * content into the child socket.
  *
@@ -837,10 +930,10 @@ void __turbulence_conn_mgr_proxy_reads (VortexConnection * conn)
 	     errno != 0 ? strerror (errno) : "");  */
 
 	if (bytes_read > 0) {
-		/* send content */
-		if (send (_socket, buffer, bytes_read, 0) != bytes_read) {
-			wrn ("PROXY-beep: closing conn-id=%d because socket=%d isn't working", 
-			     vortex_connection_get_id (conn), _socket); 
+		/* send content (handling partial sends) */
+		if (! __turbulence_conn_mgr_proxy_send_all (ctx, _socket, buffer, bytes_read)) {
+			wrn ("PROXY-beep: closing conn-id=%d because socket=%d isn't working",
+			     vortex_connection_get_id (conn), _socket);
 
 			/* remove preread handler and shutdown */
 			vortex_connection_shutdown (conn);
@@ -1021,16 +1114,24 @@ int        turbulence_conn_mgr_setup_proxy_on_parent (TurbulenceCtx * ctx, Vorte
 	return descf[0];
 }
 
-/** 
+/**
  * @brief Allows to get a reference to the registered connection with
- * the provided id. The function will return a reference to a
- * VortexConnection owned by the turbulence connection
- * manager. 
+ * the provided id.
+ *
+ * IMPORTANT: the connection returned is owned by the caller. The
+ * function acquires a reference on the caller's behalf (while holding
+ * the connection manager lock, so the connection cannot be released in
+ * the middle), which means the caller MUST call to
+ * vortex_connection_unref (conn, "conn-mgr-find-by-id") as soon as the
+ * reference is no longer needed. Without that unref the connection will
+ * be never released.
  *
  * @param ctx The turbulence context where the connection reference will be looked up.
  * @param conn_id The connection id to lookup.
  *
- * @return A VortexConnection reference or NULL value it if fails.
+ * @return A referenced VortexConnection that the caller must unref, or
+ * NULL if no connection was found with the provided id or if it was not
+ * possible to acquire a reference to it (connection being closed).
  */
 VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 						   int             conn_id)
@@ -1042,19 +1143,32 @@ VortexConnection * turbulence_conn_mgr_find_by_id (TurbulenceCtx * ctx,
 
 	/* lock and send */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
-	
+
+	/* do not lookup if the hash is not defined (module cleaned up) */
+	if (ctx->conn_mgr_hash == NULL) {
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+		return NULL;
+	} /* end if */
+
 	/* get the connection */
 	state = axl_hash_get (ctx->conn_mgr_hash, INT_TO_PTR (conn_id));
-	
+
 	/* set conection */
 	/* msg ("Connection find_by_id for conn id=%d returned pointer %p (conn: %p)", conn_id, state, state ? state->conn : NULL); */
-	if (state)
-		conn = state->conn;
+	if (state && state->conn) {
+		/* acquire the reference returned to the caller while
+		 * still holding the lock so the connection cannot be
+		 * released by the conn mgr in the middle */
+		if (vortex_connection_ref (state->conn, "conn-mgr-find-by-id"))
+			conn = state->conn;
+		else
+			wrn ("Unable to acquire reference to connection id=%d found at conn mgr, reporting not found..", conn_id);
+	} /* end if */
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
-	/* return list */
+	/* return the connection referenced (caller must unref it) */
 	return conn;
 }
 

@@ -255,6 +255,7 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
 	int                conn_id = -1;
 	TurbulenceCtx    * ctx = self->ctx;
 	VortexConnection * conn;
+	PyObject         * result;
 
 	/* parse and check result */
 	if (! PyArg_ParseTuple (args, "i", &conn_id))
@@ -267,8 +268,15 @@ static PyObject * py_turbulence_ctx_find_conn_by_id (PyTurbulenceCtx * self, PyO
 		return Py_None;
 	}
 
-	/* build connection reference */
-	return py_vortex_connection_find_reference (conn);
+	/* build connection reference: py_vortex_connection_find_reference
+	 * acquires its own reference to the connection */
+	result = py_vortex_connection_find_reference (conn);
+
+	/* release the reference returned by
+	 * turbulence_conn_mgr_find_by_id */
+	vortex_connection_unref (conn, "conn-mgr-find-by-id");
+
+	return result;
 }
 
 /** 

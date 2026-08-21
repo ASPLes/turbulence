@@ -967,6 +967,10 @@ axlDoc * mod_radmin_command_kill_connection (const char * line, axlPointer user_
 			/* connection found, shutdown */
 			vortex_connection_shutdown (conn);
 
+			/* release the reference returned by
+			 * turbulence_conn_mgr_find_by_id */
+			vortex_connection_unref (conn, "conn-mgr-find-by-id");
+
 			/* report ok */
 			(*status) = axl_true;
 			return mod_radmin_ok_msg (200, "Connection killed", "Connection close initiated");
@@ -1216,10 +1220,14 @@ void mod_radmin_child_kill_conn (TurbulenceCtx    * ctx,
 		/* found connection */
 		vortex_connection_shutdown (conn);
 
+		/* release the reference returned by
+		 * turbulence_conn_mgr_find_by_id */
+		vortex_connection_unref (conn, "conn-mgr-find-by-id");
+
 		/* now handle reply */
 		doc = mod_radmin_ok_msg (550, "Connection killed", "Connection close initiated on child process");
 		mod_radmin_handle_command_reply (axl_true, doc, caller_conn, channel, frame);
-		
+
 		return;
 	} /* end if */
 

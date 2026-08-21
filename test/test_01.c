@@ -2298,9 +2298,16 @@ axl_bool test_07 (void) {
 #define SIMPLE_CHANNEL_CREATE_WITH_CONN(conn_to_use, uri) vortex_channel_new (conn_to_use, 0, uri, NULL, NULL, NULL, NULL, NULL, NULL)
 
 /**
- * Checks turbulence_conn_mgr_profiles_stats () always terminates, even
- * when the profiles running hash can never agree with the channel count
- * reported by the connection.
+ * Checks two connection manager contracts:
+ *
+ * 1) turbulence_conn_mgr_find_by_id () returns the connection with a
+ *    reference already acquired on behalf of the caller (who must unref
+ *    it). Before the fix the connection was returned unreferenced, so
+ *    it could be released by another thread right after the lookup.
+ *
+ * 2) turbulence_conn_mgr_profiles_stats () always terminates, even when
+ *    the profiles running hash can never agree with the channel count
+ *    reported by the connection.
  *
  * The inconsistency is forced by unregistering and registering again a
  * connection that already has channels opened: the new state created by
@@ -2316,8 +2323,10 @@ axl_bool test_07_a (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
+	VortexConnection * conn_found;
 	VortexChannel    * channel;
 	axlHashCursor    * profiles;
+	int                refs_before;
 
 	/* init vortex and turbulence */
 	if (! test_common_init (&vCtx, &tCtx, "test_08.conf"))
@@ -2356,6 +2365,32 @@ axl_bool test_07_a (void) {
 		return axl_false;
 	} /* end if */
 	axl_hash_cursor_free (profiles);
+
+	/* check turbulence_conn_mgr_find_by_id hands the caller a
+	 * connection with a reference already acquired, and that
+	 * releasing it restores the previous reference count */
+	refs_before = vortex_connection_ref_count (conn);
+	conn_found  = turbulence_conn_mgr_find_by_id (tCtx, vortex_connection_get_id (conn));
+	if (conn_found != conn) {
+		printf ("ERROR (4): expected to find conn %p registered at conn mgr but found %p..\n",
+			conn, conn_found);
+		return axl_false;
+	} /* end if */
+
+	if (vortex_connection_ref_count (conn) != (refs_before + 1)) {
+		printf ("ERROR (5): expected find_by_id to acquire a reference (refs %d -> %d, expected %d)..\n",
+			refs_before, vortex_connection_ref_count (conn), refs_before + 1);
+		return axl_false;
+	} /* end if */
+
+	vortex_connection_unref (conn_found, "conn-mgr-find-by-id");
+
+	if (vortex_connection_ref_count (conn) != refs_before) {
+		printf ("ERROR (6): expected reference count to be restored after unref (found %d, expected %d)..\n",
+			vortex_connection_ref_count (conn), refs_before);
+		return axl_false;
+	} /* end if */
+	printf ("Test 07-a: find_by_id returns a referenced connection (refs: %d)..ok\n", refs_before);
 
 	/* now force a permanent mismatch: re-register the connection so
 	 * its profiles running hash is reset to empty while the
@@ -3063,13 +3098,14 @@ axl_bool test_10_b (void) {
 
 	VortexCtx        * vCtx;
 	VortexConnection * conn;
+	VortexConnection * conn_found;
 	VortexChannel    * channel;
 	VortexAsyncQueue * queue;
 	TurbulenceChild  * child;
 	VortexFrame      * frame;
 
 	/* FIRST PART: init vortex and turbulence */
-	if (! test_common_init (&vCtx, &tCtxTest10prev, "test_10b.conf")) 
+	if (! test_common_init (&vCtx, &tCtxTest10prev, "test_10b.conf"))
 		return axl_false;
 
 	/* run configuration */
@@ -3143,7 +3179,10 @@ axl_bool test_10_b (void) {
 	printf ("Test 10-b: default security from parent ok..\n");
 
 	/* check child->conn_mgr is not registered at the turbulence conn manager */
-	if (turbulence_conn_mgr_find_by_id (tCtxTest10prev, vortex_connection_get_id (child->conn_mgr))) {
+	conn_found = turbulence_conn_mgr_find_by_id (tCtxTest10prev, vortex_connection_get_id (child->conn_mgr));
+	if (conn_found) {
+		/* release the reference returned before failing */
+		vortex_connection_unref (conn_found, "conn-mgr-find-by-id");
 		printf ("Test 10-b: expected to not find child->conn_mgr registered at turbulence conn manager..\n");
 		return axl_false;
 	}
@@ -3388,7 +3427,11 @@ int test_10_d_filter_conn (VortexConnection *conn, axlPointer user_data)
 		printf ("ERROR: expected to find connection reference at filter handler but found NULL\n");
 		return axl_true; /* filter to make test fail */
 	}
-	
+
+	/* release the reference returned by
+	 * turbulence_conn_mgr_find_by_id before checking the result */
+	vortex_connection_unref (temp, "conn-mgr-find-by-id");
+
 	if (conn != temp) {
 		printf ("ERROR: expected to find connection reference %p, but found %p\n", conn, temp);
 		return axl_true; /* filter to make test fail */
@@ -7311,7 +7354,7 @@ int main (int argc, char ** argv)
 	run_test (test_07, "Test 07: Turbulence local connection");
 
 	CHECK_TEST("test_07a")
-	run_test (test_07_a, "Test 07-a: profile stats terminates on inconsistent channel count");
+	run_test (test_07_a, "Test 07-a: find_by_id references and profile stats termination");
 
 	CHECK_TEST("test_08")
 	run_test (test_08, "Test 08: Turbulence profile path filtering (basic)");
