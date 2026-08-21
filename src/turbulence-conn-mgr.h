@@ -57,11 +57,7 @@ axl_bool  turbulence_conn_mgr_broadcast_msg (TurbulenceCtx            * ctx,
 					     TurbulenceConnMgrFilter    filter_conn,
 					     axlPointer                 filter_data);
 
-axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx, 
-					    VortexPeerRole             role,
-					    const char               * filter);
-
-axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx, 
+axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 					    VortexPeerRole             role,
 					    const char               * filter);
 

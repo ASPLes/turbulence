@@ -2297,6 +2297,91 @@ axl_bool test_07 (void) {
 #define SIMPLE_CHANNEL_CREATE(uri) vortex_channel_new (conn, 0, uri, NULL, NULL, NULL, NULL, NULL, NULL)
 #define SIMPLE_CHANNEL_CREATE_WITH_CONN(conn_to_use, uri) vortex_channel_new (conn_to_use, 0, uri, NULL, NULL, NULL, NULL, NULL, NULL)
 
+/**
+ * Checks turbulence_conn_mgr_profiles_stats () always terminates, even
+ * when the profiles running hash can never agree with the channel count
+ * reported by the connection.
+ *
+ * The inconsistency is forced by unregistering and registering again a
+ * connection that already has channels opened: the new state created by
+ * turbulence_conn_mgr_register () starts with an empty profiles running
+ * hash and no further channel added/removed event will ever arrive to
+ * repopulate it, so both counters stay different for ever.
+ *
+ * Before the fix, turbulence_conn_mgr_profiles_stats () called itself
+ * again on every mismatch, so this test never returned (the whole
+ * regression suite hanged here).
+ */
+axl_bool test_07_a (void) {
+	TurbulenceCtx    * tCtx;
+	VortexCtx        * vCtx;
+	VortexConnection * conn;
+	VortexChannel    * channel;
+	axlHashCursor    * profiles;
+
+	/* init vortex and turbulence */
+	if (! test_common_init (&vCtx, &tCtx, "test_08.conf"))
+		return axl_false;
+
+	/* register here all profiles required by the test */
+	SIMPLE_URI_REGISTER("urn:aspl.es:beep:profiles:reg-test:profile-3");
+
+	/* run configuration */
+	if (! turbulence_run_config (tCtx))
+		return axl_false;
+
+	/* create connection to local server */
+	conn = vortex_connection_new (vCtx, "127.0.0.1", "44010", NULL, NULL);
+	if (! vortex_connection_is_ok (conn, axl_false)) {
+		printf ("ERROR (1): expected to find proper connection after turbulence startup..\n");
+		return axl_false;
+	} /* end if */
+
+	/* open a channel so the connection has more than the
+	 * administrative channel 0 */
+	channel = SIMPLE_CHANNEL_CREATE ("urn:aspl.es:beep:profiles:reg-test:profile-3");
+	if (channel == NULL) {
+		printf ("ERROR (2): expected to find proper channel reference but found NULL reference..\n");
+		return axl_false;
+	} /* end if */
+
+	/* wait to allow turbulence recording the channel opened */
+	test_common_microwait (30000);
+
+	/* consistent case: stats must be reported */
+	profiles = turbulence_conn_mgr_profiles_stats (tCtx, conn);
+	if (profiles == NULL) {
+		printf ("ERROR (3): expected to find profile stats for conn id=%d but found NULL..\n",
+			vortex_connection_get_id (conn));
+		return axl_false;
+	} /* end if */
+	axl_hash_cursor_free (profiles);
+
+	/* now force a permanent mismatch: re-register the connection so
+	 * its profiles running hash is reset to empty while the
+	 * connection keeps reporting 2 channels */
+	turbulence_conn_mgr_unregister (tCtx, conn);
+	turbulence_conn_mgr_register (tCtx, conn);
+
+	printf ("Test 07-a: calling profile stats with inconsistent channel count (must not hang)..\n");
+
+	/* this call must return: it may report empty/partial stats but
+	 * it must never loop for ever */
+	profiles = turbulence_conn_mgr_profiles_stats (tCtx, conn);
+	printf ("Test 07-a: profile stats returned (cursor: %p)..\n", profiles);
+	if (profiles != NULL)
+		axl_hash_cursor_free (profiles);
+
+	/* terminate connection */
+	vortex_connection_shutdown (conn);
+	vortex_connection_close (conn);
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_08 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -7125,7 +7210,7 @@ int main (int argc, char ** argv)
 	printf ("**     >> ./test_01 --child-cmd-prefix='libtool --mode=execute valgrind --leak-check=yes --show-reachable=yes --error-limit=no' [--debug]\n**\n");
 	printf ("** Providing --run-test=NAME will run only the provided regression test.\n");
 	printf ("** Available tests: test_01, test_01, test_01a, test_0b, test_02, test_03, test_03a, test_04, test_05, test_05a, test_06, test_06a\n");
-	printf ("**                  test_07, test_08, test_09, test_10prev, test_10, test_10a, test_10f, test_10b, test_10c, test_10d, test_10e, test_10g, test_11, test_12,\n");
+	printf ("**                  test_07, test_07a, test_08, test_09, test_10prev, test_10, test_10a, test_10f, test_10b, test_10c, test_10d, test_10e, test_10g, test_11, test_12,\n");
 	printf ("**                  test_12a, test_12b, test_12c, test_12d, test_12e, test_13, test_13a, test_13b, test_14, test_15, test_15a, test_16, test_17, test_18,\n");
 	printf ("**                  test_19, test_20, test_21, test_22, test_22a, test_23, test_24, test_25, test_26, test_27, test_28\n");
 	printf ("** Report bugs to:\n**\n");
@@ -7224,6 +7309,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_07")
 	run_test (test_07, "Test 07: Turbulence local connection");
+
+	CHECK_TEST("test_07a")
+	run_test (test_07_a, "Test 07-a: profile stats terminates on inconsistent channel count");
 
 	CHECK_TEST("test_08")
 	run_test (test_08, "Test 08: Turbulence profile path filtering (basic)");
