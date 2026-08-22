@@ -745,7 +745,14 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 		/* check connection role to add it to the result
 		   list */
 		msg ("Checking connection role %d == %d", vortex_connection_get_role (conn), role);
-		if ((role == -1) || vortex_connection_get_role (conn) == role) {
+		/* NOTE: -1 is converted to the (unsigned) underlying type
+		 * of VortexPeerRole before comparing. All the values of
+		 * the enum are non negative, so the compiler picks an
+		 * unsigned type for it and a plain (role == -1) compares
+		 * signed against unsigned (-Wsign-compare). Casting the
+		 * literal instead of the variable keeps the comparison
+		 * well defined and warning free. */
+		if ((role == (VortexPeerRole) -1) || vortex_connection_get_role (conn) == role) {
 			/* update reference and add the connection: only
 			 * add it if the reference was really acquired,
 			 * otherwise the unref done by
