@@ -481,14 +481,33 @@ axl_bool  test_01 (void)
 
 	/* check the count of items inside */
 	if (turbulence_db_list_count (dblist) != 0) {
-		printf ("Expected to find 0 items stored in the db-list, but found: %d\n", 
+		printf ("Expected to find 0 items stored in the db-list, but found: %d\n",
+			turbulence_db_list_count (dblist));
+		return axl_false;
+	} /* end if */
+
+	/* check that the remove by func operation was really flushed
+	 * into the storage device: unload the handler (which does not
+	 * dump content) and open the file again to check what was
+	 * really stored */
+	turbulence_db_list_unload (dblist);
+
+	dblist = turbulence_db_list_open (ctx, &err, "test_01.xml", NULL);
+	if (dblist == NULL) {
+		printf ("Failed to open db list, %s\n", axl_error_get (err));
+		axl_error_free (err);
+		return axl_false;
+	} /* end if */
+
+	if (turbulence_db_list_count (dblist) != 0) {
+		printf ("Expected to find 0 items stored in the db-list after remove by func (content not flushed?), but found: %d\n",
 			turbulence_db_list_count (dblist));
 		return axl_false;
 	} /* end if */
 
 	/* close the db list */
 	turbulence_db_list_close (dblist);
-	
+
 	/* terminate the db list */
 	turbulence_db_list_cleanup (ctx);
 
@@ -820,6 +839,129 @@ axl_bool test_01c (void)
 
 	/* balance the db_list_init above: release the module registry
 	 * list and dtd (db_list_close already unlinked our dblist) */
+	turbulence_db_list_cleanup (ctx);
+
+	return axl_true;
+}
+
+/* Memory failure injection used by test_01d.
+ *
+ * axl_calloc is a global symbol exported by libaxl, so defining it here
+ * makes every allocation done by turbulence (and axl) go through this
+ * wrapper. It is a plain passthrough unless it is armed: once armed,
+ * only the requested call fails, so the code under test hits a single
+ * out of memory condition and everything after it works again (which is
+ * exactly what a punctual memory shortage looks like). */
+int test_calloc_fail_at = 0;
+int test_calloc_count   = 0;
+
+axlPointer axl_calloc (size_t count, size_t size)
+{
+	if (test_calloc_fail_at > 0) {
+		test_calloc_count++;
+		if (test_calloc_count == test_calloc_fail_at)
+			return NULL;
+	} /* end if */
+
+	return calloc (count, size);
+}
+
+void test_calloc_arm (int fail_at)
+{
+	test_calloc_count   = 0;
+	test_calloc_fail_at = fail_at;
+	return;
+}
+
+void test_calloc_disarm (void)
+{
+	test_calloc_fail_at = 0;
+	test_calloc_count   = 0;
+	return;
+}
+
+/**
+ * @brief Regression test: the db-list API must survive a punctual
+ * memory failure, reporting the error to the caller instead of
+ * crashing, returning a half built handler or leaving the list mutex
+ * locked.
+ */
+axl_bool test_01d (void)
+{
+	TurbulenceDbList * dblist;
+	axlError         * err = NULL;
+	axlList          * list;
+
+	/* init db list module */
+	if (! turbulence_db_list_init (ctx)) {
+		printf ("Unable to initialize the turbulence db-list module..\n");
+		return axl_false;
+	}
+
+	/* clean any previous state */
+	if (turbulence_file_test_v ("test_01d.xml", FILE_EXISTS))
+		unlink ("test_01d.xml");
+
+	/* 1) make the first allocation done by open to fail: the
+	 * function must report the failure instead of returning a
+	 * handler with null members */
+	test_calloc_arm (1);
+	dblist = turbulence_db_list_open (ctx, &err, "test_01d.xml", NULL);
+	test_calloc_disarm ();
+
+	if (dblist != NULL) {
+		printf ("ERROR (1): expected to find a failure at db list open under memory failure\n");
+		return axl_false;
+	} /* end if */
+	axl_error_free (err);
+	err = NULL;
+
+	/* 2) with memory available again the module must work */
+	dblist = turbulence_db_list_open (ctx, &err, "test_01d.xml", NULL);
+	if (dblist == NULL) {
+		printf ("ERROR (2): failed to open db list after the memory failure: %s\n", axl_error_get (err));
+		axl_error_free (err);
+		return axl_false;
+	} /* end if */
+
+	if (! turbulence_db_list_add (dblist, "ITEM")) {
+		printf ("ERROR (3): expected to be able to add an item after the memory failure\n");
+		return axl_false;
+	} /* end if */
+
+	/* 3) make the first allocation done by get to fail: it must
+	 * return NULL rather than a list with items missing */
+	test_calloc_arm (1);
+	list = turbulence_db_list_get (dblist);
+	test_calloc_disarm ();
+
+	if (list != NULL) {
+		printf ("ERROR (4): expected to find a failure at db list get under memory failure, but found %d items\n",
+			axl_list_length (list));
+		axl_list_free (list);
+		return axl_false;
+	} /* end if */
+
+	/* 4) the list must remain usable: this also detects the mutex
+	 * being left locked by the failing operation above */
+	if (turbulence_db_list_count (dblist) != 1) {
+		printf ("ERROR (5): expected to find 1 item stored after the memory failure, but found: %d\n",
+			turbulence_db_list_count (dblist));
+		return axl_false;
+	} /* end if */
+
+	list = turbulence_db_list_get (dblist);
+	if (list == NULL || axl_list_length (list) != 1) {
+		printf ("ERROR (6): expected to get the content of the db list after the memory failure\n");
+		axl_list_free (list);
+		return axl_false;
+	} /* end if */
+	axl_list_free (list);
+
+	/* cleanup */
+	turbulence_db_list_close (dblist);
+	if (turbulence_file_test_v ("test_01d.xml", FILE_EXISTS))
+		unlink ("test_01d.xml");
 	turbulence_db_list_cleanup (ctx);
 
 	return axl_true;
@@ -7310,6 +7452,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_01c")
 	run_test (test_01c, "Test 01-c: db-list flush releases mutex on dump failure");
+
+	CHECK_TEST("test_01d")
+	run_test (test_01d, "Test 01-d: db-list survives a punctual memory failure");
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");

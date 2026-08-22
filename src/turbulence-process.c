@@ -94,8 +94,16 @@ void turbulence_process_init         (TurbulenceCtx * ctx, axl_bool reinit)
 	}
 
 	/* create the list of childs opened */
-	if (ctx->child_process == NULL)
+	if (ctx->child_process == NULL) {
 		ctx->child_process = axl_hash_new (axl_hash_int, axl_hash_equal_int);
+
+		/* the function can't report the failure to the caller
+		 * (void), so report it into the log: child creation is
+		 * refused later on (turbulence_process_check_child_limit)
+		 * while the rest of the server keeps working */
+		if (ctx->child_process == NULL)
+			error ("failed to allocate memory to track child processes, child creation will be disabled");
+	} /* end if */
 
 	/* init mutex */
 	vortex_mutex_create (&ctx->child_process_mutex);
@@ -654,7 +662,15 @@ void turbulence_process_send_connection_to_child (TurbulenceCtx    * ctx,
 								   vortex_connection_get_host_ip (conn),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
-	
+	if (conn_status == NULL) {
+		error ("PARENT: unable to allocate memory to build the connection status string, closing conn-id=%d",
+		       vortex_connection_get_id (conn));
+
+		/* close connection: it can't be transferred to the child */
+		vortex_connection_shutdown (conn);
+		return;
+	} /* end if */
+
 	msg ("Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, (int) strlen (conn_status));
 
 	/* socket that is now handled by the child process */
@@ -723,7 +739,17 @@ axl_bool turbulence_process_send_proxy_connection_to_child (TurbulenceCtx    * c
 								   vortex_connection_get_host_ip (conn),
 								   /* if proxied, skip recover on child */
 								   turbulence_conn_mgr_proxy_on_parent (conn));
-	
+	if (conn_status == NULL) {
+		error ("PARENT: (PROXY) unable to allocate memory to build the connection status string, closing conn-id=%d",
+		       vortex_connection_get_id (conn));
+
+		/* close connection and socket: they can't be
+		 * transferred to the child */
+		vortex_connection_shutdown (conn);
+		vortex_close_socket (client_socket);
+		return axl_false;
+	} /* end if */
+
 	msg ("PARENT: (PROXY) Sending connection to child already created, ancillary data ('%s') size: %d", conn_status, (int) strlen (conn_status));
 
 	/* send the socket descriptor to the child to avoid holding a
@@ -1375,6 +1401,17 @@ axl_bool turbulence_process_check_child_limit (TurbulenceCtx      * ctx,
 {
 	msg ("Checking global child limit: %d before creating process.", ctx->global_child_limit);
 
+	/* check the hash tracking childs is in place: without it the
+	 * child created can't be tracked (nor terminated), so refuse
+	 * the operation rather than loosing the reference */
+	if (ctx->child_process == NULL) {
+		error ("Child process tracking hash is not available (memory failure at init?), unable to accept connection on child process, closing conn-id=%d",
+		       vortex_connection_get_id (conn));
+
+		vortex_connection_shutdown (conn);
+		return axl_true; /* limit reached */
+	} /* end if */
+
 	if (axl_hash_items (ctx->child_process) >= ctx->global_child_limit) {
 		error ("Child limit reached (%d), unable to accept connection on child process, closing conn-id=%d", 
 		       ctx->global_child_limit, vortex_connection_get_id (conn));
@@ -1522,6 +1559,11 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 
 	/* first send bytes to read */
 	aux     = axl_strdup_printf ("%d\n", length);
+	if (aux == NULL) {
+		error ("PARENT: failed to create child, unable to allocate memory to notify child init string length");
+		axl_free (child_init_string);
+		return axl_false;
+	} /* end if */
 	length  = strlen (aux);
 
 	written = 0;
@@ -1548,6 +1590,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 		/* if fails, check if the parent process is finishing to avoid waiting */
 		if (ctx->is_exiting) {
 			axl_free (aux);
+			axl_free (child_init_string);
 			return axl_false;
 		}
 	} /* end while */
@@ -1557,6 +1600,7 @@ axl_bool __turbulence_process_send_child_init_string (TurbulenceCtx       * ctx,
 	if (written != length) {
 		error ("PARENT: failed to send init child string, expected to write %d bytes but %d were written, errno: %d:%s",
 		       length, written, errno, vortex_errno_get_last_error ());
+		axl_free (child_init_string);
 		return axl_false;
 	}
 
@@ -1605,6 +1649,7 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 	const char       * ppath_name;
 	int                error_code;
 	char            ** cmds;
+	char            ** cmdsAux;
 	int                iterator = 0;
 	axl_bool           skip_thread_pool_wait = axl_false;
 	axl_bool           enable_debug          = axl_false;
@@ -1867,8 +1912,16 @@ void turbulence_process_create_child (TurbulenceCtx       * ctx,
 		while (cmds[iterator] != 0)
 			iterator++;
 
-		/* expand to include additional commands */
-		cmds = axl_realloc (cmds, sizeof (char*) * (iterator + 14 + 1));
+		/* expand to include additional commands: use an
+		 * auxiliar reference so the original one is not lost
+		 * (and overwritten with NULL) in the case it fails */
+		cmdsAux = axl_realloc (cmds, sizeof (char*) * (iterator + 14 + 1));
+		if (cmdsAux == NULL) {
+			error ("CHILD: failed to allocate memory to expand commands");
+			axl_freev (cmds);
+			exit (-1);
+		} /* end if */
+		cmds = cmdsAux;
 
 		cmds[iterator] = (char *) turbulence_bin_path;
 		iterator++;

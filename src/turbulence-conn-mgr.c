@@ -421,14 +421,31 @@ axlDoc * turbulence_conn_mgr_show_connections (const char * line,
 				     "  <description>The following is a list of peers connected</description>",
 				     "  <content></content>",
 				     "</table>");
+	if (doc == NULL) {
+		error ("failed to allocate memory to report connections registered");
+		return NULL;
+	} /* end if */
+
 	/* get parent node */
 	parent = axl_doc_get (doc, "/table/content");
+	if (parent == NULL) {
+		error ("unable to find /table/content node to report connections registered");
+		axl_doc_free (doc);
+		return NULL;
+	} /* end if */
 
 	/* lock connections */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
-	
+
 	/* create cursor */
 	cursor = axl_hash_cursor_new (ctx->conn_mgr_hash);
+	if (cursor == NULL) {
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+		error ("failed to allocate memory to iterate connections registered");
+		axl_doc_free (doc);
+		return NULL;
+	} /* end if */
 
 	while (axl_hash_cursor_has_item (cursor)) {
 		/* get connection */
@@ -442,19 +459,31 @@ axlDoc * turbulence_conn_mgr_show_connections (const char * line,
 					vortex_connection_get_local_addr (state->conn),
 					vortex_connection_get_local_port (state->conn));
 
+		/* report the failure rather than returning a partial
+		 * listing that looks complete */
+		if (node == NULL) {
+			vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+			error ("failed to allocate memory to report connection id=%d",
+			       vortex_connection_get_id (state->conn));
+			axl_hash_cursor_free (cursor);
+			axl_doc_free (doc);
+			return NULL;
+		} /* end if */
+
 		/* set node to result document */
 		axl_node_set_child (parent, node);
 
 		/* next cursor */
 		axl_hash_cursor_next (cursor);
 	} /* end while */
-	
+
 	/* free cursor */
 	axl_hash_cursor_free (cursor);
 
 	/* unlock connections */
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
-	
+
 	return doc;
 }
 
@@ -489,6 +518,13 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 		axl_hash_free (ctx->conn_mgr_hash);
 		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
 
+		/* the function can't report the failure to the caller
+		 * (void): report it into the log. Connections are not
+		 * tracked from this point but the rest of the modules
+		 * keep working (every access to the hash checks it) */
+		if (ctx->conn_mgr_hash == NULL)
+			error ("failed to allocate memory to track connections (reinit), connection manager disabled");
+
 		/* release */
 		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 		return;
@@ -496,8 +532,16 @@ void turbulence_conn_mgr_init (TurbulenceCtx * ctx, axl_bool reinit)
 
 	/* init connection list hash */
 	if (ctx->conn_mgr_hash == NULL) {
-		
+
 		ctx->conn_mgr_hash = axl_hash_new (axl_hash_int, axl_hash_equal_int);
+
+		if (ctx->conn_mgr_hash == NULL) {
+			/* do not install the notification handler: it
+			 * would be called for every connection just to
+			 * drop it because there is no hash to store it */
+			error ("failed to allocate memory to track connections, connection manager disabled");
+			return;
+		} /* end if */
 
 		/* configure notification handlers */
 		vortex_connection_set_connection_actions (vortex_ctx,
@@ -729,10 +773,29 @@ axlList *  turbulence_conn_mgr_conn_list   (TurbulenceCtx            * ctx,
 
 	/* lock and send */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
-	
-	/* create the cursor */
+
+	/* check the hash is still in place: it is nullified by
+	 * turbulence_conn_mgr_cleanup */
+	if (ctx->conn_mgr_hash == NULL) {
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+		return NULL;
+	} /* end if */
+
+	/* create the cursor and the list that will hold the result:
+	 * both must be in place before referencing any connection,
+	 * otherwise the references acquired below would be lost */
 	cursor = axl_hash_cursor_new (ctx->conn_mgr_hash);
 	result = axl_list_new (axl_list_always_return_1, turbulence_conn_mgr_conn_list_free_item);
+	if (cursor == NULL || result == NULL) {
+		vortex_mutex_unlock (&ctx->conn_mgr_mutex);
+
+		error ("failed to allocate memory to build the list of connections registered");
+		if (cursor != NULL)
+			axl_hash_cursor_free (cursor);
+		if (result != NULL)
+			axl_list_free (result);
+		return NULL;
+	} /* end if */
 
 	msg ("connections registered: %d..", axl_hash_items (ctx->conn_mgr_hash));
 

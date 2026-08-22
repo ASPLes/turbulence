@@ -145,10 +145,13 @@ void __turbulence_acquire_limits (TurbulenceCtx * ctx)
  *
  * A call to \ref turbulence_exit is required before exit.
  */
-axl_bool  turbulence_init (TurbulenceCtx * ctx, 
+axl_bool  turbulence_init (TurbulenceCtx * ctx,
 			   VortexCtx     * vortex_ctx,
 			   const char    * config)
 {
+	char * domain;
+	char * domain_path;
+
 	/* no initialization done if null reference received */
 	if (ctx == NULL) {
 	        abort_error ("Received a null turbulence context, failed to init the turbulence");
@@ -170,14 +173,31 @@ axl_bool  turbulence_init (TurbulenceCtx * ctx,
 	if (vortex_ctx == NULL) {
 		msg2 ("creating a new vortex context because a null value was received..");
 		vortex_ctx = vortex_ctx_new ();
+
+		/* without vortex context there is nothing to do here */
+		if (vortex_ctx == NULL) {
+			abort_error ("Failed to allocate a new vortex context, failed to init the turbulence");
+			vortex_mutex_destroy (&ctx->exit_mutex);
+			return axl_false;
+		} /* end if */
 	} /* end if */
 
 	/* configure the vortex context created */
 	turbulence_ctx_set_vortex_ctx (ctx, vortex_ctx);
 
-	/* configure lookup domain for turbulence data */
-	vortex_support_add_domain_search_path_ref (vortex_ctx, axl_strdup ("turbulence-data"), 
-						   vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL));
+	/* configure lookup domain for turbulence data: build both
+	 * references first because they are transferred (_ref) to the
+	 * vortex context, which must not receive null values */
+	domain      = axl_strdup ("turbulence-data");
+	domain_path = vortex_support_build_filename (TBC_DATADIR, "turbulence", NULL);
+	if (domain == NULL || domain_path == NULL) {
+		abort_error ("Failed to allocate memory to configure turbulence data search path, failed to init the turbulence");
+		axl_free (domain);
+		axl_free (domain_path);
+		vortex_mutex_destroy (&ctx->exit_mutex);
+		return axl_false;
+	} /* end if */
+	vortex_support_add_domain_search_path_ref (vortex_ctx, domain, domain_path);
 #if defined(AXL_OS_WIN32)
 	/* make turbulence to add the path ../data to the search list
 	 * under windows as it is organized this way */
@@ -855,6 +875,11 @@ axl_bool  turbulence_file_test_v (const char * format, VortexFileTest test, ...)
 	/* close args */
 	va_end (args);
 
+	/* report the test can't be done rather than checking a null
+	 * path (which would be reported as "file do not exist") */
+	if (path == NULL)
+		return axl_false;
+
 	/* do the test */
 	result = vortex_support_file_test (path, test);
 	axl_free (path);
@@ -966,7 +991,9 @@ axl_bool      turbulence_file_is_fullpath (const char * file)
  * @param path The path that is required to return its base part.
  * 
  * @return Returns the base dir associated to the function. You
- * must deallocate the returning value with axl_free.
+ * must deallocate the returning value with axl_free. The function
+ * returns NULL if a null path is received or if there is no memory
+ * available to allocate the result, so the caller must check it.
  */
 char   * turbulence_base_dir            (const char * path)
 {
@@ -1001,7 +1028,9 @@ char   * turbulence_base_dir            (const char * path)
  * @param path The path that is required to return its base value.
  * 
  * @return Returns the file name associated to the function. You must
- * deallocate the returning value with axl_free.
+ * deallocate the returning value with axl_free. The function returns
+ * NULL if a null path is received or if there is no memory available
+ * to allocate the result, so the caller must check it.
  */
 char   * turbulence_file_name           (const char * path)
 {

@@ -87,7 +87,7 @@ axl_bool           turbulence_db_list_reload         (TurbulenceDbList * list);
 
 axl_bool           turbulence_db_list_flush          (TurbulenceDbList * list);
 
-axl_bool           turbulence_db_list_count          (TurbulenceDbList * list);
+int                turbulence_db_list_count          (TurbulenceDbList * list);
 
 
 /* internal services, used by turbulence engine, never by user

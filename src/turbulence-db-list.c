@@ -42,6 +42,11 @@
 /* include local dtd */
 #include <turbulence-db-list.dtd.h>
 
+/* internal functions, not exported through turbulence-db-list.h but
+ * declared here to have a prototype in place */
+axl_bool  __turbulence_db_list_validate (TurbulenceCtx * ctx, axlDoc * doc, axlError **error);
+void      turbulence_db_list_close_aux  (axlPointer _list);
+
 /** 
  * \defgroup turbulence_db_list Turbulence Db List: common abstract interface to store list of items (flushed to the storage device).
  */
@@ -93,7 +98,7 @@ axl_bool  __turbulence_db_list_validate (TurbulenceCtx * ctx, axlDoc * doc, axlE
 
 	/* check dtd status */
 	if (ctx->db_list_dtd == NULL) {
-		axl_error_new (-1, "tbc-dblist-mgr installation error, unable to find DTD to validate output", NULL, error);
+		axl_error_new (-1, "turbulence installation error, unable to find DTD to validate db-list content", NULL, error);
 		return axl_false;
 	}
 
@@ -154,8 +159,9 @@ axl_bool  __turbulence_db_list_validate (TurbulenceCtx * ctx, axlDoc * doc, axlE
  * load an empty db list into memory that will be dumped to the
  * storage device once the db list is closed.
  *
- * The path to the db list must exist. The function will create all
- * directories in the path that doesn't exists.
+ * It is not required for the path holding the db list to exist. The
+ * function will create all directories in the path that aren't
+ * already created.
  *
  * @param ctx Turbulence context where the operation will take place.
  *
@@ -174,11 +180,12 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 					      ...)
 {
 
-	/* get turbulence context */
+	/* variables used to build the full path and the handler returned */
 	va_list            args;
 	char             * full_path;
 	char             * aux;
 	char             * aux2;
+	axlNode          * node;
 	TurbulenceDbList * list;
 
 	/* check context */
@@ -192,12 +199,27 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 	
 	/* build reference */
 	list      = axl_new (TurbulenceDbList, 1);
+	if (list == NULL) {
+		axl_error_new (-1, "Failed to allocate memory to hold the db list requested", NULL, error);
+		return NULL;
+	} /* end if */
+
+	/* init its mutex before anything else: error paths below call
+	 * to turbulence_db_list_close, which destroys it */
+	vortex_mutex_create (&(list->mutex));
 
 	/* build full path to the file */
 	va_start (args, token);
 	aux       = va_arg (args, char *);
 	full_path = axl_strdup (token);
 	list->ctx = ctx;
+
+	if (full_path == NULL) {
+		va_end (args);
+		axl_error_new (-1, "Failed to allocate memory to hold the path to the db list requested", NULL, error);
+		turbulence_db_list_close (list);
+		return NULL;
+	} /* end if */
 
 	while (aux != NULL) {
 
@@ -214,6 +236,16 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 		aux2      = full_path;
 		full_path = axl_strdup_printf ("%s%s%s", full_path, VORTEX_FILE_SEPARATOR, aux);
 		axl_free (aux2);
+
+		/* stop here if the path can't be built: continuing would
+		 * make the following tokens to be appended to a null
+		 * reference, ending into an invented path */
+		if (full_path == NULL) {
+			va_end (args);
+			axl_error_new (-1, "Failed to allocate memory to build the path to the db list requested", NULL, error);
+			turbulence_db_list_close (list);
+			return NULL;
+		} /* end if */
 
 		/* next token */
 		aux = va_arg (args, char *);
@@ -256,12 +288,24 @@ TurbulenceDbList * turbulence_db_list_open   (TurbulenceCtx   * ctx,
 
 		/* file not found, open a new one */
 		list->doc = axl_doc_create ("1.0", NULL, axl_true);
-		axl_doc_set_root (list->doc, axl_node_create ("turbulence-db-list"));
+		if (list->doc == NULL) {
+			axl_error_new (-1, "Failed to allocate memory to create an empty db list", NULL, error);
+			turbulence_db_list_close (list);
+			return NULL;
+		} /* end if */
+
+		/* create the root node: report an error if it can't be
+		 * created, otherwise the list would be returned without
+		 * root node, failing on every add operation */
+		node = axl_node_create ("turbulence-db-list");
+		if (node == NULL) {
+			axl_error_new (-1, "Failed to allocate memory to create the db list root node", NULL, error);
+			turbulence_db_list_close (list);
+			return NULL;
+		} /* end if */
+		axl_doc_set_root (list->doc, node);
 
 	} /* end if */
-	
-	/* init its mutex */
-	vortex_mutex_create (&(list->mutex));
 
 	/* add the db list to the list of files opened */
 	vortex_mutex_lock (&ctx->db_list_mutex);
@@ -347,36 +391,53 @@ axl_bool                turbulence_db_list_exists (TurbulenceDbList * list,
 axl_bool                turbulence_db_list_add    (TurbulenceDbList * list,
 					      const char       * value)
 {
-	axlNode * node;
+	axlNode       * node;
+	axlNode       * newNode;
+	axlNode       * parent;
+	TurbulenceCtx * ctx;
 
 	/* check values received */
 	v_return_val_if_fail (list && value, axl_false);
 
+	/* get turbulence context */
+	ctx = list->ctx;
+
 	/* reload the document */
 	turbulence_db_list_reload (list);
-	
+
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
+
+	/* create the node holding the value before touching the
+	 * document, so a memory failure leaves the list untouched */
+	newNode = axl_node_create ("item");
+	if (newNode == NULL) {
+		vortex_mutex_unlock (&(list->mutex));
+		error ("failed to allocate memory to add an item into db list: %s", list->full_path);
+		return axl_false;
+	} /* end if */
+	axl_node_set_attribute (newNode, "value", value);
 
 	/* get the first node */
 	node = list->first;
 
 	if (node == NULL) {
-		/* basic case, first item added */
-		list->first = axl_node_create ("item");
-		axl_node_set_attribute (list->first, "value", value);
-		
-		/* check the root node */
-		node = axl_doc_get_root (list->doc);
-		axl_node_set_child (node, list->first);
+		/* basic case, first item added: get the root node to
+		 * hold it */
+		parent = axl_doc_get_root (list->doc);
+		if (parent == NULL) {
+			vortex_mutex_unlock (&(list->mutex));
+			axl_node_free (newNode);
+			error ("unable to add item into db list without root node: %s", list->full_path);
+			return axl_false;
+		} /* end if */
+
+		axl_node_set_child (parent, newNode);
+		list->first = newNode;
 
 	} else {
 		/* usual case, add it at the end */
-		node = axl_node_create ("item");
-		axl_node_set_attribute (node, "value", value);
-
-		/* add the content */
-		axl_node_set_child (axl_node_get_parent (list->first), node);
+		axl_node_set_child (axl_node_get_parent (list->first), newNode);
 	} /* end if */
 
 	/* update first node */
@@ -399,8 +460,12 @@ axl_bool                turbulence_db_list_add    (TurbulenceDbList * list,
  * deleted.
  *
  * @param value The string value to be removed from the db list.
- * 
- * @return axl_true if the item was removed, otherwise axl_false is returned.
+ *
+ * @return axl_true if the remove operation was properly completed,
+ * including the case where the item was already removed (that is, it
+ * is not present in the list). Otherwise axl_false is returned,
+ * signaling that the value was found but the resulting content could
+ * not be flushed into the storage device.
  */
 axl_bool                turbulence_db_list_remove (TurbulenceDbList * list,
 					      const char       * value)
@@ -437,25 +502,24 @@ axl_bool                turbulence_db_list_remove (TurbulenceDbList * list,
 			/* unlock and flush */
 			vortex_mutex_unlock (&(list->mutex));
 
-			/* flush */
-			turbulence_db_list_flush (list);
-
-			return axl_true;
+			/* flush, reporting to the caller if the
+			 * content could not be stored */
+			return turbulence_db_list_flush (list);
 		} /* end if */
 
 		/* get next node */
 		node = axl_node_get_next_called (node, "item");
-	} /* end if */
+	} /* end while */
 
 	/* unlock */
 	vortex_mutex_unlock (&(list->mutex));
 
-	/* item removed either because it wasn't found or because it
-	 * was really removed */
+	/* the value wasn't found: nothing to remove and nothing to
+	 * flush, so the remove operation is already accomplished */
 	return axl_true;
 }
 
-/** 
+/**
  * @brief Allows to produce a remove operation (or several remove
  * operation) using an external function which is called to check if
  * the item should be removed or not.
@@ -468,7 +532,7 @@ axl_bool                turbulence_db_list_remove (TurbulenceDbList * list,
  *
  * @param user_data User defined pointer which is passed to the filter
  * (remove) function.
- * 
+ *
  * @return axl_true if the operation was fully completed, otherwise axl_false
  * is returned.
  */
@@ -478,6 +542,7 @@ axl_bool                turbulence_db_list_remove_by_func (TurbulenceDbList     
 {
 	axlNode * node;
 	axlNode * nodeAux;
+	axl_bool  removed = axl_false;
 
 	/* check values received */
 	if (list == NULL)
@@ -503,6 +568,7 @@ axl_bool                turbulence_db_list_remove_by_func (TurbulenceDbList     
 			
 			/* found the node holding the value */
 			axl_node_remove (node, axl_true);
+			removed = axl_true;
 
 			/* update first node */
 			list->first = axl_doc_get_root (list->doc);
@@ -517,13 +583,18 @@ axl_bool                turbulence_db_list_remove_by_func (TurbulenceDbList     
 
 		/* get next node */
 		node = axl_node_get_next_called (node, "item");
-	} /* end if */
+	} /* end while */
 
-	/* unlock */
+	/* unlock (flush must be called with the mutex released
+	 * because it acquires it) */
 	vortex_mutex_unlock (&(list->mutex));
 
-	/* item removed either because it wasn't found or because it
-	 * was really removed */
+	/* flush the resulting content in the case something was
+	 * really removed */
+	if (removed)
+		return turbulence_db_list_flush (list);
+
+	/* nothing matched the filter provided: nothing to store */
 	return axl_true;
 }
 
@@ -544,9 +615,12 @@ axl_bool                turbulence_db_list_remove_by_func (TurbulenceDbList     
  * searched and edited/replaced with the value provided as newValue.
  *
  * @param newValue The new value to place in exchange for oldValue.
- * 
- * @return axl_true if the operation was properly completed, otherwise
- * axl_false is returned.
+ *
+ * @return axl_true if the operation was properly completed, including
+ * the case where oldValue is not present in the list (nothing to
+ * edit). Otherwise axl_false is returned, signaling that oldValue was
+ * found but the resulting content could not be flushed into the
+ * storage device.
  */
 axl_bool                turbulence_db_list_edit   (TurbulenceDbList * list,
 					      const char       * oldValue,
@@ -582,15 +656,14 @@ axl_bool                turbulence_db_list_edit   (TurbulenceDbList * list,
 			/* unlock and flush */
 			vortex_mutex_unlock (&(list->mutex));
 
-			/* flush */
-			turbulence_db_list_flush (list);
-
-			return axl_true;
+			/* flush, reporting to the caller if the
+			 * content could not be stored */
+			return turbulence_db_list_flush (list);
 		} /* end if */
 
 		/* get next node */
 		node = axl_node_get_next_called (node, "item");
-	} /* end if */
+	} /* end while */
 
 	/* unlock */
 	vortex_mutex_unlock (&(list->mutex));
@@ -617,30 +690,57 @@ axl_bool                turbulence_db_list_edit   (TurbulenceDbList * list,
  */
 axlList          * turbulence_db_list_get    (TurbulenceDbList * list)
 {
-	axlNode * node;
-	axlList * result;
+	axlNode       * node;
+	axlList       * result;
+	const char    * value;
+	char          * valueCopy;
+	TurbulenceCtx * ctx;
 
 	/* check values received */
 	if (list == NULL)
 		return NULL;
 
+	/* get turbulence context */
+	ctx = list->ctx;
+
 	/* reload the document */
 	turbulence_db_list_reload (list);
-	
+
+	/* create the list that will hold the result */
+	result = axl_list_new (axl_list_always_return_1, axl_free);
+	if (result == NULL) {
+		error ("failed to allocate memory to return the content of db list: %s", list->full_path);
+		return NULL;
+	} /* end if */
+
 	/* lock */
 	vortex_mutex_lock (&(list->mutex));
 
 	/* get the first node */
-	result = axl_list_new (axl_list_always_return_1, axl_free);
 	node   = list->first;
 	while (node != NULL) {
-		
-		/* store a copy of the item */
-		axl_list_add (result, axl_strdup (ATTR_VALUE (node, "value")));
-		
+
+		/* store a copy of the item (items without value are
+		 * skipped: the DTD requires the attribute, but do not
+		 * add a null reference into the list if it is missing) */
+		value = ATTR_VALUE (node, "value");
+		if (value != NULL) {
+			/* report a failure rather than returning a
+			 * list with items silently missing */
+			valueCopy = axl_strdup (value);
+			if (valueCopy == NULL) {
+				vortex_mutex_unlock (&(list->mutex));
+				axl_list_free (result);
+				error ("failed to allocate memory to copy the content of db list: %s", list->full_path);
+				return NULL;
+			} /* end if */
+
+			axl_list_add (result, valueCopy);
+		} /* end if */
+
 		/* get next node */
 		node = axl_node_get_next_called (node, "item");
-	} /* end if */
+	} /* end while */
 
 	/* unlock */
 	vortex_mutex_unlock (&(list->mutex));
@@ -781,19 +881,28 @@ axl_bool                turbulence_db_list_reload (TurbulenceDbList * list)
 	axlDoc         * newContent;
 	axlDoc         * temp;
 	axlError       * err;
+	long             new_modification;
 
 	/* do nothing if null reference is received. */
 	if (list == NULL)
 		return axl_true;
-	
+
 	/* get a reference */
 	ctx = list->ctx;
 
+	/* get the modification value before parsing the document so a
+	 * write happening while the file is being parsed is not lost
+	 * (it will be detected by the next reload) */
+	new_modification = turbulence_last_modification (list->full_path);
+
 	/* check last modification value and do nothing if nothing
 	 * have changed  */
-	if (turbulence_last_modification (list->full_path) == list->last_modification) {
+	vortex_mutex_lock (&(list->mutex));
+	if (new_modification == list->last_modification) {
+		vortex_mutex_unlock (&(list->mutex));
 		return axl_true;
 	}
+	vortex_mutex_unlock (&(list->mutex));
 
 	/* check if the document exists, and do no try to reload
 	 * something is missing .. */
@@ -804,22 +913,31 @@ axl_bool                turbulence_db_list_reload (TurbulenceDbList * list)
 	/* open the document */
 	newContent = axl_doc_parse_from_file (list->full_path, &err);
 	if (newContent == NULL) {
-		error ("failed to open for reload: %s, error was: %s", 
+		error ("failed to open for reload: %s, error was: %s",
 		       list->full_path, axl_error_get (err));
 		axl_error_free (err);
 		return axl_false;
 	}
 
+	/* lock the mutex associated to the list: the current document
+	 * must be compared and replaced holding the mutex, otherwise
+	 * another thread reloading at the same time may release it
+	 * while it is being used here */
+	vortex_mutex_lock (&(list->mutex));
+
 	/* check if we have diferences */
 	if (axl_doc_are_equal (list->doc, newContent)) {
-		/* both documents are equal, doing nothing */
+		/* both documents are equal, just update last
+		 * modification to avoid parsing the file again on
+		 * every operation */
+		list->last_modification = new_modification;
+		vortex_mutex_unlock (&(list->mutex));
+
 		axl_doc_free (newContent);
 		return axl_true;
 	}
 
-	/* documents differs, lock the mutex associated to the list */
-	vortex_mutex_lock (&(list->mutex));
-	/* get a reference to the old document */
+	/* documents differs: get a reference to the old document */
 	temp      = list->doc;
 
 	/* install the new reference */
@@ -830,13 +948,17 @@ axl_bool                turbulence_db_list_reload (TurbulenceDbList * list)
 	if (list->first)
 		list->first = axl_node_get_first_child (list->first);
 
+	/* update last modification to reflect the content just
+	 * loaded */
+	list->last_modification = new_modification;
+
 	vortex_mutex_unlock (&(list->mutex));
 
 	/* now free previous content */
 	axl_doc_free (temp);
-	
+
 	return axl_true;
-} 
+}
 
 /** 
  * @brief Allows to force a "flush" operation for the provided db list
@@ -895,13 +1017,17 @@ axl_bool                turbulence_db_list_flush  (TurbulenceDbList * list)
  * 
  * @return The number of items stored or -1 if it fails.
  */
-axl_bool               turbulence_db_list_count          (TurbulenceDbList * list)
+int                    turbulence_db_list_count          (TurbulenceDbList * list)
 {
 	int       count = 0;
 	axlNode * node;
 
 	if (list == NULL)
 		return -1;
+
+	/* reload the document to report the number of items really
+	 * stored (rest of the API also does this) */
+	turbulence_db_list_reload (list);
 
 	/* lock the mutex */
 	vortex_mutex_lock (&(list->mutex));
@@ -931,8 +1057,8 @@ axl_bool               turbulence_db_list_count          (TurbulenceDbList * lis
  */
 axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
 {
-	/* get turbulence context */
-	axlError         * err;
+	/* error reporting for the DTD parse operation done below */
+	axlError         * err = NULL;
 
 	/* check reference */
 	v_return_val_if_fail (ctx, axl_false);
@@ -940,15 +1066,22 @@ axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
 	/* init global variables */
 	vortex_mutex_create (&ctx->db_list_mutex);
 	ctx->db_list_opened = axl_list_new (turbulence_db_list_equal, turbulence_db_list_close_aux);
+	if (ctx->db_list_opened == NULL) {
+		error ("failed to allocate memory to start turbulence db-list module");
+		vortex_mutex_destroy (&ctx->db_list_mutex);
+		return axl_false;
+	} /* end if */
 	msg2 ("Init context list: %p on context: %p..", ctx->db_list_opened, ctx);
 
 	/* init dtd to validate data */
 	if (ctx->db_list_dtd == NULL) {
 		ctx->db_list_dtd = axl_dtd_parse (TURBULENCE_DB_LIST_DTD, -1, &err);
 
-		/* db list */
+		/* db list: report it as an error because without the
+		 * DTD every open operation over an existing file will
+		 * fail at the validation step */
 		if (ctx->db_list_dtd == NULL) {
-			msg2 ("failed to open DTD to validate db-list, error was: %s", axl_error_get (err));
+			error ("failed to open DTD to validate db-list, error was: %s", axl_error_get (err));
 			axl_error_free (err);
 		} /* end if */
 
@@ -959,7 +1092,7 @@ axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
 
 /** 
  * @brief Allows to cleanup the turbulence db-list module. This call
- * is usually done from the \ref turbulence_init function, but it may
+ * is usually done from the \ref turbulence_cleanup function, but it may
  * be used directly from those modules that only makes use from the
  * db-list by only calling to \ref turbulence_db_list_init.
  * 
@@ -967,19 +1100,21 @@ axl_bool                turbulence_db_list_init (TurbulenceCtx * ctx)
  */
 void               turbulence_db_list_cleanup (TurbulenceCtx * ctx)
 {
-	/* do not perform any operation if null is received or the
-	 * module was not initialized (nothing to clean) */
-	if (ctx == NULL || ctx->db_list_opened == NULL)
+	/* do not perform any operation if null is received */
+	if (ctx == NULL)
 		return;
 
-	/* clean mutex */
-	vortex_mutex_destroy (&ctx->db_list_mutex);
+	/* clean list (this closes all db-list still opened, so it
+	 * must be done before destroying the mutex protecting it) */
+	if (ctx->db_list_opened != NULL) {
+		msg ("cleaning up turbulence db list..");
+		axl_list_free (ctx->db_list_opened);
+		ctx->db_list_opened = NULL;
 
-	/* clean list */
-	msg ("cleaning up turbulence db list..");
-	axl_list_free (ctx->db_list_opened);
-	ctx->db_list_opened = NULL;
-	
+		/* clean mutex */
+		vortex_mutex_destroy (&ctx->db_list_mutex);
+	} /* end if */
+
 	/* clean dtd */
 	axl_dtd_free (ctx->db_list_dtd);
 	ctx->db_list_dtd = NULL;
@@ -993,7 +1128,7 @@ void               turbulence_db_list_cleanup (TurbulenceCtx * ctx)
  * @return axl_true if the operation was properly done, otherwise axl_false is
  * returned.
  */
-axl_bool                turbulence_db_list_reload_module  ()
+axl_bool                turbulence_db_list_reload_module  (void)
 {
 	return axl_true;
 }
@@ -1053,7 +1188,7 @@ axl_bool                turbulence_db_list_reload_module  ()
  *  >> tbc-dblist-mgr --add "ITEM 2" test.xml
  *  I: done
  *
- *  >> tbc-dblist-mgr --add "ITEM1 3" test.xml
+ *  >> tbc-dblist-mgr --add "ITEM 3" test.xml
  *  I: done
  * \endcode
  *
@@ -1088,7 +1223,7 @@ axl_bool                turbulence_db_list_reload_module  ()
  *  >> tbc-dblist-mgr --remove "ITEM 2" test.xml
  *  I: done
  *
- *  >> tbc-dblist-mgr --remove "ITEM1 3" test.xml
+ *  >> tbc-dblist-mgr --remove "ITEM 3" test.xml
  *  I: done
  * \endcode
  */
