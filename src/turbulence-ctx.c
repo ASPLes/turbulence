@@ -357,7 +357,13 @@ void            turbulence_ctx_free (TurbulenceCtx * ctx)
 	 * modules unloading them. This will allow having usable code
 	 * mapped into modules address which is usable until the last
 	 * time.  */
-	turbulence_module_cleanup (ctx); 
+	turbulence_module_cleanup (ctx);
+
+	/* destroy conn mgr mutex: turbulence_conn_mgr_cleanup does not
+	 * destroy it because handlers running on other threads may still
+	 * be about to lock it. At this point vortex is already stopped so
+	 * no handler can be running anymore. */
+	vortex_mutex_destroy (&ctx->conn_mgr_mutex);
 
 	/* release the node itself */
 	msg ("Finishing TurbulenceCtx (%p)", ctx);

@@ -700,8 +700,7 @@ void turbulence_conn_mgr_conn_list_free_item (axlPointer _conn)
 
 /** 
  * @brief Allows to get a list of connections registered on the
- * connection manager, matching the providing role and then filtered
- * by the provided filter string. 
+ * connection manager, matching the role provided.
  *
  * @param ctx The context where the operation will take place.
  *
@@ -1194,8 +1193,15 @@ axl_bool count_channels (axlPointer key, axlPointer _value, axlPointer user_data
  * @param ctx The TurbulenceCtx object where the operation will be applied.
  * @param conn The connection where it is required to get profile stats.
  *
+ * The function waits (bounded by
+ * TURBULENCE_CONN_MGR_STATS_MAX_RETRIES) until the profiles recorded
+ * agree with the channel count reported by the connection. If they
+ * never converge, the stats currently recorded are returned rather
+ * than blocking the caller for ever.
+ *
  * @return A newly created cursor or NULL if it fails. The function
- * will only fail if ctx or conn are NULL or because not enough memory
+ * will fail if ctx or conn are NULL, if the connection is not
+ * registered at the connection manager, or because not enough memory
  * to hold the cursor.
  */
 axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
@@ -1204,7 +1210,7 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 	TurbulenceConnMgrState * state;
 	axlHashCursor          * cursor;
 	int                      total_count;
-	int                      iterator = 0;
+	int                      iterator     = 0;
 
 	v_return_val_if_fail (ctx && conn, NULL);
 
@@ -1276,24 +1282,53 @@ axlHashCursor    * turbulence_conn_mgr_profiles_stats (TurbulenceCtx    * ctx,
 	return cursor;
 }
 
-/** 
- * @internal Ensure we close all active connections before exiting...
+/**
+ * @internal Uninstall every handler the connection manager installed on
+ * the connection associated to the state received.
+ *
+ * This is run as a separate pass, before any connection is shutdown, so
+ * that closing the first connections (which triggers channel removed
+ * and connection close notifications) cannot reach conn mgr handlers
+ * still installed on the connections not processed yet.
  */
-axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer data, axlPointer user_data) 
+axl_bool turbulence_conn_mgr_remove_handlers (axlPointer key, axlPointer data, axlPointer user_data)
 {
 	TurbulenceConnMgrState * state = data;
 	TurbulenceCtx          * ctx   = state->ctx;
-	VortexConnection       * conn  = state->conn;
+
+	if (state->conn == NULL)
+		return axl_false; /* keep on iterating */
 
 	/* remove installed handlers */
 	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_ADD_HANDLER, state->added_channel_id);
 	vortex_connection_remove_handler (state->conn, CONNECTION_CHANNEL_REMOVE_HANDLER, state->removed_channel_id);
+	state->added_channel_id   = NULL;
+	state->removed_channel_id = NULL;
+
+	/* uninstall on close full handler to avoid race conditions */
+	vortex_connection_remove_on_close_full (state->conn, turbulence_conn_mgr_on_close, ctx);
+
+	/* keep on iterating over all connections */
+	return axl_false;
+}
+
+/**
+ * @internal Ensure we close all active connections before exiting...
+ *
+ * NOTE: handlers were already uninstalled by
+ * turbulence_conn_mgr_remove_handlers, which runs as a previous pass.
+ */
+axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer data, axlPointer user_data)
+{
+	TurbulenceConnMgrState * state = data;
+	VortexConnection       * conn  = state->conn;
+	TurbulenceCtx          * ctx   = state->ctx;
+
+	if (conn == NULL)
+		return axl_false; /* keep on iterating */
 
 	/* nullify conn reference on state */
 	state->conn = NULL;
-
-	/* uninstall on close full handler to avoid race conditions */
-	vortex_connection_remove_on_close_full (conn, turbulence_conn_mgr_on_close, ctx);
 
 	msg ("shutting down connection id %d", vortex_connection_get_id (conn));
 	vortex_connection_shutdown (conn);
@@ -1306,7 +1341,7 @@ axl_bool turbulence_conn_mgr_shutdown_connections (axlPointer key, axlPointer da
 	return axl_false;
 }
 
-/** 
+/**
  * @internal Module cleanup.
  */
 void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
@@ -1316,21 +1351,40 @@ void turbulence_conn_mgr_cleanup (TurbulenceCtx * ctx)
 	/* shutdown all pending connections */
 	msg ("calling to cleanup registered connections that are still opened: %d", axl_hash_items (ctx->conn_mgr_hash));
 
-	/* nullify hash to be the only owner */
+	/* Nullify the hash to be the only owner. From this point on
+	 * turbulence_conn_mgr_notify refuses to register new connections
+	 * and every handler still installed finds a NULL hash and
+	 * returns without touching anything. */
 	vortex_mutex_lock (&ctx->conn_mgr_mutex);
 	conn_hash          = ctx->conn_mgr_hash;
 	ctx->conn_mgr_hash = NULL;
 	vortex_mutex_unlock (&ctx->conn_mgr_mutex);
 
-	/* finish the hash */
+	/* First pass: uninstall every handler installed by the conn mgr
+	 * before starting to shutdown and unref connections.
+	 *
+	 * NOTE: this is done WITHOUT holding conn_mgr_mutex on purpose.
+	 * vortex_connection_remove_handler takes the connection internal
+	 * mutex, while the channel added/removed handlers take the locks
+	 * in the opposite order (connection lock first, then
+	 * conn_mgr_mutex), so holding the lock here would risk a lock
+	 * inversion. It is safe unlocked because the hash was already
+	 * detached above and we are its only owner. */
+	axl_hash_foreach (conn_hash, turbulence_conn_mgr_remove_handlers, NULL);
+
+	/* Second pass: shutdown and release every connection */
 	axl_hash_foreach (conn_hash, turbulence_conn_mgr_shutdown_connections, NULL);
 
 	/* release the hash (this calls turbulence_conn_mgr_unref on
 	 * every state still stored) */
 	axl_hash_free (conn_hash);
 
-	/* destroy mutex */
-	vortex_mutex_destroy (&ctx->conn_mgr_mutex);
+	/* NOTE: conn_mgr_mutex is NOT destroyed here on purpose. Handlers
+	 * running on other threads check conn_mgr_hash before taking the
+	 * lock, so they may be about to lock it right now, and locking a
+	 * destroyed mutex is undefined behaviour. The mutex is kept alive
+	 * for the whole life of the TurbulenceCtx and destroyed by
+	 * turbulence_ctx_free, once vortex has been already stopped. */
 
 	return;
 }
