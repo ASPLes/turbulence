@@ -77,10 +77,18 @@ TurbulenceChild * turbulence_child_new (TurbulenceCtx * ctx, TurbulencePPathDef 
 		/* base directory having child socket control does not exist */
 		wrn ("run time directory %s do not exists, creating..", temp_dir);
 		if (! turbulence_create_dir (temp_dir)) {
-			/* call to finish references */
-			turbulence_child_unref (result);
-
 			error ("Unable to create directory to hold child socket connection, unable to create child process..");
+
+			/* release the members allocated so far: at this
+			 * point ref_count is still 0 and the mutex is not
+			 * created, so turbulence_child_unref() would be a
+			 * no-op (and unsafe), leaking the child object and
+			 * its socket control path on every failed
+			 * attempt. Same handling as the conn_mgr error
+			 * path below. */
+			axl_free (result->socket_control_path);
+			axl_free (result);
+
 			axl_free (temp_dir);
 			return NULL;
 		} /* end if */
