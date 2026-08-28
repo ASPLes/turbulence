@@ -15,6 +15,54 @@ axlDoc     * mod_websocket_conf = NULL;
 noPollCtx  * nopoll_ctx = NULL;
 axl_bool     __mod_websocket_nopoll_log_enabled = axl_false;
 
+/* references to the BEEP listeners started by this module: they are
+ * stored to be able to close them at module close. Every listener holds
+ * a reference to the noPoll context, so without closing them the
+ * nopoll_ctx_unref() done at close never finishes the context and
+ * everything registered into it remains allocated until the process
+ * ends. */
+axlList    * mod_websocket_listeners = NULL;
+
+/**
+ * @internal Closes a listener started by this module, releasing the
+ * reference acquired when it was stored.
+ */
+void __mod_websocket_listener_close (axlPointer _listener)
+{
+	VortexConnection * listener = _listener;
+
+	/* stop accepting connections and release our reference */
+	vortex_connection_shutdown (listener);
+	vortex_connection_close (listener);
+
+	return;
+}
+
+/**
+ * @internal Releases the listeners started by this module and the
+ * noPoll context. Used by the module close handler and by the error
+ * paths at module init (where the close handler is not called because
+ * the module was never registered).
+ */
+void __mod_websocket_release_resources (void)
+{
+	/* release module configuration */
+	axl_doc_free (mod_websocket_conf);
+	mod_websocket_conf = NULL;
+
+	/* close listeners first: they hold references to the noPoll
+	 * context created below */
+	axl_list_free (mod_websocket_listeners);
+	mod_websocket_listeners = NULL;
+
+	if (nopoll_ctx != NULL) {
+		nopoll_ctx_unref (nopoll_ctx);
+		nopoll_ctx = NULL;
+	} /* end if */
+
+	return;
+}
+
 /** 
  * @internal Load websocket.conf file.
  */
@@ -22,12 +70,24 @@ axl_bool mod_websocket_load_config (void) {
 	char     * config;
 	axlError * error = NULL;
 	char     * path;
+	char     * domain;
 
 	if (mod_websocket_conf == NULL) {
 		/* websocket.conf not loaded */
-		path = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "websocket", NULL);
+		path   = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "websocket", NULL);
+		domain = axl_strdup ("websocket");
+
+		/* both references are transferred (_ref) to the vortex
+		 * context, so they must be checked before handing them */
+		if (path == NULL || domain == NULL) {
+			error ("Failed to allocate memory to configure the websocket search path, failed to activate websocket support");
+			axl_free (path);
+			axl_free (domain);
+			return axl_false;
+		} /* end if */
+
 		msg ("Adding search path: %s", path);
-		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), axl_strdup ("websocket"), path);
+		vortex_support_add_domain_search_path_ref (TBC_VORTEX_CTX(ctx), domain, path);
 
 		/* load configuration file */
 		config  = vortex_support_domain_find_data_file (TBC_VORTEX_CTX(ctx), "websocket", "websocket.conf");
@@ -171,12 +231,21 @@ void mod_websocket_load_certificate_locations (noPollCtx * nopoll_ctx) {
 	node = axl_doc_get (mod_websocket_conf, "/mod-websocket/certificates");
 	if (HAS_ATTR_VALUE (node, "import-mod-tls-certs", "yes")) {
 	  	path = vortex_support_build_filename (turbulence_sysconfdir (ctx), "turbulence", "tls", "tls.conf", NULL);
+		if (path == NULL) {
+			error ("Failed to allocate memory to build mod-tls configuration path, unable to import its certificates");
+			return;
+		} /* end if */
+
                 msg ("WEB-SOCKET: import certificates defined at mod-tls (%s)", path);
 	        doc  = axl_doc_parse_from_file (path, &err);
 		if (doc == NULL) {
 			error ("Unable to import certificates from path %s, error was: %s",
 			       path, axl_error_get (err));
 			axl_error_free (err);
+
+			/* release the path built above: it was only
+			 * released on the success path below */
+			axl_free (path);
 			return;
 		} /* end if */
 
@@ -216,24 +285,26 @@ void __mod_websocket_check_and_enable_port_sharing (TurbulenceCtx * _ctx, axlDoc
 void __mod_websocket_nopoll_log (noPollCtx * nopoll_ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data)
 {
 	TurbulenceCtx * ctx = user_data;
-	char          * message;
 
 	/* check if nopoll log is enabled to avoid dropping a log about warning and debug */
 	if (! __mod_websocket_nopoll_log_enabled && (level == NOPOLL_LEVEL_WARNING || level == NOPOLL_LEVEL_DEBUG))
 		return;
 
-	/* prepare string to differenciate it */
-	message = axl_strdup_printf (" (nopoll) %s", log_msg);
+	if (log_msg == NULL)
+		return;
 
+	/* report the message using a constant format string with the
+	 * log provided as an argument. The message reported by noPoll
+	 * may include content coming from the network (failed
+	 * handshakes, headers, ..), so it must never be used as the
+	 * format string itself. No copy is needed to prefix it. */
 	if (level == NOPOLL_LEVEL_CRITICAL)
-		error (message);
+		error (" (nopoll) %s", log_msg);
 	else if (level == NOPOLL_LEVEL_WARNING)
-		wrn (message);
+		wrn (" (nopoll) %s", log_msg);
 	else
-		msg (message);
+		msg (" (nopoll) %s", log_msg);
 
-	/* release */
-	axl_free (message);
 	return;
 }
 
@@ -273,6 +344,18 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 	/* init context */
 	nopoll_ctx = nopoll_ctx_new ();
 	msg ("WEB-SOCKET: Creating noPoll context %p", nopoll_ctx);
+	if (nopoll_ctx == NULL) {
+		error ("Failed to create noPoll context (memory failure?), unable to activate websocket support");
+		return axl_false;
+	} /* end if */
+
+	/* prepare the list holding the listeners started below */
+	mod_websocket_listeners = axl_list_new (axl_list_always_return_1, __mod_websocket_listener_close);
+	if (mod_websocket_listeners == NULL) {
+		error ("Failed to allocate memory to track websocket listeners, unable to activate websocket support");
+		__mod_websocket_release_resources ();
+		return axl_false;
+	} /* end if */
 
 	/* check and install port share config (even in child) */
 	__mod_websocket_check_and_enable_port_sharing (_ctx, mod_websocket_conf, nopoll_ctx); 
@@ -297,8 +380,14 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 		/* get port */
 		port       = axl_node_get_content_trim (node, NULL);
 		enable_tls = HAS_ATTR_VALUE (node, "enable-tls", "yes");
-		if (! port) 
+		if (! port) {
+			wrn ("Websocket (noPoll): found <port> declaration without content, skipping it");
+
+			/* get next port: without advancing here the
+			 * loop would spin forever on this same node */
+			node = axl_node_get_next_called (node, "port");
 			continue;
+		} /* end if */
 
 		/* get cert and key */
 		cert = ATTR_VALUE (node, "cert");
@@ -313,7 +402,7 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 
 		/* create the noPoll listener */
 		if (enable_tls) {
-			nopoll_listener = nopoll_listener_tls_new (nopoll_ctx, "0.0.0.0", port); 
+			nopoll_listener = nopoll_listener_tls_new (nopoll_ctx, "0.0.0.0", port);
 
 			/* set listener certificate */
 			if (cert && key)
@@ -321,14 +410,36 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 		} else
 			nopoll_listener = nopoll_listener_new (nopoll_ctx, "0.0.0.0", port);
 
+		/* check the noPoll listener before handing it to vortex:
+		 * a null reference would be reported later as a generic
+		 * BEEP listener failure, hiding the real cause */
+		if (nopoll_listener == NULL) {
+			error ("Websocket (noPoll): failed to start listener at port %s (enable-tls=%d), unable to activate websocket support",
+			       port, enable_tls);
+			__mod_websocket_release_resources ();
+			return axl_false;
+		} /* end if */
+
 		/* now associate that listener to BEEP */
 		listener = vortex_websocket_listener_new (TBC_VORTEX_CTX (_ctx), nopoll_listener, NULL, NULL);
 		if (! vortex_connection_is_ok (listener, axl_false)) {
 			error ("ERROR: expected to find proper BEEP listener over Websocket creation but failure was found..\n");
+
+			/* release the failed listener and everything
+			 * started so far: the module close handler is
+			 * not called when init fails */
+			vortex_connection_close (listener);
+			__mod_websocket_release_resources ();
 			return axl_false;
 		} /* end if */
 
 		msg ("Websocket (noPoll) listener socket started at: %s:%s", vortex_connection_get_host (listener), vortex_connection_get_port (listener));
+
+		/* keep a reference to close it at module close */
+		if (vortex_connection_ref (listener, "mod-websocket listener"))
+			axl_list_append (mod_websocket_listeners, listener);
+		else
+			wrn ("Websocket (noPoll): unable to acquire a reference to listener at port %s, it will not be closed at module close", port);
 
 		/* get next port */
 		node = axl_node_get_next_called (node, "port");
@@ -344,17 +455,17 @@ static int  mod_websocket_init (TurbulenceCtx * _ctx) {
 static void mod_websocket_close (TurbulenceCtx * _ctx) {
 	msg ("WEBSOCKET: closing module..");
 
-	/* release module allocated memory */
-	axl_doc_free (mod_websocket_conf);
-	mod_websocket_conf = NULL;
+	/* configure log handling: the context is not created on child
+	 * processes (module init returns before creating it) */
+	if (nopoll_ctx != NULL) {
+		nopoll_log_enable (nopoll_ctx, nopoll_false);
+		nopoll_log_color_enable (nopoll_ctx, nopoll_false);
+		nopoll_log_set_handler (nopoll_ctx, NULL, NULL);
+	} /* end if */
 
-	/* configure log handling */
-	nopoll_log_enable (nopoll_ctx, nopoll_false);
-	nopoll_log_color_enable (nopoll_ctx, nopoll_false);
-	nopoll_log_set_handler (nopoll_ctx, NULL, NULL);
-
-	nopoll_ctx_unref (nopoll_ctx);
-	nopoll_ctx = NULL;
+	/* release module configuration, close the listeners started by
+	 * this module and release the noPoll context */
+	__mod_websocket_release_resources ();
 
 	/* cleanup library */
 	nopoll_cleanup_library ();
