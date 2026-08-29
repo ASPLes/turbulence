@@ -89,12 +89,21 @@ void turbulence_mediator_init        (TurbulenceCtx * ctx)
 		/* init hash */
 		ctx->mediator_hash = axl_hash_new (axl_hash_string, axl_hash_equal_string);
 
+		/* check allocation: with a null hash the module stays
+		   disabled (every operation below reports failure)
+		   rather than making the process abort */
+		if (ctx->mediator_hash == NULL) {
+			error ("unable to allocate mediator hash, mediator module will not be available");
+			return;
+		} /* end if */
+
 		/* because the handler was not ready, take opportunity
 		   to register built-in events */
-		turbulence_mediator_create_plug (ctx, "turbulence", "module-registered",
-						 /* do not subscribe */
-						 axl_false, NULL, NULL);
-		
+		if (! turbulence_mediator_create_plug (ctx, "turbulence", "module-registered",
+						       /* do not subscribe */
+						       axl_false, NULL, NULL))
+			error ("unable to register built-in mediator event turbulence::module-registered");
+
 	} /* end if */
 	return;
 }
@@ -163,11 +172,47 @@ void turbulence_mediator_plug_free (axlPointer _plug)
 {
 	TurbulenceMediatorPlug * plug = (TurbulenceMediatorPlug * ) _plug;
 
+	if (plug == NULL)
+		return;
+
+	/* NOTE: all members below accept a null reference, so this
+	   function is also usable to release a partially created plug
+	   (error paths at create_plug/create_api) */
 	axl_free      (plug->entry_domain);
 	axl_free      (plug->entry_name);
 	axl_list_free (plug->subscribers);
 	axl_free      (plug);
 	return;
+}
+
+/**
+ * @internal Appends the subscriber holder provided to the plug
+ * subscribers list, checking the operation really took place.
+ *
+ * axl_list_append reports nothing: under a memory failure it just
+ * does not link the node, which would silently leak the holder and
+ * make the caller believe it is subscribed. On failure the holder is
+ * released here.
+ *
+ * @return axl_true if the subscriber was stored (ownership
+ * transferred to the list), otherwise axl_false (holder already
+ * released).
+ */
+static axl_bool turbulence_mediator_add_subscriber (TurbulenceMediatorPlug       * plug,
+						    TurbulenceMediatorSubscriber * subscriber)
+{
+	int length;
+
+	length = axl_list_length (plug->subscribers);
+	axl_list_append (plug->subscribers, subscriber);
+
+	if (axl_list_length (plug->subscribers) != (length + 1)) {
+		/* not stored: release the holder to avoid leaking it */
+		axl_free (subscriber);
+		return axl_false;
+	} /* end if */
+
+	return axl_true;
 }
 
 /** 
@@ -196,7 +241,15 @@ void turbulence_mediator_plug_free (axlPointer _plug)
  * @param user_data User defined pointer passed to the handler when
  * the event happens.
  *
- * @return axl_true if the plug was created, otherwise axl_false is returned.
+ * @return axl_true if the plug is available after the call (either
+ * because it was created or because it already existed) and the
+ * subscription, if requested, was done. Otherwise axl_false is
+ * returned.
+ *
+ * NOTE: an event plug and an API entry (\ref
+ * turbulence_mediator_create_api) share the same name space. Calling
+ * this function with subscribe set to axl_true over an already
+ * created API entry fails (API entries cannot be subscribed).
  */
 axl_bool turbulence_mediator_create_plug (TurbulenceCtx             * ctx,
 					  const char                * entry_name, 
@@ -213,7 +266,7 @@ axl_bool turbulence_mediator_create_plug (TurbulenceCtx             * ctx,
 	v_return_val_if_fail (entry_name,   axl_false);
 	v_return_val_if_fail (entry_domain, axl_false);
 
-	/* check that the plug is not already created */
+	/* build the key that identifies the plug */
 	full_name = axl_strdup_printf ("%s::%s", entry_name, entry_domain);
 	if (full_name == NULL)
 		return axl_false;
@@ -221,44 +274,98 @@ axl_bool turbulence_mediator_create_plug (TurbulenceCtx             * ctx,
 	/* lock */
 	vortex_mutex_lock (&ctx->mediator_hash_mutex);
 
+	/* the mediator may be uninitialized or its hash may have
+	   failed to be created: do not report a plug that is not
+	   registered anywhere */
+	if (ctx->mediator_hash == NULL) {
+		axl_free (full_name);
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	/* get plug */
 	plug      = axl_hash_get (ctx->mediator_hash, full_name);
 	if (plug == NULL) {
 		/* plug not found, create and register */
 		plug               = axl_new (TurbulenceMediatorPlug, 1);
+		if (plug == NULL) {
+			axl_free (full_name);
+			vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+			return axl_false;
+		} /* end if */
+
 		plug->is_api       = axl_false;
 		plug->entry_name   = axl_strdup (entry_name);
 		plug->entry_domain = axl_strdup (entry_domain);
 		plug->subscribers  = axl_list_new (axl_list_always_return_1, axl_free);
-		
+
+		/* check every allocation before registering a half
+		   built plug into the global hash */
+		if (plug->entry_name == NULL || plug->entry_domain == NULL || plug->subscribers == NULL) {
+			turbulence_mediator_plug_free (plug);
+			axl_free (full_name);
+			vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+			return axl_false;
+		} /* end if */
+
 		/* register */
-		axl_hash_insert_full (ctx->mediator_hash, 
+		axl_hash_insert_full (ctx->mediator_hash,
 				      /* store key and its destroy function */
 				      full_name, axl_free,
 				      /* store plug and its destroy function */
 				      plug, turbulence_mediator_plug_free);
+
+		/* axl_hash_insert_full reports nothing: when it cannot
+		   allocate its internal nodes it just does not store
+		   the item (keeping no reference to key or data). Check
+		   the plug got registered, otherwise both would be
+		   leaked and the caller would be told the event
+		   exists */
+		if (axl_hash_get (ctx->mediator_hash, full_name) != plug) {
+			turbulence_mediator_plug_free (plug);
+			axl_free (full_name);
+			vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+			return axl_false;
+		} /* end if */
 	} else {
 		/* free key no longer used */
 		axl_free (full_name);
 	} /* end if */
-	
+
 	/* now check if the caller is requesting to subscribe */
 	if (! subscribe) {
 		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
 		return axl_true;
 	} /* end if */
 
+	/* API entries share the name space with event plugs but they
+	   have no subscribers list: reject the subscription as
+	   turbulence_mediator_subscribe does instead of silently
+	   dropping the holder */
+	if (plug->is_api) {
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	/* subscribe: create the holder */
 	subscriber            = axl_new (TurbulenceMediatorSubscriber, 1);
+	if (subscriber == NULL) {
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	subscriber->handler   = handler;
 	subscriber->user_data = user_data;
 
 	/* now subscribe */
-	axl_list_append (plug->subscribers, subscriber);
+	if (! turbulence_mediator_add_subscriber (plug, subscriber)) {
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->mediator_hash_mutex);
-	
+
 	return axl_true;
 }
 
@@ -285,7 +392,7 @@ int      turbulence_mediator_plug_num     (TurbulenceCtx             * ctx)
 /** 
  * @brief Checks if a particular plug is already registered.
  *
- * @param ctx The context where the plug existance will be checked.
+ * @param ctx The context where the plug existence will be checked.
  *
  * @param entry_name The plug entry name to check.
  * @param entry_domain The plug entry domain to check.
@@ -312,7 +419,7 @@ axl_bool turbulence_mediator_plug_exits   (TurbulenceCtx             * ctx,
 	/* lock */
 	vortex_mutex_lock (&ctx->mediator_hash_mutex);
 
-	/* check existance */
+	/* check existence */
 	result = (axl_hash_get (ctx->mediator_hash, full_name) != NULL);
 	axl_free (full_name);
 
@@ -324,7 +431,7 @@ axl_bool turbulence_mediator_plug_exits   (TurbulenceCtx             * ctx,
 
 
 /** 
- * @brief Allows to subscribe to the provide entry name under the
+ * @brief Allows to subscribe to the provided entry name under the
  * provided entry domain. The handler and user data will be called in
  * the case the event is fired.
  *
@@ -340,8 +447,9 @@ axl_bool turbulence_mediator_plug_exits   (TurbulenceCtx             * ctx,
  * @param user_data A pointer to user defined data, passed to the
  * handler configured.
  *
- * NOTE: if the event does not exist, the handler won't receive
- * any notification.
+ * NOTE: if the event does not exist, or the name is already taken by
+ * an API entry (\ref turbulence_mediator_create_api), the function
+ * fails and the handler won't receive any notification.
  *
  * @return axl_true if the caller was subscribed, otherwise axl_false
  * is returned.
@@ -360,7 +468,7 @@ axl_bool turbulence_mediator_subscribe   (TurbulenceCtx             * ctx,
 	v_return_val_if_fail (entry_name, axl_false);
 	v_return_val_if_fail (entry_domain, axl_false);
 
-	/* check that the plug is not already created */
+	/* build the key that identifies the plug */
 	full_name = axl_strdup_printf ("%s::%s", entry_name, entry_domain);
 	if (full_name == NULL)
 		return axl_false;
@@ -374,7 +482,8 @@ axl_bool turbulence_mediator_subscribe   (TurbulenceCtx             * ctx,
 	/* free no longer used entry key */
 	axl_free (full_name);
 
-	/* check */
+	/* only event plugs can be subscribed: reject a missing plug
+	   and any API entry registered under the same name */
 	if (plug == NULL || plug->is_api) {
 		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
 		return axl_false;
@@ -382,11 +491,19 @@ axl_bool turbulence_mediator_subscribe   (TurbulenceCtx             * ctx,
 	
 	/* subscribe: create the holder */
 	subscriber            = axl_new (TurbulenceMediatorSubscriber, 1);
+	if (subscriber == NULL) {
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	subscriber->handler   = handler;
 	subscriber->user_data = user_data;
 
 	/* now subscribe */
-	axl_list_append (plug->subscribers, subscriber);
+	if (! turbulence_mediator_add_subscriber (plug, subscriber)) {
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
 
 	/* unlock */
 	vortex_mutex_unlock (&ctx->mediator_hash_mutex);
@@ -422,13 +539,21 @@ axl_bool     turbulence_mediator_create_api   (TurbulenceCtx             * ctx,
 	v_return_val_if_fail (entry_name,   axl_false);
 	v_return_val_if_fail (entry_domain, axl_false);
 
-	/* check that the plug is not already created */
+	/* build the key that identifies the API entry */
 	full_name = axl_strdup_printf ("%s::%s", entry_name, entry_domain);
 	if (full_name == NULL)
 		return axl_false;
 
 	/* lock */
 	vortex_mutex_lock (&ctx->mediator_hash_mutex);
+
+	/* the mediator may be uninitialized or its hash may have
+	   failed to be created */
+	if (ctx->mediator_hash == NULL) {
+		axl_free (full_name);
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
 
 	/* get plug */
 	plug      = axl_hash_get (ctx->mediator_hash, full_name);
@@ -440,31 +565,57 @@ axl_bool     turbulence_mediator_create_api   (TurbulenceCtx             * ctx,
 		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
 		return axl_false;
 	} /* end if */
-	
+
 	/* plug not found, create and register */
 	plug               = axl_new (TurbulenceMediatorPlug, 1);
+	if (plug == NULL) {
+		axl_free (full_name);
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	plug->is_api       = axl_true;
 	plug->entry_name   = axl_strdup (entry_name);
 	plug->entry_domain = axl_strdup (entry_domain);
 	plug->api_handler  = handler;
 	plug->user_data    = user_data;
-		
+
+	/* check every allocation before registering a half built
+	   entry into the global hash */
+	if (plug->entry_name == NULL || plug->entry_domain == NULL) {
+		turbulence_mediator_plug_free (plug);
+		axl_free (full_name);
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	/* register */
-	axl_hash_insert_full (ctx->mediator_hash, 
+	axl_hash_insert_full (ctx->mediator_hash,
 			      /* store key and its destroy function */
 			      full_name, axl_free,
 			      /* store plug and its destroy function */
 			      plug, turbulence_mediator_plug_free);
-	
+
+	/* check the entry got registered (see note at
+	   turbulence_mediator_create_plug) */
+	if (axl_hash_get (ctx->mediator_hash, full_name) != plug) {
+		turbulence_mediator_plug_free (plug);
+		axl_free (full_name);
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return axl_false;
+	} /* end if */
+
 	/* unlock */
 	vortex_mutex_unlock (&ctx->mediator_hash_mutex);
-	
+
 	return axl_true;
 }
 
 /** 
  * @brief Allows to remove a particular handler registered on a plug
- * identified by entry_name and entry_domain.
+ * identified by entry_name and entry_domain. The plug itself is not
+ * removed: only the subscription matching the handler and user data
+ * provided is dropped.
  *
  * @param ctx The turbulence context where the operation will take
  * place.
@@ -494,7 +645,7 @@ void turbulence_mediator_remove_plug (TurbulenceCtx             * ctx,
 	v_return_if_fail (entry_name);
 	v_return_if_fail (entry_domain);
 
-	/* check that the plug is not already created */
+	/* build the key that identifies the plug */
 	full_name = axl_strdup_printf ("%s::%s", entry_name, entry_domain);
 	if (full_name == NULL)
 		return;
@@ -561,7 +712,7 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 	v_return_val_if_fail (entry_name, NULL);
 	v_return_val_if_fail (entry_domain, NULL);
 
-	/* check that the plug is not already created */
+	/* build the key that identifies the plug */
 	full_name = axl_strdup_printf ("%s::%s", entry_name, entry_domain);
 	if (full_name == NULL)
 		return NULL;
@@ -576,13 +727,21 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 	axl_free (full_name);
 
 	if (plug == NULL || (plug->is_api != is_api)) {
-		/* plug not found or it is an api */
+		/* plug not found or it does not match the requested
+		   kind (an api call over an event plug or the opposite) */
 		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
 		return NULL;
 	} /* end if */
 
 	/* prepare the mediator object */
 	object               = axl_new (TurbulenceMediatorObject, 1);
+	if (object == NULL) {
+		/* no memory to notify: report the failure to the
+		   caller instead of dereferencing a null object */
+		vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+		return NULL;
+	} /* end if */
+
 	object->ctx          = ctx;
 	object->entry_name   = entry_name;
 	object->entry_domain = entry_domain;
@@ -625,6 +784,15 @@ axlPointer turbulence_mediator_common_call (TurbulenceCtx             * ctx,
 			/* copy (handler, user_data) pairs into an
 			 * independent array owned by this call */
 			snapshot = axl_new (TurbulenceMediatorSubscriber, count);
+			if (snapshot == NULL) {
+				/* no memory for the snapshot: skip the
+				   notification instead of iterating the
+				   live list with the lock released */
+				vortex_mutex_unlock (&ctx->mediator_hash_mutex);
+				axl_free (object);
+				return NULL;
+			} /* end if */
+
 			iterator = 0;
 			while (iterator < count) {
 				/* get subscriber value */
@@ -754,16 +922,21 @@ axlPointer     turbulence_mediator_call_api     (TurbulenceCtx             * ctx
  */
 void turbulence_mediator_cleanup      (TurbulenceCtx * ctx)
 {
-	if (ctx == NULL || ctx->mediator_hash == NULL)
+	if (ctx == NULL)
 		return;
 
-	/* finish hash */
+	/* finish hash (axl_hash_free accepts a null reference: the
+	   hash may be missing because its allocation failed at
+	   turbulence_mediator_init, but the mutex was created there
+	   in any case and must be released too) */
+	vortex_mutex_lock (&ctx->mediator_hash_mutex);
 	axl_hash_free (ctx->mediator_hash);
 	ctx->mediator_hash = NULL;
+	vortex_mutex_unlock (&ctx->mediator_hash_mutex);
 
 	/* clear mutex */
 	vortex_mutex_destroy (&ctx->mediator_hash_mutex);
-	
+
 
 	return;
 }

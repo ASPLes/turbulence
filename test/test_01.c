@@ -967,6 +967,146 @@ axl_bool test_01d (void)
 	return axl_true;
 }
 
+int test_01e_notified = 0;
+
+void test_01e_handler (TurbulenceMediatorObject * object)
+{
+	/* just count the notification received */
+	test_01e_notified++;
+	return;
+}
+
+/**
+ * @brief Regression test: the mediator API must survive a punctual
+ * memory failure (reporting the error to the caller instead of
+ * registering half built plugs, leaking subscribers or leaving the
+ * mediator mutex locked) and must not accept subscriptions over an
+ * API entry, which has no subscribers list.
+ */
+axl_bool test_01e (void)
+{
+	int iterator;
+
+	/* init the mediator module */
+	turbulence_mediator_init (ctx);
+
+	/* 1) an API entry and an event plug share the same name
+	 * space: subscribing to an API entry must fail rather than
+	 * silently dropping the subscription */
+	if (! turbulence_mediator_create_api (ctx, "test-01e", "api", test_01e_handler, NULL)) {
+		printf ("ERROR (1): expected to be able to create the api entry\n");
+		return axl_false;
+	} /* end if */
+
+	if (turbulence_mediator_create_plug (ctx, "test-01e", "api", axl_true, test_01e_handler, NULL)) {
+		printf ("ERROR (2): expected to find a failure while subscribing (through create_plug) to an api entry\n");
+		return axl_false;
+	} /* end if */
+
+	if (turbulence_mediator_subscribe (ctx, "test-01e", "api", test_01e_handler, NULL)) {
+		printf ("ERROR (3): expected to find a failure while subscribing to an api entry\n");
+		return axl_false;
+	} /* end if */
+
+	/* 2) make the allocations done by create_plug fail, one at a
+	 * time: none of them must register the plug or crash.
+	 *
+	 * NOTE: only the allocations done by the mediator itself are
+	 * exercised, that is, the plug holder (1) and the subscribers
+	 * list (4). Allocations 2 and 3 are the ones done inside
+	 * axl_strdup: axl_stream_strdup does not check the value
+	 * returned by axl_new before memcpy'ing over it, so forcing
+	 * those to fail crashes inside libaxl, not in the code under
+	 * test. The mediator checks them anyway (see create_plug). */
+	iterator = 1;
+	while (iterator <= 4) {
+		if (iterator == 2 || iterator == 3) {
+			iterator++;
+			continue;
+		} /* end if */
+
+		test_calloc_arm (iterator);
+		if (turbulence_mediator_create_plug (ctx, "test-01e", "entry", axl_false, NULL, NULL)) {
+			test_calloc_disarm ();
+			printf ("ERROR (4): expected to find a failure at create_plug with memory failure at allocation %d\n", iterator);
+			return axl_false;
+		} /* end if */
+		test_calloc_disarm ();
+
+		/* the plug must not be registered after the failure */
+		if (turbulence_mediator_plug_exits (ctx, "test-01e", "entry")) {
+			printf ("ERROR (5): plug was registered after a memory failure at allocation %d\n", iterator);
+			return axl_false;
+		} /* end if */
+
+		iterator++;
+	} /* end while */
+
+	/* 3) with memory available again the plug must be created:
+	 * this also detects the mediator mutex being left locked by
+	 * the failing operations above */
+	if (! turbulence_mediator_create_plug (ctx, "test-01e", "entry", axl_true, test_01e_handler, NULL)) {
+		printf ("ERROR (6): failed to create the plug after the memory failures\n");
+		return axl_false;
+	} /* end if */
+
+	/* 4) a failing subscription must not be reported as done */
+	test_calloc_arm (1);
+	if (turbulence_mediator_subscribe (ctx, "test-01e", "entry", test_01e_handler, INT_TO_PTR (2))) {
+		test_calloc_disarm ();
+		printf ("ERROR (7): expected to find a failure while subscribing under memory failure\n");
+		return axl_false;
+	} /* end if */
+	test_calloc_disarm ();
+
+	/* 5) the event must still reach the subscriber registered at
+	 * step 3 (and only that one) */
+	test_01e_notified = 0;
+	turbulence_mediator_push_event (ctx, "test-01e", "entry", NULL, NULL, NULL, NULL);
+	if (test_01e_notified != 1) {
+		printf ("ERROR (8): expected to find 1 notification after the memory failures, but found: %d\n",
+			test_01e_notified);
+		return axl_false;
+	} /* end if */
+
+	/* 6) a memory failure while pushing the event must not crash
+	 * and must leave the mediator usable */
+	test_01e_notified = 0;
+	test_calloc_arm (1);
+	turbulence_mediator_push_event (ctx, "test-01e", "entry", NULL, NULL, NULL, NULL);
+	test_calloc_disarm ();
+
+	if (test_01e_notified != 0) {
+		printf ("ERROR (9): expected to find no notification when the mediator object cannot be allocated\n");
+		return axl_false;
+	} /* end if */
+
+	/* 6b) same for the subscribers snapshot (second allocation
+	 * done by the push operation) */
+	test_01e_notified = 0;
+	test_calloc_arm (2);
+	turbulence_mediator_push_event (ctx, "test-01e", "entry", NULL, NULL, NULL, NULL);
+	test_calloc_disarm ();
+
+	if (test_01e_notified != 0) {
+		printf ("ERROR (9b): expected to find no notification when the subscribers snapshot cannot be allocated\n");
+		return axl_false;
+	} /* end if */
+
+	test_01e_notified = 0;
+	turbulence_mediator_push_event (ctx, "test-01e", "entry", NULL, NULL, NULL, NULL);
+	if (test_01e_notified != 1) {
+		printf ("ERROR (10): expected to find 1 notification after the push event memory failure, but found: %d\n",
+			test_01e_notified);
+		return axl_false;
+	} /* end if */
+
+	/* cleanup */
+	turbulence_mediator_cleanup (ctx);
+
+	return axl_true;
+}
+
 /* prototype for the internal profile path mask handler (not published
  * in a public header) used by the regression test below */
 extern axl_bool __turbulence_ppath_mask (VortexConnection * connection,
@@ -7455,6 +7595,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_01d")
 	run_test (test_01d, "Test 01-d: db-list survives a punctual memory failure");
+
+	CHECK_TEST("test_01e")
+	run_test (test_01e, "Test 01-e: mediator survives a punctual memory failure");
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");
