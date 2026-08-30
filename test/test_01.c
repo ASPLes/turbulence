@@ -55,6 +55,10 @@
 /* used by test_signal_block to inspect the process signal mask */
 #include <signal.h>
 
+/* used by test_01g to reach the module definition of an already loaded
+ * module and drop its init handler */
+#include <dlfcn.h>
+
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
 /* support for websocket */
 #include <vortex_websocket.h>
@@ -1106,6 +1110,174 @@ axl_bool test_01e (void)
 
 	return axl_true;
 }
+
+/* Locates the module used by the module API regression tests below.
+ *
+ * mod_test_11 is used on purpose: it is not registered into the context
+ * used by this test program (test_11 runs turbulence as a separate
+ * process), so it can be opened, registered and released here without
+ * disturbing the modules registered by test_04. */
+const char * test_01f_module_path (void)
+{
+	if (vortex_support_file_test ("test_11_module/.libs/mod_test_11.so", FILE_EXISTS))
+		return "test_11_module/.libs/mod_test_11.so";
+	if (vortex_support_file_test ("test_11_module/mod_test_11.so", FILE_EXISTS))
+		return "test_11_module/mod_test_11.so";
+	return NULL;
+}
+
+/**
+ * @brief Regression test: the module API must survive a punctual memory
+ * failure, reporting the error to the caller instead of writing into a
+ * null reference, and it must leave the registered modules mutex
+ * released so the following operation works.
+ */
+axl_bool test_01f (void)
+{
+	const char       * path;
+	TurbulenceModule * module;
+	int                registered;
+
+	path = test_01f_module_path ();
+	if (path == NULL) {
+		printf ("Test 01-f: unable to find mod_test_11, skipping test..\n");
+		return axl_true;
+	} /* end if */
+
+	/* modules registered before this test: the registry must be left
+	 * exactly like this when the test finishes */
+	registered = axl_list_length (ctx->registered_modules);
+
+	/* 1) make the allocation of the module holder fail: the function
+	 * must report the failure instead of writing the path into a null
+	 * reference */
+	test_calloc_arm (1);
+	module = turbulence_module_open (ctx, path);
+	test_calloc_disarm ();
+
+	if (module != NULL) {
+		printf ("ERROR (1): expected to find a failure opening a module under memory failure\n");
+		turbulence_module_free (module);
+		return axl_false;
+	} /* end if */
+
+	/* 2) with memory available again the module must open */
+	module = turbulence_module_open (ctx, path);
+	if (module == NULL) {
+		printf ("ERROR (2): failed to open module after the memory failure\n");
+		return axl_false;
+	} /* end if */
+
+	/* register it so the notification below has something to
+	 * snapshot */
+	if (! turbulence_module_register (module)) {
+		printf ("ERROR (3): failed to register module %s\n", path);
+		turbulence_module_free (module);
+		return axl_false;
+	} /* end if */
+
+	if (axl_list_length (ctx->registered_modules) != (registered + 1)) {
+		printf ("ERROR (3b): expected to find %d registered modules after register, but found: %d\n",
+			registered + 1, axl_list_length (ctx->registered_modules));
+		return axl_false;
+	} /* end if */
+
+	/* 3) make the snapshot allocated by turbulence_module_notify ()
+	 * fail: it must report the failure rather than indexing a null
+	 * array */
+	test_calloc_arm (1);
+	if (turbulence_module_notify (ctx, TBC_RELOAD_HANDLER, NULL, NULL, NULL)) {
+		test_calloc_disarm ();
+		printf ("ERROR (4): expected to find a failure notifying modules under memory failure\n");
+		turbulence_module_unregister (module);
+		turbulence_module_free (module);
+		return axl_false;
+	} /* end if */
+	test_calloc_disarm ();
+
+	/* 4) with memory available the notification must work again: this
+	 * also detects the registered modules mutex being left locked by
+	 * the failing operation above */
+	if (! turbulence_module_notify (ctx, TBC_RELOAD_HANDLER, NULL, NULL, NULL)) {
+		printf ("ERROR (5): expected to be able to notify modules after the memory failure\n");
+		turbulence_module_unregister (module);
+		turbulence_module_free (module);
+		return axl_false;
+	} /* end if */
+
+	/* 5) unregister must really unlink the module: otherwise the
+	 * release done right after would leave a dangling reference
+	 * inside the registered modules list */
+	turbulence_module_unregister (module);
+	if (axl_list_length (ctx->registered_modules) != registered) {
+		printf ("ERROR (6): expected to find %d registered modules after unregister, but found: %d\n",
+			registered, axl_list_length (ctx->registered_modules));
+		return axl_false;
+	} /* end if */
+
+	turbulence_module_free (module);
+
+	return axl_true;
+}
+
+/**
+ * @brief Regression test: defining an init handler is optional for a
+ * turbulence module (see turbulence_module_get_init), so loading a
+ * module that does not define it must work instead of jumping through a
+ * null function pointer.
+ */
+axl_bool test_01g (void)
+{
+	const char       * path;
+	TurbulenceModule * module;
+	TurbulenceModDef * def;
+	ModInitFunc        saved_init;
+	void             * handle;
+
+	path = test_01f_module_path ();
+	if (path == NULL) {
+		printf ("Test 01-g: unable to find mod_test_11, skipping test..\n");
+		return axl_true;
+	} /* end if */
+
+	/* reach the very same module_def the loader will find (dlopen is
+	 * reference counted, so it returns the already mapped object) and
+	 * drop its init handler to build a module without init */
+	handle = dlopen (path, RTLD_LAZY | RTLD_GLOBAL);
+	if (handle == NULL) {
+		printf ("ERROR (1): unable to dlopen module %s: %s\n", path, dlerror ());
+		return axl_false;
+	} /* end if */
+
+	def = (TurbulenceModDef *) dlsym (handle, "module_def");
+	if (def == NULL) {
+		printf ("ERROR (2): unable to find 'module_def' at %s\n", path);
+		dlclose (handle);
+		return axl_false;
+	} /* end if */
+
+	saved_init = def->init;
+	def->init  = NULL;
+
+	module = turbulence_module_open_and_register (ctx, path);
+
+	/* restore the handler before anything else uses the module */
+	def->init  = saved_init;
+
+	if (module == NULL) {
+		printf ("ERROR (3): expected to load a module that does not define an init handler\n");
+		dlclose (handle);
+		return axl_false;
+	} /* end if */
+
+	/* leave the module registry as it was found */
+	turbulence_module_unregister (module);
+	turbulence_module_free (module);
+	dlclose (handle);
+
+	return axl_true;
+}
+
 
 /* prototype for the internal profile path mask handler (not published
  * in a public header) used by the regression test below */
@@ -7598,6 +7770,12 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_01e")
 	run_test (test_01e, "Test 01-e: mediator survives a punctual memory failure");
+
+	CHECK_TEST("test_01f")
+	run_test (test_01f, "Test 01-f: module loading survives a punctual memory failure");
+
+	CHECK_TEST("test_01g")
+	run_test (test_01g, "Test 01-g: module without init handler is loaded, not called through NULL");
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");

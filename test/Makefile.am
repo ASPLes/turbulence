@@ -68,7 +68,7 @@ test_01_SOURCES = test_01.c
 # mod_sasl_mysql_conf.o provides the configuration layer of the mysql sasl
 # backend, exercised by test_12d/test_12e. It depends on libaxl alone, so it
 # links here without pulling MySQL into the test binary.
-test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o ../modules/mod-sasl/mod_sasl_mysql_conf.o -lcrypt $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
+test_01_LDADD   = ../src/libturbulence.la ../modules/mod-sasl/common-sasl.o ../modules/mod-sasl/mod_sasl_mysql_conf.o -lcrypt -ldl $(AXL_LIBS) $(VORTEX_LIBS) $(VORTEX_SASL_LIBS) \
 	$(VORTEX_XML_RPC_LIBS) $(EXARG_LIBS) $(VORTEX_TLS_LIBS) $(VORTEX_WEBSOCKET_LIBS)
 
 test_websocket_client_SOURCES = test-websocket-client.c

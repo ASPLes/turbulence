@@ -70,15 +70,27 @@ struct _TurbulenceModule {
 	axlList          * provided_profiles;
 };
 
-/** 
+/**
  * @internal Starts the turbulence module initializing all internal
  * variables.
+ *
+ * If the list holding registered modules cannot be allocated the
+ * failure is reported here (the mutex is still created so the rest of
+ * the API can be called safely): every function that walks the list
+ * degrades into a no-op and \ref turbulence_module_register reports
+ * the failure to its caller.
  */
 void               turbulence_module_init      (TurbulenceCtx * ctx)
 {
+	if (ctx == NULL)
+		return;
+
 	/* a list of all modules loaded */
-	ctx->registered_modules = axl_list_new (axl_list_always_return_1, 
+	ctx->registered_modules = axl_list_new (axl_list_always_return_1,
 						(axlDestroyFunc) turbulence_module_free);
+	if (ctx->registered_modules == NULL)
+		error ("unable to allocate the list of registered modules, module loading will not be available");
+
 	/* init mutex */
 	vortex_mutex_create (&ctx->registered_modules_mutex);
 	return;
@@ -112,12 +124,27 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 {
 	TurbulenceModule * result;
 
+	axl_return_val_if_fail (ctx, NULL);
 	axl_return_val_if_fail (module, NULL);
 
 	/* allocate memory for the result */
 	result         = axl_new (TurbulenceModule, 1);
-	result->path   = axl_strdup (module);
+	if (result == NULL) {
+		error ("unable to allocate memory to hold module reference (%s), memory failure", module);
+		return NULL;
+	} /* end if */
+
+	/* set the context first so error reporting done by
+	   turbulence_module_free () below has a working context */
 	result->ctx    = ctx;
+	result->path   = axl_strdup (module);
+	if (result->path == NULL) {
+		error ("unable to allocate memory to hold module path (%s), memory failure", module);
+
+		/* free the result and return */
+		turbulence_module_free (result);
+		return NULL;
+	} /* end if */
 #if defined(AXL_OS_UNIX)
 	result->handle = dlopen (module, RTLD_LAZY | RTLD_GLOBAL);
 #elif defined(AXL_OS_WIN32)
@@ -132,7 +159,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 #if defined(AXL_OS_UNIX)
 		error ("unable to load module (%s): %s", module, dlerror ());
 #elif defined(AXL_OS_WIN32)
-		error ("unable to load module (%s), error code: %d", module, GetLastError ());
+		error ("unable to load module (%s), error code: %lu", module, (unsigned long) GetLastError ());
 #endif
 
 		/* free the result and return */
@@ -151,7 +178,7 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 #if defined(AXL_OS_UNIX)
 		error ("unable to find 'module_def' symbol, it seems it isn't a turbulence module: %s", dlerror ());
 #elif defined(AXL_OS_WIN32)
-		error ("unable to find 'module_def' symbol, it seems it isn't a turbulence module: error code %d", GetLastError ());
+		error ("unable to find 'module_def' symbol, it seems it isn't a turbulence module: error code %lu", (unsigned long) GetLastError ());
 #endif
 		
 		/* free the result and return */
@@ -228,7 +255,7 @@ void               turbulence_module_unload       (TurbulenceCtx * ctx,
 ModInitFunc        turbulence_module_get_init  (TurbulenceModule * module)
 {
 	/* check the reference received */
-	if (module == NULL)
+	if (module == NULL || module->def == NULL)
 		return NULL;
 
 	/* return the reference */
@@ -249,7 +276,7 @@ ModInitFunc        turbulence_module_get_init  (TurbulenceModule * module)
 ModCloseFunc       turbulence_module_get_close (TurbulenceModule * module)
 {
 	/* check the reference received */
-	if (module == NULL)
+	if (module == NULL || module->def == NULL)
 		return NULL;
 
 	/* return the reference */
@@ -309,10 +336,13 @@ axl_bool             turbulence_module_register  (TurbulenceModule * module)
 {
 	TurbulenceCtx    * ctx;
 	int                iterator;
+	int                length;
 	TurbulenceModule * mod_added;
 
 	/* check values received */
 	v_return_val_if_fail (module, axl_false);
+	v_return_val_if_fail (module->ctx, axl_false);
+	v_return_val_if_fail (module->def, axl_false);
 
 	/* get context reference */
 	ctx = module->ctx;
@@ -338,7 +368,21 @@ axl_bool             turbulence_module_register  (TurbulenceModule * module)
 		iterator++;
 	} /* end while */
 
+	/* axl_list_add () does not report failures: it silently does
+	   nothing when the list is NULL (init failed) and when the node
+	   holding the item cannot be allocated. Check the item really got
+	   stored so the caller is not told the module is registered when
+	   it is not (which would leak it and would leave it out of the
+	   cleanup done by turbulence_module_cleanup). */
+	length = axl_list_length (ctx->registered_modules);
 	axl_list_add (ctx->registered_modules, module);
+	if (axl_list_length (ctx->registered_modules) != (length + 1)) {
+		error ("unable to register module: %s, failed to store it into the registered modules list (memory failure)",
+		       module->def->mod_name);
+		vortex_mutex_unlock (&ctx->registered_modules_mutex);
+		return axl_false;
+	} /* end if */
+
 	msg ("Registered modules (%d, %p)", axl_list_length (ctx->registered_modules), ctx->registered_modules);
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
@@ -362,10 +406,19 @@ void               turbulence_module_unregister  (TurbulenceModule * module)
 
 	/* get a reference to the context */
 	ctx = module->ctx;
+	if (ctx == NULL)
+		return;
 
-	/* register the module */
+	/* unregister the module.
+	 *
+	 * Note _ptr is required here: the list is created with
+	 * axl_list_always_return_1 as equality function (it is used to
+	 * always append at the end), and that function never reports two
+	 * items as equal, so the plain axl_list_unlink () would find
+	 * nothing and would silently leave the module linked, turning the
+	 * release done by the caller into a dangling reference. */
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
-	axl_list_unlink (ctx->registered_modules, module);
+	axl_list_unlink_ptr (ctx->registered_modules, module);
 	vortex_mutex_unlock (&ctx->registered_modules_mutex);
 
 	return;
@@ -385,6 +438,7 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
 {
 	TurbulenceModule * module;
 	ModInitFunc        init;
+	ModCloseFunc       close_func;
 
 	if (ctx == NULL || location == NULL)
 		return NULL;
@@ -415,25 +469,40 @@ TurbulenceModule           * turbulence_module_open_and_register (TurbulenceCtx 
 
 	/* init the module */
 	init = turbulence_module_get_init (module);
-		
-	/* check init */
-	if (! init (ctx)) {
+
+	/* check init: having no init function is allowed (see
+	   turbulence_module_get_init), so only call it when defined */
+	if (init != NULL && ! init (ctx)) {
 		wrn ("init module: %s has failed, skipping", location);
-		
+
 		/* close the module but do not unmap it. This way
 		   modules partially loaded won't break turbulence in
 		   the case they fail to load for some reason. */
 		module->skip_unmap = axl_true;
 		turbulence_module_free (module);
-		
+
 		return NULL;
-		
+
 	} else {
 		msg ("init ok, registering module: %s", location);
 	}
 
 	/* register the module to be loaded */
-	turbulence_module_register (module);
+	if (! turbulence_module_register (module)) {
+		wrn ("unable to register module: %s, discarding it", location);
+
+		/* the module was already initialized: give it the chance
+		   to release what init acquired and do not unmap it,
+		   because init may have left references (profiles,
+		   handlers, ...) pointing into the module code. */
+		close_func = turbulence_module_get_close (module);
+		if (close_func != NULL)
+			close_func (ctx);
+		module->skip_unmap = axl_true;
+		turbulence_module_free (module);
+
+		return NULL;
+	} /* end if */
 
 	/* now the module is registered, publish this is done */
 	turbulence_mediator_push_event (ctx, "turbulence", "module-registered", 
@@ -520,17 +589,21 @@ void               turbulence_module_free (TurbulenceModule * module)
  * @param handler The handler to be called.
  *
  * @param data Optional data to be passed to the handler. This pointer
- * is handler specific.
+ * is handler specific. Only \ref TBC_PPATH_SELECTED_HANDLER uses it,
+ * receiving the selected profile path definition.
  *
  * @param data2 Second optional data to be passed to the handler. This
- * pointer is handler specific.
+ * pointer is handler specific. Only \ref TBC_PPATH_SELECTED_HANDLER
+ * uses it, receiving the connection the selection applies to.
  *
- * @param data3 Third optional data to be passed to the handler. This
- * pointer is handler specific.
+ * @param data3 Reserved for future handlers. It is currently not
+ * passed to any handler.
  *
  * @return Returns axl_true if all handlers executed also returned
  * axl_true. Those handler that have no return value will cause the
- * function to always return axl_true. 
+ * function to always return axl_true. It also returns axl_false when
+ * the notification could not be run at all (for example, when the
+ * module snapshot cannot be allocated).
  */
 axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx, 
 						  TurbulenceModHandler    handler,
@@ -545,6 +618,9 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 	int                  iterator = 0;
 	axl_bool             result   = axl_true;
 
+	/* check values received */
+	v_return_val_if_fail (ctx, axl_false);
+
 	vortex_mutex_lock (&ctx->registered_modules_mutex);
 
 	/* load search paths here in case of TBC_PPATH_SELECTED_HANDLER */
@@ -558,14 +634,27 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 	 * modules referenced are not freed at runtime (only at cleanup,
 	 * after all notifications finished), so caching the pointers is
 	 * safe. Modules registered during the notification are
-	 * intentionally not notified in the current round. */
+	 * intentionally not notified in the current round.
+	 *
+	 * Note this holds as long as no module is released while
+	 * notifications may be running: turbulence_module_unload () does
+	 * free modules, so it must not be called concurrently with this
+	 * function. */
 	count = axl_list_length (ctx->registered_modules);
-	if (count == 0) {
+	if (count <= 0) {
+		/* nothing to notify (or the list was never created) */
 		vortex_mutex_unlock (&ctx->registered_modules_mutex);
 		return axl_true;
 	} /* end if */
 
 	snapshot = axl_new (TurbulenceModule *, count);
+	if (snapshot == NULL) {
+		error ("unable to allocate the module snapshot to run notification (handler: %d), memory failure",
+		       handler);
+		vortex_mutex_unlock (&ctx->registered_modules_mutex);
+		return axl_false;
+	} /* end if */
+
 	while (iterator < count) {
 		snapshot[iterator] = axl_list_get_nth (ctx->registered_modules, iterator);
 		iterator++;
