@@ -44,6 +44,13 @@ void               turbulence_module_init        (TurbulenceCtx * ctx);
 TurbulenceModule * turbulence_module_open        (TurbulenceCtx * ctx, 
 						  const char    * module);
 
+/* NOTE: incomplete, do not use. Reserved for the unload after fork
+ * support announced by 0.4.0, which was never finished (no
+ * configuration directive enables it and nothing calls this). It is
+ * still exported for binary compatibility only. Among other things, it
+ * must not be called while module notifications may be running. See
+ * the full description at turbulence-module.c before wiring it into
+ * anything. */
 void               turbulence_module_unload      (TurbulenceCtx * ctx,
 						  const char    * module);
 

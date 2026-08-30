@@ -95,9 +95,15 @@ typedef void (*ModCloseFunc) (TurbulenceCtx * ctx);
  * unload code required in the case turbulence ask the module
  * to stop its function.
  * 
- * Unload function is only called in the context of child process
- * created by turbulence to isolate some requests (modules and
- * profiles) to be handled by a low permissions user.
+ * <b>NOTE: this handler is currently never called.</b> It was intended
+ * to be called in the context of the child process created by
+ * turbulence to isolate some requests (modules and profiles) to be
+ * handled by a low permissions user, so a module could release what it
+ * must not keep on the child. That support was announced by 0.4.0 but
+ * was never finished: the only code calling this handler is \ref
+ * turbulence_module_unload, which is itself incomplete and has no
+ * callers. Do not place on it anything your module needs done: use
+ * \ref ModCloseFunc "close" instead.
  *
  * @param ctx The turbulence context where the close operation is
  * taking place.

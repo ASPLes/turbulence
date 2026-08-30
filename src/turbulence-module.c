@@ -191,11 +191,38 @@ TurbulenceModule * turbulence_module_open (TurbulenceCtx * ctx, const char * mod
 	return result;
 }
 
-/** 
+/**
  * @brief Allows to close the provided module, unloading from memory
  * and removing all registration references. The function does not
  * perform any module space notification. The function makes use of
  * the unload function implemented by modules (if defined).
+ *
+ * <b>NOTE: this function is incomplete and must not be used yet.</b>
+ *
+ * It was published by 0.4.0 to support unloading selected modules
+ * after the fork operation (see \ref ModUnloadFunc), but that support
+ * was never finished: there is no configuration directive enabling it
+ * and, as a consequence, this is the only place calling the unload
+ * handler provided by modules, and nothing in turbulence calls this
+ * function. It is kept exported only for binary compatibility.
+ *
+ * Before wiring it into anything, these have to be solved:
+ *
+ * - It is the only code path releasing a module while the server is
+ *   running. \ref turbulence_module_notify iterates over a snapshot of
+ *   the modules registered taken under the lock, assuming modules are
+ *   only released at cleanup time, so releasing one here while a
+ *   notification is in flight leaves a dangling reference behind.
+ *
+ * - The module unload handler is called holding
+ *   registered_modules_mutex, which is not recursive: a handler
+ *   reaching back into this API deadlocks.
+ *
+ * - The module close handler is not called, so whatever init acquired
+ *   is never released.
+ *
+ * - The module code is unmapped (dlclose) even though other threads
+ *   may still be running inside it.
  *
  * @param ctx The context where the module must be removed.
  * @param module The module name to be unloaded.
@@ -636,10 +663,11 @@ axl_bool           turbulence_module_notify      (TurbulenceCtx         * ctx,
 	 * safe. Modules registered during the notification are
 	 * intentionally not notified in the current round.
 	 *
-	 * Note this holds as long as no module is released while
-	 * notifications may be running: turbulence_module_unload () does
-	 * free modules, so it must not be called concurrently with this
-	 * function. */
+	 * This holds as long as no module is released while notifications
+	 * may be running. The only function releasing a module at runtime
+	 * is turbulence_module_unload (), which is incomplete and unused
+	 * (see its description): wiring it in requires making this
+	 * snapshot keep the modules alive first. */
 	count = axl_list_length (ctx->registered_modules);
 	if (count <= 0) {
 		/* nothing to notify (or the list was never created) */
