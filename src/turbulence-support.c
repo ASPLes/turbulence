@@ -62,7 +62,38 @@ int mkstemp(char *template);
 	}								\
 } while (0)
 
-/** 
+/**
+ * @internal Runs the provided command, already built by the caller,
+ * reporting its exit status and releasing it afterwards.
+ *
+ * A NULL command (memory failure while building it) is tolerated and
+ * just reported: the commands driven through this function only add
+ * informative headers to the backtrace file, so skipping one of them
+ * degrades the report but still allows producing the backtrace, which
+ * is far more useful than aborting the whole operation because of a
+ * punctual memory shortage.
+ *
+ * @param ctx The context where the operation is implemented.
+ *
+ * @param command The command to run (may be NULL). It is released by
+ * this function.
+ */
+static void __turbulence_support_run_command (TurbulenceCtx * ctx, char * command)
+{
+	int status;
+
+	if (command == NULL) {
+		error ("Unable to add information to backtrace file, memory failure while building command");
+		return;
+	} /* end if */
+
+	status = system (command);
+	msg ("Running: %s, exit status: %d", command, status);
+	axl_free (command);
+	return;
+}
+
+/**
  * @brief Allows to get process backtrace (including all threads) of
  * the given process id.
  *
@@ -72,7 +103,8 @@ int mkstemp(char *template);
  * getpid () to get current process id.
  *
  * @return A newly allocated string containing the path to the file
- * where the backtrace was generated or NULL if it fails.
+ * where the backtrace was generated or NULL if it fails. The caller
+ * owns the string returned and must release it with axl_free.
  */
 char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 {
@@ -85,22 +117,34 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	int                  status;
 	char               * backtrace_file = NULL;
 
+	/* ctx is dereferenced below (ctx->child) and it is also needed to
+	 * resolve the runtime paths, so reject a null reference here
+	 * rather than crashing while reporting a crash */
+	if (ctx == NULL)
+		return NULL;
+
 	temp_name = axl_strdup ("/tmp/turbulence-backtrace.XXXXXX");
+	if (temp_name == NULL) {
+		error ("Unable to create gdb commands file to feed gdb, memory failure");
+		return NULL;
+	} /* end if */
+
 	temp_file = mkstemp (temp_name);
 	if (temp_file == -1) {
-		error ("Bad signal found but unable to create gdb commands file to feed gdb");
+		error ("Unable to create gdb commands file to feed gdb, mkstemp () failed on %s, errno=%d", temp_name, errno);
+		axl_free (temp_name);
 		return NULL;
 	} /* end if */
 
 	str_pid = axl_strdup_printf ("%d", pid);
 	if (str_pid == NULL) {
-		error ("Bad signal found but unable to get str pid version, memory failure");
+		error ("Unable to get str pid version, memory failure");
 		close (temp_file);
 		unlink (temp_name);
 		axl_free (temp_name);
 		return NULL;
 	}
-	
+
 	/* write personalized gdb commands */
 	write_and_check ("attach ", 7);
 	write_and_check (str_pid, strlen (str_pid));
@@ -116,21 +160,31 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 	/* close temp file */
 	close (temp_file);
 	
-	/* build the command to get gdb output */
-	while (1) {
-		backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.%d.gdb", turbulence_runtime_datadir (ctx), pid, (int) time (NULL));
-		file_handle    = fopen (backtrace_file, "w");
-		if (file_handle == NULL) {
-			msg ("Changing path because path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
-			axl_free (backtrace_file);
-			backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.%d.gdb", turbulence_runtime_tmpdir (ctx), pid, (int) time (NULL));
-		} else {
-			fclose (file_handle);
-			msg ("Checked that %s is writable/readable for the current uid=%d", backtrace_file, getuid ());
-			break;
+	/* build the path to hold the gdb output: check first the runtime
+	 * datadir and, in the case it is not writable for the current
+	 * uid, fall back into the temporal directory */
+	backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.%d.gdb", turbulence_runtime_datadir (ctx), pid, (int) time (NULL));
+	if (backtrace_file == NULL) {
+		error ("Failed to produce backtrace, memory failure while building backtrace file path");
+		unlink (temp_name);
+		axl_free (temp_name);
+		return NULL;
+	} /* end if */
+
+	file_handle    = fopen (backtrace_file, "w");
+	if (file_handle == NULL) {
+		msg ("Changing path because path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
+		axl_free (backtrace_file);
+
+		/* check the alternative path */
+		backtrace_file = axl_strdup_printf ("%s/turbulence-backtrace.%d.%d.gdb", turbulence_runtime_tmpdir (ctx), pid, (int) time (NULL));
+		if (backtrace_file == NULL) {
+			error ("Failed to produce backtrace, memory failure while building alternative backtrace file path");
+			unlink (temp_name);
+			axl_free (temp_name);
+			return NULL;
 		} /* end if */
 
-		/* check path again */
 		file_handle    = fopen (backtrace_file, "w");
 		if (file_handle == NULL) {
 			error ("Failed to produce backtrace, alternative path %s is not allowed to the current uid=%d", backtrace_file, getuid ());
@@ -138,43 +192,39 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 			unlink (temp_name);
 			axl_free (temp_name);
 			return NULL;
-		}
-		fclose (file_handle);
-		break; /* reached this point alternative path has worked */
-	} /* end while */
+		} /* end if */
+	} /* end if */
 
-	if (backtrace_file == NULL) {
-		error ("Failed to produce backtrace, internal reference is NULL");
-		unlink (temp_name);
-		axl_free (temp_name);
-		return NULL;
-	}
+	fclose (file_handle);
+	msg ("Checked that %s is writable/readable for the current uid=%d", backtrace_file, getuid ());
 
 	/* place some system information */
-	command  = axl_strdup_printf ("echo \"Turbulence backtrace at `hostname -f`, created at `date`\" > %s", backtrace_file);
-	status   = system (command);
-	msg ("Running: %s, exit status: %d", command, status);
-	axl_free (command);
+	__turbulence_support_run_command (ctx, axl_strdup_printf ("echo \"Turbulence backtrace at `hostname -f`, created at `date`\" > \"%s\"", backtrace_file));
 
 	/* get profile path id */
-	if (ctx->child == NULL) 
-		command  = axl_strdup_printf ("echo \"Failure found at main process.\" >> %s", backtrace_file);
+	if (ctx->child == NULL)
+		command  = axl_strdup_printf ("echo \"Failure found at main process.\" >> \"%s\"", backtrace_file);
 	else {
 		/* get profile path associated to child process */
-		command   = axl_strdup_printf ("echo \"Failure found at child process.\" >> %s", backtrace_file);
+		command   = axl_strdup_printf ("echo \"Failure found at child process.\" >> \"%s\"", backtrace_file);
 	}
-	status   = system (command);
-	msg ("Running: %s, exit status: %d", command, status);
-	axl_free (command);
+	__turbulence_support_run_command (ctx, command);
 
 	/* get place some pid information */
-	command  = axl_strdup_printf ("echo -e 'Process that failed was %d. Here is the backtrace:\n--------------' >> %s", pid, backtrace_file);
-	status   = system (command);
-	msg ("Running: %s, exit status: %d", command, status);
-	axl_free (command);
-	
-	/* get backtrace */
-	command  = axl_strdup_printf ("gdb -batch -x %s >> %s 2>&1", temp_name, backtrace_file);
+	__turbulence_support_run_command (ctx, axl_strdup_printf ("echo -e 'Process that failed was %d. Here is the backtrace:\n--------------' >> \"%s\"", pid, backtrace_file));
+
+	/* get backtrace: this one is the reason of the whole function, so
+	 * a memory failure building it must be reported as a failure
+	 * rather than returning a backtrace file without backtrace */
+	command  = axl_strdup_printf ("gdb -batch -x \"%s\" >> \"%s\" 2>&1", temp_name, backtrace_file);
+	if (command == NULL) {
+		error ("Failed to produce backtrace, memory failure while building gdb command");
+		unlink (temp_name);
+		axl_free (temp_name);
+		axl_free (backtrace_file);
+		return NULL;
+	} /* end if */
+
 	status   = system (command);
 	msg ("Running: %s, exit status: %d", command, status);
 
@@ -192,10 +242,30 @@ char          * turbulence_support_get_backtrace (TurbulenceCtx * ctx, int pid)
 #endif			
 }
 
+/**
+ * @internal Receives a SMTP reply from the provided socket, storing it
+ * into the caller provided buffer, and checks it is an affirmative
+ * one (250, 220 or 354).
+ *
+ * @param ctx The context where the operation is implemented.
+ *
+ * @param conn The socket connected to the SMTP server.
+ *
+ * @param buffer The caller provided buffer where the reply is stored.
+ *
+ * @param buffer_size The size of the buffer provided.
+ *
+ * @param error_message Context description added to the error reported
+ * in the case the reply cannot be received.
+ *
+ * @return axl_true if an affirmative reply was received. In the case
+ * axl_false is returned, the socket received was already closed by
+ * this function, so the caller must not use it nor close it again.
+ */
 axl_bool turbulence_support_smtp_send_receive_reply_and_check (TurbulenceCtx * ctx,
-							       VORTEX_SOCKET   conn, 
-							       char          * buffer, 
-							       int             buffer_size, 
+							       VORTEX_SOCKET   conn,
+							       char          * buffer,
+							       int             buffer_size,
 							       const char    * error_message)
 {
 	int read_bytes;
@@ -207,6 +277,7 @@ axl_bool turbulence_support_smtp_send_receive_reply_and_check (TurbulenceCtx * c
 	read_bytes = recv (conn, buffer, buffer_size, 0);
 	if (read_bytes <= 0) {
 		error ("Failed to receive reply SMTP content. %s", error_message);
+		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
 
@@ -279,7 +350,7 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 					       smtp_server ? smtp_server : "localhost",
 					       smtp_port ? smtp_port : "25",
 					       NULL, &err);
-	if (conn == -1) {
+	if (conn < 0) {
 		error ("Unable to connect to smtp server %s:%s, error was: %s",
 		       smtp_server ? smtp_server : "localhost",
 		       smtp_port ? smtp_port : "25",
@@ -309,13 +380,13 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 	/* send termination */
 	if (send (conn, "\r\n", 2, 0) != 2) {
-		error ("Unable to send mail message, failed to send mail from content (address)..");
+		error ("Unable to send mail message, failed to send mail from termination..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
 
 	/* read reply */
-	if (! turbulence_support_smtp_send_receive_reply_and_check (ctx, conn, buffer, 1024, 
+	if (! turbulence_support_smtp_send_receive_reply_and_check (ctx, conn, buffer, 1024,
 								    "Failed to receive mail from confirmation"))
 		return axl_false;
 
@@ -333,13 +404,13 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 	/* send termination */
 	if (send (conn, "\r\n", 2, 0) != 2) {
-		error ("Unable to send mail message, failed to send mail from content (address)..");
+		error ("Unable to send mail message, failed to send rcpt to termination..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
 
 	/* read reply */
-	if (! turbulence_support_smtp_send_receive_reply_and_check (ctx, conn, buffer, 1024, 
+	if (! turbulence_support_smtp_send_receive_reply_and_check (ctx, conn, buffer, 1024,
 								    "Failed to receive rcpt to confirmation"))
 		return axl_false;
 
@@ -364,14 +435,14 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 	} /* end if */
 
 	if (send (conn, mail_to, strlen (mail_to), 0) != strlen (mail_to)) {
-		error ("Unable to send mail message, failed to send rcpt to content (address)..");
+		error ("Unable to send mail message, failed to send To: content (address)..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
 
 	/* send termination */
 	if (send (conn, "\r\n", 2, 0) != 2) {
-		error ("Unable to send mail message, failed to send mail from content (address)..");
+		error ("Unable to send mail message, failed to send To: termination..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
@@ -384,18 +455,18 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 	} /* end if */
 
 	if (send (conn, mail_from, strlen (mail_from), 0) != strlen (mail_from)) {
-		error ("Unable to send mail message, failed to send rcpt to content (address)..");
+		error ("Unable to send mail message, failed to send From: content (address)..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
 
 	/* send termination */
 	if (send (conn, "\r\n", 2, 0) != 2) {
-		error ("Unable to send mail message, failed to send mail from content (address)..");
+		error ("Unable to send mail message, failed to send From: termination..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */
-	
+
 	/* check subject */
 	if (subject) {
 	        msg ("SMTP: subject command sent..");
@@ -417,7 +488,7 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 		/* send termination */
 		if (send (conn, "\r\n", 2, 0) != 2) {
-			error ("Unable to send mail message, failed to send mail from content (address)..");
+			error ("Unable to send mail message, failed to send subject termination..");
 			vortex_close_socket (conn);
 			return axl_false;
 		} /* end if */
@@ -435,7 +506,7 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 		/* send termination */
 		if (send (conn, "\r\n", 2, 0) != 2) {
-			error ("Unable to send mail message, failed to send mail from content (address)..");
+			error ("Unable to send mail message, failed to send body termination..");
 			vortex_close_socket (conn);
 			return axl_false;
 		} /* end if */
@@ -468,10 +539,15 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 
 			/* send termination */
 			if (send (conn, "\r\n", 2, 0) != 2) {
-			        error ("Unable to send mail message, failed to send mail from content (address)..");
+			        error ("Unable to send mail message, failed to send body file termination..");
 				vortex_close_socket (conn);
 				return axl_false;
 			} /* end if */
+		} else {
+			/* do not abort the notification because of this:
+			 * the message is still useful without the file
+			 * content, but the failure must not go unnoticed */
+			error ("Unable to open body file %s, sending mail message without its content, errno=%d", body_file, errno);
 		} /* end if */
 	} /* end if */
 
@@ -491,7 +567,7 @@ axl_bool        turbulence_support_smtp_send (TurbulenceCtx * ctx,
 	/* send termination */
 	msg ("Now sending quit..");
 	if (send (conn, "quit\r\n", 6, 0) != 6) {
-		error ("Unable to send mail message, failed to send termination message..");
+		error ("Unable to send mail message, failed to send quit command..");
 		vortex_close_socket (conn);
 		return axl_false;
 	} /* end if */

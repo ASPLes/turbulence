@@ -59,6 +59,16 @@
  * module and drop its init handler */
 #include <dlfcn.h>
 
+/* used by test_01h to force mkstemp () to fail leaving the process
+ * without available descriptors */
+#include <sys/time.h>
+#include <sys/resource.h>
+
+/* used by test_01i to run a listener that drops the connection */
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #if defined(ENABLE_WEBSOCKET_SUPPORT)
 /* support for websocket */
 #include <vortex_websocket.h>
@@ -884,6 +894,50 @@ void test_calloc_disarm (void)
 	return;
 }
 
+/* Memory failure injection for axl_strdup_printf, used by test_01h.
+ *
+ * test_calloc_arm cannot reach these allocations: axl_strdup_printf is
+ * an alias of axl_stream_strdup_printf and, when libaxl is built with
+ * AXL_HAVE_VASPRINTF (the usual case), the string is produced with
+ * vasprintf, which never goes through axl_calloc. Capturing the alias
+ * target here (another global symbol exported by libaxl) is the only
+ * way of forcing it to report the out of memory condition it already
+ * knows how to report. */
+int test_printf_fail_at = 0;
+int test_printf_count   = 0;
+
+char * axl_stream_strdup_printf (const char * chunk, ...)
+{
+	char    * result;
+	va_list   args;
+
+	if (test_printf_fail_at > 0) {
+		test_printf_count++;
+		if (test_printf_count == test_printf_fail_at)
+			return NULL;
+	} /* end if */
+
+	va_start (args, chunk);
+	result = axl_stream_strdup_printfv (chunk, args);
+	va_end (args);
+
+	return result;
+}
+
+void test_printf_arm (int fail_at)
+{
+	test_printf_count   = 0;
+	test_printf_fail_at = fail_at;
+	return;
+}
+
+void test_printf_disarm (void)
+{
+	test_printf_fail_at = 0;
+	test_printf_count   = 0;
+	return;
+}
+
 /**
  * @brief Regression test: the db-list API must survive a punctual
  * memory failure, reporting the error to the caller instead of
@@ -1274,6 +1328,264 @@ axl_bool test_01g (void)
 	turbulence_module_unregister (module);
 	turbulence_module_free (module);
 	dlclose (handle);
+
+	return axl_true;
+}
+
+/* defined further below, next to test_10_e, which is the other user */
+int test_count_open_fds (void);
+
+/* Allocations swept by test_01h: the pid string, the two candidate
+ * paths for the backtrace file and the four commands run to fill it.
+ * Sweeping a couple more than needed costs nothing and keeps the test
+ * valid if another command is added. */
+#define TEST_01H_ALLOCS (8)
+
+/* Checks whether the provided backtrace file ends with the separator
+ * written just before invoking gdb, that is, nothing was appended
+ * after it and therefore no backtrace was produced. Returning a path
+ * to such a file is the deferred failure this test looks for: the
+ * caller mails it believing it holds a backtrace. */
+axl_bool test_01h_backtrace_is_empty (const char * file)
+{
+	FILE * handle;
+	char   line[512];
+	char   last[512];
+	int    length;
+
+	last[0] = 0;
+	handle  = fopen (file, "r");
+	if (handle == NULL)
+		return axl_true;
+
+	while (fgets (line, sizeof (line), handle) != NULL) {
+		/* skip empty lines so the separator is really the last
+		 * content found */
+		if (line[0] == '\n')
+			continue;
+		memcpy (last, line, sizeof (line));
+	} /* end while */
+	fclose (handle);
+
+	/* drop the trailing newline before comparing */
+	length = strlen (last);
+	if (length > 0 && last[length - 1] == '\n')
+		last[length - 1] = 0;
+
+	return axl_cmp (last, "--------------");
+}
+
+/**
+ * @brief Regression test: turbulence_support_get_backtrace runs from
+ * the bad signal handler, that is, at the worst possible moment to add
+ * a second crash. It must survive a punctual memory failure at any of
+ * its allocations (it used to hand the result of axl_strdup_printf
+ * straight to fopen and system) and it must not leak the temporal file
+ * name when mkstemp fails.
+ *
+ * The leak part of this test only reports through valgrind/ASan; the
+ * rest is checked here.
+ */
+axl_bool test_01h (void)
+{
+	char           * backtrace_file;
+	int              iterator;
+	struct rlimit    orig_limit;
+	struct rlimit    limit;
+
+	/* 1) sweep a punctual memory failure over every allocation: none
+	 * of them may crash the process, and the function must either
+	 * report the failure (NULL) or return a backtrace file that
+	 * really exists (no deferred failures: a path is never returned
+	 * for a file that was not produced) */
+	for (iterator = 1; iterator <= TEST_01H_ALLOCS; iterator++) {
+		test_printf_arm (iterator);
+		backtrace_file = turbulence_support_get_backtrace (ctx, getpid ());
+		test_printf_disarm ();
+
+		if (backtrace_file == NULL)
+			continue;
+
+		if (! turbulence_file_test_v (backtrace_file, FILE_EXISTS)) {
+			printf ("ERROR (1): turbulence_support_get_backtrace reported %s with a memory failure at allocation %d, but that file does not exist\n",
+				backtrace_file, iterator);
+			axl_free (backtrace_file);
+			return axl_false;
+		} /* end if */
+
+		/* the failure must be reported by the function detecting
+		 * it, never deferred by handing back a backtrace file
+		 * without backtrace */
+		if (test_01h_backtrace_is_empty (backtrace_file)) {
+			printf ("ERROR (1b): turbulence_support_get_backtrace reported %s with a memory failure at allocation %d, but no backtrace was produced into it\n",
+				backtrace_file, iterator);
+			unlink (backtrace_file);
+			axl_free (backtrace_file);
+			return axl_false;
+		} /* end if */
+
+		unlink (backtrace_file);
+		axl_free (backtrace_file);
+	} /* end for */
+
+	/* 2) with memory available again the operation must work: this
+	 * detects the failing paths above leaving anything behind that
+	 * blocks a later backtrace */
+	backtrace_file = turbulence_support_get_backtrace (ctx, getpid ());
+	if (backtrace_file == NULL) {
+		printf ("ERROR (2): expected to be able to produce a backtrace after the memory failures\n");
+		return axl_false;
+	} /* end if */
+	unlink (backtrace_file);
+	axl_free (backtrace_file);
+
+	/* 3) force mkstemp () to fail by leaving the process without
+	 * available descriptors: the function must report the failure
+	 * (NULL) releasing the temporal name it had already allocated */
+	if (getrlimit (RLIMIT_NOFILE, &orig_limit) != 0) {
+		printf ("ERROR (3): failed to get RLIMIT_NOFILE\n");
+		return axl_false;
+	} /* end if */
+
+	limit          = orig_limit;
+	limit.rlim_cur = 3; /* stdin, stdout and stderr only */
+	if (setrlimit (RLIMIT_NOFILE, &limit) != 0) {
+		printf ("ERROR (4): failed to lower RLIMIT_NOFILE\n");
+		return axl_false;
+	} /* end if */
+
+	backtrace_file = turbulence_support_get_backtrace (ctx, getpid ());
+
+	/* restore the limit before reporting anything, so a failure here
+	 * does not leave the rest of the suite without descriptors */
+	setrlimit (RLIMIT_NOFILE, &orig_limit);
+
+	if (backtrace_file != NULL) {
+		printf ("ERROR (5): expected a backtrace failure with no descriptors available, but got: %s\n", backtrace_file);
+		unlink (backtrace_file);
+		axl_free (backtrace_file);
+		return axl_false;
+	} /* end if */
+
+	return axl_true;
+}
+
+/* Listener used by test_01i to play the role of a SMTP server that
+ * drops the connection without replying. */
+typedef struct _TestSmtpDropServer {
+	VORTEX_SOCKET     listener;
+	VortexAsyncQueue * queue;
+} TestSmtpDropServer;
+
+axlPointer test_01i_drop_server (axlPointer _data)
+{
+	TestSmtpDropServer * data = _data;
+	VORTEX_SOCKET        session;
+
+	/* accept the connection and close it right away, without
+	 * sending the SMTP greetings: this is what the caller sees as a
+	 * failed reply reception */
+	session = accept (data->listener, NULL, NULL);
+	if (session >= 0)
+		vortex_close_socket (session);
+
+	/* signal the main thread that the connection was already
+	 * dropped */
+	vortex_async_queue_push (data->queue, INT_TO_PTR (1));
+	return NULL;
+}
+
+/**
+ * @brief Regression test: when the SMTP server drops the connection
+ * without replying, turbulence_support_smtp_send must not leak the
+ * socket. The reply check closed the socket only when the server
+ * answered with a negative reply, so every failure to receive left a
+ * descriptor behind: on a daemon that notifies failures by mail, that
+ * accumulates until the process runs out of descriptors.
+ */
+axl_bool test_01i (void)
+{
+	TestSmtpDropServer   data;
+	VortexThread         thread;
+	struct sockaddr_in   addr;
+	socklen_t            addr_len;
+	char               * port;
+	int                  fds_before;
+	int                  fds_after;
+	int                  reuse = 1;
+
+	/* create a listener bound to a port chosen by the system */
+	data.listener = socket (AF_INET, SOCK_STREAM, 0);
+	if (data.listener < 0) {
+		printf ("ERROR (1): failed to create listener socket\n");
+		return axl_false;
+	} /* end if */
+
+	setsockopt (data.listener, SOL_SOCKET, SO_REUSEADDR, (char *) &reuse, sizeof (reuse));
+
+	memset (&addr, 0, sizeof (addr));
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+	addr.sin_port        = 0;
+
+	if (bind (data.listener, (struct sockaddr *) &addr, sizeof (addr)) != 0 ||
+	    listen (data.listener, 1) != 0) {
+		printf ("ERROR (2): failed to bind/listen the test SMTP listener\n");
+		vortex_close_socket (data.listener);
+		return axl_false;
+	} /* end if */
+
+	addr_len = sizeof (addr);
+	if (getsockname (data.listener, (struct sockaddr *) &addr, &addr_len) != 0) {
+		printf ("ERROR (3): failed to get the port of the test SMTP listener\n");
+		vortex_close_socket (data.listener);
+		return axl_false;
+	} /* end if */
+	port = axl_strdup_printf ("%d", ntohs (addr.sin_port));
+
+	data.queue = vortex_async_queue_new ();
+	if (! vortex_thread_create (&thread, (VortexThreadFunc) test_01i_drop_server,
+				    &data, VORTEX_THREAD_CONF_END)) {
+		printf ("ERROR (4): failed to create the test SMTP server thread\n");
+		vortex_close_socket (data.listener);
+		vortex_async_queue_unref (data.queue);
+		axl_free (port);
+		return axl_false;
+	} /* end if */
+
+	/* count descriptors with the listener and the thread already in
+	 * place, so only what smtp send does is measured */
+	fds_before = test_count_open_fds ();
+
+	/* this must fail: the server drops the connection without
+	 * replying to the greetings */
+	if (turbulence_support_smtp_send (ctx, "test@aspl.es", "test2@aspl.es",
+					  "Test 01-i", "body", NULL, "127.0.0.1", port)) {
+		printf ("ERROR (5): expected a failure sending mail to a server that drops the connection\n");
+		vortex_async_queue_pop (data.queue);
+		vortex_thread_destroy (&thread, axl_false);
+		vortex_close_socket (data.listener);
+		vortex_async_queue_unref (data.queue);
+		axl_free (port);
+		return axl_false;
+	} /* end if */
+
+	/* wait for the server thread to finish before counting, so its
+	 * accepted descriptor is not counted as ours */
+	vortex_async_queue_pop (data.queue);
+	vortex_thread_destroy (&thread, axl_false);
+
+	fds_after = test_count_open_fds ();
+
+	vortex_close_socket (data.listener);
+	vortex_async_queue_unref (data.queue);
+	axl_free (port);
+
+	if (fds_before > 0 && fds_after > fds_before) {
+		printf ("ERROR (6): turbulence_support_smtp_send leaked %d descriptor(s) when the reply could not be received (before=%d, after=%d)\n",
+			fds_after - fds_before, fds_before, fds_after);
+		return axl_false;
+	} /* end if */
 
 	return axl_true;
 }
@@ -7776,6 +8088,12 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_01g")
 	run_test (test_01g, "Test 01-g: module without init handler is loaded, not called through NULL");
+
+	CHECK_TEST("test_01h")
+	run_test (test_01h, "Test 01-h: backtrace support survives a punctual memory failure");
+
+	CHECK_TEST("test_01i")
+	run_test (test_01i, "Test 01-i: smtp send does not leak the socket when no reply is received");
 
 	CHECK_TEST("test_02")
 	run_test (test_02, "Test 02: Turbulence misc functions");
