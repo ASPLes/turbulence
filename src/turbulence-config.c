@@ -124,11 +124,18 @@ void turbulence_config_load_expand_nodes (TurbulenceCtx * ctx)
 		} else if (HAS_ATTR (node, "dir")) {
 			msg ("Opening directory: %s", ATTR_VALUE (node, "dir"));
 			dir    = opendir (ATTR_VALUE (node, "dir"));
-			
+			if (dir == NULL)
+				wrn ("Failed to open directory %s, skipping include, errno=%d (%s)",
+				     ATTR_VALUE (node, "dir"), errno, strerror (errno));
+
 			while (dir && (dirent = readdir (dir))) {
 
 				/* build path */
 				full_path = axl_strdup_printf ("%s/%s", ATTR_VALUE (node, "dir"), dirent->d_name);
+				if (full_path == NULL) {
+					wrn ("Failed to allocate memory to build path for %s, skipping..", dirent->d_name);
+					continue;
+				} /* end if */
 
 				/* check for regular file */
 				if (! vortex_support_file_test (full_path, FILE_IS_REGULAR)) {
@@ -170,7 +177,8 @@ void turbulence_config_load_expand_nodes (TurbulenceCtx * ctx)
 			}
 
 			/* close directory */
-			closedir (dir);
+			if (dir)
+				closedir (dir);
 			
 			/* remove include node */
 			axl_node_remove (node, axl_true);

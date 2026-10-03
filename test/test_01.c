@@ -2960,6 +2960,43 @@ axl_bool test_06_a (void) {
 	return axl_true;
 }
 
+axl_bool test_06_b (void) {
+	TurbulenceCtx * tCtx;
+	VortexCtx     * vCtx;
+	axlNode       * node;
+
+	/* init vortex and turbulence using a configuration that
+	 * includes a <include dir="..."> pointing to a directory that
+	 * does not exist: it must be skipped without crashing */
+	if (! test_common_init (&vCtx, &tCtx, "test_06b.conf"))
+		return axl_false;
+
+	/* check the rest of the document was loaded */
+	node = axl_doc_get (tCtx->config, "/turbulence/global-settings/ports/port");
+	if (node == NULL) {
+		printf ("ERROR: expected to find ports/port node but found NULL\n");
+		return axl_false;
+	}
+
+	/* the include node must have been removed even though the
+	 * directory could not be opened */
+	if (axl_doc_find_called (tCtx->config, "include")) {
+		printf ("ERROR: no include node should be found, but it was..\n");
+		return axl_false;
+	}
+
+	/* and nothing should have been included */
+	if (axl_doc_find_called (tCtx->config, "path-def")) {
+		printf ("ERROR: expected to find no <path-def> node (include directory does not exist)..\n");
+		return axl_false;
+	}
+
+	/* finish turbulence */
+	test_common_exit (vCtx, tCtx);
+
+	return axl_true;
+}
+
 axl_bool test_07 (void) {
 	TurbulenceCtx    * tCtx;
 	VortexCtx        * vCtx;
@@ -8133,6 +8170,9 @@ int main (int argc, char ** argv)
 
 	CHECK_TEST("test_06a")
 	run_test (test_06_a, "Test 06-a: Check file configuration splitting support");
+
+	CHECK_TEST("test_06b")
+	run_test (test_06_b, "Test 06-b: <include dir> pointing to a missing directory is skipped");
 
 	CHECK_TEST("test_07")
 	run_test (test_07, "Test 07: Turbulence local connection");

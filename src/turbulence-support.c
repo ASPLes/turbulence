@@ -52,8 +52,8 @@ int mkstemp(char *template);
 
 
 #define write_and_check(str, len) do {					\
-	if (write (temp_file, str, len) != len) {			\
-		error ("Unable to write expected string: %s", str);     \
+	if (write (temp_file, (str), (len)) != (len)) {			\
+		error ("Unable to write expected string: %s", (str));   \
 		close (temp_file);					\
 		unlink (temp_name);					\
 		axl_free (temp_name);					\

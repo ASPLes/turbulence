@@ -8,6 +8,7 @@ INCLUDES = -I../src/ -I../modules/mod-sasl/ \
 configuration_files = \
 	test_01-b.conf \
 	test_06a.conf \
+	test_06b.conf \
 	test06a.ports.conf \
 	test06a.listener.conf \
 	test_07.conf  \
