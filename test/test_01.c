@@ -2964,6 +2964,7 @@ axl_bool test_06_b (void) {
 	TurbulenceCtx * tCtx;
 	VortexCtx     * vCtx;
 	axlNode       * node;
+	int             iterator;
 
 	/* init vortex and turbulence using a configuration that
 	 * includes a <include dir="..."> pointing to a directory that
@@ -2985,9 +2986,29 @@ axl_bool test_06_b (void) {
 		return axl_false;
 	}
 
-	/* and nothing should have been included */
-	if (axl_doc_find_called (tCtx->config, "path-def")) {
-		printf ("ERROR: expected to find no <path-def> node (include directory does not exist)..\n");
+	/* nothing should have been included: the only <path-def> left
+	 * must be the one declared inline at test_06b.conf, so the
+	 * document keeps being valid against the DTD, which declares
+	 * <profile-path-configuration> as (path-def+) */
+	node     = axl_doc_find_called (tCtx->config, "path-def");
+	iterator = 0;
+	while (node) {
+		/* node found */
+		iterator++;
+
+		/* next node */
+		node = axl_node_get_next_called (node, "path-def");
+	} /* end while */
+
+	if (iterator != 1) {
+		printf ("ERROR: expected to find just the inline <path-def> node (include directory does not exist) but found %d..\n", iterator);
+		return axl_false;
+	}
+
+	node = axl_doc_find_called (tCtx->config, "path-def");
+	if (! HAS_ATTR_VALUE (node, "path-name", "inline-only")) {
+		printf ("ERROR: expected the remaining <path-def> to be the inline one (path-name='inline-only') but found: %s..\n",
+			ATTR_VALUE (node, "path-name") ? ATTR_VALUE (node, "path-name") : "NULL");
 		return axl_false;
 	}
 
